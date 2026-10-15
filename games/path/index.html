@@ -167,7 +167,7 @@ const Ads=(function(){
     busy=false;Sound.resume();return ok;
   }
   return{platform,
-    init(){if(platform!=="vk")return;const s=document.createElement("script");s.src="vk-bridge.min.js";
+    init(){if(platform!=="vk")return;const s=document.createElement("script");s.src="vk-bridge.min.js";s.onerror=()=>{const c=document.createElement("script");c.src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js";c.onload=s.onload;document.head.appendChild(c);};
       s.onload=()=>{bridge=window.vkBridge;try{bridge.send("VKWebAppInit")}catch(e){}};document.head.appendChild(s);},
     rewarded(){return show("reward")},
     async interstitial(){if(Date.now()-lastInter<90e3)return false;const ok=await show("inter");if(ok)lastInter=Date.now();return ok;}
