@@ -567,13 +567,13 @@ function finish(status){
     fails++;if(status==="spike"||status==="saw"){Sound.zap();burst(X(world.x),Y(world.y),["#fff","#ff6b6b","#ffd23e"],26,1.5);}else Sound.fail();
     setTimeout(()=>{
       const [t1,t2]=REASONS[status];
-      let h="<h2>"+t1+"</h2><p>"+t2+". Поправь линии и попробуй ещё раз!</p>"+
-        "<button class='btn g' id='eAgain'>Попробовать снова</button>";
+      let h="<h2>"+t1+"</h2><p>"+t2+". Попробуй ещё раз!</p>"+
+        "<button class='btn g' id='eAgain'>↺ Заново</button>";
       if(!hinted[li]&&fails>=2)h+="<button class='btn y' id='eHint'>💡 Показать решение ▶</button>";
-      h+="<button class='btn gr' id='eClear'>Стереть линии</button>";
+      h+="<button class='btn gr' id='eEdit'>✏️ Поправить линии</button>";
       $("endCard").innerHTML=h;$("ovEnd").classList.add("on");
-      $("eAgain").onclick=async()=>{closeEnd();if(fails%4===0)await Ads.interstitial();resetRun();};
-      $("eClear").onclick=()=>{closeEnd();resetRun();strokes=[];inkUsed=0;updateHud();};
+      $("eAgain").onclick=async()=>{closeEnd();if(fails%4===0)await Ads.interstitial();resetRun();strokes=[];inkUsed=0;updateHud();};
+      $("eEdit").onclick=()=>{closeEnd();resetRun();};
       const eh=$("eHint");if(eh)eh.onclick=async()=>{if(await getHint()){closeEnd();resetRun();}};
     },status==="out"?500:800);
   }
