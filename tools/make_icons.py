@@ -59,36 +59,54 @@ def blocks_icon():
     return im
 
 
-def mine_icon():
-    im = bg((25, 90, 140), (8, 23, 42)).convert("RGBA")
-    glow(im, (512, 500), 400, (90, 200, 255, 140))
-    cx, cy, R = 512, 520, 360
-    pts = []
-    for i in range(8):
-        a = i / 8 * 2 * math.pi - math.pi / 2
-        k = 0.78 if i % 2 else 1
-        pts.append((cx + math.cos(a) * R * k, cy + math.sin(a) * R * k))
+def path_icon():
+    im = bg((47, 143, 230), (124, 201, 255)).convert("RGBA")
+    sun = Image.new("RGBA", im.size, (0, 0, 0, 0))
+    for k in range(300, 0, -6):
+        a = int(150 * (1 - k / 300) ** 1.6)
+        ImageDraw.Draw(sun).ellipse([180 - k, 150 - k, 180 + k, 150 + k], fill=(255, 246, 200, a))
+    im.alpha_composite(sun)
     d = ImageDraw.Draw(im)
-    for i in range(8):
-        a, b = pts[i], pts[(i + 1) % 8]
-        l = [200, 150, 230, 120, 180, 140, 210, 165][i]
-        d.polygon([(cx, cy), a, b], fill=(int(l * .35), int(l * .85), 255, 255), outline=(220, 245, 255, 200))
-    inner = [(cx + (x - cx) * .45, cy + (y - cy) * .45) for x, y in pts]
-    over = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    ImageDraw.Draw(over).polygon(inner, fill=(255, 255, 255, 70))
-    glare = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    ImageDraw.Draw(glare).polygon([(cx - 230, cy - 400), (cx - 110, cy - 400), (cx - 290, cy + 400), (cx - 410, cy + 400)], fill=(255, 255, 255, 60))
-    clip = Image.new("L", im.size, 0)
-    ImageDraw.Draw(clip).polygon(pts, fill=255)
-    over.paste(glare, (0, 0), Image.composite(glare.getchannel("A"), Image.new("L", im.size, 0), clip))
-    im.alpha_composite(over)
-    # искры
-    sp = Image.new("RGBA", im.size, (0, 0, 0, 0))
-    sd = ImageDraw.Draw(sp)
-    for x, y, r in [(820, 230, 46), (200, 790, 34), (860, 820, 28), (230, 250, 24)]:
-        sd.polygon([(x, y - r), (x + r * .28, y - r * .28), (x + r, y), (x + r * .28, y + r * .28), (x, y + r),
-                    (x - r * .28, y + r * .28), (x - r, y), (x - r * .28, y - r * .28)], fill=(255, 240, 190, 255))
-    im.alpha_composite(sp)
+    # холмы
+    for b, col, a in [(.80, (95, 191, 106), 60), (.90, (47, 138, 71), 40)]:
+        pts = [(0, S)] + [(x, S * b - math.sin(x / S * 5) * a) for x in range(0, S + 20, 20)] + [(S, S)]
+        d.polygon(pts, fill=col + (255,))
+    # радужная линия
+    pts = [(150, 330), (330, 470), (520, 600), (700, 690)]
+    seg = []
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        for k in range(30):
+            t = k / 30; seg.append((x0 + (x1 - x0) * t, y0 + (y1 - y0) * t))
+    seg.append(pts[-1])
+    import colorsys
+    for i in range(len(seg) - 1):
+        r, g, b = colorsys.hsv_to_rgb(i / len(seg) * .85, .85, 1)
+        d.line([seg[i], seg[i + 1]], fill=(int(r * 255), int(g * 255), int(b * 255), 255), width=58)
+    for p, h in ((seg[0], 0), (seg[-1], .85)):
+        r, g, b = colorsys.hsv_to_rgb(h, .85, 1)
+        d.ellipse([p[0] - 29, p[1] - 29, p[0] + 29, p[1] + 29], fill=(int(r * 255), int(g * 255), int(b * 255), 255))
+    # корзина
+    cx, by = 800, 900
+    d.rectangle([cx - 150, by - 200, cx + 150, by], fill=(255, 215, 80, 90))
+    d.line([(cx - 150, by - 210), (cx - 150, by), (cx + 150, by), (cx + 150, by - 210)], fill=(232, 165, 18, 255), width=40, joint="curve")
+    for k in range(1, 4):
+        d.line([(cx - 140, by - k * 52), (cx + 140, by - k * 52)], fill=(200, 130, 10, 140), width=10)
+    # шарик
+    bx, byy, r = 300, 255, 120
+    ball = Image.new("RGBA", im.size, (0, 0, 0, 0)); bd = ImageDraw.Draw(ball)
+    for k in range(r, 0, -2):
+        t = k / r
+        bd.ellipse([bx - k, byy - k, bx + k, byy + k], fill=(int(47 + (191 - 47) * (1 - t)), int(143 + (240 - 143) * (1 - t)), 255, 255))
+    bd.arc([bx - r * .7 + 20, byy - r * .7, bx + r * .7 + 20, byy + r * .7], 60, 200, fill=(255, 255, 255, 160), width=18)
+    bd.ellipse([bx - 70, byy - 80, bx - 10, byy - 40], fill=(255, 255, 255, 200))
+    sh = Image.new("RGBA", im.size, (0, 0, 0, 0)); ImageDraw.Draw(sh).ellipse([bx - 70, byy + 108, bx + 120, byy + 140], fill=(0, 0, 0, 55))
+    im.alpha_composite(sh); im.alpha_composite(ball)
+    ImageDraw.Draw(im).ellipse([bx - r, byy - r, bx + r, byy + r], outline=(20, 70, 140, 120), width=8)
+    # звезда
+    sx, sy, R = 560, 330, 85
+    st = [(sx + math.cos(i / 10 * 2 * math.pi - math.pi / 2) * (R if i % 2 == 0 else R * .45),
+           sy + math.sin(i / 10 * 2 * math.pi - math.pi / 2) * (R if i % 2 == 0 else R * .45)) for i in range(10)]
+    ImageDraw.Draw(im).polygon(st, fill=(255, 198, 26, 255), outline=(224, 137, 10, 255), width=10)
     return im
 
 
@@ -102,5 +120,5 @@ def save(name, im):
 
 
 save("block", blocks_icon())
-save("idle", mine_icon())
+save("path", path_icon())
 print("ok")

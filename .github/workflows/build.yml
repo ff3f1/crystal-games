@@ -17,10 +17,10 @@ jobs:
             dir: block
             name: Кристальные блоки
             appId: ru.crystalgames.blocks
-          - key: IDLE
-            dir: idle
-            name: Кристальная шахта
-            appId: ru.crystalgames.mine
+          - key: PATH
+            dir: path
+            name: Нарисуй путь
+            appId: ru.crystalgames.drawpath
     steps:
       - uses: actions/checkout@v4
 
@@ -91,7 +91,7 @@ jobs:
           tar xzf vkontakte-vk-bridge-*.tgz
           BR=$(ls package/dist/browser.min.js 2>/dev/null || ls package/dist/*.min.js | head -1)
           mkdir -p out
-          for g in block idle; do
+          for g in block path; do
             mkdir -p build/$g
             cp -r games/$g/. build/$g/
             cp "$BR" build/$g/vk-bridge.min.js

@@ -23,35 +23,27 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{out}/2_level.png")
     pg.evaluate("__game.goMenu('levels')"); pg.wait_for_timeout(600)
     pg.screenshot(path=f"{out}/3_map.png")
-    pg.evaluate("__game.setTheme('neon');__game.startGame('bombs')"); pg.evaluate(CLOSE); pg.evaluate(BOT, 16)
+    pg.evaluate("__game.setTheme('neon');__game.startGame('bombs')"); pg.evaluate(CLOSE); pg.evaluate(BOT, 9)
     pg.evaluate("__game.score=4230"); pg.wait_for_timeout(1500)
     pg.screenshot(path=f"{out}/4_bombs_neon.png")
     pg.evaluate("__game.setTheme('candy');__game.startGame('blitz')"); pg.evaluate(CLOSE); pg.evaluate(BOT, 10); pg.wait_for_timeout(250)
     pg.screenshot(path=f"{out}/5_blitz_candy.png")
     pg.close()
 
-    # --- Шахта ---
-    out = f"{ROOT}/store/idle/screens"; os.makedirs(out, exist_ok=True)
+    # --- Нарисуй путь ---
+    out = f"{ROOT}/store/path/screens"; os.makedirs(out, exist_ok=True)
     pg = br.new_page(viewport={"width": 360, "height": 640}, device_scale_factor=3)
     pg.add_init_script("""if(!sessionStorage.getItem('x')){sessionStorage.setItem('x',1);localStorage.clear();
-      const d=Math.floor((Date.now()-new Date().getTimezoneOffset()*60e3)/864e5);
-      localStorage.setItem('cm_save',JSON.stringify({coins:84250,total:9e5,lifetime:9e5,gens:[30,22,12,4,0,0,0,0,0,0],tapLv:30,
-        upgs:{g0u10:1,g0u25:1,g1u10:1,tap1:1},last:Date.now(),daily:{day:d,streak:3},bossAt:Date.now()+9e5}));}""")
-    pg.goto(G("idle")); pg.wait_for_timeout(1200)
-    c = pg.evaluate("__game.center()"); box = pg.locator("#cv").bounding_box()
-    def taps(n):
-        for i in range(n):
-            pg.mouse.click(box["x"] + c["cx"] + (i % 3 - 1) * 25, box["y"] + c["cy"] + (i % 2) * 20); pg.wait_for_timeout(35)
-    taps(8); pg.screenshot(path=f"{out}/1_mine.png")
-    pg.evaluate("__game.S.world=2;__game.S.maxWorld=2;__game.S.coins=3.2e8;__game.resetScene();__game.render(true)"); pg.wait_for_timeout(700)
-    c = pg.evaluate("__game.center()"); taps(8); pg.screenshot(path=f"{out}/2_lava.png")
-    pg.evaluate("__game.S.bossAt=0;__game.startBoss()"); pg.wait_for_timeout(300); taps(14); pg.wait_for_timeout(150)
-    pg.screenshot(path=f"{out}/3_boss.png")
-    pg.evaluate("__game.S.boss=null"); pg.reload(); pg.wait_for_timeout(500); pg.evaluate(CLOSE)
-    pg.evaluate("__game.S.world=4;__game.S.maxWorld=4;__game.S.coins=4.1e13;__game.resetScene();__game.render(true)")
-    pg.click('[data-t="w"]'); pg.wait_for_timeout(700)
-    pg.screenshot(path=f"{out}/4_worlds.png")
-    pg.click('[data-t="q"]'); pg.wait_for_timeout(500)
-    c = pg.evaluate("__game.center()"); taps(6); pg.screenshot(path=f"{out}/5_quests.png")
+      localStorage.setItem('dp_stars',JSON.stringify([3,3,3,2,3,3,3,2,3,3,3,3,2,3,3,1,3,2]));}""")
+    pg.goto(G("path")); pg.wait_for_timeout(2400)
+    pg.screenshot(path=f"{out}/1_menu.png")
+    def shot(i, name, wait, skin=0):
+        pg.evaluate(f"__game.setSkin({skin});__game.startLevel({i});__game.strokes=JSON.parse(JSON.stringify(__game.LEVELS[{i}].sol));__game.play()")
+        pg.wait_for_timeout(wait); pg.screenshot(path=f"{out}/{name}.png")
+    shot(4, "2_snake", 2600, 1)
+    shot(17, "3_trampoline", 1500, 2)
+    shot(20, "4_portal", 1250, 4)
+    pg.evaluate(CLOSE); pg.evaluate("__game.goLevels()"); pg.wait_for_timeout(500)
+    pg.screenshot(path=f"{out}/5_levels.png")
     br.close()
 print("ok")
