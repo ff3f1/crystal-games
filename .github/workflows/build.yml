@@ -1,0 +1,103 @@
+name: Build games
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: RuStore — ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: BLOCK
+            dir: block
+            name: Кристальные блоки
+            appId: ru.crystalgames.blocks
+          - key: IDLE
+            dir: idle
+            name: Кристальная шахта
+            appId: ru.crystalgames.mine
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Положить игру и иконки в проект
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r games/${{ matrix.dir }}/. android/app/src/main/assets/
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$d
+            cp store/${{ matrix.dir }}/icons/ic_launcher_$d.png android/app/src/main/res/mipmap-$d/ic_launcher.png
+          done
+
+      - name: Ключ подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/release.jks
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> $GITHUB_ENV
+          else
+            echo "::warning::Секрет KEYSTORE_B64 не задан — сборка подписана отладочным ключом (для RuStore не годится)"
+          fi
+
+      - name: Сборка APK и AAB
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: >
+          gradle assembleRelease bundleRelease --no-daemon
+          -PappId=${{ matrix.appId }}
+          "-PappName=${{ matrix.name }}"
+          -PversionCode=${{ github.run_number }}
+          -PversionName=1.0.${{ github.run_number }}
+          -PadInter=${{ vars[format('{0}_AD_INTER', matrix.key)] || 'demo-interstitial-yandex' }}
+          -PadReward=${{ vars[format('{0}_AD_REWARD', matrix.key)] || 'demo-rewarded-yandex' }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustore-${{ matrix.dir }}
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+
+  vk:
+    name: VK — архивы игр
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Собрать архивы с VK Bridge
+        run: |
+          npm pack @vkontakte/vk-bridge
+          tar xzf vkontakte-vk-bridge-*.tgz
+          BR=$(ls package/dist/browser.min.js 2>/dev/null || ls package/dist/*.min.js | head -1)
+          mkdir -p out
+          for g in block idle; do
+            mkdir -p build/$g
+            cp -r games/$g/. build/$g/
+            cp "$BR" build/$g/vk-bridge.min.js
+            (cd build/$g && zip -r ../../out/vk-$g.zip .)
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vk-games
+          path: out/*.zip

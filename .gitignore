@@ -1,0 +1,4 @@
+secrets/
+signing-key.zip
+*.jks
+*.zip

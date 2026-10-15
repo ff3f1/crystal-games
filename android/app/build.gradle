@@ -1,0 +1,54 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Параметры конкретной игры передаются из сценария сборки (-PgameId=... и т.д.)
+def p = { String k, String d -> project.hasProperty(k) ? project.property(k).toString() : d }
+
+android {
+    namespace 'ru.crystalgames.shell'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId p('appId', 'ru.crystalgames.demo')
+        minSdk 24
+        targetSdk 34
+        versionCode p('versionCode', '1').toInteger()
+        versionName p('versionName', '1.0')
+        resValue 'string', 'app_name', p('appName', 'Game')
+        // ID рекламных блоков Яндекс РСЯ. По умолчанию — демо-блоки Яндекса (для проверки).
+        buildConfigField 'String', 'AD_INTER', '"' + p('adInter', 'demo-interstitial-yandex') + '"'
+        buildConfigField 'String', 'AD_REWARD', '"' + p('adReward', 'demo-rewarded-yandex') + '"'
+    }
+
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            def ks = System.getenv('KEYSTORE_PATH')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('KEYSTORE_PATH') ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.webkit:webkit:1.11.0'
+    implementation 'com.yandex.android:mobileads:7.+'
+}
