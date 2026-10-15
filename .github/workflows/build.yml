@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   android:
     name: RuStore — ${{ matrix.name }}
@@ -17,10 +20,14 @@ jobs:
             dir: block
             name: Кристальные блоки
             appId: ru.crystalgames.blocks
+            adInter: R-M-20230574-1
+            adReward: R-M-20230574-2
           - key: PATH
             dir: path
             name: Нарисуй путь
             appId: ru.crystalgames.drawpath
+            adInter: R-M-20230578-1
+            adReward: R-M-20230578-2
     steps:
       - uses: actions/checkout@v4
 
@@ -69,15 +76,19 @@ jobs:
           "-PappName=${{ matrix.name }}"
           -PversionCode=${{ github.run_number }}
           -PversionName=1.0.${{ github.run_number }}
-          -PadInter=${{ vars[format('{0}_AD_INTER', matrix.key)] || 'demo-interstitial-yandex' }}
-          -PadReward=${{ vars[format('{0}_AD_REWARD', matrix.key)] || 'demo-rewarded-yandex' }}
+          -PadInter=${{ matrix.adInter }}
+          -PadReward=${{ matrix.adReward }}
+
+      - name: Понятные имена файлов
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk out/${{ matrix.dir }}-${{ github.run_number }}.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/${{ matrix.dir }}-${{ github.run_number }}.aab
 
       - uses: actions/upload-artifact@v4
         with:
           name: rustore-${{ matrix.dir }}
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/bundle/release/*.aab
+          path: out/*
 
   vk:
     name: VK — архивы игр
@@ -103,3 +114,20 @@ jobs:
         with:
           name: vk-games
           path: out/*.zip
+
+  builds:
+    name: Готовые файлы в ветку builds
+    needs: [android, vk]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+      - name: Сохранить в ветку builds
+        run: |
+          mkdir -p site && find dl -type f \( -name '*.apk' -o -name '*.aab' -o -name '*.zip' \) -exec cp {} site/ \;
+          cd site && ls -la
+          git init -q -b builds
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add -A && git commit -qm "Сборка ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" builds
