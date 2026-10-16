@@ -1,0 +1,106 @@
+name: Build Звёздный рой
+
+# Отдельная сборка новой игры: не трогает сборки «Кристальных блоков» и «Нарисуй путь»
+on:
+  push:
+    branches: [swarm, main]
+    paths: ['games/swarm/**', 'store/swarm/**', 'android/**', '.github/workflows/build-swarm.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: RuStore — Звёздный рой
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Положить игру и иконки в проект
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r games/swarm/. android/app/src/main/assets/
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$d
+            cp store/swarm/icons/ic_launcher_$d.png android/app/src/main/res/mipmap-$d/ic_launcher.png
+          done
+      - name: Ключ подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/release.jks
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> $GITHUB_ENV
+          else
+            echo "::warning::Секрет KEYSTORE_B64 не задан — сборка подписана отладочным ключом"
+          fi
+      - name: Сборка APK и AAB
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: >
+          gradle assembleRelease bundleRelease --no-daemon
+          -PappId=ru.crystalgames.swarm
+          "-PappName=Звёздный рой"
+          -PversionCode=${{ github.run_number }}
+          -PversionName=1.0.${{ github.run_number }}
+          -PadInter=${{ vars.SWARM_AD_INTER || 'demo-interstitial-yandex' }}
+          -PadReward=${{ vars.SWARM_AD_REWARD || 'demo-rewarded-yandex' }}
+      - name: Понятные имена файлов
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk out/swarm-${{ github.run_number }}.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/swarm-${{ github.run_number }}.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rustore-swarm
+          path: out/*
+
+  vk:
+    name: VK и веб — архив игры
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Архивы с VK Bridge
+        run: |
+          npm pack @vkontakte/vk-bridge
+          tar xzf vkontakte-vk-bridge-*.tgz
+          BR=$(ls package/dist/browser.min.js 2>/dev/null || ls package/dist/*.min.js | head -1)
+          mkdir -p out build/swarm
+          cp -r games/swarm/. build/swarm/
+          cp "$BR" build/swarm/vk-bridge.min.js
+          (cd build/swarm && zip -r ../../out/vk-swarm.zip .)
+          (cd games/swarm && zip -r ../../out/web-swarm.zip .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vk-swarm
+          path: out/*.zip
+
+  builds:
+    name: Готовые файлы в ветку builds-swarm
+    needs: [android, vk]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+      - name: Сохранить в ветку builds-swarm
+        run: |
+          mkdir -p site && find dl -type f \( -name '*.apk' -o -name '*.aab' -o -name '*.zip' \) -exec cp {} site/ \;
+          cd site && ls -la
+          git init -q -b builds-swarm
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add -A && git commit -qm "Сборка Звёздного роя ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" builds-swarm

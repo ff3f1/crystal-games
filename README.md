@@ -1,11 +1,12 @@
 # Crystal Games
 
-Две HTML5-игры с рекламой для RuStore (Android) и VK.
+HTML5-игры с рекламой для RuStore (Android), VK и веба.
 
 | Папка | Игра |
 |---|---|
 | `games/block` | «Кристальные блоки» — головоломка 8×8 |
 | `games/path` | «Нарисуй путь» — физическая головоломка, 30 уровней |
+| `games/swarm` | «Звёздный рой» — экшен: рой светлячков, 40 планет, WebGL |
 | `android` | Android-оболочка (WebView + Яндекс Рекламная сеть) |
 | `store` | иконки, скриншоты 1080×1920, тексты для витрин |
 | `privacy.html` | политика конфиденциальности (публикуется через GitHub Pages) |
@@ -36,4 +37,18 @@ ID рекламных блоков из кабинета Яндекс Рекла
 python3 tests/test_block.py <папка_для_скриншотов>
 python3 tests/test_path.py <папка_для_скриншотов>
 python3 tools/path_levels.py <папка>   # пересборка и проверка уровней «Нарисуй путь»
+```
+
+## «Звёздный рой» (ветка `swarm`)
+Отдельная сборка `.github/workflows/build-swarm.yml` (не трогает две другие игры):
+- пакет `ru.crystalgames.swarm`, файлы попадают в ветку `builds-swarm`: `swarm-N.apk`, `swarm-N.aab`, `vk-swarm.zip`, `web-swarm.zip`;
+- ID рекламных блоков — переменные `SWARM_AD_INTER`, `SWARM_AD_REWARD` (пока не заданы — демо-блоки);
+- ключ подписи — те же секреты, что и у других игр.
+
+Код: `games/swarm/js/` — `render.js` (WebGL, свечение), `world.js` (рой, бой, опасности, боты), `galaxy.js` (карта галактики),
+`game.js` (экраны, награды, сохранение), `platform.js` (реклама Android/VK/Яндекс Игры), `data.js` (биомы, мутации, баланс).
+
+```
+python3 tests/test_swarm.py <папка>    # автопилот проходит первую планету + проверка баланса
+python3 tools/swarm_shots.py           # скриншоты для витрин 1080×1920
 ```
