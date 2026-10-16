@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 
 def ads = new Properties()
 file('ads.properties').withInputStream { ads.load(it) }
-def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+def runNumber = ((System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int) + 10
 def ksPath = System.getenv('KEYSTORE_PATH')
 def ks = ksPath ? file(ksPath) : file('release.jks')
 
