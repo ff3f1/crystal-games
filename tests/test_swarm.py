@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 URL = "file://" + os.path.join(ROOT, "games", "swarm", "index.html")
 OUT = sys.argv[1] if len(sys.argv) > 1 else "."
-ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+ARGS = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--disable-gpu-rasterization", "--disable-partial-raster", "--disable-oop-rasterization"]
 errors = []
 with sync_playwright() as p:
     b = p.chromium.launch(args=ARGS)
