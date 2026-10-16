@@ -6,6 +6,7 @@
 |---|---|
 | `games/block` | «Кристальные блоки» — головоломка 8×8 |
 | `games/path` | «Нарисуй путь» — физическая головоломка, 30 уровней |
+| `games/snowball` | «Снежный ком» — аркада: кати ком, расти, сноси всё меньше себя |
 | `android` | Android-оболочка (WebView + Яндекс Рекламная сеть) |
 | `store` | иконки, скриншоты 1080×1920, тексты для витрин |
 | `privacy.html` | политика конфиденциальности (публикуется через GitHub Pages) |
@@ -36,4 +37,12 @@ ID рекламных блоков из кабинета Яндекс Рекла
 python3 tests/test_block.py <папка_для_скриншотов>
 python3 tests/test_path.py <папка_для_скриншотов>
 python3 tools/path_levels.py <папка>   # пересборка и проверка уровней «Нарисуй путь»
+```
+
+## «Снежный ком» (ветка `snowball`)
+Сборка `.github/workflows/build-snowball.yml` → ветка `builds-snowball`: `snowball-N.apk`, `snowball-N.aab`, `vk-snowball.zip`, `web-snowball.zip`.
+Пакет `ru.crystalgames.snowball`; ID рекламы — переменные `SNOWBALL_AD_INTER`, `SNOWBALL_AD_REWARD` (пока не заданы — демо-блоки).
+```
+python3 tests/test_snowball.py <папка>    # автопилот проходит 2 уровня
+python3 tools/snowball_assets.py          # иконка и скриншоты для витрин
 ```
