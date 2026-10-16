@@ -53,8 +53,8 @@ jobs:
           "-PappName=Снежный ком"
           -PversionCode=${{ github.run_number }}
           -PversionName=1.0.${{ github.run_number }}
-          -PadInter=${{ vars.SNOWBALL_AD_INTER || 'demo-interstitial-yandex' }}
-          -PadReward=${{ vars.SNOWBALL_AD_REWARD || 'demo-rewarded-yandex' }}
+          -PadInter=${{ vars.SNOWBALL_AD_INTER || 'R-M-20234827-1' }}
+          -PadReward=${{ vars.SNOWBALL_AD_REWARD || 'R-M-20234827-2' }}
       - name: Понятные имена файлов
         run: |
           mkdir -p out
