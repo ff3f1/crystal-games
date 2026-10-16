@@ -1,0 +1,52 @@
+name: Build Бабушкин погреб
+
+on:
+  push:
+    branches: [pogreb]
+    paths: ['pogreb/**', '.github/workflows/build-pogreb.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Ключ подписи
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > $RUNNER_TEMP/release.jks
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> $GITHUB_ENV
+          fi
+      - name: Сборка APK и AAB
+        working-directory: pogreb
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: >
+          gradle assembleRelease bundleRelease --no-daemon
+          -PadReward=R-M-20226272-1 -PadInter=R-M-20226272-2
+      - name: Файлы
+        run: |
+          mkdir -p out
+          cp pogreb/app/build/outputs/apk/release/*.apk out/pogreb-${{ github.run_number }}.apk
+          cp pogreb/app/build/outputs/bundle/release/*.aab out/pogreb-${{ github.run_number }}.aab
+      - name: В ветку builds-pogreb
+        run: |
+          cd out
+          git init -q -b builds-pogreb
+          git config user.name "github-actions" && git config user.email "actions@github.com"
+          git add -A && git commit -qm "Сборка Бабушкина погреба ${{ github.run_number }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" builds-pogreb

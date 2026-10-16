@@ -1,0 +1,52 @@
+plugins { id 'com.android.application' }
+
+def ads = new Properties()
+file('ads.properties').withInputStream { ads.load(it) }
+def runNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+def ksPath = System.getenv('KEYSTORE_PATH')
+def ks = ksPath ? file(ksPath) : file('release.jks')
+
+android {
+    namespace 'ru.babushkinpogreb.game'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'ru.babushkinpogreb.game'
+        minSdk 24
+        targetSdk 34
+        versionCode runNumber
+        versionName "1.0.${runNumber}"
+        buildConfigField 'String', 'REWARDED_ID', "\"${project.findProperty('adReward') ?: ads.REWARDED_ID}\""
+        buildConfigField 'String', 'INTERSTITIAL_ID', "\"${project.findProperty('adInter') ?: ads.INTERSTITIAL_ID}\""
+    }
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            if (ks.exists()) {
+                storeFile ks
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS') ?: 'pogreb'
+                keyPassword System.getenv('KEY_PASSWORD') ?: System.getenv('KEYSTORE_PASSWORD')
+                enableV1Signing true
+                enableV2Signing true
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (ks.exists()) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.yandex.android:mobileads:7.+'
+}

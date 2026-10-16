@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Бабушкин погреб</title>
+<style>
+body{margin:0;font-size:14px}img{max-width:100%}
+@font-face{font-family:"Neucha";src:url(fonts/Neucha.ttf) format("truetype");font-display:swap}
+@font-face{font-family:"Ruslan Display";src:url(fonts/RuslanDisplay.ttf) format("truetype");font-display:swap}
+@font-face{font-family:"Rubik";src:url(fonts/Rubik.ttf) format("truetype");font-weight:300 900;font-display:swap}
+</style>
+<style>
+/* Layout: one-screen mobile game. Brick cellar backdrop with a hanging lamp at top centre,
+   level pill + icon buttons, grandma's speech line, grid of wooden shelves, three tools below.
+   Single dark look by choice (it is a cellar). */
+:root{
+  --wall:#140e0b; --card:#2a1e17; --card-2:#35271d; --line:rgba(244,197,108,.32);
+  --lamp:#f4c56c; --lamp-deep:#c98d2e; --ink:#f6eadb; --muted:#bca78d; --chalk:#f1ebdd;
+  --hint:#aee07f; --red:#d0533c;
+  --f-title:"Ruslan Display",Georgia,serif;
+  --f-hand:"Neucha","Comic Sans MS",cursive;
+  --f-body:"Rubik",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--wall);color:var(--ink);font-family:var(--f-body);overflow-x:hidden;touch-action:manipulation;-webkit-user-select:none;user-select:none}
+#bg{position:fixed;inset:0;z-index:0;background-color:var(--wall);background-size:256px 192px,auto,auto}
+#bg::after{content:"";position:absolute;inset:0;background:
+  radial-gradient(ellipse 75% 50% at 50% 0%,rgba(244,197,108,.26),transparent 70%),
+  radial-gradient(ellipse 120% 90% at 50% 35%,transparent 45%,rgba(0,0,0,.72) 100%)}
+#dust{position:fixed;inset:0;z-index:1;pointer-events:none;width:100%;height:100%}
+.app{position:relative;z-index:2;max-width:780px;margin:0 auto;padding-inline:16px;padding-block:12px 16px;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:12px}
+
+/* lamp */
+.lamp{position:absolute;left:50%;top:calc(-1 * env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.cord{width:2px;height:26px;background:#3a2c22}
+.cap{width:16px;height:7px;background:#4a3a2c;border-radius:3px 3px 0 0}
+.bulb{width:18px;height:20px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 45% 40%,#fffbe8,#ffd986 45%,#e8a43c 100%);box-shadow:0 0 18px 6px rgba(255,205,110,.55),0 0 70px 26px rgba(255,190,90,.18);animation:flicker 7s infinite}
+@keyframes flicker{0%,100%,43%,47%{opacity:1}44%{opacity:.78}46%{opacity:.9}}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px}
+.pill{display:flex;flex-direction:column;gap:2px;padding:6px 12px;border-radius:12px;background:rgba(20,13,9,.55);border:1px solid var(--line)}
+.pill b{font-family:var(--f-hand);font-weight:400;font-size:21px;line-height:1;color:var(--lamp)}
+.pill span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.top-btns{display:flex;gap:6px}
+button{font-family:var(--f-body);color:var(--ink);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ib{width:42px;height:42px;border-radius:12px;background:rgba(20,13,9,.55);border:1px solid var(--line);display:grid;place-items:center;padding:0}
+.ib svg{width:22px;height:22px}
+.ib:active{transform:scale(.94)}
+:focus-visible{outline:2px solid var(--lamp);outline-offset:3px}
+
+/* grandma */
+.granny-row{display:flex;align-items:center;gap:10px}
+.face{width:58px;height:58px;flex:0 0 auto;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.face svg{width:100%;height:100%;display:block}
+.face .v{display:none}
+.face[data-mood="ok"] .v-ok,.face[data-mood="happy"] .v-happy,.face[data-mood="worried"] .v-worried{display:inline}
+.bubble{position:relative;margin:0;flex:1;min-width:0;background:#f3e7cf;color:#3b2a1b;border-radius:14px;padding:8px 13px;font-family:var(--f-hand);font-size:18px;line-height:1.22;min-height:2.5em;display:flex;align-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35)}
+.bubble::before{content:"";position:absolute;left:-7px;top:50%;margin-top:-7px;border:7px solid transparent;border-right-color:#f3e7cf;border-left:0}
+.bubble.say{animation:sayIn .25s ease-out}
+@keyframes sayIn{from{opacity:.2;transform:translateY(3px)}to{opacity:1;transform:none}}
+
+/* cellar */
+.cellar{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 16px;align-content:center;padding-block:18px 10px}
+.shelf{container-type:inline-size;padding:0 8px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;outline-offset:6px;border-radius:6px}
+.slots{display:flex;gap:3cqi;align-items:flex-end;position:relative;z-index:1}
+.jar,.slot{flex:1 1 0;min-width:0;aspect-ratio:60/86;display:block}
+.jar{transition:transform .16s ease;filter:drop-shadow(0 3px 2px rgba(0,0,0,.45));overflow:visible}
+.jar.lift{transform:translateY(-22%);filter:drop-shadow(0 12px 8px rgba(0,0,0,.5)) drop-shadow(0 0 8px rgba(255,214,130,.45))}
+.slot{background:radial-gradient(ellipse 55% 7% at 50% 99%,rgba(0,0,0,.35),transparent)}
+.plank{position:relative;height:15px;margin-inline:-8px;border-radius:2px;
+  background:
+    repeating-linear-gradient(92deg,rgba(0,0,0,.09) 0 1px,transparent 1px 7px,rgba(255,255,255,.04) 7px 8px,transparent 8px 13px),
+    linear-gradient(180deg,#c4935f 0 26%,#94603a 26%,#7a4b2b 70%,#5b351c 100%);
+  box-shadow:0 12px 16px -4px rgba(0,0,0,.7);transition:box-shadow .15s}
+.plank::before,.plank::after{content:"";position:absolute;top:100%;width:9px;height:11px;background:#2b2420;clip-path:polygon(0 0,100% 0,0 100%)}
+.plank::before{left:16%}
+.plank::after{right:16%;transform:scaleX(-1)}
+.shelf.sel .plank{box-shadow:0 0 0 2px var(--lamp),0 0 16px rgba(244,197,108,.5),0 12px 16px -4px rgba(0,0,0,.7)}
+.shelf.hint .plank{animation:glow .8s ease-in-out infinite alternate}
+@keyframes glow{from{box-shadow:0 0 0 1px var(--hint),0 12px 16px -4px rgba(0,0,0,.7)}to{box-shadow:0 0 0 3px var(--hint),0 0 22px var(--hint),0 12px 16px -4px rgba(0,0,0,.7)}}
+.chalk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-hand);font-size:13px;line-height:1;color:var(--chalk);opacity:.92;text-shadow:0 0 1px rgba(255,255,255,.4);letter-spacing:.04em}
+.shelf.fresh .chalk{animation:write .7s steps(12) both}
+@keyframes write{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.shelf.shake{animation:shake .3s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-6px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.spark{position:absolute;left:50%;bottom:16px;width:6px;height:6px;border-radius:50%;background:#ffe39a;box-shadow:0 0 8px #ffd36a;pointer-events:none;z-index:3;animation:spark .7s ease-out forwards}
+@keyframes spark{from{transform:translate(-50%,0) scale(1);opacity:1}to{transform:translate(calc(-50% + var(--dx)),var(--dy)) scale(.3);opacity:0}}
+.cellar{justify-content:center}
+.cellar.tight .chalk{font-size:11px}
+
+/* tools */
+.tools{display:flex;gap:8px}
+.tool{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px 8px;border-radius:14px;background:linear-gradient(180deg,var(--card-2),var(--card));border:1px solid var(--line);box-shadow:0 4px 0 #120c08,0 6px 12px rgba(0,0,0,.4);font-size:14px;font-weight:500;position:relative}
+.tool svg{width:24px;height:24px}
+.tool em{font-style:normal;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#2a1a0e;background:var(--lamp);border-radius:6px;padding:1px 6px;font-weight:700}
+.tool:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #120c08,0 3px 8px rgba(0,0,0,.4)}
+.tool:disabled{opacity:.4;cursor:default}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:16px;background:rgba(10,6,4,.74);overflow-y:auto}
+.overlay.show .card{animation:cardIn .3s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes cardIn{from{transform:translateY(16px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+.card{position:relative;width:100%;max-width:360px;box-sizing:border-box;background:linear-gradient(180deg,var(--card-2),var(--card));border:1px solid var(--line);border-radius:20px;padding:58px 20px 20px;margin-top:46px;text-align:center;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.6)}
+.card .face{position:absolute;left:50%;top:-50px;width:96px;height:96px;transform:translateX(-50%)}
+.card h2{margin:0;font-family:var(--f-title);font-weight:400;font-size:34px;line-height:1.1;color:var(--lamp);text-wrap:balance}
+.card p{margin:0;line-height:1.45}
+.quote{font-family:var(--f-hand);font-size:20px;line-height:1.25}
+.stat{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.stars{display:flex;justify-content:center;gap:8px}
+.stars svg{width:44px;height:44px;opacity:.25;transform:scale(.7)}
+.stars svg.on{animation:starIn .35s cubic-bezier(.2,.9,.3,1.6) forwards}
+@keyframes starIn{to{opacity:1;transform:scale(1)}}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>button{flex:1 1 0}
+.btn{padding:12px 14px;border-radius:12px;font-size:16px;font-weight:500;background:var(--card-2);border:1px solid var(--line);box-shadow:0 3px 0 #120c08}
+.btn.primary{background:linear-gradient(180deg,#ffd77f,var(--lamp-deep));color:#2a1708;border-color:#ffd77f;font-weight:700;box-shadow:0 3px 0 #7a4e14}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:none}
+.btn:disabled{opacity:.45;cursor:default}
+.btn small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.75;font-weight:500}
+.share-text{font-size:13px;color:var(--muted);user-select:all;-webkit-user-select:all;background:rgba(0,0,0,.3);border-radius:8px;padding:8px}
+.ad-tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ad-box{aspect-ratio:16/9;border:1px dashed var(--muted);border-radius:12px;display:grid;place-items:center;padding:12px;color:var(--muted);font-size:14px;line-height:1.45}
+.ad-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.ad-bar i{display:block;height:100%;width:0;background:var(--lamp)}
+
+/* menu */
+#menu{background:transparent;place-items:center}
+#menu::before{content:"";position:fixed;inset:0;background:rgba(10,6,4,.95);z-index:-1}
+.menu{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.menu .face{width:132px;height:132px}
+.logo{margin:0;font-family:var(--f-title);font-weight:400;font-size:clamp(40px,12vw,60px);line-height:1;color:var(--lamp);text-shadow:0 3px 0 #6b4314,0 0 30px rgba(244,197,108,.35);text-wrap:balance}
+.tagline{margin:0;font-family:var(--f-hand);font-size:20px;color:var(--ink)}
+.menu .btn{width:100%}
+.rules{margin:0;font-size:14px;line-height:1.5;color:var(--muted);max-width:34ch}
+.toggles{display:flex;gap:8px;width:100%}
+.toggles .btn{flex:1;font-size:14px}
+.btn[aria-pressed="false"]{opacity:.6}
+
+.no-ads .tool em,.no-ads #stShelf small{display:none}
+.menu-open .app{visibility:hidden}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="bg" aria-hidden="true"></div>
+<canvas id="dust" aria-hidden="true"></canvas>
+<div id="sprites" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></div>
+
+<div class="app">
+  <div class="lamp" aria-hidden="true"><i class="cord"></i><i class="cap"></i><i class="bulb"></i></div>
+  <header class="top">
+    <div class="pill"><b id="lvlText">Уровень 1</b><span id="stats">0 ходов</span></div>
+    <div class="top-btns">
+      <button class="ib" id="btnSound" aria-label="Выключить звук"></button>
+      <button class="ib" id="btnRestart" aria-label="Начать уровень заново"></button>
+      <button class="ib" id="btnMenu" aria-label="Меню"></button>
+    </div>
+  </header>
+  <div class="granny-row">
+    <div class="face" id="faceMain" data-mood="ok"></div>
+    <p class="bubble" id="say" aria-live="polite"></p>
+  </div>
+  <main class="cellar" id="cellar" aria-label="Полки с банками"></main>
+  <footer class="tools" id="tools">
+    <button class="tool" id="btnUndo"><span class="ico" data-ico="undo"></span>Отменить</button>
+    <button class="tool" id="btnHint"><span class="ico" data-ico="hint"></span>Подсказка<em>реклама</em></button>
+    <button class="tool" id="btnShelf"><span class="ico" data-ico="shelf"></span>Полка<em>реклама</em></button>
+  </footer>
+</div>
+
+<div class="overlay" id="menu" hidden>
+  <div class="menu">
+    <div class="face" data-mood="happy"></div>
+    <h1 class="logo">Бабушкин погреб</h1>
+    <p class="tagline">Разложи закатки по полкам</p>
+    <button class="btn primary" id="btnPlay">Играть</button>
+    <div class="toggles">
+      <button class="btn" id="tgSfx" aria-pressed="true">Звуки</button>
+      <button class="btn" id="tgMusic" aria-pressed="true">Музыка</button>
+    </div>
+    <p class="rules">Тапни полку, чтобы взять крайнюю банку, и тапни другую, чтобы поставить. Ставить можно к такой же банке или на пустое место. Собери на каждой полке четыре одинаковые банки.</p>
+  </div>
+</div>
+
+<div class="overlay" id="win" hidden>
+  <div class="card">
+    <div class="face" data-mood="happy"></div>
+    <h2>Порядок!</h2>
+    <div class="stars" id="stars"></div>
+    <p class="quote" id="winQuote"></p>
+    <p class="stat" id="winStat"></p>
+    <div class="row">
+      <button class="btn" id="btnShare">Поделиться</button>
+      <button class="btn primary" id="btnNext">Дальше</button>
+    </div>
+    <p class="share-text" id="shareText" hidden></p>
+  </div>
+</div>
+
+<div class="overlay" id="stuck" hidden>
+  <div class="card">
+    <div class="face" data-mood="worried"></div>
+    <h2>Тупик</h2>
+    <p class="quote">Ох, внучок, так банки уже не разложить. Отмени пару ходов или начни заново.</p>
+    <button class="btn primary" id="stRestart">Играть заново</button>
+    <div class="row">
+      <button class="btn" id="stUndo">Отменить ход</button>
+      <button class="btn" id="stShelf">+ Полка<small>за рекламу</small></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ad" hidden>
+  <div class="card" style="padding-top:20px;margin-top:0">
+    <div class="ad-tag" id="adTitle">Реклама</div>
+    <div class="ad-box">В приложении здесь будет ролик рекламной сети.<br>Сейчас это заглушка прототипа.</div>
+    <div class="ad-bar"><i id="adBar"></i></div>
+    <div class="row">
+      <button class="btn" id="adSkip">Отказаться</button>
+      <button class="btn primary" id="adGo" disabled>Забрать</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Логика игры (чистые функции, без DOM) ===== */
+const CAP = 4;
+const TYPE_COUNT = 8;
+
+const copy = sh => sh.map(s => s.slice());
+const isDone = s => s.length === CAP && s.every(x => x === s[0]);
+const solved = sh => sh.every(s => !s.length || isDone(s));
+function canMove(sh, a, b) {
+  if (a === b) return false;
+  const A = sh[a], B = sh[b];
+  if (!A || !B || !A.length || B.length >= CAP) return false;
+  if (isDone(A)) return false;
+  return !B.length || B[B.length - 1] === A[A.length - 1];
+}
+const key = sh => sh.map(s => s.join('')).sort().join('|');
+
+/* Все осмысленные ходы. Отбрасываем только заведомо бесполезные:
+   перенос банки с однородной полки на пустую ничего не меняет по сути. */
+function usefulMoves(sh) {
+  const out = [];
+  for (let a = 0; a < sh.length; a++) {
+    const A = sh[a];
+    if (!A.length || isDone(A)) continue;
+    const uni = A.every(x => x === A[0]);
+    let seenEmpty = false;
+    for (let b = 0; b < sh.length; b++) {
+      if (!canMove(sh, a, b)) continue;
+      const empty = !sh[b].length;
+      if (empty && uni) continue;
+      if (empty) { if (seenEmpty) continue; seenEmpty = true; } // пустые полки равнозначны
+      // приоритет: на такую же банку (особенно если полка почти собрана), потом на пустую
+      let p = empty ? 2 : 0;
+      if (!empty && sh[b].every(x => x === sh[b][0])) p = -1;
+      out.push({ a, b, p });
+    }
+  }
+  out.sort((x, y) => x.p - y.p);
+  return out;
+}
+
+/* Поиск решения. Возвращает {path} или {path:null, aborted}.
+   aborted=false означает: решения ДОКАЗАННО нет. */
+function solve(start, limit) {
+  const seen = new Set();
+  let nodes = 0, aborted = false;
+  const path = [];
+  const sh = copy(start);
+  function dfs() {
+    if (solved(sh)) return true;
+    if (++nodes > limit) { aborted = true; return false; }
+    const k = key(sh);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    for (const m of usefulMoves(sh)) {
+      sh[m.b].push(sh[m.a].pop());
+      path.push([m.a, m.b]);
+      if (dfs()) return true;
+      path.pop();
+      sh[m.a].push(sh[m.b].pop());
+      if (aborted) return false;
+    }
+    return false;
+  }
+  const ok = dfs();
+  return ok ? { path: path.slice(), nodes } : { path: null, aborted, nodes };
+}
+
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+function shuffle(a, R) {
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+function spec(level) {
+  const types = Math.min(3 + Math.floor((level - 1) / 2), TYPE_COUNT);
+  return { types, empty: 2, candidates: level >= 6 ? 3 : 1 };
+}
+
+/* Запасной генератор: перемешивание обратными ходами от собранного состояния.
+   Решаемость гарантирована по построению. */
+function reverseScramble(picks, empty, R) {
+  const sh = picks.map(t => Array(CAP).fill(t));
+  for (let i = 0; i < empty; i++) sh.push([]);
+  for (let step = 0; step < 400; step++) {
+    const from = Math.floor(R() * sh.length), to = Math.floor(R() * sh.length);
+    if (from === to) continue;
+    const F = sh[from], T = sh[to];
+    if (!F.length || T.length >= CAP) continue;
+    const x = F[F.length - 1];
+    // обратный ход допустим, если прямой ход (to -> from) был бы легален
+    const under = F.length >= 2 ? F[F.length - 2] : null;
+    if (under !== null && under !== x) continue;
+    T.push(F.pop());
+  }
+  return sh;
+}
+
+/* Уровень гарантированно решаем: принимаем только раскладки, для которых решатель нашёл решение */
+function generate(level, R) {
+  R = R || Math.random;
+  const { types, empty, candidates } = spec(level);
+  const picks = shuffle([...Array(TYPE_COUNT).keys()], R).slice(0, types);
+  let best = null;
+  for (let attempt = 0; attempt < 40 && (!best || best.count < candidates); attempt++) {
+    const pool = shuffle(picks.flatMap(t => Array(CAP).fill(t)), R);
+    const sh = [];
+    for (let i = 0; i < types; i++) sh.push(pool.slice(i * CAP, (i + 1) * CAP));
+    for (let i = 0; i < empty; i++) sh.push([]);
+    if (sh.some(isDone)) continue;
+    // не даём почти собранных полок на старте (3 одинаковые снизу)
+    if (sh.some(s => s.length === CAP && s[0] === s[1] && s[1] === s[2])) continue;
+    const r = solve(sh, 60000);
+    if (!r.path) continue;
+    const score = r.nodes + r.path.length * 3;
+    if (!best || score > best.score) best = { sh, score, count: (best ? best.count : 0) + 1 };
+    else best.count++;
+  }
+  if (best) return best.sh;
+  let sh;
+  do { sh = reverseScramble(picks, empty, R); } while (solved(sh));
+  return sh;
+}
+
+/* Проверка сохранённого состояния на целостность */
+function validState(sh) {
+  if (!Array.isArray(sh) || sh.length < 3 || sh.length > 14) return false;
+  const counts = {};
+  for (const s of sh) {
+    if (!Array.isArray(s) || s.length > CAP) return false;
+    for (const x of s) {
+      if (!Number.isInteger(x) || x < 0 || x >= TYPE_COUNT) return false;
+      counts[x] = (counts[x] || 0) + 1;
+    }
+  }
+  return Object.values(counts).every(c => c === CAP) && Object.keys(counts).length > 0;
+}
+/* ===== конец логики ===== */
+
+
+/* ADS=true: точки показа рекламы (в прототипе заглушки). ADS=false: релиз без рекламы, награды бесплатно */
+const ADS=true;
+const IN_APP=!!window.AndroidApp;
+if(!ADS)document.documentElement.classList.add('no-ads');
+
+/* ================= Контент ================= */
+const TYPES=['Огурцы','Томаты','Мёд','Малина','Грибы','Черника','Капуста','Абрикос'];
+const LINES={
+  first:'Тапни полку, возьмёшь крайнюю банку. Тапни другую, поставишь. Ставить можно к такой же банке или на пустое место.',
+  start:['Опять всё перемешали! Огурцы к огурцам, варенье к варенью.','Зима на носу, а в погребе бардак. Разложи-ка по полкам.','Дед искал хрен и всё переставил. Помогай.','Соседка Зинаида заходила. После неё всегда так.','Внук приезжал, банки считал. Насчитал, а сложить забыл.','Кот залез в погреб. Кота выгнали, банки остались.','Сестра из города звонила, просит малинового. А где оно тут найдётся?','Картошку спускали и всё задели. Наведи порядок.'],
+  done:['Вот это полка! Закатано.','Красота, как у людей.','Ну хоть одна полка по-человечески.','Эту хоть соседям показывай.','Вот так, вот так. Молодец.'],
+  win:['Вот теперь порядок! Возьми баночку малинового с собой.','Умница! Дед бы час возился.','Хоть сейчас на выставку в сельсовет.','Ну всё, к зиме готовы. Почти.','Пирожков напеку, заслужил.','Вот это руки! Не то что у деда.'],
+  bad:['Не, так не встанет. Только к такой же банке или на пустое место.','Куда! Огурцы с вареньем не дружат.','Ты что, грибы к мёду? Не балуй.'],
+  full:'Эта полка и так полная, глаза-то разуй.',
+  empty:'Тут пусто, брать нечего.',
+  doneShelf:'Эту не трогай, она уже закатана.',
+  undo:['Передумал? Бывает.','Ничего, переставим.','Вернула как было.'],
+  restart:'Ладно, начнём сначала. Не торопись.',
+  shelf:'Дед полку прибил. Пользуйся, пока не отвалилась.',
+  hint:'Переставь банку с полки, что светится, на вторую светящуюся.',
+  hintUnknown:'Сама не соображу, внучок. Попробуй сам, я в тебя верю.'
+};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const $=id=>document.getElementById(id);
+const reduced=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function plural(n,f){const a=n%10,b=n%100;if(a===1&&b!==11)return f[0];if(a>=2&&a<=4&&(b<10||b>=20))return f[1];return f[2]}
+function load(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+
+/* ================= Графика: банки ================= */
+const BODY='M9 24 Q9 16 17 16 H43 Q51 16 51 24 V76 Q51 84 43 84 H17 Q9 84 9 76 Z';
+const f1=n=>Math.round(n*10)/10;
+const CONTENT=[
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#a9b45a"/>';
+    for(let i=0;i<5;i++){const x=9.5+i*8.3,y=f1(21+R()*7);
+      s+=`<rect x="${f1(x)}" y="${y}" width="8.6" height="66" rx="4.3" fill="#3f6c27" stroke="#23441a" stroke-width=".7"/><path d="M${f1(x+2.5)} ${f1(y+4)}V${f1(y+58)}" stroke="#7aa64c" stroke-width="1.3" stroke-linecap="round"/>`;
+      for(let k=0;k<6;k++)s+=`<circle cx="${f1(x+1.6+R()*5.4)}" cy="${f1(y+7+R()*52)}" r=".75" fill="#22401a"/>`;}
+    return s+'<path d="M21 20q6 9 3 24M24 27l6-4M23 33l-6-3M24 39l5-2" stroke="#2c4818" stroke-width="1.1" fill="none"/><ellipse cx="38" cy="79" rx="3.6" ry="2.5" fill="#f5efe0"/>';},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#d98458"/>';
+    const ys=[28,41,54,67,80];ys.forEach((y,r)=>{const xs=r%2?[22,37]:[15,30,45];xs.forEach(x=>{const cx=f1(x+R()*2-1),cy=f1(y+R()*2-1);
+      s+=`<circle cx="${cx}" cy="${cy}" r="7.7" fill="#c42f1c" stroke="#8e1f10" stroke-width=".6"/><ellipse cx="${f1(cx-2.6)}" cy="${f1(cy-2.8)}" rx="2.5" ry="1.6" fill="#f08467" opacity=".85"/><path d="M${f1(cx-2.3)} ${f1(cy-6.6)}l2.3 1.7 2.3-1.7" stroke="#3d6b22" stroke-width="1.1" fill="none"/>`;});});
+    return s;},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="url(#honey)"/>';
+    s+='<g transform="translate(24 64)"><polygon points="7,0 3.5,6 -3.5,6 -7,0 -3.5,-6 3.5,-6" fill="#f4b73e" stroke="#b9780f" stroke-width="1"/><path d="M0-6V6M-7 0H7" stroke="#b9780f" stroke-width=".7"/></g>';
+    for(let i=0;i<9;i++)s+=`<circle cx="${f1(14+R()*32)}" cy="${f1(26+R()*52)}" r="${f1(.7+R()*1.3)}" fill="#fff6d0" opacity=".55"/>`;
+    return s+'<rect x="0" y="20" width="60" height="5" fill="#ffe08a" opacity=".55"/>';},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#6c0e2f"/>';
+    for(let i=0;i<18;i++){const cx=f1(12+R()*36),cy=f1(24+R()*58);
+      s+=`<circle cx="${cx}" cy="${cy}" r="5.4" fill="#c42b5b"/>`;
+      for(let k=0;k<5;k++){const a=k*1.26+R();s+=`<circle cx="${f1(cx+Math.cos(a)*2.6)}" cy="${f1(cy+Math.sin(a)*2.6)}" r="1.3" fill="#e46c94"/>`;}}
+    return s;},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#b4884b"/>';
+    s+='<ellipse cx="40" cy="44" rx="6" ry="2.4" transform="rotate(-35 40 44)" fill="#7a8a39"/>';
+    const pos=[[16,30],[33,27],[46,35],[22,46],[40,54],[14,62],[30,68],[46,72],[20,80]];
+    pos.forEach(([x,y])=>{const cx=f1(x+R()*3-1.5),cy=f1(y+R()*3-1.5);
+      s+=`<rect x="${f1(cx-2.3)}" y="${cy}" width="4.6" height="7.5" rx="1.6" fill="#f1e3c5"/><path d="M${f1(cx-7.5)} ${f1(cy+1.5)}Q${cx} ${f1(cy-9)} ${f1(cx+7.5)} ${f1(cy+1.5)}Z" fill="#6a3c1b"/><path d="M${f1(cx-4)} ${f1(cy-2)}Q${f1(cx-1)} ${f1(cy-5.4)} ${f1(cx+2.4)} ${f1(cy-5)}" stroke="#a96d3a" stroke-width="1.1" fill="none" stroke-linecap="round"/>`;});
+    for(let i=0;i<6;i++)s+=`<circle cx="${f1(12+R()*36)}" cy="${f1(30+R()*50)}" r="1.1" fill="#2a1a10"/>`;
+    return s;},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#151b44"/>';
+    for(let i=0;i<30;i++){const cx=f1(11+R()*38),cy=f1(23+R()*60);
+      s+=`<circle cx="${cx}" cy="${cy}" r="3.8" fill="#4757a8"/><circle cx="${f1(cx-1.2)}" cy="${f1(cy-1.3)}" r=".9" fill="#a3aee6"/><circle cx="${cx}" cy="${cy}" r=".9" fill="#10153a"/>`;}
+    return s;},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#e6dea2"/>';
+    for(let i=0;i<55;i++){const x=f1(9+R()*42),y=f1(22+R()*62),dx=f1(R()*8-4),dy=f1(R()*4-2);
+      s+=`<path d="M${x} ${y}q${f1(dx/2)} ${f1(dy-2)} ${dx} ${dy}" stroke="#aab653" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;}
+    for(let i=0;i<12;i++){const x=f1(10+R()*40),y=f1(24+R()*58);s+=`<path d="M${x} ${y}l${f1(R()*6-3)} ${f1(R()*3+1)}" stroke="#e2772a" stroke-width="1.6" stroke-linecap="round"/>`;}
+    for(let i=0;i<6;i++)s+=`<circle cx="${f1(12+R()*36)}" cy="${f1(26+R()*56)}" r="2.2" fill="#b3172c"/>`;
+    return s;},
+  R=>{let s='<rect x="0" y="20" width="60" height="70" fill="#f3b55a"/>';
+    const pos=[[17,29],[37,28],[28,42],[46,45],[15,53],[35,58],[23,70],[44,72],[16,83],[34,84]];
+    pos.forEach(([x,y])=>{const cx=f1(x+R()*2-1),cy=f1(y+R()*2-1);
+      s+=`<circle cx="${cx}" cy="${cy}" r="8" fill="#ea7f22" stroke="#c4621a" stroke-width=".6"/><circle cx="${f1(cx+1)}" cy="${f1(cy+.6)}" r="3.4" fill="#c85e16"/><path d="M${f1(cx-5)} ${f1(cy-2)}Q${f1(cx-3)} ${f1(cy-5.5)} ${cx} ${f1(cy-6)}" stroke="#ffc27a" stroke-width="1.2" fill="none" stroke-linecap="round"/>`;});
+    return s;}
+];
+const LIDS=['gold','gold','cloth','silver','gold','silver','white','gold'];
+function lidMarkup(kind){
+  if(kind==='cloth')return '<rect x="12" y="8" width="36" height="6" rx="2" fill="url(#lidGold)"/><path d="M5 13Q7 2 30 1.5Q53 2 55 13L51 16Q30 11.5 9 16Z" fill="url(#cloth)" stroke="#8a2a1f" stroke-width=".6"/><path d="M9 14.2Q30 10.5 51 14.2" stroke="#efdcb4" stroke-width="1.5" fill="none"/>';
+  const g={gold:'lidGold',silver:'lidSilver',white:'lidWhite'}[kind];
+  let s=`<rect x="11" y="4" width="38" height="9.5" rx="2.6" fill="url(#${g})"/>`;
+  for(let x=14;x<48;x+=3)s+=`<path d="M${x} 6v6" stroke="rgba(0,0,0,.16)" stroke-width=".8"/>`;
+  return s+'<path d="M13 5.3H47" stroke="rgba(255,255,255,.65)" stroke-width=".9"/>';
+}
+function jarMarkup(i,R){
+  const name=TYPES[i];
+  const fit=name.length>6?' textLength="31" lengthAdjust="spacingAndGlyphs"':'';
+  return lidMarkup(LIDS[i])+
+    '<rect x="13" y="12.5" width="34" height="5" fill="rgba(215,232,226,.22)" stroke="rgba(240,250,245,.5)" stroke-width="1"/>'+
+    `<path d="${BODY}" fill="rgba(215,232,226,.2)"/>`+
+    `<g clip-path="url(#jc)">${CONTENT[i](R)}<rect width="60" height="86" fill="url(#depth)"/></g>`+
+    `<path d="${BODY}" fill="none" stroke="rgba(240,250,245,.62)" stroke-width="1.6"/>`+
+    '<path d="M14.5 27Q13 50 14.5 73" stroke="rgba(255,255,255,.5)" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M46 30V38" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-linecap="round"/>'+
+    `<g transform="rotate(-4 30 56)"><rect x="12" y="49" width="36" height="14" rx="1.5" fill="#f0e3c3"/><path d="M12 49h36" stroke="rgba(0,0,0,.08)"/><text x="30" y="59.4" text-anchor="middle" font-family="Neucha, cursive" font-size="10" fill="#3a2a1c"${fit}>${name}</text></g>`;
+}
+function grannyMarkup(){
+  return '<svg viewBox="0 0 100 100" role="img" aria-label="Бабушка">'+
+  '<path d="M12 64Q8 16 50 10Q92 16 88 64Q84 44 50 41Q16 44 12 64Z" fill="url(#kdots)"/>'+
+  '<circle cx="50" cy="60" r="29" fill="#f1c6a2"/>'+
+  '<path d="M27 47Q50 35 73 47Q50 41 27 47Z" fill="#d9d4cc"/>'+
+  '<path d="M16 55Q18 26 50 24Q82 26 84 55Q72 38 50 38Q28 38 16 55Z" fill="url(#kdots)" stroke="#86201b" stroke-width=".8"/>'+
+  '<path d="M44 86l-10 10l12-3zM56 86l10 10l-12-3z" fill="#b42f28"/><circle cx="50" cy="87" r="4.5" fill="#b42f28"/>'+
+  '<circle cx="34" cy="68" r="6" fill="#ec8f86" opacity=".5"/><circle cx="66" cy="68" r="6" fill="#ec8f86" opacity=".5"/>'+
+  '<path class="v v-ok v-happy" d="M30 47Q37 43 44 46.5M56 46.5Q63 43 70 47" stroke="#8d8378" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+  '<path class="v v-worried" d="M30 48L43 43.5M70 48L57 43.5" stroke="#8d8378" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+  '<circle class="v v-ok v-worried" cx="38" cy="57" r="2.4" fill="#3a2a1c"/><circle class="v v-ok v-worried" cx="62" cy="57" r="2.4" fill="#3a2a1c"/>'+
+  '<path class="v v-happy" d="M33.5 58Q38 53 42.5 58M57.5 58Q62 53 66.5 58" stroke="#3a2a1c" stroke-width="2.2" fill="none" stroke-linecap="round"/>'+
+  '<circle cx="38" cy="57" r="8.5" fill="rgba(255,255,255,.12)" stroke="#5a4532" stroke-width="2"/><circle cx="62" cy="57" r="8.5" fill="rgba(255,255,255,.12)" stroke="#5a4532" stroke-width="2"/><path d="M46.5 56Q50 54 53.5 56" stroke="#5a4532" stroke-width="2" fill="none"/>'+
+  '<path d="M50 61Q54 67 49 68.5" stroke="#c98d6c" stroke-width="2" fill="none" stroke-linecap="round"/>'+
+  '<path class="v v-ok" d="M42 75Q50 80.5 58 75" stroke="#8c3b2c" stroke-width="2.4" fill="none" stroke-linecap="round"/>'+
+  '<path class="v v-happy" d="M40 73Q50 86 60 73Z" fill="#8c2f24"/><path class="v v-happy" d="M44 78.5Q50 82 56 78.5" stroke="#e98b7e" stroke-width="2" fill="none"/>'+
+  '<path class="v v-worried" d="M42 79Q50 73 58 79" stroke="#8c3b2c" stroke-width="2.4" fill="none" stroke-linecap="round"/>'+
+  '</svg>';
+}
+const ICONS={
+  sound:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor" fill-opacity=".2"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor" fill-opacity=".2"/><path d="M17 9.5l5 5M22 9.5l-5 5"/></svg>',
+  restart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v5h5"/></svg>',
+  menu:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="#f4c56c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+  hint:'<svg viewBox="0 0 24 24" fill="none" stroke="#f4c56c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z" fill="#f4c56c" fill-opacity=".25"/></svg>',
+  shelf:'<svg viewBox="0 0 24 24" fill="none" stroke="#f4c56c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="14" width="20" height="4" rx="1" fill="#f4c56c" fill-opacity=".25"/><path d="M6 18l-1 3M18 18l1 3M12 3v8M8 7h8"/></svg>'
+};
+const STAR='<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" fill="#ffd36a" stroke="#a8711a" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+
+function buildSprites(){
+  const R=rng(20261013);
+  let d='<clipPath id="jc"><path d="'+BODY+'"/></clipPath>'+
+  '<linearGradient id="lidGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7de8f"/><stop offset=".55" stop-color="#c49536"/><stop offset="1" stop-color="#7d5a17"/></linearGradient>'+
+  '<linearGradient id="lidSilver" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1efe9"/><stop offset=".55" stop-color="#aaa79f"/><stop offset="1" stop-color="#6f6d67"/></linearGradient>'+
+  '<linearGradient id="lidWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf8f1"/><stop offset="1" stop-color="#cfc8b8"/></linearGradient>'+
+  '<linearGradient id="honey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd067"/><stop offset="1" stop-color="#b5660a"/></linearGradient>'+
+  '<linearGradient id="depth" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".3"/><stop offset=".3" stop-color="#000" stop-opacity="0"/><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".42"/></linearGradient>'+
+  '<pattern id="cloth" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#f3e6d2"/><rect width="3" height="3" fill="#c23a2c"/><rect x="3" y="3" width="3" height="3" fill="#c23a2c"/></pattern>'+
+  '<pattern id="kdots" width="9" height="9" patternUnits="userSpaceOnUse"><rect width="9" height="9" fill="#b42f28"/><circle cx="4.5" cy="4.5" r="1.7" fill="#f6e6cf"/></pattern>';
+  TYPES.forEach((_,i)=>{d+=`<symbol id="jar${i}" viewBox="0 0 60 86">${jarMarkup(i,R)}</symbol>`});
+  $('sprites').innerHTML='<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"><defs>'+d+'</defs></svg>';
+  document.querySelectorAll('.face').forEach(f=>f.innerHTML=grannyMarkup());
+  document.querySelectorAll('.ico').forEach(e=>e.outerHTML=ICONS[e.dataset.ico]);
+  $('btnRestart').innerHTML=ICONS.restart;$('btnMenu').innerHTML=ICONS.menu;
+}
+
+/* фон: кирпичная кладка, нарисованная один раз */
+function buildBricks(){
+  const c=document.createElement('canvas'),W=256,H=192,bw=64,bh=24;c.width=W;c.height=H;
+  const g=c.getContext('2d');if(!g)return;
+  const R=rng(77);g.fillStyle='#100a07';g.fillRect(0,0,W,H);
+  for(let row=0;row<H/bh;row++){
+    const off=row%2?bw/2:0;
+    for(let col=0;col<W/bw;col++){
+      const l=13+R()*8,h=10+R()*12,s=28+R()*18;
+      const draw=x=>{g.fillStyle=`hsl(${h},${s}%,${l}%)`;g.fillRect(x+2,row*bh+2,bw-4,bh-4);
+        g.fillStyle='rgba(255,220,180,.05)';g.fillRect(x+2,row*bh+2,bw-4,3);};
+      const x=col*bw+off;draw(x);if(x+bw>W)draw(x-W);
+    }
+  }
+  for(let i=0;i<900;i++){g.fillStyle=`rgba(0,0,0,${R()*.3})`;g.fillRect(R()*W,R()*H,1.5,1.5)}
+  try{$('bg').style.backgroundImage=`url(${c.toDataURL()})`}catch(e){}
+}
+
+/* пылинки в свете лампы */
+function startDust(){
+  if(reduced)return;const c=$('dust'),g=c.getContext('2d');if(!g)return;
+  let W=0,H=0;const P=[];
+  function size(){const d=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;c.width=W*d;c.height=H*d;g.setTransform(d,0,0,d,0,0)}
+  size();addEventListener('resize',size);
+  for(let i=0;i<42;i++)P.push({x:Math.random()*W,y:Math.random()*H,r:.5+Math.random()*1.5,vy:-(.04+Math.random()*.14),ph:Math.random()*6.3});
+  (function frame(t){
+    if(!document.hidden){g.clearRect(0,0,W,H);
+      for(const p of P){p.y+=p.vy;p.x+=Math.sin(t/2200+p.ph)*.14;if(p.y<-4){p.y=H+4;p.x=Math.random()*W}
+        const d=Math.hypot(p.x-W/2,p.y*1.3)/Math.max(W,H),a=Math.max(0,.6-d*.85);
+        if(a>.02){g.fillStyle=`rgba(255,222,160,${a})`;g.beginPath();g.arc(p.x,p.y,p.r,0,6.283);g.fill()}}}
+    requestAnimationFrame(frame);
+  })(0);
+}
+
+/* ================= Звук (синтез, без файлов) ================= */
+const Snd={
+  ctx:null,out:null,mus:null,sfx:true,music:true,muted:false,timer:null,next:0,step:0,
+  init(){
+    if(this.ctx){if(this.ctx.state==='suspended')this.ctx.resume().catch(()=>{});return}
+    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+    try{this.ctx=new AC()}catch(e){return}
+    this.out=this.ctx.createGain();this.out.connect(this.ctx.destination);
+    this.mus=this.ctx.createGain();this.mus.gain.value=0;this.mus.connect(this.out);
+    this.apply();
+    document.addEventListener('visibilitychange',()=>{if(!this.ctx)return;document.hidden?this.ctx.suspend().catch(()=>{}):this.ctx.resume().catch(()=>{})});
+  },
+  apply(){
+    if(!this.ctx)return;const t=this.ctx.currentTime;
+    this.out.gain.setTargetAtTime(this.muted?0:.9,t,.05);
+    this.mus.gain.setTargetAtTime(this.music?.55:0,t,.3);
+    if(this.music&&!this.muted)this.startMusic();else this.stopMusic();
+  },
+  can(){return this.ctx&&this.sfx&&!this.muted},
+  tone(f,t,dur,type,vol,dest){
+    const c=this.ctx,o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g);g.connect(dest||this.out);o.start(t);o.stop(t+dur+.05);
+  },
+  clink(f,vol,t){t=t||this.ctx.currentTime;this.tone(f,t,.4,'sine',vol);this.tone(f*2.76,t,.2,'sine',vol*.4);this.tone(f*5.4,t,.09,'sine',vol*.18)},
+  pick(){if(this.can())this.clink(1700,.1)},
+  place(){if(!this.can())return;const t=this.ctx.currentTime;this.clink(1200,.15,t);this.tone(170,t,.1,'sine',.3)},
+  bad(){if(!this.can())return;const t=this.ctx.currentTime;this.tone(160,t,.14,'triangle',.3);this.tone(115,t+.08,.18,'triangle',.26)},
+  done(){if(!this.can())return;const t=this.ctx.currentTime;[1046,1318,1568,2093].forEach((f,i)=>this.clink(f,.12,t+i*.08))},
+  star(i){if(this.can())this.clink([1318,1568,2093][i]||1568,.16)},
+  win(){if(!this.can())return;const t=this.ctx.currentTime;[784,988,1175,1568].forEach((f,i)=>{this.tone(f,t+i*.11,.8,'triangle',.12);this.tone(f*2,t+i*.11,.3,'sine',.04)})},
+  sad(){if(!this.can())return;const t=this.ctx.currentTime;[494,440,392,330].forEach((f,i)=>this.tone(f,t+i*.16,.5,'triangle',.1))},
+  click(){if(this.can())this.tone(1400,this.ctx.currentTime,.04,'triangle',.05)},
+  /* мелодия-шкатулка, вальс 3/4 */
+  TUNE:[[69,1],[72,1],[76,1],[74,1],[72,1],[71,1],[69,1],[71,1],[72,1],[64,3],[65,1],[69,1],[72,1],[76,1],[74,1],[72,1],[71,1],[67,1],[71,1],[69,3],
+        [72,1],[76,1],[79,1],[77,1],[76,1],[74,1],[72,1],[74,1],[76,1],[69,3],[65,1],[69,1],[72,1],[71,1],[69,1],[68,1],[69,3],[0,3]],
+  BASS:[45,50,45,40,41,45,40,45,45,53,48,45,41,40,45,0],
+  startMusic(){
+    if(this.timer||!this.ctx)return;
+    this.next=this.ctx.currentTime+.15;this.step=0;this.beat=0;
+    this.timer=setInterval(()=>this.sched(),120);
+  },
+  stopMusic(){clearInterval(this.timer);this.timer=null},
+  sched(){
+    const B=.62,c=this.ctx;
+    while(this.next<c.currentTime+.5){
+      const [m,len]=this.TUNE[this.step];
+      if(this.beat%3===0){const b=this.BASS[(this.beat/3)%this.BASS.length];if(b)this.tone(440*Math.pow(2,(b-69)/12),this.next,1.7,'triangle',.07,this.mus)}
+      if(m){const f=440*Math.pow(2,(m-69)/12);this.tone(f,this.next,1.3,'sine',.075,this.mus);this.tone(f*2,this.next,.45,'sine',.025,this.mus)}
+      this.next+=B*len;this.beat+=len;this.step=(this.step+1)%this.TUNE.length;
+      if(this.step===0)this.beat=0;
+    }
+  }
+};
+function vibrate(ms){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
+
+/* ================= Состояние ================= */
+const st={level:1,shelves:[],start:[],moves:0,hist:[],sel:null,extra:false,hint:null,over:false,started:false};
+let stuckToken=0,stuckTimer=null;
+const cellar=$('cellar');
+
+function save(){
+  store('pogreb-v2',{level:st.over?st.level+1:st.level,shelves:st.over?null:st.shelves,start:st.start,moves:st.moves,extra:st.extra});
+}
+function restore(){
+  const s=load('pogreb-v2');
+  if(!s||!Number.isInteger(s.level)||s.level<1)return false;
+  st.level=Math.min(s.level,9999);
+  if(validState(s.shelves)&&validState(s.start)&&!solved(s.shelves)&&s.shelves.length>=s.start.length&&s.shelves.length-s.start.length<=1){
+    st.shelves=s.shelves;st.start=s.start;st.moves=Math.max(0,s.moves|0);st.extra=s.shelves.length>s.start.length;
+    return true;
+  }
+  return false;
+}
+
+function say(text,mood){
+  const b=$('say');b.textContent=text;b.classList.remove('say');void b.offsetWidth;b.classList.add('say');
+  setMood(mood||'ok');
+}
+let moodTimer=null;
+function setMood(m){
+  const f=$('faceMain');f.dataset.mood=m;clearTimeout(moodTimer);
+  if(m!=='ok')moodTimer=setTimeout(()=>f.dataset.mood='ok',2600);
+}
+
+function render(fresh){
+  const sh=st.shelves,html=[];
+  sh.forEach((s,i)=>{
+    let c='shelf';
+    if(st.sel===i)c+=' sel';
+    if(st.hint&&(st.hint[0]===i||st.hint[1]===i))c+=' hint';
+    if(fresh===i)c+=' fresh';
+    const label=s.length?s.map(t=>TYPES[t]).join(', '):'пустая';
+    let inner='';
+    for(let j=0;j<CAP;j++){
+      if(j<s.length){const lift=st.sel===i&&j===s.length-1?' lift':'';
+        inner+=`<svg class="jar${lift}" viewBox="0 0 60 86"><use href="#jar${s[j]}"/></svg>`;}
+      else inner+='<span class="slot"></span>';
+    }
+    html.push(`<div class="${c}" data-i="${i}" role="button" tabindex="0" aria-label="Полка ${i+1}: ${label}${isDone(s)?', собрана':''}"><div class="slots">${inner}</div><div class="plank">${isDone(s)?'<span class="chalk">закатано</span>':''}</div></div>`);
+  });
+  cellar.innerHTML=html.join('');
+  layout();
+  const types=st.start.filter(s=>s.length).length;
+  const doneN=sh.filter(isDone).length;
+  $('lvlText').textContent='Уровень '+st.level;
+  $('stats').textContent=`${st.moves} ${plural(st.moves,['ход','хода','ходов'])} · собрано ${doneN}/${types}`;
+  $('btnUndo').disabled=!st.hist.length||st.over;
+  $('btnHint').disabled=st.over;
+  $('btnShelf').disabled=st.extra||st.over;
+}
+/* подбираем число колонок так, чтобы все полки влезли в экран с самыми крупными банками */
+function layout(){
+  const n=st.shelves.length;if(!n)return;
+  const W=cellar.clientWidth,gx=14,gy=28;
+  const top=cellar.getBoundingClientRect().top+window.scrollY;
+  const avail=window.innerHeight-top-$('tools').offsetHeight-12-16-28;
+  let best=null;
+  for(let c=2;c<=5;c++){
+    const sw=Math.min(300,(W-gx*(c-1))/c);
+    if(sw<96)break;
+    best=c;
+    const jw=(sw-16-.09*sw)/4,rh=jw*86/60+15+gy;
+    if(Math.ceil(n/c)*rh-gy<=avail)break;
+  }
+  best=best||2;
+  cellar.style.gridTemplateColumns=`repeat(${best},minmax(0,300px))`;
+  cellar.classList.toggle('tight',(W-gx*(best-1))/best<130);
+}
+addEventListener('resize',()=>{if(st.shelves.length)layout()});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>layout());
+
+const shelfEl=i=>cellar.querySelector(`.shelf[data-i="${i}"]`);
+function topJar(i){const e=shelfEl(i);if(!e)return null;const j=e.querySelectorAll('.jar');return j[j.length-1]||null}
+
+function shake(i){const e=shelfEl(i);if(!e)return;e.classList.remove('shake');void e.offsetWidth;e.classList.add('shake')}
+function sparkle(i){
+  if(reduced)return;const e=shelfEl(i);if(!e)return;
+  for(let k=0;k<12;k++){const s=document.createElement('i');s.className='spark';
+    const a=Math.PI+Math.random()*Math.PI,r=30+Math.random()*50;
+    s.style.setProperty('--dx',Math.cos(a)*r*1.4+'px');s.style.setProperty('--dy',Math.sin(a)*r+'px');
+    s.style.left=10+Math.random()*80+'%';e.appendChild(s);setTimeout(()=>s.remove(),750)}
+}
+
+function tap(i){
+  if(st.over||!st.started)return;
+  const sh=st.shelves;
+  if(st.hint){st.hint=null}
+  if(st.sel===null){
+    if(!sh[i].length){render();shake(i);Snd.bad();say(LINES.empty,'worried');return}
+    if(isDone(sh[i])){render();shake(i);Snd.bad();say(LINES.doneShelf,'worried');return}
+    st.sel=i;render();Snd.pick();return;
+  }
+  if(st.sel===i){st.sel=null;render();Snd.click();return}
+  if(canMove(sh,st.sel,i)){doMove(st.sel,i);return}
+  // недопустимый ход
+  const target=sh[i];
+  if(target.length&&!isDone(target)&&target.length<CAP&&target[target.length-1]!==sh[st.sel][sh[st.sel].length-1]){
+    // другая банка сверху: просто переключаем выбор на эту полку
+    st.sel=i;render();Snd.pick();return;
+  }
+  st.sel=null;render();shake(i);Snd.bad();vibrate(30);
+  say(isDone(target)?LINES.doneShelf:target.length>=CAP?LINES.full:pick(LINES.bad),'worried');
+}
+
+function doMove(a,b){
+  const fromEl=topJar(a),fr=fromEl?fromEl.getBoundingClientRect():null;
+  st.hist.push(copy(st.shelves));if(st.hist.length>300)st.hist.shift();
+  st.shelves[b].push(st.shelves[a].pop());
+  st.moves++;st.sel=null;st.hint=null;stuckToken++;
+  const nowDone=isDone(st.shelves[b]);
+  const win=solved(st.shelves);
+  if(win)st.over=true;
+  render(nowDone?b:-1);
+  const toEl=topJar(b);
+  if(fr&&toEl&&!reduced&&toEl.animate){
+    const tr=toEl.getBoundingClientRect(),dx=fr.left-tr.left,dy=fr.top-tr.top,sc=fr.width/(tr.width||1);
+    toEl.animate([
+      {transform:`translate(${dx}px,${dy}px) scale(${sc})`},
+      {transform:`translate(${dx*.45}px,${dy*.45-34}px) rotate(${dx>0?-10:10}deg) scale(${(sc+1)/2})`,offset:.5},
+      {transform:'none'}],{duration:300,easing:'cubic-bezier(.3,.6,.4,1)'});
+  }
+  setTimeout(()=>Snd.place(),reduced?0:250);
+  save();
+  if(win){setTimeout(()=>Snd.done(),300);sparkle(b);setTimeout(showWin,900);return}
+  if(nowDone){setTimeout(()=>Snd.done(),300);sparkle(b);say(pick(LINES.done),'happy')}
+  scheduleStuck();
+}
+
+function scheduleStuck(){
+  clearTimeout(stuckTimer);const token=stuckToken;
+  stuckTimer=setTimeout(()=>{
+    if(token!==stuckToken||st.over)return;
+    const r=solve(st.shelves,40000);
+    if(!r.path&&!r.aborted&&token===stuckToken)showStuck();
+  },420);
+}
+
+/* ================= Экраны ================= */
+let openOverlay=null;
+function show(id){const o=$(id);if(id==='menu')document.body.classList.add('menu-open');o.hidden=false;o.classList.remove('show');void o.offsetWidth;o.classList.add('show');openOverlay=id;
+  const f=o.querySelector('.btn.primary:not([disabled])');if(f)setTimeout(()=>f.focus({preventScroll:true}),50)}
+function hide(id){if(id==='menu')document.body.classList.remove('menu-open');$(id).hidden=true;if(openOverlay===id)openOverlay=null}
+
+function newLevel(){
+  st.shelves=generate(st.level);st.start=copy(st.shelves);
+  st.moves=0;st.hist=[];st.sel=null;st.extra=false;st.hint=null;st.over=false;stuckToken++;
+  say(st.level===1?LINES.first:pick(LINES.start));render();save();
+}
+function restartLevel(){
+  st.shelves=copy(st.start);st.moves=0;st.hist=[];st.sel=null;st.extra=false;st.hint=null;st.over=false;stuckToken++;
+  say(LINES.restart);render();save();
+}
+function undo(){
+  if(!st.hist.length||st.over)return;
+  st.shelves=st.hist.pop();st.moves=Math.max(0,st.moves-1);st.sel=null;st.hint=null;stuckToken++;
+  Snd.click();say(pick(LINES.undo));render();save();scheduleStuck();
+}
+function addShelf(){
+  if(st.extra)return;st.extra=true;st.shelves.push([]);st.hist.forEach(h=>h.push([]));
+  st.sel=null;st.hint=null;stuckToken++;Snd.place();say(LINES.shelf,'happy');render();save();scheduleStuck();
+}
+
+function showStuck(){
+  if(!$('ad').hidden||!$('win').hidden||st.over)return;
+  st.sel=null;render();Snd.sad();setMood('worried');
+  $('stShelf').hidden=st.extra;$('stUndo').disabled=!st.hist.length;
+  show('stuck');
+}
+
+/* реклама-заглушка: reward — награда за просмотр, inter — между уровнями */
+let adTimer=null,adCb=null;
+function showAd(kind,cb){
+  if(!ADS){if(cb)cb();return}
+  if(IN_APP&&window.AndroidApp.showAd){
+    adCb=cb;adKind=kind;
+    if(Snd.ctx)Snd.mus.gain.setTargetAtTime(0,Snd.ctx.currentTime,.1);
+    try{window.AndroidApp.showAd(kind)}catch(e){window.onAdResult(kind,'unavailable')}
+    return;
+  }
+  adCb=cb;const reward=kind==='reward';
+  $('adTitle').textContent=reward?'Реклама за награду':'Реклама';
+  $('adSkip').hidden=!reward;
+  $('adGo').textContent=reward?'Забрать награду':'Закрыть';
+  $('adGo').disabled=true;
+  const bar=$('adBar'),T=3000,t0=Date.now();bar.style.width='0';
+  clearInterval(adTimer);
+  adTimer=setInterval(()=>{const p=Math.min(1,(Date.now()-t0)/T);bar.style.width=p*100+'%';
+    if(p>=1){clearInterval(adTimer);$('adGo').disabled=false;$('adGo').focus({preventScroll:true})}},50);
+  if(Snd.ctx&&Snd.music)Snd.mus.gain.setTargetAtTime(0,Snd.ctx.currentTime,.2);
+  show('ad');
+}
+function closeAd(run){
+  clearInterval(adTimer);hide('ad');
+  if(Snd.ctx)Snd.apply();
+  const cb=adCb;adCb=null;if(run&&cb)cb();
+}
+/* ответ нативной рекламы: ok — досмотрел, skipped — закрыл раньше, unavailable — реклама не загрузилась */
+let adKind=null;
+window.onAdResult=function(kind,status){
+  if(Snd.ctx)Snd.apply();
+  const cb=adCb;adCb=null;adKind=null;
+  if(kind!=='reward'){if(cb)cb();return}
+  if(status==='ok'){if(cb)cb();return}
+  if(status==='unavailable'){say('Реклама не загрузилась. Ладно уж, держи так.','happy');if(cb)cb();return}
+  say('Не досмотрел, так и награды нет.','worried');
+};
+window.onAppPause=function(){if(Snd.ctx)Snd.ctx.suspend().catch(()=>{})};
+window.onAppResume=function(){if(Snd.ctx&&!document.hidden)Snd.ctx.resume().catch(()=>{})};
+$('adSkip').onclick=()=>{Snd.click();closeAd(false)};
+$('adGo').onclick=()=>{Snd.click();closeAd(true)};
+
+function showWin(){
+  const types=st.start.filter(s=>s.length).length;
+  const par=types*CAP+types;
+  const stars=st.moves<=par?3:st.moves<=Math.round(par*1.5)?2:1;
+  const sEl=$('stars');sEl.innerHTML=STAR+STAR+STAR;sEl.setAttribute('aria-label',stars+' из 3 звёзд');
+  $('winQuote').textContent=pick(LINES.win);
+  $('winStat').textContent=`Уровень ${st.level} · ${st.moves} ${plural(st.moves,['ход','хода','ходов'])}`;
+  window._share=`Навёл порядок в бабушкином погребе: уровень ${st.level}, ${st.moves} ${plural(st.moves,['ход','хода','ходов'])}, ${'★'.repeat(stars)}. Сможешь быстрее?`;
+  $('shareText').hidden=true;$('btnShare').textContent='Поделиться';
+  const best=load('pogreb-stars')||{};best[st.level]=Math.max(best[st.level]||0,stars);store('pogreb-stars',best);
+  st.level++;store('pogreb-v2',{level:st.level});
+  Snd.win();show('win');
+  [...sEl.children].forEach((s,i)=>{if(i<stars)setTimeout(()=>{s.classList.add('on');Snd.star(i)},350+i*260)});
+}
+$('btnShare').onclick=()=>{
+  Snd.click();const txt=window._share||'';
+  if(IN_APP&&window.AndroidApp.share){try{window.AndroidApp.share(txt+' Ищи «Бабушкин погреб» в RuStore.');return}catch(e){}}
+  const fb=()=>{$('shareText').textContent=txt;$('shareText').hidden=false};
+  try{navigator.clipboard.writeText(txt).then(()=>{$('btnShare').textContent='Скопировано'},fb)}catch(e){fb()}
+};
+$('btnNext').onclick=()=>{
+  Snd.click();hide('win');
+  const finished=st.level-1;
+  if(finished%3===0)showAd('inter',newLevel);else newLevel();
+};
+
+$('stRestart').onclick=()=>{Snd.click();hide('stuck');restartLevel()};
+$('stUndo').onclick=()=>{hide('stuck');undo()};
+$('stShelf').onclick=()=>{Snd.click();hide('stuck');showAd('reward',addShelf)};
+
+$('btnUndo').onclick=undo;
+$('btnRestart').onclick=()=>{if(!st.over){Snd.click();restartLevel()}};
+$('btnHint').onclick=()=>{
+  if(st.over)return;Snd.click();
+  const r=solve(st.shelves,80000);
+  if(!r.path&&!r.aborted){showStuck();return}
+  showAd('reward',()=>{
+    if(r.path&&r.path.length){st.sel=null;st.hint=r.path[0];render();say(LINES.hint,'happy')}
+    else say(LINES.hintUnknown);
+  });
+};
+$('btnShelf').onclick=()=>{if(st.extra||st.over)return;Snd.click();showAd('reward',addShelf)};
+
+cellar.addEventListener('click',e=>{const s=e.target.closest('.shelf');if(s)tap(+s.dataset.i)});
+cellar.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;const s=e.target.closest('.shelf');if(!s)return;
+  e.preventDefault();const i=+s.dataset.i;tap(i);const n=shelfEl(i);if(n)n.focus({preventScroll:true});
+});
+
+/* настройки звука */
+const settings=Object.assign({sfx:true,music:true,muted:false},load('pogreb-settings')||{});
+function applySettings(){
+  Snd.sfx=!!settings.sfx;Snd.music=!!settings.music;Snd.muted=!!settings.muted;Snd.apply();
+  $('tgSfx').setAttribute('aria-pressed',String(Snd.sfx));$('tgSfx').textContent='Звуки: '+(Snd.sfx?'вкл':'выкл');
+  $('tgMusic').setAttribute('aria-pressed',String(Snd.music));$('tgMusic').textContent='Музыка: '+(Snd.music?'вкл':'выкл');
+  $('btnSound').innerHTML=Snd.muted?ICONS.mute:ICONS.sound;
+  $('btnSound').setAttribute('aria-label',Snd.muted?'Включить звук':'Выключить звук');
+  store('pogreb-settings',settings);
+}
+$('btnSound').onclick=()=>{Snd.init();settings.muted=!settings.muted;applySettings();Snd.click()};
+$('tgSfx').onclick=()=>{Snd.init();settings.sfx=!settings.sfx;applySettings();Snd.click()};
+$('tgMusic').onclick=()=>{Snd.init();settings.music=!settings.music;applySettings()};
+
+$('btnMenu').onclick=()=>{Snd.click();st.sel=null;render();$('btnPlay').textContent='Продолжить';show('menu')};
+$('btnPlay').onclick=()=>{
+  Snd.init();applySettings();Snd.click();hide('menu');
+  if(!st.started){st.started=true;if(!st.shelves.length)newLevel();else{say(pick(LINES.start));render();scheduleStuck()}}
+};
+
+/* кнопка «Назад» на Android: закрываем окно или открываем меню; из меню выходим */
+window.onAndroidBack=function(){
+  if(!$('ad').hidden){closeAd(false);return 'handled'}
+  if(!$('win').hidden||!$('stuck').hidden)return 'handled';
+  if(adCb&&IN_APP)return 'handled';
+  if(!$('menu').hidden){if(st.started){hide('menu');return 'handled'}return 'exit'}
+  if(st.sel!==null){st.sel=null;render();return 'handled'}
+  $('btnMenu').click();return 'handled';
+};
+
+/* ================= Старт ================= */
+buildSprites();buildBricks();startDust();
+if(!restore()){st.shelves=generate(st.level);st.start=copy(st.shelves)}
+else if(!st.shelves.length){st.shelves=generate(st.level);st.start=copy(st.shelves)}
+say(st.level===1&&st.moves===0?LINES.first:pick(LINES.start));
+render();
+$('btnPlay').textContent=st.level>1||st.moves>0?`Продолжить · уровень ${st.level}`:'Играть';
+applySettings();
+show('menu');
+</script>
+
+</body>
+</html>
