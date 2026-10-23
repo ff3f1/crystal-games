@@ -28,6 +28,13 @@ jobs:
             appId: ru.crystalgames.drawpath
             adInter: R-M-20230578-1
             adReward: R-M-20230578-2
+          - key: FISH
+            dir: fish
+            name: "Рыбалка: Клюёт!"
+            appId: ru.crystalgames.fishing
+            # демо-блоки Яндекса, пока в кабинете РСЯ не созданы свои
+            adInter: demo-interstitial-yandex
+            adReward: demo-rewarded-yandex
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +74,7 @@ jobs:
       - name: Сборка APK и AAB
         working-directory: android
         env:
+          LC_ALL: C.UTF-8
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -104,7 +112,7 @@ jobs:
           tar xzf vkontakte-vk-bridge-*.tgz
           BR=$(ls package/dist/browser.min.js 2>/dev/null || ls package/dist/*.min.js | head -1)
           mkdir -p out
-          for g in block path; do
+          for g in block path fish; do
             mkdir -p build/$g
             cp -r games/$g/. build/$g/
             cp "$BR" build/$g/vk-bridge.min.js

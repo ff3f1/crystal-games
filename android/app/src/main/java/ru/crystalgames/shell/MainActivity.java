@@ -1,7 +1,15 @@
 package ru.crystalgames.shell;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.util.Base64;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.JavascriptInterface;
@@ -13,6 +21,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -33,6 +42,9 @@ import com.yandex.mobile.ads.rewarded.RewardedAd;
 import com.yandex.mobile.ads.rewarded.RewardedAdEventListener;
 import com.yandex.mobile.ads.rewarded.RewardedAdLoadListener;
 import com.yandex.mobile.ads.rewarded.RewardedAdLoader;
+
+import java.io.File;
+import java.io.FileOutputStream;
 
 /**
  * Оболочка HTML5-игры: WebView + реклама Яндекса.
@@ -75,8 +87,17 @@ public class MainActivity extends AppCompatActivity {
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 return loader.shouldInterceptRequest(request.getUrl());
             }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if ("appassets.androidplatform.net".equals(u.getHost())) return false;
+                openExternal(u.toString());
+                return true;
+            }
         });
         web.addJavascriptInterface(new AdsBridge(), "AndroidAds");
+        web.addJavascriptInterface(new ShareBridge(), "AndroidShare");
         web.loadUrl(START_URL);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -159,6 +180,61 @@ public class MainActivity extends AppCompatActivity {
     private class AdsBridge {
         @JavascriptInterface public void showInterstitial(int id) { ui.post(() -> showInter(id)); }
         @JavascriptInterface public void showRewarded(int id) { ui.post(() -> showReward(id)); }
+    }
+
+    private void openExternal(String url) {
+        try {
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(i);
+        } catch (Exception e) {
+            Toast.makeText(this, "Не удалось открыть ссылку", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** Шаринг картинки, внешние ссылки, оценка в RuStore, вибрация. */
+    private class ShareBridge {
+        @JavascriptInterface public void shareImage(String b64, String text) {
+            ui.post(() -> {
+                try {
+                    File dir = new File(getCacheDir(), "share");
+                    if (!dir.exists()) dir.mkdirs();
+                    File f = new File(dir, "ulov.jpg");
+                    FileOutputStream out = new FileOutputStream(f);
+                    out.write(Base64.decode(b64, Base64.DEFAULT));
+                    out.close();
+                    Uri uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", f);
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("image/jpeg");
+                    send.putExtra(Intent.EXTRA_STREAM, uri);
+                    send.putExtra(Intent.EXTRA_TEXT, text);
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "Поделиться"));
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Не удалось поделиться", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+        @JavascriptInterface public void openUrl(String url) { ui.post(() -> openExternal(url)); }
+        @JavascriptInterface public void rate() {
+            ui.post(() -> {
+                try {
+                    Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse("rustore://apps.rustore.ru/app/" + getPackageName()));
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                } catch (ActivityNotFoundException e) {
+                    openExternal("https://www.rustore.ru/catalog/app/" + getPackageName());
+                }
+            });
+        }
+        @JavascriptInterface public void vibrate(int ms) {
+            try {
+                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                if (v == null || !v.hasVibrator()) return;
+                if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createOneShot(Math.max(1, ms), VibrationEffect.DEFAULT_AMPLITUDE));
+                else v.vibrate(ms);
+            } catch (Exception ignored) { }
+        }
     }
 
     private void hideSystemBars() {

@@ -2,3 +2,5 @@ secrets/
 signing-key.zip
 *.jks
 *.zip
+tools/raw_assets/
+__pycache__/

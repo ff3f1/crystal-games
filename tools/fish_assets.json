@@ -1,0 +1,905 @@
+{
+ "comment": "Списки картинок для Flux. size — [ширина, высота]. Генерация: python tools/fish_generate.py",
+ "images": [
+  {
+   "key": "bg/pond_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/pond_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/pond_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/pond_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/oka_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Oka river in central Russia, a sandy spit on the right, willows and mixed forest on the gentle far bank. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/oka_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Oka river in central Russia, a sandy spit on the right, willows and mixed forest on the gentle far bank. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/oka_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Oka river in central Russia, a sandy spit on the right, willows and mixed forest on the gentle far bank. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/oka_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Oka river in central Russia, a sandy spit on the right, willows and mixed forest on the gentle far bank. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/platnik_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a paid fishing pond resort in the Russian countryside, small wooden gazebos and fishing platforms along the far shore, a birch grove behind. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/platnik_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a paid fishing pond resort in the Russian countryside, small wooden gazebos and fishing platforms along the far shore, a birch grove behind. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/platnik_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a paid fishing pond resort in the Russian countryside, small wooden gazebos and fishing platforms along the far shore, a birch grove behind. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/platnik_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a paid fishing pond resort in the Russian countryside, small wooden gazebos and fishing platforms along the far shore, a birch grove behind. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/volga_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the vast Rybinsk reservoir on the Volga, a very distant low shoreline with dark forest, a tiny white bell tower and a small lighthouse far away, huge sky. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/volga_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the vast Rybinsk reservoir on the Volga, a very distant low shoreline with dark forest, a tiny white bell tower and a small lighthouse far away, huge sky. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/volga_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the vast Rybinsk reservoir on the Volga, a very distant low shoreline with dark forest, a tiny white bell tower and a small lighthouse far away, huge sky. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/volga_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the vast Rybinsk reservoir on the Volga, a very distant low shoreline with dark forest, a tiny white bell tower and a small lighthouse far away, huge sky. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/ladoga_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Ladoga in Karelia, smooth granite rocks and boulders on the far shore, tall Scots pines. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/ladoga_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Ladoga in Karelia, smooth granite rocks and boulders on the far shore, tall Scots pines. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/ladoga_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Ladoga in Karelia, smooth granite rocks and boulders on the far shore, tall Scots pines. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/ladoga_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Ladoga in Karelia, smooth granite rocks and boulders on the far shore, tall Scots pines. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/akhtuba_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Akhtuba river in the Volga delta near Astrakhan, low banks with big willow trees, dense reeds, sandy shore. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/akhtuba_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Akhtuba river in the Volga delta near Astrakhan, low banks with big willow trees, dense reeds, sandy shore. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/akhtuba_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Akhtuba river in the Volga delta near Astrakhan, low banks with big willow trees, dense reeds, sandy shore. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/akhtuba_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: the Akhtuba river in the Volga delta near Astrakhan, low banks with big willow trees, dense reeds, sandy shore. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/baikal_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Baikal, rugged mountains with snowy peaks on the far side, rocky shore with larch and pine trees. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/baikal_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Baikal, rugged mountains with snowy peaks on the far side, rocky shore with larch and pine trees. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/baikal_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Baikal, rugged mountains with snowy peaks on the far side, rocky shore with larch and pine trees. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/baikal_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: lake Baikal, rugged mountains with snowy peaks on the far side, rocky shore with larch and pine trees. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/taiga_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a wild Siberian taiga river, steep hills covered with dense spruce and larch forest, rocky banks, light mist. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/taiga_summer",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a wild Siberian taiga river, steep hills covered with dense spruce and larch forest, rocky banks, light mist. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/taiga_autumn",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a wild Siberian taiga river, steep hills covered with dense spruce and larch forest, rocky banks, light mist. golden autumn, yellow and orange birch leaves, dark green spruces, crisp clear day. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "bg/taiga_winter",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a wild Siberian taiga river, steep hills covered with dense spruce and larch forest, rocky banks, light mist. deep winter, everything covered with fresh snow, snowy spruces, the lake is frozen and covered with flat white ice and snow. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "fish/bleak",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A common bleak (Alburnus alburnus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/roach",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A common roach (Rutilus rutilus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/rudd",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A rudd (Scardinius erythrophthalmus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/perch",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A European perch (Perca fluviatilis), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/ruffe",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A ruffe (Gymnocephalus cernua), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/rotan",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Amur sleeper fish (rotan) (Perccottus glenii), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/crucian",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Prussian carp (silver crucian carp) (Carassius gibelio), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/gcrucian",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A golden crucian carp (Carassius carassius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/bream",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A common bream (Abramis brama), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/sbream",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A white bream (Blicca bjoerkna), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/tench",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A tench (Tinca tinca), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/carp",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A mirror carp (Cyprinus carpio), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/wildcarp",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A wild common carp (Cyprinus carpio), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/grasscarp",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A grass carp (Ctenopharyngodon idella), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/pike",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A northern pike (Esox lucius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/zander",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A zander (pikeperch) (Sander lucioperca), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/asp",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A asp (Leuciscus aspius) (Leuciscus aspius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/chub",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A European chub (Squalius cephalus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/ide",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A ide (orfe) (Leuciscus idus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/dace",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A common dace (Leuciscus leuciscus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/vobla",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Caspian roach (vobla) (Rutilus caspicus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/catfish",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A wels catfish (Silurus glanis), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/burbot",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A burbot (Lota lota), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/smelt",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A European smelt (Osmerus eperlanus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/whitefish",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A European whitefish (Coregonus lavaretus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/omul",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Baikal omul (Coregonus migratorius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/grayling",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Arctic grayling (Thymallus arcticus), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/lenok",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A lenok trout (Brachymystax lenok), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/taimen",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Siberian taimen (Hucho taimen), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/trout",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A rainbow trout (Oncorhynchus mykiss), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "fish/sturgeon",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A Russian sturgeon (Acipenser gueldenstaedtii), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "items/worm",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a pink earthworm used as fishing bait, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/maggot",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a small pile of white fishing maggots, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/bloodworm",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a bundle of thin red bloodworm larvae, fishing bait, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/bread",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a slice of white bread, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/dough",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a ball of yellow fishing dough paste, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/corn",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a handful of yellow sweet corn kernels, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/barley",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a small pile of boiled pearl barley grains, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/livebait",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a small live silver minnow fish used as live bait, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/grasshopper",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a green grasshopper, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/boilie",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "three round carp fishing boilies, orange and red, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/crawler",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a large dark red nightcrawler earthworm, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/amphipod",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a small freshwater amphipod shrimp (gammarus), fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/spinner",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a silver inline spinner fishing lure with a red bead and a treble hook, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/spoon",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a gold casting spoon fishing lure with a red stripe and a treble hook, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/wobbler",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a minnow wobbler crankbait fishing lure, blue back and silver belly, two treble hooks, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/jig",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a chartreuse soft plastic paddle-tail swimbait on a lead jig head, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/mouse",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a brown mouse-imitation fishing lure for taimen with a treble hook, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/balancer",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "an ice fishing balance jig lure, yellow and red, hooks on both ends, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/icespoon",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a narrow silver vertical ice fishing spoon lure, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/mormy",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a tiny black tungsten ice fishing jig (mormyshka) with a gold bead, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/gb",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a paper bag of fishing groundbait with some crumbs spilled, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/float",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a classic fishing float bobber, red top and white body, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/feeder",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a metal mesh feeder cage for feeder fishing, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/ice",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a short winter ice fishing rod with a small reel and a spring nod indicator, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/line",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a spool of blue monofilament fishing line, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "items/hook",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a single steel fishing hook, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "ui/icon",
+   "group": "ui",
+   "size": [
+    1024,
+    1024
+   ],
+   "optional": true,
+   "prompt": "Mobile game app icon for a fishing game: a striped European perch leaping out of a calm lake at golden sunset next to a red and white fishing float, water splashes, bold readable silhouette, vibrant colors, centered composition, no text, no letters, no border"
+  }
+ ],
+ "music": [
+  {
+   "key": "music_summer",
+   "tags": "acoustic guitar, warm, relaxing, folk, gentle, summer, nature, instrumental, 80 bpm",
+   "lyrics": "[instrumental]",
+   "seconds": 150
+  },
+  {
+   "key": "music_spring",
+   "tags": "light acoustic folk, flute, guitar, cheerful, spring morning, instrumental, 92 bpm",
+   "lyrics": "[instrumental]",
+   "seconds": 150
+  },
+  {
+   "key": "music_autumn",
+   "tags": "melancholic acoustic guitar and piano, russian folk melody, calm, autumn, instrumental, 72 bpm",
+   "lyrics": "[instrumental]",
+   "seconds": 150
+  },
+  {
+   "key": "music_winter",
+   "tags": "soft piano, bells, cozy winter, calm ambient, instrumental, 70 bpm",
+   "lyrics": "[instrumental]",
+   "seconds": 150
+  },
+  {
+   "key": "music_night",
+   "tags": "ambient synth pads, slow, dreamy, night lake, lo-fi chill, instrumental, 62 bpm",
+   "lyrics": "[instrumental]",
+   "seconds": 150
+  }
+ ]
+}
