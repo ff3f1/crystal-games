@@ -46,17 +46,119 @@ def find_host():
     return None
 
 
+# ---------- поиск и запуск ComfyUI ----------
+SKIP = {"windows", "program files", "program files (x86)", "programdata", "$recycle.bin", "system volume information", "appdata",
+        "node_modules", ".git", "models", "custom_nodes", "site-packages", "output", "input", "temp", "__pycache__", "lib", "include"}
+
+
+def known_folder(csidl, fallback):
+    try:
+        import ctypes
+        from ctypes import wintypes
+        buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHGetFolderPathW(None, csidl, None, 0, buf)
+        if buf.value and os.path.isdir(buf.value):
+            return buf.value
+    except Exception:
+        pass
+    return fallback
+
+
+def is_comfy(d):
+    return os.path.isfile(os.path.join(d, "main.py")) and os.path.isdir(os.path.join(d, "comfy")) and os.path.isfile(os.path.join(d, "nodes.py"))
+
+
+def find_comfy_dirs():
+    home = os.path.expanduser("~")
+    docs = known_folder(0x05, os.path.join(home, "Documents"))
+    roots = [(os.path.join(docs, "ai-assets"), 5), (docs, 3), (home, 3), (os.path.join(home, "Desktop"), 3)]
+    for drv in "CDEFG":
+        roots.append((drv + ":\\", 3))
+    found, seen = [], set()
+    for root, depth in roots:
+        if not os.path.isdir(root):
+            continue
+        stack = [(root, 0)]
+        while stack:
+            d, lv = stack.pop()
+            key = os.path.normcase(os.path.abspath(d))
+            if key in seen:
+                continue
+            seen.add(key)
+            if is_comfy(d):
+                found.append(d)
+                continue
+            if lv >= depth:
+                continue
+            try:
+                for e in os.scandir(d):
+                    if e.is_dir(follow_symlinks=False) and e.name.lower() not in SKIP and not e.name.startswith("."):
+                        stack.append((e.path, lv + 1))
+            except Exception:
+                pass
+    # сначала то, что в ai-assets
+    found.sort(key=lambda d: ("ai-assets" not in d.lower(), len(d)))
+    return found
+
+
+def comfy_python(d):
+    parent = os.path.dirname(d)
+    for c in (os.path.join(parent, "python_embeded", "python.exe"), os.path.join(d, ".venv", "Scripts", "python.exe"),
+              os.path.join(d, "venv", "Scripts", "python.exe"), os.path.join(parent, ".venv", "Scripts", "python.exe"),
+              os.path.join(parent, "venv", "Scripts", "python.exe"), os.path.join(d, ".venv", "bin", "python"), os.path.join(d, "venv", "bin", "python")):
+        if os.path.isfile(c):
+            return c
+    return sys.executable
+
+
+def launch_comfy():
+    local = os.environ.get("LOCALAPPDATA", "")
+    for exe in (os.path.join(local, "Programs", "@comfyorgcomfyui-electron", "ComfyUI.exe"), os.path.join(local, "Programs", "ComfyUI", "ComfyUI.exe")):
+        if local and os.path.isfile(exe):
+            say("Запускаю приложение ComfyUI:", exe)
+            subprocess.Popen([exe], cwd=os.path.dirname(exe))
+            return True
+    say("Ищу ComfyUI на компьютере (до минуты)...")
+    dirs = find_comfy_dirs()
+    if not dirs:
+        return False
+    d = dirs[0]
+    say("Нашёл ComfyUI:", d)
+    STATE["comfy_dir"] = d
+    parent = os.path.dirname(d)
+    bat = os.path.join(parent, "run_nvidia_gpu.bat")
+    flags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+    if os.path.isfile(bat) and os.name == "nt":
+        say("Запускаю:", bat)
+        subprocess.Popen(["cmd", "/c", bat], cwd=parent, creationflags=flags)
+        return True
+    py = comfy_python(d)
+    cmd = [py, "-s", "main.py", "--port", "8188"]
+    if os.path.isdir(os.path.join(parent, "python_embeded")):
+        cmd.append("--windows-standalone-build")
+    say("Запускаю:", " ".join('"%s"' % c if " " in c else c for c in cmd))
+    subprocess.Popen(cmd, cwd=d, creationflags=flags)
+    return True
+
+
 def wait_host():
     h = find_host()
     if h:
         return h
-    say("ComfyUI не отвечает. Запусти ComfyUI — я подожду и продолжу сам (проверяю каждые 5 секунд)...")
-    for _ in range(360):
+    started = launch_comfy()
+    if started:
+        say("ComfyUI запускается в отдельном окне — первый запуск занимает 1–3 минуты. Это окно не закрывай.")
+    else:
+        say("ComfyUI на компьютере не нашёл. Запусти его сам — я подожду и продолжу (проверяю каждые 5 секунд).")
+    for i in range(360):
         time.sleep(5)
         h = find_host()
         if h:
+            time.sleep(3)
             return h
-    say("За 30 минут ComfyUI так и не запустился. Запусти его и открой START.bat ещё раз.")
+        if started and i == 60:
+            say("Пять минут, а ComfyUI всё не отвечает. Посмотри в его окно — нет ли там ошибки. Я продолжаю ждать.")
+    say("За 30 минут ComfyUI так и не запустился. Пришли log.txt из этой папки в чат.")
     sys.exit(1)
 
 
