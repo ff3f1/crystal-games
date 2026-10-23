@@ -66,7 +66,7 @@ with sync_playwright() as p:
 
     # Обрыв: натяжение больше теста лески
     pg.evaluate("__game.G.cast(0,20)"); pg.wait_for_timeout(1500)
-    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.state='bite';r.bite={s:FZ.SP.carp,w:9,style:'drag',phase:'take',t:0,touches:0,nextTouch:0,take:5,empty:false};G.strike();G.rig().fish.T=50;}""")
+    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.state='bite';r.bite={s:FZ.SP.carp,w:9,style:'drag',phase:'take',t:0,touches:0,nextTouch:0,take:5,empty:false};const tu=G.state().tut;G.state().tut=2;G.strike();G.state().tut=tu;G.rig().fish.T=50;}""")
     pg.wait_for_timeout(400)
     check("обрыв и второй шанс", pg.is_visible("#lRev"))
     pg.click("#lRev"); pg.wait_for_timeout(1700)

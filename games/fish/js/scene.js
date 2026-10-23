@@ -4,7 +4,7 @@
   const U = FZ.U;
   const R = { fx: [], rings: [], parts: [], birds: [], jumps: [] };
   let cv, ctx, W = 390, H = 844, dpr = 1;
-  let topC, topG, rippleC, landC = null, landKey = "", iceC = null, iceKey = "";
+  let topC, topG, landC = null, landKey = "", iceC = null, iceKey = "";
   let shoreY = 340, K = 1000, nearZ = 3.2, farZ = 70;
   const camH = 2.6;
   let stars = [], clouds = [], reeds = [], pads = [], quality = "hi";
@@ -56,27 +56,19 @@
 
   // ---------- Инициализация ----------
   R.init = function (canvas) {
-    cv = canvas; ctx = cv.getContext("2d");
+    cv = canvas; ctx = cv.getContext("2d", { alpha: false });
     topC = document.createElement("canvas"); topG = topC.getContext("2d");
-    rippleC = document.createElement("canvas"); rippleC.width = 256; rippleC.height = 128;
-    const rg = rippleC.getContext("2d"); const rr = U.rng("ripple");
-    for (let i = 0; i < 420; i++) {
-      const y = rr.range(0, 128), x = rr.range(-40, 256), w = rr.range(8, 60), light = rr() > 0.5;
-      rg.fillStyle = light ? "rgba(255,255,255," + rr.range(0.1, 0.35) + ")" : "rgba(0,10,20," + rr.range(0.08, 0.3) + ")";
-      rg.beginPath(); rg.ellipse(x + w / 2, y, w / 2, rr.range(0.5, 1.6), 0, 0, Math.PI * 2); rg.fill();
-      if (x + w > 256) { rg.beginPath(); rg.ellipse(x + w / 2 - 256, y, w / 2, 1, 0, 0, Math.PI * 2); rg.fill(); }
-    }
     R.resize();
   };
   R.setQuality = function (q) { quality = q; R.resize(); };
   R.resize = function () {
     W = window.innerWidth; H = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, quality === "hi" ? 2 : 1.25);
+    dpr = Math.min(window.devicePixelRatio || 1, { hi: 2, mid: 1.5, lo: 1 }[quality] || 1.5);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + "px"; cv.style.height = H + "px";
     shoreY = Math.round(H * (H / W > 1.9 ? 0.39 : 0.37));
     topC.width = Math.round(W * dpr); topC.height = Math.round(shoreY * dpr);
-    landKey = ""; iceKey = "";
+    landKey = ""; iceKey = ""; baseKey = ""; maskKey = ""; dashes = [];
     const r = U.rng("stars");
     stars = []; for (let i = 0; i < 90; i++) stars.push([r() * W, Math.pow(r(), 1.5) * shoreY * 0.8, r.range(0.4, 1.4), r() * 6]);
     clouds = []; for (let i = 0; i < 7; i++) clouds.push({ x: r() * W * 1.4 - W * 0.2, y: r.range(0.08, 0.5) * shoreY, s: r.range(0.6, 1.4), seed: r() * 100 });
@@ -285,25 +277,27 @@
   }
 
   // ---------- Кадр ----------
-  R.render = function (v, dt) {
-    const loc = v.loc, season = v.season, t = v.t;
-    if (farZ !== loc.zfar) R.setFar(loc.zfar);
-    const L = R.light(v.hour, season);
-    R.lastLight = L;
-    const wx = v.wx;
-    const over = wx.sky === "overcast" || wx.sky === "rain" || wx.sky === "storm" || wx.sky === "snow";
-    const windF = 0.5 + wx.wind / 7;
+  // Небо и берег рисуются в кэш раз в несколько секунд (свет меняется медленно),
+  // облака досоставляются в верхний слой 2–3 раза в секунду, отражение — тоже из кэша.
+  let skyC = null, landLitC = null, reflC = null, iceLitC = null, cloudSpr = [];
+  let baseKey = "", composeT = -1, reflDirty = true, iceLitKey = "";
+  const mk = (w, h) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr)); const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, g]; };
+  const WCOL = { pond: ["#5a7a62", "#1c3a30"], river: ["#5a7a84", "#1d3440"], platnik: ["#5a7a6a", "#1e3a34"], reservoir: ["#64849a", "#1e3448"],
+    lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"] };
 
-    // --- верхняя часть (небо + берег) во вспомогательный холст ---
-    const g = topG;
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function buildBase(v, L, over) {
+    const loc = v.loc, season = v.season, wx = v.wx;
+    // небо
+    let a = mk(W, shoreY); skyC = a[0]; let g = a[1];
     let skyTop = L.top, skyBot = L.bot;
     if (over) { skyTop = U.mix(skyTop, "#7a8494", 0.55 * (1 - L.dark * 0.6)); skyBot = U.mix(skyBot, "#a8b0b8", 0.55 * (1 - L.dark * 0.6)); }
     if (season === "winter") skyBot = U.mix(skyBot, "#dfe8f2", 0.25 * (1 - L.dark));
     const sk = g.createLinearGradient(0, 0, 0, shoreY); sk.addColorStop(0, skyTop); sk.addColorStop(1, skyBot);
     g.fillStyle = sk; g.fillRect(0, 0, W, shoreY);
     if (L.stars > 0.02 && !over) {
-      for (const s of stars) { g.globalAlpha = L.stars * (0.55 + 0.45 * Math.sin(t * 1.7 + s[3])); g.fillStyle = "#fff"; g.fillRect(s[0], s[1], s[2], s[2]); }
+      const tw = U.rng("tw" + Math.round(v.hour * 16));
+      g.fillStyle = "#fff";
+      for (const s of stars) { g.globalAlpha = L.stars * (0.45 + 0.55 * tw()); g.fillRect(s[0], s[1], s[2], s[2]); }
       g.globalAlpha = 1;
     }
     if (L.sunUp && !over) {
@@ -322,47 +316,107 @@
       g.fillStyle = "rgba(170,180,210,0.5)"; g.beginPath(); g.arc(mx - 4, my - 3, 3, 0, Math.PI * 2); g.arc(mx + 4, my + 4, 2.2, 0, Math.PI * 2); g.fill();
       g.globalAlpha = 1;
     }
-    // облака
+    // облака — спрайты под текущий свет
     const cloudCol = U.mix(U.mix("#ffffff", L.bot, 0.35), "#1a2240", L.dark * 0.9);
-    for (const c of clouds) {
-      c.x += (0.004 + wx.wind * 0.0025) * W * dt * 0.1;
-      if (c.x > W * 1.25) c.x = -W * 0.35;
-      const n = over ? 1.6 : (wx.sky === "cloudy" ? 1 : 0.45);
-      g.fillStyle = U.rgba(cloudCol, Math.min(0.9, 0.5 * n));
-      const cr = U.rng(c.seed);
-      for (let i = 0; i < 6; i++) { g.beginPath(); g.ellipse(c.x + cr.range(-60, 60) * c.s, c.y + cr.range(-8, 6) * c.s, cr.range(26, 52) * c.s * n, cr.range(9, 17) * c.s, 0, 0, Math.PI * 2); g.fill(); }
-    }
-    // берег
+    const n = over ? 1.6 : (wx.sky === "cloudy" ? 1 : 0.45);
+    cloudSpr = clouds.map(function (c) {
+      const cr = U.rng(c.seed), pw = (60 + 52 * n) * c.s + 4, ph = 25 * c.s + 4;
+      const b = mk(pw * 2, ph * 2), cg = b[1];
+      cg.fillStyle = U.rgba(cloudCol, Math.min(0.9, 0.5 * n));
+      for (let i = 0; i < 6; i++) { cg.beginPath(); cg.ellipse(pw + cr.range(-60, 60) * c.s, ph + cr.range(-8, 6) * c.s, cr.range(26, 52) * c.s * n, cr.range(9, 17) * c.s, 0, 0, Math.PI * 2); cg.fill(); }
+      return { c: b[0], w: pw, h: ph };
+    });
+    // берег с освещением
+    a = mk(W, shoreY); landLitC = a[0]; g = a[1];
     const img = FZ.Assets.bg(loc.id, season);
     if (img) {
       const wl = FZ.Assets.waterline(loc.id, season);
       const sc = Math.max(W / img.width, (shoreY + 8) / (img.height * wl));
       g.drawImage(img, (W - img.width * sc) / 2, shoreY - img.height * wl * sc, img.width * sc, img.height * sc);
+      // небо картинки плавно уступает игровому небу (свет, звёзды, луна)
+      g.globalCompositeOperation = "destination-out";
+      const fade = g.createLinearGradient(0, 0, 0, shoreY * 0.62);
+      fade.addColorStop(0, "rgba(0,0,0," + (0.15 + L.dark * 0.8) + ")"); fade.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = fade; g.fillRect(0, 0, W, shoreY * 0.62);
+      g.globalCompositeOperation = "source-over";
     } else {
       const key = loc.id + season + W + "x" + H + dpr;
       if (landKey !== key) { landC = buildLand(loc, season); landKey = key; }
       g.drawImage(landC, 0, 0, W, shoreY);
     }
-    // освещение берега
-    if (L.dark > 0.01) { g.globalCompositeOperation = "multiply"; g.fillStyle = U.mix("#ffffff", "#24305e", L.dark); g.fillRect(0, 0, W, shoreY); g.globalCompositeOperation = "source-over"; }
-    if (L.warm > 0.01) { g.globalAlpha = L.warm; g.fillStyle = L.tint; g.globalCompositeOperation = "soft-light"; g.fillRect(0, 0, W, shoreY); g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; }
-    if (img && L.stars > 0.05 && !over) { // звёзды поверх неба картинки
-      for (const s of stars) { if (s[1] > shoreY * 0.45) continue; g.globalAlpha = L.stars * 0.8 * (0.55 + 0.45 * Math.sin(t * 1.7 + s[3])); g.fillStyle = "#fff"; g.fillRect(s[0], s[1], s[2], s[2]); }
-      g.globalAlpha = 1;
-    }
-    // туман на зорьке
+    g.globalCompositeOperation = "source-atop";
+    if (L.dark > 0.01) { g.globalCompositeOperation = "multiply"; g.fillStyle = U.mix("#ffffff", "#24305e", L.dark); g.fillRect(0, 0, W, shoreY); }
+    if (L.warm > 0.01) { g.globalAlpha = L.warm; g.fillStyle = L.tint; g.globalCompositeOperation = "soft-light"; g.fillRect(0, 0, W, shoreY); g.globalAlpha = 1; }
+    g.globalCompositeOperation = "destination-in"; g.drawImage(img ? landMask(img, loc, season) : landC, 0, 0, W, shoreY);
+    g.globalCompositeOperation = "source-over";
     if ((v.period === "dawn" || (wx.sky === "overcast" && season !== "summer")) && !v.ice) {
       const fg = g.createLinearGradient(0, shoreY * 0.7, 0, shoreY); fg.addColorStop(0, "rgba(230,232,240,0)"); fg.addColorStop(1, U.rgba(U.mix("#e8ecf2", L.bot, 0.3), 0.55 * (1 - L.dark)));
       g.fillStyle = fg; g.fillRect(0, shoreY * 0.7, W, shoreY * 0.3);
     }
+  }
+  // маска непрозрачности фоновой картинки (после вычитания неба) — чтобы свет не красил прозрачное
+  let maskC = null, maskKey = "";
+  function landMask(img, loc, season) {
+    const key = loc.id + season + W + "x" + H + dpr + Math.round(R.lastLight.dark * 10);
+    if (maskKey === key) return maskC;
+    const a = mk(W, shoreY), g = a[1];
+    const wl = FZ.Assets.waterline(loc.id, season);
+    const sc = Math.max(W / img.width, (shoreY + 8) / (img.height * wl));
+    g.drawImage(img, (W - img.width * sc) / 2, shoreY - img.height * wl * sc, img.width * sc, img.height * sc);
+    g.globalCompositeOperation = "destination-out";
+    const fade = g.createLinearGradient(0, 0, 0, shoreY * 0.62);
+    fade.addColorStop(0, "rgba(0,0,0," + (0.15 + R.lastLight.dark * 0.8) + ")"); fade.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = fade; g.fillRect(0, 0, W, shoreY * 0.62);
+    maskC = a[0]; maskKey = key; return maskC;
+  }
+  function composeTop() {
+    const g = topG;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(skyC, 0, 0);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    clouds.forEach(function (c, i) { const s = cloudSpr[i]; if (s) g.drawImage(s.c, c.x - s.w, c.y - s.h, s.w * 2, s.h * 2); });
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.drawImage(landLitC, 0, 0);
+  }
+  function buildRefl(v, L, over) {
+    const span = H - shoreY;
+    const a = mk(W, span), g = a[1];
+    const WC = WCOL[v.loc.style];
+    let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
+    if (v.season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
+    if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
+    const wg = g.createLinearGradient(0, 0, 0, span); wg.addColorStop(0, far); wg.addColorStop(1, near);
+    g.fillStyle = wg; g.fillRect(0, 0, W, span);
+    // отражение берега: перевёрнутый верхний слой
+    g.save(); g.globalAlpha = over ? 0.55 : 0.75;
+    g.setTransform(dpr, 0, 0, -dpr / 1.02, 0, shoreY * dpr / 1.02);
+    g.drawImage(topC, 0, 0, topC.width, topC.height, 0, 0, W, shoreY);
+    g.restore();
+    const dg = g.createLinearGradient(0, 0, 0, span); dg.addColorStop(0, U.rgba(near, 0)); dg.addColorStop(0.45, U.rgba(near, 0.28)); dg.addColorStop(1, U.rgba(near, 0.78));
+    g.fillStyle = dg; g.fillRect(0, 0, W, span);
+    g.fillStyle = U.rgba(L.bot, 0.25); g.fillRect(0, 0, W, 1.5);
+    reflC = a[0];
+  }
 
-    // --- на экран ---
+  R.render = function (v, dt) {
+    const loc = v.loc, season = v.season, t = v.t;
+    if (farZ !== loc.zfar) R.setFar(loc.zfar);
+    const L = R.light(v.hour, season);
+    R.lastLight = L;
+    const wx = v.wx;
+    const over = wx.sky === "overcast" || wx.sky === "rain" || wx.sky === "storm" || wx.sky === "snow";
+    const windF = 0.5 + wx.wind / 7;
+    const key = loc.id + "|" + season + "|" + wx.sky + "|" + Math.round(v.hour * 16) + "|" + W + "x" + H + "|" + dpr + "|" + (v.ice ? 1 : 0) + "|" + FZ.Assets.version;
+    for (const c of clouds) { c.x += (0.004 + wx.wind * 0.0025) * W * dt * 0.1; if (c.x > W * 1.25) c.x = -W * 0.35; }
+    if (key !== baseKey) { buildBase(v, L, over); baseKey = key; composeTop(); composeT = t; if (!v.ice) buildRefl(v, L, over); reflDirty = false; }
+    else if (reflDirty && !v.ice) { buildRefl(v, L, over); reflDirty = false; }
+    else if (t - composeT > 0.4 || t < composeT) { composeTop(); composeT = t; reflDirty = true; }
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let sx = 0, sy = 0;
     if (R.shakeA > 0.05) { sx = (Math.random() - 0.5) * R.shakeA; sy = (Math.random() - 0.5) * R.shakeA; R.shakeA *= Math.pow(0.02, dt); }
-    ctx.translate(sx, sy);
-    ctx.drawImage(topC, 0, 0, topC.width, topC.height, -4, -4, W + 8, shoreY + 4);
-    // птицы
+    if (sx || sy) { ctx.translate(sx, sy); ctx.drawImage(topC, 0, 0, topC.width, topC.height, -6, -6, W + 12, shoreY + 6); }
+    else ctx.drawImage(topC, 0, 0, topC.width, topC.height, 0, 0, W, shoreY);
     R.drawBirds(L, dt, t);
 
     if (v.ice) R.drawIceField(v, L, t);
@@ -377,69 +431,60 @@
   };
 
   // ---------- Вода ----------
+  let dashes = [];
   R.drawWater = function (v, L, t, windF, over) {
-    const season = v.season, st = v.loc.style;
-    const WC = { pond: ["#5a7a62", "#1c3a30"], river: ["#5a7a84", "#1d3440"], platnik: ["#5a7a6a", "#1e3a34"], reservoir: ["#64849a", "#1e3448"],
-      lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"] }[st];
-    let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
-    if (season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
-    if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
-    const wg = ctx.createLinearGradient(0, shoreY, 0, H); wg.addColorStop(0, far); wg.addColorStop(1, near);
-    ctx.fillStyle = wg; ctx.fillRect(-6, shoreY, W + 12, H - shoreY + 6);
-    // отражения
+    const season = v.season;
     const span = H - shoreY;
-    const reflA = over ? 0.55 : 0.75;
+    // отражение с волной: полосы из готового слоя
+    const lo = quality === "lo";
     let y = shoreY;
-    while (y < H) {
-      const d = y - shoreY, k = d / span;
-      const step = 2 + k * 4.5;
-      const srcY = shoreY - d * 1.02 - step;
-      if (srcY < 0) break;
+    while (y < H + 6) {
+      const d = Math.min(y - shoreY, span - 1), k = d / span;
+      const step = Math.max(1, Math.min(span - d, lo ? 4 + k * 12 : 2.5 + k * 7));
       const amp = (0.4 + k * k * 9) * windF;
       const dx = Math.sin(y * 0.11 + t * 1.7) * amp + Math.sin(y * 0.037 - t * 1.1) * amp * 0.7;
-      ctx.globalAlpha = reflA * (1 - k * 0.6);
-      ctx.drawImage(topC, 0, srcY * dpr, topC.width, step * dpr, dx - 6, y, W + 12, step + 0.6);
+      ctx.drawImage(reflC, 0, d * dpr, reflC.width, Math.max(1, step * dpr), dx - 6, y, W + 12, step + 0.6);
       y += step;
     }
-    ctx.globalAlpha = 1;
-    // глубина: затемнение к зрителю
-    const dg = ctx.createLinearGradient(0, shoreY, 0, H); dg.addColorStop(0, "rgba(0,0,0,0)"); dg.addColorStop(1, U.rgba(near, 0.55));
-    ctx.fillStyle = dg; ctx.fillRect(-6, shoreY, W + 12, span + 6);
-    // рябь
-    if (quality === "hi") {
-      ctx.globalCompositeOperation = "soft-light";
-      y = shoreY;
-      let row = 0;
-      while (y < H) {
-        const k = (y - shoreY) / span; const step = 2 + k * 5;
-        const sw = 256 * (1.1 - k * 0.75);
-        const srow = (row * 3 + t * 6 * windF) % 120;
-        ctx.globalAlpha = (0.2 + k * 0.32) * Math.min(1.2, windF);
-        const off = (t * 9 * windF + row * 13) % (256 - sw + 1);
-        ctx.drawImage(rippleC, Math.max(0, off), srow, sw, 4, -4, y, W + 8, step + 0.5);
-        y += step; row++;
-      }
-      ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+    // рябь: светлые и тёмные штрихи
+    if (!dashes.length || dashes.W !== W) {
+      const r = U.rng("dash"); dashes = []; dashes.W = W;
+      for (let i = 0; i < 130; i++) dashes.push({ k: Math.pow(r(), 1.25), x: r() * (W + 80), l: r.range(0.5, 1.5), ph: r() * 6.28, light: r() > 0.42, sp: r.range(0.6, 1.4) });
     }
+    const n = lo ? 60 : 130;
+    const wa = Math.min(1.3, windF);
+    const lightC = U.mix(U.mix(L.bot, "#ffffff", 0.35), "#7080a0", L.dark), darkC = U.mix("#0a1a24", "#000000", L.dark);
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.fillStyle = pass ? darkC : lightC;
+      for (let i = 0; i < n; i++) {
+        const q = dashes[i]; if (q.light === !!pass) continue;
+        const k = q.k, yy = shoreY + 2 + k * (span - 2);
+        const w = (5 + k * 60) * q.l;
+        let x = (q.x + t * (4 + 22 * k) * windF * q.sp) % (W + 80) - 40;
+        const a = (0.07 + 0.2 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
+        if (a <= 0.01) continue;
+        ctx.globalAlpha = a; ctx.fillRect(x, yy, w, 0.6 + k * 1.6);
+      }
+    }
+    ctx.globalAlpha = 1;
     // солнечная / лунная дорожка
     const glint = L.sunUp && !over ? { x: L.sunX, c: U.mix("#fff8e0", "#ffb070", L.sunLow), a: 0.35 + L.sunLow * 0.55 } : (L.moonA > 0.3 && !over ? { x: W * 0.28, c: "#dfe6ff", a: 0.55 * L.moonA } : null);
     if (glint) {
       ctx.globalCompositeOperation = "lighter";
-      for (let i = 0; i < 90; i++) {
-        const k = Math.pow((i + 0.5) / 90, 1.5);
+      ctx.fillStyle = glint.c;
+      const gn = lo ? 40 : 70;
+      for (let i = 0; i < gn; i++) {
+        const k = Math.pow((i + 0.5) / gn, 1.5);
         const yy = shoreY + 1 + k * span;
         const flick = Math.sin(t * 6.3 + i * 12.97) * 0.5 + 0.5;
         if (flick < 0.45) continue;
         const ww = (3 + k * 46) * (0.4 + flick) * (0.6 + windF * 0.3);
         const xx = glint.x + Math.sin(i * 7.3 + t * 0.9) * (4 + k * 34);
         ctx.globalAlpha = glint.a * (1 - k * 0.65) * flick;
-        ctx.fillStyle = glint.c; ctx.fillRect(xx - ww / 2, yy, ww, 0.8 + k * 1.6);
+        ctx.fillRect(xx - ww / 2, yy, ww, 0.8 + k * 1.6);
       }
       ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
     }
-    // линия у берега
-    ctx.fillStyle = U.rgba(L.bot, 0.25); ctx.fillRect(0, shoreY, W, 1.5);
-    // кувшинки и листья
     if (v.loc.style === "pond" || v.loc.style === "delta" || v.loc.style === "platnik") R.drawPads(v, L, t, season);
     if (season === "autumn") R.drawLeaves(v, L, t);
   };
@@ -475,10 +520,16 @@
   // ---------- Лёд ----------
   R.drawIceField = function (v, L, t) {
     const key = v.loc.id + W + "x" + H + dpr;
-    if (iceKey !== key) { iceC = buildIce(v.loc); iceKey = key; }
-    ctx.drawImage(iceC, 0, 0, iceC.width, iceC.height, 0, shoreY, W, H - shoreY);
-    if (L.dark > 0.01) { ctx.globalCompositeOperation = "multiply"; ctx.fillStyle = U.mix("#ffffff", "#2a3a6a", L.dark); ctx.fillRect(0, shoreY, W, H - shoreY); ctx.globalCompositeOperation = "source-over"; }
-    if (L.warm > 0.01) { ctx.globalAlpha = L.warm * 0.7; ctx.globalCompositeOperation = "soft-light"; ctx.fillStyle = L.tint; ctx.fillRect(0, shoreY, W, H - shoreY); ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1; }
+    if (iceKey !== key) { iceC = buildIce(v.loc); iceKey = key; iceLitKey = ""; }
+    if (iceLitKey !== baseKey) {
+      const a = mk(W, H - shoreY), g = a[1];
+      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(iceC, 0, 0); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (L.dark > 0.01) { g.globalCompositeOperation = "multiply"; g.fillStyle = U.mix("#ffffff", "#2a3a6a", L.dark); g.fillRect(0, 0, W, H - shoreY); }
+      if (L.warm > 0.01) { g.globalAlpha = L.warm * 0.7; g.globalCompositeOperation = "soft-light"; g.fillStyle = L.tint; g.fillRect(0, 0, W, H - shoreY); g.globalAlpha = 1; }
+      g.globalCompositeOperation = "source-over";
+      iceLitC = a[0]; iceLitKey = baseKey;
+    }
+    ctx.drawImage(iceLitC, 0, 0, iceLitC.width, iceLitC.height, 0, shoreY, W, H - shoreY);
     // блики на снегу
     if (L.sunUp) {
       ctx.globalCompositeOperation = "lighter";
@@ -700,9 +751,9 @@
       const kx = tip.x - kl * Math.cos(nod * 0.5), ky = tip.y + kl * Math.sin(nod * 0.5) + bend * 14;
       ctx.strokeStyle = U.mix("#2a2a2a", "#4a5470", L.dark); ctx.lineWidth = 2.6;
       ctx.beginPath(); ctx.moveTo(tip.x, tip.y); ctx.quadraticCurveTo(tip.x - kl * 0.5, tip.y + nod * 10, kx, ky); ctx.stroke();
+      if (night) R.glow(kx, ky, 16);
       ctx.fillStyle = night ? "#7aff6a" : "#ff3a1a";
-      if (night) { ctx.shadowColor = "#7aff6a"; ctx.shadowBlur = 12; }
-      ctx.beginPath(); ctx.arc(kx, ky, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      ctx.beginPath(); ctx.arc(kx, ky, 5, 0, Math.PI * 2); ctx.fill();
       lineFrom = { x: kx, y: ky };
     }
 
@@ -787,11 +838,9 @@
     if (up > 0) { ctx.fillStyle = "#f4f0e8"; ctx.beginPath(); ctx.ellipse(0, -hgt * 0.05, w * 1.6, hgt * 0.5 * up + 1, 0, 0, Math.PI * 2); ctx.fill(); }
     const top = -hgt * (1 + up * 0.5);
     ctx.fillStyle = "#f6f6f2"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, hgt * 0.55 + up * hgt * 0.5);
-    if (night) {
-      ctx.shadowColor = "#8aff6a"; ctx.shadowBlur = 14; ctx.fillStyle = "#9aff7a";
-    } else ctx.fillStyle = "#ff3d12";
+    if (night) { R.glow(0, top + hgt * 0.22, hgt * 0.9); ctx.fillStyle = "#9aff7a"; }
+    else ctx.fillStyle = "#ff3d12";
     ctx.beginPath(); ctx.roundRect(-w / 2, top, w, hgt * 0.47, w / 2); ctx.fill();
-    ctx.shadowBlur = 0;
     ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, Math.max(1, hgt * 0.05));
     ctx.restore();
     // кольцо у основания
@@ -925,6 +974,19 @@
     }
     try { thumbs[key] = c.toDataURL("image/jpeg", 0.85); } catch (e) { thumbs[key] = ""; }
     return thumbs[key];
+  };
+
+  // Зелёное свечение светлячка (заранее нарисованный спрайт вместо дорогой тени)
+  let glowC = null;
+  R.glow = function (x, y, r) {
+    if (!glowC) {
+      glowC = document.createElement("canvas"); glowC.width = glowC.height = 64;
+      const g = glowC.getContext("2d"); const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+      gr.addColorStop(0, "rgba(160,255,140,0.95)"); gr.addColorStop(0.3, "rgba(120,255,100,0.45)"); gr.addColorStop(1, "rgba(120,255,100,0)");
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    }
+    const op = ctx.globalCompositeOperation; ctx.globalCompositeOperation = "lighter";
+    ctx.drawImage(glowC, x - r, y - r, r * 2, r * 2); ctx.globalCompositeOperation = op;
   };
 
   R.shake = function (a) { R.shakeA = Math.max(R.shakeA, a); };
