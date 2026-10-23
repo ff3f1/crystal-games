@@ -109,17 +109,17 @@ def run():
         W = pg.wait_for_timeout
 
         # 1) рассвет на пруду, заброс
-        pg.evaluate("__cap('Рыбалка как в жизни','поплавок, фидер, спиннинг и зимняя')")
-        W(1300)
+        pg.evaluate("__cap('Рыбалка как в жизни','поплавок, фидер, спиннинг и лёд')")
+        W(900)
         pg.mouse.move(180, 300); pg.mouse.down(); pg.mouse.move(200, 330, steps=8); W(250); pg.mouse.up()  # заброс жестом
-        W(1700)
+        W(1300)
         mark("cast")
         # 2) поклёвка: карп ведёт поплавок
         pg.evaluate("__cap('Поплавок повело —','подсекай!')")
         pg.evaluate("""()=>{const r=__game.G.rig();if(r.state!=='wait'&&r.state!=='settle'){__game.G.cast(0,14);} }""")
-        W(900)
+        W(500)
         pg.evaluate("""()=>{const r=__game.G.rig();r.state='bite';r.bite={s:FZ.SP.carp,w:4.3,style:'drag',phase:'take',t:0.2,touches:0,nextTouch:0,take:9,empty:false};}""")
-        W(1500)
+        W(1200)
         mark("bite")
         # подсечка свайпом вверх
         pg.mouse.move(190, 560); pg.mouse.down(); pg.mouse.move(190, 470, steps=4); pg.mouse.up()
@@ -134,14 +134,14 @@ def run():
         xs = [250, 250, 120, 120, 260, 260, 150, 200]
         t0 = time.time(); i = 0; said = False
         pg.mouse.move(250, 600); pg.mouse.down()
-        while time.time() - t0 < 9.5:
+        while time.time() - t0 < 6.5:
             st = pg.evaluate(guard)
             if st != "fight": break
             el = time.time() - t0
-            if el > 2.5: pg.evaluate("()=>{const f=__game.G.rig().fish;if(f)f.S=Math.max(0,f.S-0.035);}")
+            if el > 1.8: pg.evaluate("()=>{const f=__game.G.rig().fish;if(f)f.S=Math.max(0,f.S-0.05);}")
             if el > 1.6 and int(el * 1.2) != i:
                 i = int(el * 1.2); pg.mouse.move(xs[i % len(xs)], 600, steps=6)
-            if el > 4.6 and not said:
+            if el > 3.4 and not said:
                 said = True; pg.evaluate("__cap('Веди удилище','против рыбы, чтобы не ушла в траву')")
             W(120)
         mark("fight")
@@ -154,7 +154,7 @@ def run():
         # 4) карточка улова
         pg.evaluate("__cap('');__cta(false)")
         pg.evaluate("document.getElementById('toast').innerHTML=''")
-        W(2600)
+        W(2300)
         mark("catch")
         if pg.is_visible("#cKeep"): pg.click("#cKeep")
         W(300)
@@ -162,17 +162,17 @@ def run():
         pg.evaluate("document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on'));document.getElementById('hud').classList.remove('hide')")
         pg.evaluate(SETUP, {"loc": "ladoga", "season": "winter", "time": "day", "sky": "cloudy"})
         pg.evaluate("__cap('Зимняя рыбалка','бурим лунку на Ладоге');__cta(true)")
-        W(500)
+        W(300)
         pg.evaluate("__game.G.drill()")
-        W(2900)
+        W(2600)
         mark("ice")
         pg.evaluate("""()=>{const r=__game.G.rig();r.state='bite';r.bite={s:FZ.SP.perch,w:0.62,style:'twitch',phase:'take',t:0.3,touches:0,nextTouch:0,take:9,empty:false};}""")
         pg.evaluate("__cap('Кивок дрогнул —','подсекай!')")
-        W(1000)
+        W(800)
         pg.evaluate("""()=>{const G=__game.G;const tu=G.state().tut;G.state().tut=2;G.strike();G.state().tut=tu;}""")
         pg.mouse.move(180, 600); pg.mouse.down()
         t0 = time.time()
-        while time.time() - t0 < 3.2:
+        while time.time() - t0 < 2.2:
             st = pg.evaluate(guard)
             if st != "fight": break
             pg.evaluate("()=>{const f=__game.G.rig().fish;if(f)f.S=Math.max(0,f.S-0.05);}")
@@ -185,17 +185,17 @@ def run():
                 pg.evaluate("()=>{const f=__game.G.rig().fish;if(f){f.S=0.05;f.D=Math.min(f.D,0.6);}}"); pg.mouse.down(); W(150); pg.mouse.up()
             W(100)
         pg.evaluate("__cap('');__cta(false)")
-        W(1700)
+        W(1500)
         mark("ice_catch")
         # 6) водоёмы — карта
         pg.evaluate("document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on'));document.getElementById('hud').classList.remove('hide')")
         pg.evaluate(SETUP, {"loc": "oka", "season": "autumn", "time": "dusk", "mode": "spin"})
         pg.evaluate("__cap('8 водоёмов России','31 вид рыбы: от плотвы до тайменя');__cta(true)")
-        W(2300)
+        W(2000)
         mark("oka")
         # 7) финальная карточка
         pg.evaluate("__end()")
-        W(3300)
+        W(3000)
         mark("end")
         if not SHOTS:
             cdp.send("Page.stopScreencast")
