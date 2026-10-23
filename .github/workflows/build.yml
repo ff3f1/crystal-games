@@ -32,9 +32,8 @@ jobs:
             dir: fish
             name: "Рыбалка: Клюёт!"
             appId: ru.crystalgames.fishing
-            # демо-блоки Яндекса, пока в кабинете РСЯ не созданы свои
-            adInter: demo-interstitial-yandex
-            adReward: demo-rewarded-yandex
+            adInter: R-M-20269656-1
+            adReward: R-M-20269656-2
     steps:
       - uses: actions/checkout@v4
 

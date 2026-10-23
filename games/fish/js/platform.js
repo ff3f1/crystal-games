@@ -6,7 +6,7 @@
   FZ.CONFIG = {
     pkg: "ru.crystalgames.fishing",
     store: "https://www.rustore.ru/catalog/app/ru.crystalgames.fishing",
-    youtube: "",            // ссылка на YouTube-канал (кнопка в настройках появится, когда заполнено)
+    youtube: "https://youtube.com/@shpargalka_rybaka", // ссылка на YouTube-канал (кнопка в настройках появится, когда заполнено)
     title: "Рыбалка: Клюёт!",
     interGap: 150           // секунд между межстраничной рекламой
   };
