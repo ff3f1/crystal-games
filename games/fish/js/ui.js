@@ -123,17 +123,21 @@
   };
 
   let hintKey = "", tensDpr = 0;
+  // DOM трогаем только когда значение поменялось: лишние записи заставляют браузер пересчитывать страницу
+  const setT = (id, v) => { const e = $(id); if (e._v !== v) { e._v = v; e.textContent = v; } };
+  const setH = (id, v) => { const e = $(id); if (e._h !== v) { e._h = v; e.innerHTML = v; } };
+  const setS = (id, k, v) => { const e = $(id); const c = "_s" + k; if (e[c] !== v) { e[c] = v; e.style[k] = v; } };
+  const setC = (id, cls, on) => { const e = typeof id === "string" ? $(id) : id; const c = "_c" + cls; if (e[c] !== on) { e[c] = on; e.classList.toggle(cls, on); } };
+  let echoT = 0;
   UI.frame = function (dt, t) {
     const s = G.sess(); if (!s || !hudBuilt) return;
     const st = G.state(), r = G.rig();
-    $("hLvl").textContent = st.lvl;
-    $("hXp").style.width = Math.round(st.xp / FZ.xpNeed(st.lvl) * 100) + "%";
-    $("hMoney").textContent = U.money(st.money);
+    setT("hLvl", String(st.lvl));
+    setS("hXp", "width", Math.round(st.xp / FZ.xpNeed(st.lvl) * 100) + "%");
+    setT("hMoney", U.money(st.money));
     const night = s.period === "night";
-    const tk = fmtH(s.hour) + s.wx.sky + night;
-    if (UI._tk !== tk) { UI._tk = tk; $("hTime").innerHTML = skyIc(s.wx.sky, night) + fmtH(s.hour); }
+    setH("hTime", skyIc(s.wx.sky, night) + fmtH(s.hour));
     // кнопка действия
-    const act = $("bAct");
     let label = "", calm = false, alarm = false;
     const mode = s.mode;
     switch (r.state) {
@@ -146,24 +150,27 @@
       case "nohole": label = "Бурить"; break;
       case "drill": label = "Бурю…"; calm = true; break;
     }
-    if (act.textContent !== label) act.textContent = label;
-    act.classList.toggle("calm", calm); act.classList.toggle("alarm", alarm);
+    setT("bAct", label);
+    setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
     // инструменты/натяжение
     const fight = r.state === "fight" || r.state === "landing";
-    $("hTens").classList.toggle("hide", !fight);
-    $("hDrag").classList.toggle("hide", r.state !== "fight");
-    ["tRod", "tBait", "tGb", "tMore"].forEach((id) => $(id).classList.toggle("hide", fight));
-    $("hIce").classList.toggle("hide", !(s.ice && s.hole && !fight && r.state !== "drill"));
-    if (s.ice && s.hole) { const k = s.hole.lure; $("iceKnob").style.top = k * 100 + "%"; $("iceTxt").textContent = (s.hole.depth * k).toFixed(1).replace(".", ",") + " м"; }
+    setC("hTens", "hide", !fight);
+    setC("hDrag", "hide", r.state !== "fight");
+    ["tRod", "tBait", "tGb", "tMore"].forEach((id) => setC(id, "hide", fight));
+    setC("hIce", "hide", !(s.ice && s.hole && !fight && r.state !== "drill"));
+    if (s.ice && s.hole) { const k = s.hole.lure; setS("iceKnob", "top", k * 100 + "%"); setT("iceTxt", (s.hole.depth * k).toFixed(1).replace(".", ",") + " м"); }
     if (r.state === "fight" && r.fish) UI.drawTension(r.fish, s);
-    $("dVal").textContent = Math.round(st.drag * 100) + "%";
-    // эхолот
-    const echo = $("hEcho");
+    setT("dVal", Math.round(st.drag * 100) + "%");
+    // эхолот — 4 раза в секунду
     if (st.extras.echo && !fight) {
-      echo.classList.remove("hide");
-      if (s.ice) echo.innerHTML = s.hole ? "Глубина <b>" + s.hole.depth.toFixed(1).replace(".", ",") + " м</b><br>Рыба: <b>" + (s.hole.fish > 1.1 ? "много" : s.hole.fish > 0.6 ? "есть" : "мало") + "</b>" : "Эхолот готов";
-      else { const p = G.sess().lastAim || { X: 0, Z: 10 }; const tbl = r.state === "wait" ? G.biteTable() : null; let tot = 0; if (tbl) tbl.forEach((x) => (tot += x[1])); echo.innerHTML = "Глубина <b>" + G.depthAt(p.X, p.Z).toFixed(1).replace(".", ",") + " м</b>" + (tbl ? "<br>Активность: <b>" + (tot > 0.15 ? "высокая" : tot > 0.07 ? "средняя" : "низкая") + "</b>" : ""); }
-    } else echo.classList.add("hide");
+      setC("hEcho", "hide", false);
+      echoT -= dt;
+      if (echoT <= 0) {
+        echoT = 0.25;
+        if (s.ice) setH("hEcho", s.hole ? "Глубина <b>" + s.hole.depth.toFixed(1).replace(".", ",") + " м</b><br>Рыба: <b>" + (s.hole.fish > 1.1 ? "много" : s.hole.fish > 0.6 ? "есть" : "мало") + "</b>" : "Эхолот готов");
+        else { const p = G.sess().lastAim || { X: 0, Z: 10 }; const tbl = r.state === "wait" ? G.biteTable() : null; let tot = 0; if (tbl) tbl.forEach((x) => (tot += x[1])); setH("hEcho", "Глубина <b>" + G.depthAt(p.X, p.Z).toFixed(1).replace(".", ",") + " м</b>" + (tbl ? "<br>Активность: <b>" + (tot > 0.15 ? "высокая" : tot > 0.07 ? "средняя" : "низкая") + "</b>" : "")); }
+      }
+    } else setC("hEcho", "hide", true);
     UI.hint(s, r, st, t);
   };
 
@@ -549,14 +556,17 @@
     const st = G.state(), S = st.settings;
     const sw = (k, n) => '<div class="opt"><span>' + n + '</span><button class="sw ' + (S[k] ? "on" : "") + '" data-k="' + k + '" aria-label="' + n + '"></button></div>';
     let html = "<h2>Настройки</h2><div class=\"sub\">" + FZ.CONFIG.title + "</div><div class=\"scroll\">" + sw("sound", "Звуки природы и эффекты") + sw("music", "Музыка") + sw("vibro", "Вибрация") +
-      '<div class="opt"><span>Качество графики</span></div><div class="seg" id="qSeg"><button data-q="hi" class="' + (S.quality === "hi" ? "on" : "") + '">Высокое</button><button data-q="lo" class="' + (S.quality === "lo" ? "on" : "") + '">Экономное</button></div>' +
+      (FZ.Assets.has() ? '<div class="opt"><span>Графика</span></div><div class="seg" id="gSeg"><button data-g="paint" class="' + (S.gfx !== "art" ? "on" : "") + '">Реалистичная</button><button data-g="art" class="' + (S.gfx === "art" ? "on" : "") + '">Рисованная</button></div>' : "") +
+      '<div class="opt"><span>Плавность и чёткость</span></div><div class="seg" id="qSeg">' + [["auto", "Авто"], ["hi", "Чётко"], ["mid", "Средне"], ["lo", "Плавно"]].map((q) => '<button data-q="' + q[0] + '" class="' + (S.quality === q[0] ? "on" : "") + '">' + q[1] + "</button>").join("") + "</div>" +
+      '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» само снижает чёткость, если телефон не успевает показывать 60 кадров.</div>' +
       '<div class="row"><div class="pic">' + ic("cam") + '</div><div class="body"><div class="t">Режим съёмки</div><div class="d">Кнопка с камерой на берегу прячет интерфейс — удобно снимать ролики и Shorts с экрана.</div></div></div>' +
       (FZ.CONFIG.youtube ? '<button class="btn" id="sYt" style="width:100%;margin-top:10px">' + ic("yt") + " Наш канал на YouTube</button>" : "") +
       '<button class="btn ghost" id="sRate" style="width:100%;margin-top:10px">' + ic("star") + " Оценить игру</button>" +
       '<div class="d" style="color:var(--muted);font-size:12px;margin-top:16px;text-align:center">Crystal Games. Статистика: поймано ' + st.stats.total + " рыб, " + st.stats.kg.toFixed(1).replace(".", ",") + " кг, отпущено " + st.stats.released + "</div></div>";
     const sh = UI.sheet(html, () => { if (UI.menuOpen) UI.showMenu(); });
     sh.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { const k = b.dataset.k; S[k] = !S[k]; b.classList.toggle("on", S[k]); if (k === "sound") FZ.Sound.setOn(S[k]); if (k === "music") { FZ.Sound.setMusic(S[k]); if (S[k]) UI.ambience(); } G.save(true); FZ.Sound.click(); }));
-    sh.querySelectorAll("#qSeg button").forEach((b) => (b.onclick = () => { S.quality = b.dataset.q; FZ.Scene.setQuality(S.quality); G.save(true); UI.closeSheet(); UI.showSettings(); }));
+    sh.querySelectorAll("#qSeg button").forEach((b) => (b.onclick = () => { S.quality = b.dataset.q; if (S.quality === "auto") S.autoQ = "hi"; FZ.applyQuality(); G.save(true); UI.closeSheet(); UI.showSettings(); }));
+    sh.querySelectorAll("#gSeg button").forEach((b) => (b.onclick = () => { S.gfx = b.dataset.g; FZ.Assets.setStyle(S.gfx); G.save(true); UI.refreshTools(); UI.closeSheet(); UI.showSettings(); UI.toast(S.gfx === "art" ? "Графика: рисованная" : "Графика: реалистичная"); }));
     const yt = sh.querySelector("#sYt"); if (yt) yt.onclick = () => FZ.Platform.openUrl(FZ.CONFIG.youtube);
     sh.querySelector("#sRate").onclick = () => { st.rateAsked = 2; G.save(true); FZ.Platform.rate(); };
   };

@@ -29,10 +29,15 @@
     })).then(function () { A.ok = true; });
   };
 
+  // Две версии графики: «paint» — сгенерированные картинки, «art» — нарисованная кодом
+  A.style = "paint"; A.version = 0;
+  A.has = () => Object.keys(A.img).some((k) => k.indexOf("bg/") === 0 || k.indexOf("fish/") === 0);
+  A.setStyle = function (st) { A.style = st === "art" ? "art" : "paint"; A.version++; };
+  const on = () => A.style !== "art";
   A.get = (k) => A.img[k] || null;
-  A.bg = (loc, season) => A.img["bg/" + loc + "_" + season] || null;
-  A.fish = (id) => A.img["fish/" + id] || null;
-  A.item = (id) => A.img["items/" + id] || null;
+  A.bg = (loc, season) => (on() && A.img["bg/" + loc + "_" + season]) || null;
+  A.fish = (id) => (on() && A.img["fish/" + id]) || null;
+  A.item = (id) => (on() && A.img["items/" + id]) || null;
   A.audio = (k) => (M.audio && M.audio[k] ? "assets/" + M.audio[k] : null);
   // Где у фоновой картинки линия воды (доля высоты), если отличается от стандартной
   A.waterline = (loc, season) => ((A.tuning.waterline || {})["bg/" + loc + "_" + season]) || 0.97;

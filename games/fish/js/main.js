@@ -93,24 +93,29 @@
     if (running) requestAnimationFrame(frame);
   }
 
-  // Слабый телефон: если кадров мало — переключаемся на экономную графику
-  let fq = { t0: 0, n: 0, done: !!navigator.webdriver };
+  // Качество «Авто»: начинаем с высокого и ступенькой снижаем, пока кадров меньше 48 в секунду
+  const QL = ["hi", "mid", "lo"];
+  const effQ = (st) => (st.settings.quality === "auto" ? (st.settings.autoQ || "hi") : st.settings.quality);
+  let fq = { t0: 0, n: 0, off: !!navigator.webdriver, start: 0 };
   function autoQuality(now) {
-    if (fq.done || !G.sess() || UI.anyOpen()) { fq.t0 = 0; fq.n = 0; return; }
+    const st = G.state();
+    if (fq.off || st.settings.quality !== "auto" || !G.sess() || document.hidden || now - fq.start < 2500) { fq.t0 = 0; return; }
     if (!fq.t0) { fq.t0 = now; fq.n = 0; return; }
     fq.n++;
-    if (now - fq.t0 > 6000) {
+    if (now - fq.t0 > 4000) {
       const fps = fq.n / ((now - fq.t0) / 1000);
-      fq.done = true;
-      const st = G.state();
-      if (fps < 38 && st.settings.quality === "hi") { st.settings.quality = "lo"; Sc.setQuality("lo"); G.save(true); UI.toast("Включена экономная графика — так плавнее. Сменить можно в настройках"); }
+      fq.t0 = 0;
+      const i = QL.indexOf(effQ(st));
+      if (fps < 48 && i < QL.length - 1) { st.settings.autoQ = QL[i + 1]; Sc.setQuality(QL[i + 1]); G.save(true); fq.start = now; }
     }
   }
+  FZ.applyQuality = function () { const st = G.state(); Sc.setQuality(effQ(st)); fq.start = performance.now(); };
 
   // ---------- Запуск ----------
   function boot() {
     const st = G.load();
-    Sc.init(cv); Sc.setQuality(st.settings.quality);
+    Sc.init(cv); Sc.setQuality(effQ(st)); fq.start = performance.now();
+    FZ.Assets.setStyle(st.settings.gfx);
     FZ.Sound.setOn(st.settings.sound); FZ.Sound.music = st.settings.music;
     const bar = document.getElementById("bootBar");
     FZ.Assets.load((k) => { bar.style.width = Math.round(k * 100) + "%"; }).then(function () {

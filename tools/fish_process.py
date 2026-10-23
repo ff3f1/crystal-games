@@ -18,7 +18,14 @@ TUNE_PATH = os.path.join(ROOT, "tools", "fish_tuning.json")
 TUNE = json.load(open(TUNE_PATH, encoding="utf-8")) if os.path.exists(TUNE_PATH) else {"flip": {}, "waterline": {}}
 
 try:
-    from rembg import remove as rembg_remove
+    from rembg import remove as rembg_remove, new_session
+    _sess = None
+
+    def _rembg(im):
+        global _sess
+        if _sess is None:
+            _sess = new_session("isnet-general-use")
+        return rembg_remove(im, session=_sess)
 except Exception:
     rembg_remove = None
 
@@ -44,7 +51,7 @@ def cut_by_color(im):
 def cutout(im):
     if rembg_remove:
         try:
-            return rembg_remove(im.convert("RGBA"))
+            return _rembg(im.convert("RGB"))
         except Exception as e:
             print("  rembg не сработал (%s), режу по цвету" % e)
     return cut_by_color(im)
@@ -65,8 +72,8 @@ def main():
     total = 0
     for it in MAN["images"]:
         key = it["key"]
-        src = os.path.join(RAW, key + ".png")
-        if not os.path.exists(src):
+        src = next((os.path.join(RAW, key + e) for e in (".png", ".webp", ".jpg") if os.path.exists(os.path.join(RAW, key + e))), None)
+        if not src:
             continue
         im = Image.open(src)
         group, name = key.split("/")
@@ -111,12 +118,20 @@ def main():
             if ext not in (".mp3", ".ogg", ".wav", ".flac", ".m4a"):
                 continue
             src = os.path.join(adir, f)
-            if ext in (".mp3", ".ogg"):
+            if ff:
+                # мягкие начало и конец, чтобы трек незаметно зацикливался
+                dst = os.path.join(OUT, "audio", stem + ".mp3")
+                dur = 0.0
+                try:
+                    dur = float(subprocess.run([shutil.which("ffprobe") or "ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", src],
+                                               capture_output=True, text=True).stdout.strip() or 0)
+                except Exception:
+                    pass
+                af = "afade=t=in:d=1.5" + (",afade=t=out:st=%.2f:d=3" % max(0, dur - 3) if dur > 8 else "")
+                subprocess.run([ff, "-y", "-loglevel", "error", "-i", src, "-af", af, "-ac", "2", "-b:a", "128k", dst], check=True)
+            elif ext in (".mp3", ".ogg"):
                 dst = os.path.join(OUT, "audio", stem + ext)
                 shutil.copyfile(src, dst)
-            elif ff:
-                dst = os.path.join(OUT, "audio", stem + ".mp3")
-                subprocess.run([ff, "-y", "-loglevel", "error", "-i", src, "-b:a", "128k", dst], check=True)
             else:
                 print("  %s: нет ffmpeg для сжатия, кладу как есть" % f)
                 dst = os.path.join(OUT, "audio", f)

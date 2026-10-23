@@ -53,11 +53,13 @@ Object.keys(ITEMS).forEach((id) => {
 out.images.push({ key: "ui/icon", group: "ui", size: [1024, 1024], optional: true,
   prompt: "Mobile game app icon for a fishing game: a striped European perch leaping out of a calm lake at golden sunset next to a red and white fishing float, water splashes, bold readable silhouette, vibrant colors, centered composition, no text, no letters, no border" });
 out.music = [
-  { key: "music_summer", tags: "acoustic guitar, warm, relaxing, folk, gentle, summer, nature, instrumental, 80 bpm", lyrics: "[instrumental]", seconds: 150 },
-  { key: "music_spring", tags: "light acoustic folk, flute, guitar, cheerful, spring morning, instrumental, 92 bpm", lyrics: "[instrumental]", seconds: 150 },
-  { key: "music_autumn", tags: "melancholic acoustic guitar and piano, russian folk melody, calm, autumn, instrumental, 72 bpm", lyrics: "[instrumental]", seconds: 150 },
-  { key: "music_winter", tags: "soft piano, bells, cozy winter, calm ambient, instrumental, 70 bpm", lyrics: "[instrumental]", seconds: 150 },
-  { key: "music_night", tags: "ambient synth pads, slow, dreamy, night lake, lo-fi chill, instrumental, 62 bpm", lyrics: "[instrumental]", seconds: 150 }
+  { key: "music_summer", tags: "relaxing acoustic folk instrumental, warm fingerpicked acoustic guitar, soft mandolin, gentle shaker, summer morning by a lake, peaceful, nature, cozy game background music", bpm: 84, keyscale: "D major", seconds: 90 },
+  { key: "music_spring", tags: "light cheerful acoustic instrumental, wooden flute melody, acoustic guitar, soft hand percussion, spring morning, birds, hopeful, game background music", bpm: 92, keyscale: "G major", seconds: 90 },
+  { key: "music_autumn", tags: "calm melancholic instrumental, russian folk melody on balalaika and acoustic guitar, soft piano, autumn river, nostalgic, warm, game background music", bpm: 72, keyscale: "A minor", seconds: 90 },
+  { key: "music_winter", tags: "cozy winter instrumental, soft felt piano, gentle sleigh bells, warm strings pad, snowy frozen lake, calm, game background music", bpm: 70, keyscale: "C major", seconds: 90 },
+  { key: "music_night", tags: "slow dreamy ambient instrumental, warm analog synth pads, soft electric piano, distant crickets, night lake under the moon, lo-fi chill, game background music", bpm: 64, keyscale: "E minor", seconds: 90 }
 ];
+const first = ["bg/pond_summer", "fish/pike", "items/worm"];
+out.images.sort((a, b) => (first.indexOf(b.key) >= 0) - (first.indexOf(a.key) >= 0));
 fs.writeFileSync(path.join(__dirname, "fish_assets.json"), JSON.stringify(out, null, 1));
 console.log("images:", out.images.length, "music:", out.music.length);

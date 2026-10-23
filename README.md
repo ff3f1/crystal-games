@@ -42,19 +42,19 @@ python3 tools/path_levels.py <папка>   # пересборка и прове
 
 ## «Рыбалка: Клюёт!»: свои картинки и музыка
 
-Игра полностью работает и без них: рыбы, водоёмы и иконки рисуются кодом. Сгенерированные ассеты подхватываются сами.
+Игра работает и без них: рыбы, водоёмы и иконки рисуются кодом. В настройках игры есть переключатель
+«Графика: реалистичная / рисованная» — он появляется, когда сгенерированные картинки подключены.
 
-1. Запустить ComfyUI с моделью Flux.
-2. В папке репозитория: `python tools/fish_generate.py` — 89 картинок (32 фона, 31 рыба, 26 иконок) в `tools/raw_assets`.
-   Можно прерывать и запускать снова — готовое пропускается. Свой воркфлоу: `--workflow файл_API.json`, другой чекпойнт: `--ckpt имя`.
-   Если системного Python нет — тем, что внутри ComfyUI: `python_embeded\python.exe tools\fish_generate.py`.
-3. Музыка (по желанию): в ACE-Step сделать треки по тегам из `tools/fish_assets.json` (раздел `music`) и положить в
-   `tools/raw_assets/audio/` с именами `music_summer`, `music_spring`, `music_autumn`, `music_winter`, `music_night` (mp3/wav/flac).
-4. `python tools/fish_process.py` — вырезает фон, сжимает в webp, подключает к игре (`games/fish/assets/assets.js`).
-   С `pip install rembg` фон у рыб вырезается аккуратнее.
-5. `git add games/fish/assets && git commit -m "Ассеты рыбалки" && git push` — и сборка.
+**На ПК (ComfyUI):** набор `tools/comfy_kit` (архив собирает `python3 tools/make_comfy_kit.py`).
+Распаковать, запустить ComfyUI, дважды щёлкнуть `START.bat`. Набор сам находит Python и модель
+(Flux одним файлом, раздельно UNET + T5 + CLIP + VAE, GGUF; если Flux нет — SDXL), делает 90 картинок
+и 5 треков через ACE-Step 1.5 (если он есть в ComfyUI) и кладёт на рабочий стол `fishing_images.zip`
+и `fishing_music.zip`. Прерывать можно — повторный запуск продолжит.
 
-Тонкая настройка — `tools/fish_tuning.json`: `flip` разворачивает спрайт рыбы головой влево (`{"flip": {"fish/pike": true}}`),
+**Подключение:** `python3 tools/fish_import.py fishing_images.zip fishing_music.zip` — вырезает фон у рыб
+и иконок (rembg), сжимает в webp, делает плавные края у музыки и пишет `games/fish/assets/assets.js`.
+Тонкая настройка — `tools/fish_tuning.json`: `flip` разворачивает спрайт рыбы головой влево,
 `waterline` — где на фоне линия воды (доля высоты, по умолчанию 0.97).
+
 Иконка: `python tools/fish_icon.py` (если есть `games/fish/assets/ui/icon.png` — берётся она). Скриншоты: `python tools/store_shots.py`.
 Ссылка на YouTube-канал для кнопки в настройках — `FZ.CONFIG.youtube` в `games/fish/js/platform.js`.

@@ -2,15 +2,6 @@
  "comment": "Списки картинок для Flux. size — [ширина, высота]. Генерация: python tools/fish_generate.py",
  "images": [
   {
-   "key": "bg/pond_spring",
-   "group": "bg",
-   "size": [
-    1024,
-    896
-   ],
-   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
-  },
-  {
    "key": "bg/pond_summer",
    "group": "bg",
    "size": [
@@ -18,6 +9,35 @@
     896
    ],
    "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. midsummer, lush green foliage, warm clear day with a few fluffy clouds. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
+  },
+  {
+   "key": "fish/pike",
+   "group": "fish",
+   "size": [
+    1152,
+    640
+   ],
+   "cutout": true,
+   "prompt": "A northern pike (Esox lucius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
+  },
+  {
+   "key": "items/worm",
+   "group": "items",
+   "size": [
+    768,
+    768
+   ],
+   "cutout": true,
+   "prompt": "a pink earthworm used as fishing bait, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
+  },
+  {
+   "key": "bg/pond_spring",
+   "group": "bg",
+   "size": [
+    1024,
+    896
+   ],
+   "prompt": "Landscape view from the near shore across the water: a small Russian village pond, birch trees and willows on the far bank, a few wooden village houses and a small white Orthodox church with a blue onion dome, reeds along the bank, a small wooden pier. early spring, fresh light green leaves, some trees still bare, small patches of melting snow in the shade. The far shoreline runs straight across the lower part of the image, the water is visible only as a thin calm band along the very bottom edge, sky fills the upper half. painterly realistic digital illustration for a mobile game background, soft natural daylight, rich but natural colors, highly detailed, wide panoramic composition, no people, no boats, no animals, no text, no watermark, no frame"
   },
   {
    "key": "bg/pond_autumn",
@@ -430,16 +450,6 @@
    "prompt": "A grass carp (Ctenopharyngodon idella), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
   },
   {
-   "key": "fish/pike",
-   "group": "fish",
-   "size": [
-    1152,
-    640
-   ],
-   "cutout": true,
-   "prompt": "A northern pike (Esox lucius), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
-  },
-  {
    "key": "fish/zander",
    "group": "fish",
    "size": [
@@ -598,16 +608,6 @@
    ],
    "cutout": true,
    "prompt": "A Russian sturgeon (Acipenser gueldenstaedtii), freshwater fish, full body in strict side view, head pointing to the LEFT, tail on the right, accurate natural coloration and anatomy, detailed scales and fins, wet glossy skin, high quality realistic natural history illustration, soft even studio lighting, isolated on a plain light gray background, centered, the whole fish visible with margins, no text, no watermark, no hook, no hands"
-  },
-  {
-   "key": "items/worm",
-   "group": "items",
-   "size": [
-    768,
-    768
-   ],
-   "cutout": true,
-   "prompt": "a pink earthworm used as fishing bait, fishing tackle game item icon, single object centered, clean detailed semi-realistic illustration, soft studio lighting, isolated on a plain light gray background, no text, no watermark"
   },
   {
    "key": "items/maggot",
@@ -873,33 +873,38 @@
  "music": [
   {
    "key": "music_summer",
-   "tags": "acoustic guitar, warm, relaxing, folk, gentle, summer, nature, instrumental, 80 bpm",
-   "lyrics": "[instrumental]",
-   "seconds": 150
+   "tags": "relaxing acoustic folk instrumental, warm fingerpicked acoustic guitar, soft mandolin, gentle shaker, summer morning by a lake, peaceful, nature, cozy game background music",
+   "bpm": 84,
+   "keyscale": "D major",
+   "seconds": 90
   },
   {
    "key": "music_spring",
-   "tags": "light acoustic folk, flute, guitar, cheerful, spring morning, instrumental, 92 bpm",
-   "lyrics": "[instrumental]",
-   "seconds": 150
+   "tags": "light cheerful acoustic instrumental, wooden flute melody, acoustic guitar, soft hand percussion, spring morning, birds, hopeful, game background music",
+   "bpm": 92,
+   "keyscale": "G major",
+   "seconds": 90
   },
   {
    "key": "music_autumn",
-   "tags": "melancholic acoustic guitar and piano, russian folk melody, calm, autumn, instrumental, 72 bpm",
-   "lyrics": "[instrumental]",
-   "seconds": 150
+   "tags": "calm melancholic instrumental, russian folk melody on balalaika and acoustic guitar, soft piano, autumn river, nostalgic, warm, game background music",
+   "bpm": 72,
+   "keyscale": "A minor",
+   "seconds": 90
   },
   {
    "key": "music_winter",
-   "tags": "soft piano, bells, cozy winter, calm ambient, instrumental, 70 bpm",
-   "lyrics": "[instrumental]",
-   "seconds": 150
+   "tags": "cozy winter instrumental, soft felt piano, gentle sleigh bells, warm strings pad, snowy frozen lake, calm, game background music",
+   "bpm": 70,
+   "keyscale": "C major",
+   "seconds": 90
   },
   {
    "key": "music_night",
-   "tags": "ambient synth pads, slow, dreamy, night lake, lo-fi chill, instrumental, 62 bpm",
-   "lyrics": "[instrumental]",
-   "seconds": 150
+   "tags": "slow dreamy ambient instrumental, warm analog synth pads, soft electric piano, distant crickets, night lake under the moon, lo-fi chill, game background music",
+   "bpm": 64,
+   "keyscale": "E minor",
+   "seconds": 90
   }
  ]
 }

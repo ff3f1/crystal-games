@@ -68,7 +68,7 @@
     cv.style.width = W + "px"; cv.style.height = H + "px";
     shoreY = Math.round(H * (H / W > 1.9 ? 0.39 : 0.37));
     topC.width = Math.round(W * dpr); topC.height = Math.round(shoreY * dpr);
-    landKey = ""; iceKey = ""; baseKey = ""; maskKey = ""; dashes = [];
+    landKey = ""; iceKey = ""; baseKey = ""; maskKey = ""; reedKey = ""; dashes = [];
     const r = U.rng("stars");
     stars = []; for (let i = 0; i < 90; i++) stars.push([r() * W, Math.pow(r(), 1.5) * shoreY * 0.8, r.range(0.4, 1.4), r() * 6]);
     clouds = []; for (let i = 0; i < 7; i++) clouds.push({ x: r() * W * 1.4 - W * 0.2, y: r.range(0.08, 0.5) * shoreY, s: r.range(0.6, 1.4), seed: r() * 100 });
@@ -281,14 +281,25 @@
   // облака досоставляются в верхний слой 2–3 раза в секунду, отражение — тоже из кэша.
   let skyC = null, landLitC = null, reflC = null, iceLitC = null, cloudSpr = [];
   let baseKey = "", composeT = -1, reflDirty = true, iceLitKey = "";
-  const mk = (w, h) => { const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(w * dpr)); c.height = Math.max(1, Math.round(h * dpr)); const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); return [c, g]; };
+  // Холсты переиспользуются: создавать новый каждые полсекунды — лишняя работа сборщику мусора
+  const pool = {};
+  const mk = (w, h, name) => {
+    const cw = Math.max(1, Math.round(w * dpr)), ch = Math.max(1, Math.round(h * dpr));
+    let e = name && pool[name];
+    if (!e || e[0].width !== cw || e[0].height !== ch) {
+      const c = document.createElement("canvas"); c.width = cw; c.height = ch; e = [c, c.getContext("2d")];
+      if (name) pool[name] = e;
+    }
+    const g = e[1]; g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.globalCompositeOperation = "source-over"; g.clearRect(0, 0, cw, ch); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return e;
+  };
   const WCOL = { pond: ["#5a7a62", "#1c3a30"], river: ["#5a7a84", "#1d3440"], platnik: ["#5a7a6a", "#1e3a34"], reservoir: ["#64849a", "#1e3448"],
     lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"] };
 
   function buildBase(v, L, over) {
     const loc = v.loc, season = v.season, wx = v.wx;
     // небо
-    let a = mk(W, shoreY); skyC = a[0]; let g = a[1];
+    let a = mk(W, shoreY, "sky"); skyC = a[0]; let g = a[1];
     let skyTop = L.top, skyBot = L.bot;
     if (over) { skyTop = U.mix(skyTop, "#7a8494", 0.55 * (1 - L.dark * 0.6)); skyBot = U.mix(skyBot, "#a8b0b8", 0.55 * (1 - L.dark * 0.6)); }
     if (season === "winter") skyBot = U.mix(skyBot, "#dfe8f2", 0.25 * (1 - L.dark));
@@ -321,13 +332,13 @@
     const n = over ? 1.6 : (wx.sky === "cloudy" ? 1 : 0.45);
     cloudSpr = clouds.map(function (c) {
       const cr = U.rng(c.seed), pw = (60 + 52 * n) * c.s + 4, ph = 25 * c.s + 4;
-      const b = mk(pw * 2, ph * 2), cg = b[1];
+      const b = mk(pw * 2, ph * 2, "cloud" + clouds.indexOf(c)), cg = b[1];
       cg.fillStyle = U.rgba(cloudCol, Math.min(0.9, 0.5 * n));
       for (let i = 0; i < 6; i++) { cg.beginPath(); cg.ellipse(pw + cr.range(-60, 60) * c.s, ph + cr.range(-8, 6) * c.s, cr.range(26, 52) * c.s * n, cr.range(9, 17) * c.s, 0, 0, Math.PI * 2); cg.fill(); }
       return { c: b[0], w: pw, h: ph };
     });
     // берег с освещением
-    a = mk(W, shoreY); landLitC = a[0]; g = a[1];
+    a = mk(W, shoreY, "land"); landLitC = a[0]; g = a[1];
     const img = FZ.Assets.bg(loc.id, season);
     if (img) {
       const wl = FZ.Assets.waterline(loc.id, season);
@@ -359,7 +370,7 @@
   function landMask(img, loc, season) {
     const key = loc.id + season + W + "x" + H + dpr + Math.round(R.lastLight.dark * 10);
     if (maskKey === key) return maskC;
-    const a = mk(W, shoreY), g = a[1];
+    const a = mk(W, shoreY, "mask"), g = a[1];
     const wl = FZ.Assets.waterline(loc.id, season);
     const sc = Math.max(W / img.width, (shoreY + 8) / (img.height * wl));
     g.drawImage(img, (W - img.width * sc) / 2, shoreY - img.height * wl * sc, img.width * sc, img.height * sc);
@@ -380,21 +391,27 @@
   }
   function buildRefl(v, L, over) {
     const span = H - shoreY;
-    const a = mk(W, span), g = a[1];
+    const a = mk(W + 16, span, "refl"), g = a[1];
+    g.translate(8, 0);
     const WC = WCOL[v.loc.style];
     let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
     if (v.season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
     if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
+    // непрозрачная основа (слой копируется на экран как есть — прозрачных мест быть не должно)
     const wg = g.createLinearGradient(0, 0, 0, span); wg.addColorStop(0, far); wg.addColorStop(1, near);
-    g.fillStyle = wg; g.fillRect(0, 0, W, span);
+    g.fillStyle = wg; g.fillRect(-8, 0, W + 16, span);
     // отражение берега: перевёрнутый верхний слой
-    g.save(); g.globalAlpha = over ? 0.55 : 0.75;
-    g.setTransform(dpr, 0, 0, -dpr / 1.02, 0, shoreY * dpr / 1.02);
-    g.drawImage(topC, 0, 0, topC.width, topC.height, 0, 0, W, shoreY);
+    g.save(); g.globalAlpha = over ? 0.6 : 0.8;
+    g.setTransform(dpr, 0, 0, -dpr / 1.02, 8 * dpr, shoreY * dpr / 1.02);
+    g.drawImage(topC, 0, 0, topC.width, topC.height, -8, 0, W + 16, shoreY);
     g.restore();
-    const dg = g.createLinearGradient(0, 0, 0, span); dg.addColorStop(0, U.rgba(near, 0)); dg.addColorStop(0.45, U.rgba(near, 0.28)); dg.addColorStop(1, U.rgba(near, 0.78));
-    g.fillStyle = dg; g.fillRect(0, 0, W, span);
-    g.fillStyle = U.rgba(L.bot, 0.25); g.fillRect(0, 0, W, 1.5);
+    // цвет воды густеет к зрителю и прячет место, где отражение заканчивается
+    const e = U.clamp(shoreY * 1.02 / span, 0.2, 1);
+    const dg = g.createLinearGradient(0, 0, 0, span);
+    dg.addColorStop(0, U.rgba(far, 0.05)); dg.addColorStop(e * 0.55, U.rgba(U.mix(far, near, 0.4), 0.3));
+    dg.addColorStop(e * 0.97, U.rgba(U.mix(far, near, 0.75), 0.82)); dg.addColorStop(1, U.rgba(near, 0.9));
+    g.fillStyle = dg; g.fillRect(-8, 0, W + 16, span);
+    g.fillStyle = U.rgba(L.bot, 0.25); g.fillRect(-8, 0, W + 16, 1.5);
     reflC = a[0];
   }
 
@@ -410,11 +427,12 @@
     for (const c of clouds) { c.x += (0.004 + wx.wind * 0.0025) * W * dt * 0.1; if (c.x > W * 1.25) c.x = -W * 0.35; }
     if (key !== baseKey) { buildBase(v, L, over); baseKey = key; composeTop(); composeT = t; if (!v.ice) buildRefl(v, L, over); reflDirty = false; }
     else if (reflDirty && !v.ice) { buildRefl(v, L, over); reflDirty = false; }
-    else if (t - composeT > 0.4 || t < composeT) { composeTop(); composeT = t; reflDirty = true; }
+    else if (t - composeT > 0.8 || t < composeT) { composeTop(); composeT = t; reflDirty = true; }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     let sx = 0, sy = 0;
     if (R.shakeA > 0.05) { sx = (Math.random() - 0.5) * R.shakeA; sy = (Math.random() - 0.5) * R.shakeA; R.shakeA *= Math.pow(0.02, dt); }
+    R._sx = sx; R._sy = sy;
     if (sx || sy) { ctx.translate(sx, sy); ctx.drawImage(topC, 0, 0, topC.width, topC.height, -6, -6, W + 12, shoreY + 6); }
     else ctx.drawImage(topC, 0, 0, topC.width, topC.height, 0, 0, W, shoreY);
     R.drawBirds(L, dt, t);
@@ -436,16 +454,24 @@
     const season = v.season;
     const span = H - shoreY;
     // отражение с волной: полосы из готового слоя
+    // в пикселях экрана, без масштабирования — это простое копирование полос
     const lo = quality === "lo";
-    let y = shoreY;
-    while (y < H + 6) {
-      const d = Math.min(y - shoreY, span - 1), k = d / span;
-      const step = Math.max(1, Math.min(span - d, lo ? 4 + k * 12 : 2.5 + k * 7));
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const prevSmooth = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+    const ox = Math.round((R._sx || 0) * dpr), top0 = Math.round((shoreY + (R._sy || 0)) * dpr), rh = reflC.height;
+    let d = 0;
+    while (d < rh) {
+      const k = d / rh;
+      const step = Math.max(1, Math.round((lo ? 4 + k * 12 : 2.5 + k * 7) * dpr));
+      const y = top0 + d;
       const amp = (0.4 + k * k * 9) * windF;
-      const dx = Math.sin(y * 0.11 + t * 1.7) * amp + Math.sin(y * 0.037 - t * 1.1) * amp * 0.7;
-      ctx.drawImage(reflC, 0, d * dpr, reflC.width, Math.max(1, step * dpr), dx - 6, y, W + 12, step + 0.6);
-      y += step;
+      const dx = Math.round((Math.sin(y / dpr * 0.11 + t * 1.7) * amp + Math.sin(y / dpr * 0.037 - t * 1.1) * amp * 0.7 - 8) * dpr);
+      const hh = Math.min(step, rh - d);
+      ctx.drawImage(reflC, 0, d, reflC.width, hh, dx + ox, y, reflC.width, hh);
+      d += step;
     }
+    ctx.imageSmoothingEnabled = prevSmooth;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.translate(R._sx || 0, R._sy || 0);
     // рябь: светлые и тёмные штрихи
     if (!dashes.length || dashes.W !== W) {
       const r = U.rng("dash"); dashes = []; dashes.W = W;
@@ -522,7 +548,7 @@
     const key = v.loc.id + W + "x" + H + dpr;
     if (iceKey !== key) { iceC = buildIce(v.loc); iceKey = key; iceLitKey = ""; }
     if (iceLitKey !== baseKey) {
-      const a = mk(W, H - shoreY), g = a[1];
+      const a = mk(W, H - shoreY, "icelit"), g = a[1];
       g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(iceC, 0, 0); g.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (L.dark > 0.01) { g.globalCompositeOperation = "multiply"; g.fillStyle = U.mix("#ffffff", "#2a3a6a", L.dark); g.fillRect(0, 0, W, H - shoreY); }
       if (L.warm > 0.01) { g.globalAlpha = L.warm * 0.7; g.globalCompositeOperation = "soft-light"; g.fillStyle = L.tint; g.fillRect(0, 0, W, H - shoreY); g.globalAlpha = 1; }
@@ -604,23 +630,52 @@
   };
 
   // ---------- Камыш ----------
-  R.drawReeds = function (v, L, t, windF, season) {
+  // Камыш: по две группы с каждой стороны рисуются в слои один раз на свет/сезон,
+  // а каждый кадр слой копируется полосами со сдвигом — покачивание без перерисовки 46 линий
+  let reedLayers = [], reedKey = "";
+  function buildReeds(L, season) {
+    reedLayers = [];
     const dark = L.dark;
-    for (const r of reeds) {
-      const sway = Math.sin(t * (0.9 + windF * 0.5) + r.ph) * 0.05 * windF;
-      const col = season === "winter" ? U.mix("#c8b88a", "#a89a6a", r.shade) : season === "autumn" ? U.mix("#a89a4a", "#7a6a3a", r.shade) : season === "spring" ? U.mix("#7aa04a", "#a89a6a", r.shade) : U.mix("#3e6a2a", "#5a8a3a", r.shade);
-      ctx.strokeStyle = U.mix(col, "#05080e", dark * 0.85);
-      ctx.lineWidth = r.w; ctx.lineCap = "round";
-      const x0 = r.x, y0 = H + 4, tipX = x0 + (r.bend + sway) * r.h, tipY = H - r.h;
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.quadraticCurveTo(x0 + (r.bend + sway) * r.h * 0.2, H - r.h * 0.5, tipX, tipY); ctx.stroke();
-      if (r.cat && season !== "spring") {
-        ctx.fillStyle = U.mix(season === "winter" ? "#8a6a4a" : "#6a3e22", "#05080e", dark * 0.85);
-        const cx = U.lerp(x0, tipX, 0.88), cy = U.lerp(y0, tipY, 0.88) + 6;
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(Math.atan2(tipX - x0, -(tipY - y0)) * 0.9);
-        ctx.beginPath(); ctx.roundRect(-r.w * 1.3, -r.h * 0.07, r.w * 2.6, r.h * 0.14, r.w); ctx.fill(); ctx.restore();
+    for (let side = 0; side < 2; side++) {
+      for (let grp = 0; grp < 1; grp++) {
+        const list = reeds.filter((r) => (side === 0 ? r.x < W / 2 : r.x >= W / 2));
+        if (!list.length) continue;
+        let x0 = Infinity, x1 = -Infinity, hmax = 0;
+        list.forEach((r) => { x0 = Math.min(x0, r.x + Math.min(0, r.bend * r.h) - 14); x1 = Math.max(x1, r.x + Math.max(0, r.bend * r.h) + 14); hmax = Math.max(hmax, r.h + 16); });
+        const a = mk(x1 - x0, hmax, "reed" + side + grp), g = a[1];
+        g.lineCap = "round";
+        list.forEach(function (r) {
+          const col = season === "winter" ? U.mix("#c8b88a", "#a89a6a", r.shade) : season === "autumn" ? U.mix("#a89a4a", "#7a6a3a", r.shade) : season === "spring" ? U.mix("#7aa04a", "#a89a6a", r.shade) : U.mix("#3e6a2a", "#5a8a3a", r.shade);
+          g.strokeStyle = U.mix(col, "#05080e", dark * 0.85); g.lineWidth = r.w;
+          const bx = r.x - x0, by = hmax + 4, tipX = bx + r.bend * r.h, tipY = hmax - r.h;
+          g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx + r.bend * r.h * 0.2, hmax - r.h * 0.5, tipX, tipY); g.stroke();
+          if (r.cat && season !== "spring") {
+            g.fillStyle = U.mix(season === "winter" ? "#8a6a4a" : "#6a3e22", "#05080e", dark * 0.85);
+            const cx = U.lerp(bx, tipX, 0.88), cy = U.lerp(by, tipY, 0.88) + 6;
+            g.save(); g.translate(cx, cy); g.rotate(Math.atan2(tipX - bx, -(tipY - by)) * 0.9);
+            g.beginPath(); g.roundRect(-r.w * 1.3, -r.h * 0.07, r.w * 2.6, r.h * 0.14, r.w); g.fill(); g.restore();
+          }
+        });
+        reedLayers.push({ c: a[0], x: x0, w: x1 - x0, h: hmax, ph: side * 1.7 + grp * 2.1 });
       }
     }
-    ctx.lineCap = "butt";
+  }
+  R.drawReeds = function (v, L, t, windF, season) {
+    if (reedKey !== baseKey) { buildReeds(L, season); reedKey = baseKey; }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const sm = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+    const ox = Math.round((R._sx || 0) * dpr), oy = Math.round((R._sy || 0) * dpr), band = Math.max(4, Math.round(8 * dpr));
+    for (const l of reedLayers) {
+      const sway = Math.sin(t * (0.9 + windF * 0.5) + l.ph) * 0.05 * windF;
+      const cw = l.c.width, ch = l.c.height, x0 = Math.round(l.x * dpr) + ox, y0 = Math.round((H - l.h) * dpr) + oy;
+      for (let y = 0; y < ch; y += band) {
+        const hh = Math.min(band, ch - y), hgt = (ch - y - hh / 2) / dpr; // высота полосы над низом экрана
+        const off = Math.round((sway + Math.sin(t * 1.3 + hgt * 0.02 + l.ph) * 0.012 * windF) * hgt * (hgt / l.h) * dpr);
+        ctx.drawImage(l.c, 0, y, cw, hh, x0 + off, y0 + y, cw, hh);
+      }
+    }
+    ctx.imageSmoothingEnabled = sm;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.translate(R._sx || 0, R._sy || 0);
   };
 
   // ---------- Птицы, всплески вдали ----------
@@ -674,13 +729,15 @@
       ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.55 * (1 - k)); ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.ellipse(q.x, q.y, rad, rad * 0.28, 0, 0, Math.PI * 2); ctx.stroke();
     }
+    ctx.strokeStyle = lineCol; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = R.fx.length - 1; i >= 0; i--) {
       const f = R.fx[i]; f.age += dt;
       if (f.age > f.life) { R.fx.splice(i, 1); if (f.type === "bub") R.ring(f.X, f.Z, 0.12, 0.6); continue; }
       if (f.age < 0 || v.ice) continue;
       const q = R.proj(f.X, f.Z); const rr = Math.max(1, q.s * 0.05 * (0.6 + f.age));
-      ctx.strokeStyle = lineCol; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(q.x, q.y - rr * 0.6, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.moveTo(q.x + rr, q.y - rr * 0.6); ctx.arc(q.x, q.y - rr * 0.6, rr, 0, Math.PI * 2);
     }
+    ctx.stroke();
     // прыжки рыбы вдали
     for (let i = R.jumps.length - 1; i >= 0; i--) {
       const j = R.jumps[i]; j.age += dt;
@@ -784,18 +841,33 @@
       ctx.beginPath(); ctx.moveTo(p.x - 18, H + 10); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 18, H + 10); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(p.x - 10, p.y - 4); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 10, p.y - 4); ctx.stroke();
     }
-    const segs = 16;
-    for (let i = 0; i < segs; i++) {
-      const a = i / segs, b = (i + 1) / segs;
-      const p0 = qb(bx, by, mx, my, tip.x, tip.y, a), p1 = qb(bx, by, mx, my, tip.x, tip.y, b);
-      const w = U.lerp(v.mode === "ice" ? 8 : v.mode === "feeder" ? 10 : 9, v.mode === "feeder" ? 2.6 : 1.6, a);
-      ctx.strokeStyle = U.mix(v.mode === "feeder" && a > 0.8 ? (night ? "#7aff6a" : (i % 2 ? "#ffffff" : "#ff6a12")) : rodCol, "#000000", L.dark * 0.5);
-      ctx.lineWidth = w; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
-    }
-    // кольца
+    // удилище — одна сужающаяся фигура вдоль кривой (вершинка фидера — отдельно)
+    const w0 = v.mode === "ice" ? 8 : v.mode === "feeder" ? 10 : 9, w1 = v.mode === "feeder" ? 2.6 : 1.6;
+    const rodPoly = function (a0, a1, col) {
+      const n = 10, left = [], right = [];
+      for (let i = 0; i <= n; i++) {
+        const tt = U.lerp(a0, a1, i / n);
+        const p = qb(bx, by, mx, my, tip.x, tip.y, tt), q = qb(bx, by, mx, my, tip.x, tip.y, Math.min(1, tt + 0.01));
+        let nx = -(q.y - p.y), ny = q.x - p.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+        const hw = U.lerp(w0, w1, tt) / 2;
+        left.push([p.x + nx * hw, p.y + ny * hw]); right.push([p.x - nx * hw, p.y - ny * hw]);
+      }
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(left[0][0], left[0][1]);
+      for (let i = 1; i <= n; i++) ctx.lineTo(left[i][0], left[i][1]);
+      for (let i = n; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+      ctx.closePath(); ctx.fill();
+    };
+    const body = U.mix(rodCol, "#000000", L.dark * 0.5);
+    if (v.mode === "feeder") {
+      rodPoly(0, 0.8, body);
+      rodPoly(0.8, 1, U.mix(night ? "#7aff6a" : "#ff6a12", "#000000", L.dark * 0.3));
+      if (!night) { rodPoly(0.86, 0.9, "#ffffff"); rodPoly(0.94, 0.97, "#ffffff"); }
+    } else rodPoly(0, 1, body);
+    // кольца одним контуром
     ctx.strokeStyle = U.mix("#c8ccd0", "#303848", L.dark); ctx.lineWidth = 1.2;
-    for (let i = 1; i < 6; i++) { const p = qb(bx, by, mx, my, tip.x, tip.y, 0.3 + i * 0.12); ctx.beginPath(); ctx.arc(p.x, p.y - 3, 2.5 - i * 0.25, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.beginPath();
+    for (let i = 1; i < 6; i++) { const p = qb(bx, by, mx, my, tip.x, tip.y, 0.3 + i * 0.12), r2 = 2.5 - i * 0.25; ctx.moveTo(p.x + r2, p.y - 3); ctx.arc(p.x, p.y - 3, r2, 0, Math.PI * 2); }
+    ctx.stroke();
     // колокольчик донки
     if (v.mode === "feeder") {
       const p = qb(bx, by, mx, my, tip.x, tip.y, 0.9);

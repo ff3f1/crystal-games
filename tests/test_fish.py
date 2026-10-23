@@ -34,7 +34,7 @@ with sync_playwright() as p:
 
     # Заброс касанием воды
     pg.mouse.move(195, 470); pg.mouse.down(); pg.mouse.move(185, 460); pg.mouse.up()
-    pg.wait_for_timeout(1500)
+    pg.wait_for_timeout(2200)
     check("заброс → ожидание", pg.evaluate("__game.G.rig().state") in ("wait", "bite"))
     # Обучающая поклёвка приходит быстро
     for _ in range(40):

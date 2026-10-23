@@ -53,8 +53,13 @@
      o: {phase, amp (изгиб), silhouette, alpha, dir (1 — голова влево, -1 — вправо), roll} */
   A.drawFish = function (ctx, s, x, y, len, o) {
     o = o || {};
-    const sprite = FZ.Assets && FZ.Assets.fish(s.id);
-    if (sprite && !o.silhouette) return A.drawSprite(ctx, sprite, x, y, len, o, s);
+    if (!o.direct) {
+      // готовый спрайт: сгенерированный или нарисованный кодом один раз (рисовать рыбу каждый кадр дорого)
+      const sprite = !o.silhouette && FZ.Assets && FZ.Assets.fish(s.id);
+      if (sprite) return A.drawSprite(ctx, sprite, x, y, len, o, s);
+      const need = len * 2, size = need <= 300 ? 320 : need <= 640 ? 640 : 1280;
+      return A.drawSprite(ctx, A.procSprite(s, !!o.silhouette, size), x, y, len / PROC_K, o, s);
+    }
     const L = s.look;
     const P = PROFILES[L.head === "normal" ? (L.h > 0.4 ? "big" : "normal") : L.head] || PROFILES.normal;
     const bodyL = len * 0.84;
@@ -327,6 +332,16 @@
     }
   };
 
+  // Кэш рыб, нарисованных кодом: рыба занимает PROC_K ширины холста (запас под усы и плавники)
+  const PROC_K = 0.76, pcache = {};
+  A.procSprite = function (s, sil, size) {
+    const key = s.id + (sil ? "|s|" : "|c|") + size;
+    if (pcache[key]) return pcache[key];
+    const c = document.createElement("canvas"); c.width = size; c.height = Math.round(size * 0.75);
+    A.drawFish(c.getContext("2d"), s, size / 2, c.height / 2, size * PROC_K, { silhouette: sil, amp: 0, direct: true });
+    pcache[key] = c; return c;
+  };
+
   // Сгенерированный спрайт рыбы (голова влево), с изгибом полосками
   A.drawSprite = function (ctx, img, x, y, len, o, s) {
     const w = len, h = len * img.height / img.width;
@@ -363,7 +378,7 @@
 
   // ---------- Иконки снастей ----------
   A.icon = function (id, size) {
-    const key = "ic|" + id + "|" + size;
+    const key = "ic|" + id + "|" + size + "|" + (FZ.Assets ? FZ.Assets.style : "");
     if (cache[key]) return cache[key];
     const img = FZ.Assets && FZ.Assets.item(id);
     const c = document.createElement("canvas"); const k = 2; c.width = c.height = size * k;
@@ -385,7 +400,7 @@
     const blob = function (x, y, r, col) { const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, U.shade(col, 0.4)); gr.addColorStop(1, col); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
     const minnow = function (col, lure) {
       const s = { look: { h: .26, back: lure ? "#1d6f8a" : "#4f6f7a", side: lure ? "#9fe0f0" : "#d9e2e6", belly: lure ? "#fff" : "#f4f7f8", fin: lure ? "#e04a28" : "#c9d2d6", eye: lure ? "#ffd23a" : "#ccc", pat: "none", head: "normal", dorsal: "normal", tail: "fork" }, id: "ic" };
-      A.drawFish(g, s, c, c, S * 0.82, { dir: -1 });
+      A.drawFish(g, s, c, c, S * 0.82, { dir: -1, direct: true });
     };
     switch (id) {
       case "worm": worm("#c9686a", S * 0.11, 2.2); break;

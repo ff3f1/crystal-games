@@ -26,13 +26,14 @@
       active: "float", drag: 0.7,
       records: {}, caught: {}, stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
       daily: { day: "", quests: [], giftDay: "", streak: 0, tour: null, tourDay: "", tourClaim: [] },
-      settings: { sound: true, music: true, vibro: true, quality: "hi" },
+      settings: { sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
       tut: 0, rateAsked: 0, firstDay: U.dayKey(), lastDay: ""
     };
   }
   G.load = function () {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) { st = Object.assign(fresh(), s); st.settings = Object.assign(fresh().settings, s.settings || {}); } } catch (e) { st = null; }
     if (!st) st = fresh();
+    if (st.settings.qv !== 2) { st.settings.quality = "auto"; st.settings.autoQ = "hi"; st.settings.qv = 2; }
     if (st.rods.indexOf("i1") < 0) { st.rods.push("i1"); if (!st.load.ice.rod) st.load.ice.rod = "i1"; }
     autoBait();
     G.dayCheck();
