@@ -1,0 +1,17 @@
+{
+  "name": "fishingsim-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Сервер покупок для FishingSim (VK Play): авторизация, заказы, золото, выдачи",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js --dev"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

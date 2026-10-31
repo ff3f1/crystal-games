@@ -1,0 +1,54 @@
+{
+  "products": [
+    {
+      "id": "gold_100",
+      "title": "100 золота",
+      "description": "Премиум-валюта",
+      "priceRub": 99,
+      "premiumAmount": 100
+    },
+    {
+      "id": "gold_550",
+      "title": "550 золота",
+      "description": "+10% бонус",
+      "priceRub": 449,
+      "premiumAmount": 550
+    },
+    {
+      "id": "gold_1200",
+      "title": "1200 золота",
+      "description": "+20% бонус",
+      "priceRub": 899,
+      "premiumAmount": 1200
+    },
+    {
+      "id": "premium_30d",
+      "title": "Премиум-аккаунт на 30 дней",
+      "description": "+50% серебра и опыта за улов",
+      "priceRub": 299,
+      "premiumDays": 30
+    },
+    {
+      "id": "starter_pack",
+      "title": "Набор начинающего рыбака",
+      "description": "Спиннинг, катушка 2500, 3 воблера и 300 золота. Один раз на аккаунт.",
+      "priceRub": 149,
+      "premiumAmount": 300,
+      "oncePerUser": true,
+      "items": [
+        { "itemId": "rod_spin_m", "count": 1, "permanent": true },
+        { "itemId": "reel_2500", "count": 1, "permanent": true },
+        { "itemId": "lure_wobbler_minnow", "count": 3, "permanent": false }
+      ]
+    }
+  ],
+
+  "goldPrices": {
+    "rod_catfish_pro":     { "gold": 290, "permanent": true },
+    "reel_multiplier_pro": { "gold": 250, "permanent": true },
+    "line_braid_pro":      { "gold": 120, "permanent": true },
+    "lure_golden_carp":    { "gold": 40,  "permanent": false, "quantity": 1 },
+    "bait_boilie":         { "gold": 15,  "permanent": false, "quantity": 10 },
+    "loc_trophy_pond":     { "gold": 490, "permanent": true }
+  }
+}
