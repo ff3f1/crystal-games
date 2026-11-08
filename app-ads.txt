@@ -6,4 +6,4 @@
 # Замените <PUBLISHER_ID> на реальный ID издателя из кабинета Яндекс Рекламной сети
 # (https://partner.yandex.ru/v2/inapp/app/)
 #
-ff3f1.github.io DIRECT <PUBLISHER_ID>
+ff3f1.github.io DIRECT 20269656
