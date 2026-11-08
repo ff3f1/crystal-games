@@ -1,0 +1,9 @@
+# app-ads.txt для Crystal Games (RuStore / Android)
+# Домен сайта: https://ff3f1.github.io/crystal-games/
+# Файл должен быть доступен по адресу:
+# https://ff3f1.github.io/crystal-games/app-ads.txt
+#
+# Замените <PUBLISHER_ID> на реальный ID издателя из кабинета Яндекс Рекламной сети
+# (https://partner.yandex.ru/v2/inapp/app/)
+#
+ff3f1.github.io DIRECT <PUBLISHER_ID>
