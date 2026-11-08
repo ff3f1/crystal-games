@@ -29,10 +29,9 @@ import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 
 import com.yandex.mobile.ads.common.AdError;
-import com.yandex.mobile.ads.common.AdRequestConfiguration;
+import com.yandex.mobile.ads.common.AdRequest;
 import com.yandex.mobile.ads.common.AdRequestError;
 import com.yandex.mobile.ads.common.ImpressionData;
-import com.yandex.mobile.ads.common.MobileAds;
 import com.yandex.mobile.ads.interstitial.InterstitialAd;
 import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener;
 import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener;
@@ -113,34 +112,30 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        MobileAds.initialize(this, () -> {
-            interLoader = new InterstitialAdLoader(this);
-            interLoader.setAdLoadListener(new InterstitialAdLoadListener() {
+        interLoader = new InterstitialAdLoader(this);
+        rewardLoader = new RewardedAdLoader(this);
+        loadInter();
+        loadReward();
+    }
+
+    private void loadInter() {
+        if (interLoader != null)
+            interLoader.loadAd(new AdRequest.Builder(BuildConfig.AD_INTER).build(), new InterstitialAdLoadListener() {
                 @Override public void onAdLoaded(InterstitialAd ad) { interAd = ad; }
                 @Override public void onAdFailedToLoad(AdRequestError error) {
                     interAd = null; ui.postDelayed(MainActivity.this::loadInter, 30000);
                 }
             });
-            rewardLoader = new RewardedAdLoader(this);
-            rewardLoader.setAdLoadListener(new RewardedAdLoadListener() {
+    }
+
+    private void loadReward() {
+        if (rewardLoader != null)
+            rewardLoader.loadAd(new AdRequest.Builder(BuildConfig.AD_REWARD).build(), new RewardedAdLoadListener() {
                 @Override public void onAdLoaded(RewardedAd ad) { rewardAd = ad; }
                 @Override public void onAdFailedToLoad(AdRequestError error) {
                     rewardAd = null; ui.postDelayed(MainActivity.this::loadReward, 30000);
                 }
             });
-            loadInter();
-            loadReward();
-        });
-    }
-
-    private void loadInter() {
-        if (interLoader != null)
-            interLoader.loadAd(new AdRequestConfiguration.Builder(BuildConfig.AD_INTER).build());
-    }
-
-    private void loadReward() {
-        if (rewardLoader != null)
-            rewardLoader.loadAd(new AdRequestConfiguration.Builder(BuildConfig.AD_REWARD).build());
     }
 
     private void result(int id, boolean ok) {
@@ -256,8 +251,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
-        if (interLoader != null) interLoader.setAdLoadListener(null);
-        if (rewardLoader != null) rewardLoader.setAdLoadListener(null);
         if (web != null) web.destroy();
         super.onDestroy();
     }
