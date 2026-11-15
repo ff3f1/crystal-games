@@ -43,6 +43,7 @@
     if (st.rods.indexOf("i1") < 0) { st.rods.push("i1"); if (!st.load.ice.rod) st.load.ice.rod = "i1"; }
     autoBait();
     G.dayCheck();
+    checkAchievements();
     return st;
   };
   let saveT = 0;
