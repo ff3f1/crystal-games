@@ -3,6 +3,7 @@ name: Fishing game tests
 on:
   push:
     branches:
+      - main
       - "feature/fishing-expeditions-*"
     paths:
       - "games/fish/**"
