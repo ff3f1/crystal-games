@@ -95,8 +95,10 @@ with sync_playwright() as p:
     # Карточка для шаринга рисуется
     ok = pg.evaluate("""()=>{const s=FZ.SP.pike;const c=FZ.Share.card({s,w:5.2,len:88,loc:'oka',date:'2026-10-23',trophy:false,record:true,newSpecies:false,pct:90});return c.width===1080&&c.toDataURL().length>50000}""")
     check("карточка улова 1080×1920", ok)
-    # Сохранение переживает перезагрузку
-    pg.evaluate("__game.G.save(true)"); pg.reload(); pg.wait_for_timeout(1500)
+    # Старый формат v1 автоматически получает новые поля экспедиции и достижений
+    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;localStorage.setItem('fz_save',JSON.stringify(old));}""")
+    pg.reload(); pg.wait_for_timeout(1500)
+    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10"))
     check("сохранение", pg.evaluate("__game.G.state().rods.indexOf('d1')>=0"))
     b.close()
 
