@@ -358,8 +358,8 @@
     if (sess.mode === "ice") { const k = rig.lure || 0.8; return k > 0.75 ? "bottom" : k > 0.3 ? "mid" : "top"; }
     return g.depth || "bottom";
   }
-  const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1 };
-  const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1 };
+  const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1, brooktrout: 1 };
+  const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1, palia: 1, nase: 1, sterlet: 1 };
   const RARF = [1, 1, 0.85, 0.6, 0.35, 0.18];
   G.biteTable = function () {
     const g = G.gear(sess.mode), loc = sess.loc, wx = sess.wx;
