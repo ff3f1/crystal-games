@@ -636,9 +636,12 @@
     $("cShare").onclick = () => FZ.Share.share(r);
     $("cDbl").onclick = async function () {
       if (doubled) return;
+      const btn = this;
+      if (btn.disabled) return;
+      btn.disabled = true;
       const ok = await FZ.Ads.rewarded();
-      if (!ok) { UI.toast("Реклама сейчас недоступна", "bad"); return; }
-      doubled = true; this.classList.add("on"); this.textContent = "Награда удвоена";
+      if (!ok) { btn.disabled = false; UI.toast("Реклама не загрузилась. Попробуйте ещё раз", "bad"); return; }
+      doubled = true; btn.classList.add("on"); btn.textContent = "Награда удвоена";
       if ($("cKeepS")) $("cKeepS").textContent = "+" + U.money(r.price * 2);
       $("cRelS").textContent = "+" + Math.round(r.xp * (r.mustRelease ? 2 : 1.5) * 2) + " опыта";
     };
@@ -668,7 +671,20 @@
       '<button class="btn brass" id="lRev"><span class="adtag">реклама</span> Второй шанс</button><button class="btn ghost" id="lNo">Отпустить с миром</button></div>';
     ov.classList.add("on");
     $("lNo").onclick = () => { ov.classList.remove("on"); G.rig().lost = null; };
-    $("lRev").onclick = async () => { const ok = await FZ.Ads.rewarded(); ov.classList.remove("on"); if (ok) G.revive(); else UI.toast("Реклама сейчас недоступна", "bad"); };
+    $("lRev").onclick = async function () {
+      const btn = this;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = "Загружаем рекламу…";
+      const ok = await FZ.Ads.rewarded();
+      if (ok && G.revive()) {
+        ov.classList.remove("on");
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="adtag">реклама</span> Повторить второй шанс';
+        UI.toast("Реклама не загрузилась. Попробуйте ещё раз", "bad");
+      }
+    };
   };
 
   FZ.UI = UI;
