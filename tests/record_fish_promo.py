@@ -75,6 +75,9 @@ with sync_playwright() as p:
         page.click("#bAct")
         page.wait_for_timeout(2800)
     page.wait_for_timeout(2200)
+    # Show the actual expedition destination from the game runtime.
+    page.evaluate("__game.G.state().lvl=17; __game.G.state().money=5000; __game.G.startExpedition('mountainlake',1)")
+    page.wait_for_timeout(3200)
 
     # Keep the capture only if the game ran without uncaught JS errors.
     if errors:
