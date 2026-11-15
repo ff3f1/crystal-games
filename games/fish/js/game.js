@@ -15,6 +15,8 @@
   function fresh() {
     return {
       v: 1, money: 300, xp: 0, lvl: 1, karma: 0, loc: "pond", seasonPick: null,
+      expedition: { active: false, locId: null, homeLoc: "pond", homeSeason: null, daysTotal: 0, daysLeft: 0, daysSpent: 0, catches: 0, best: 0, completed: false },
+      achievements: {}, expeditionsCompleted: 0, firstIceCatches: 0,
       rods: ["f1", "i1"], lines: ["l1"], hooks: ["h1", "h2"], extras: {}, lures: {},
       inv: { worm: 40, bread: 25, gb: 2 },
       load: {
@@ -33,6 +35,10 @@
   G.load = function () {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) { st = Object.assign(fresh(), s); st.settings = Object.assign(fresh().settings, s.settings || {}); } } catch (e) { st = null; }
     if (!st) st = fresh();
+    st.expedition = Object.assign(fresh().expedition, st.expedition || {});
+    st.achievements = st.achievements || {};
+    st.expeditionsCompleted = st.expeditionsCompleted || 0;
+    st.firstIceCatches = st.firstIceCatches || 0;
     if (st.settings.qv !== 2) { st.settings.quality = "auto"; st.settings.autoQ = "hi"; st.settings.qv = 2; }
     if (st.rods.indexOf("i1") < 0) { st.rods.push("i1"); if (!st.load.ice.rod) st.load.ice.rod = "i1"; }
     autoBait();
@@ -151,12 +157,13 @@
   // ---------- Сессия рыбалки ----------
   G.startSession = function (locId, seasonPick) {
     if (seasonPick !== undefined) st.seasonPick = seasonPick;
-    const loc = FZ.LOC[locId || st.loc];
+    const trip = st.expedition;
+    const loc = FZ.LOC[trip && trip.active ? trip.locId : (locId || st.loc)];
     st.loc = loc.id;
     const season = G.season();
     const now = new Date();
     sess = {
-      loc, season, ice: season === "winter", mode: G.modeFor(season),
+      loc, season, ice: season === "winter", firstIce: Wd.firstIceActive(season), mode: G.modeFor(season),
       hour: now.getHours() + now.getMinutes() / 60,
       wx: Wd.weather(loc.id, season), spots: [], fedSpot: null, gbUntil: 0, t: 0, catches: 0,
       hole: null, nextSpot: 3, lastAim: null
@@ -170,6 +177,77 @@
     return sess;
   };
   G.endSession = function () { sess = null; rig = null; };
+
+  // ---------- Экспедиции ----------
+  G.startExpedition = function (locId, days) {
+    const loc = FZ.LOC[locId];
+    const trip = st.expedition;
+    if (!loc || !loc.expedition) return "Это место не подходит для экспедиции";
+    if (trip.active) return "Вы уже в экспедиции";
+    if (st.lvl < loc.lvl) return "Нужен уровень " + loc.lvl;
+    if (rig && (rig.state === "fight" || rig.state === "landing" || rig.state === "result")) return "Сначала закончим текущую рыбалку";
+    days = U.clamp(Math.round(days || 3), 1, 3);
+    const cost = days * 250;
+    if (st.money < cost) return "Для экспедиции нужно " + U.money(cost);
+    trip.active = true; trip.locId = locId; trip.homeLoc = st.loc;
+    trip.homeSeason = G.season(); trip.daysTotal = days; trip.daysLeft = days;
+    trip.daysSpent = 0; trip.catches = 0; trip.best = 0; trip.completed = false;
+    st.money -= cost; st.loc = locId;
+    G.startSession(locId, trip.homeSeason);
+    emit("expedition", { started: true, loc });
+    G.save(true);
+    return true;
+  };
+  G.returnExpedition = function () {
+    const trip = st.expedition;
+    if (!trip.active) return 0;
+    const days = trip.daysSpent;
+    const reward = Math.round(days * 180 + trip.catches * 35 + trip.best * 55);
+    const home = trip.homeLoc || "pond", season = trip.homeSeason;
+    st.money += reward; st.expeditionsCompleted++;
+    trip.active = false; trip.locId = null; trip.daysLeft = 0; trip.completed = false;
+    st.loc = home;
+    G.startSession(home, season);
+    checkAchievements();
+    G.save(true);
+    emit("expedition", { returned: true, reward });
+    return reward;
+  };
+  function expeditionDayPassed() {
+    const trip = st.expedition;
+    if (!trip.active || trip.completed) return;
+    trip.daysSpent++;
+    trip.daysLeft = Math.max(0, trip.daysTotal - trip.daysSpent);
+    if (trip.daysLeft === 0) {
+      trip.completed = true;
+      emit("expedition", { completed: true });
+    } else {
+      emit("expedition", { dayPassed: true, daysLeft: trip.daysLeft });
+    }
+    G.save(true);
+  }
+
+  // ---------- Достижения ----------
+  G.achievementProgress = function (def) { return Wd.achievementValue(def.stat, st); };
+  function checkAchievements() {
+    Wd.ACHIEVEMENTS.forEach(function (a) {
+      const current = G.achievementProgress(a);
+      if (current >= a.need && !st.achievements[a.id]) {
+        st.achievements[a.id] = { unlocked: true, claimed: false, date: U.dayKey() };
+        emit("achievement", { achievement: a });
+      }
+    });
+  }
+  G.claimAchievement = function (id) {
+    const a = Wd.ACHIEVEMENTS.find((x) => x.id === id);
+    const saved = st.achievements[id];
+    if (!a || G.achievementProgress(a) < a.need || !saved || saved.claimed) return 0;
+    saved.claimed = true;
+    st.money += a.reward;
+    G.addXP(Math.round(a.reward / 8));
+    G.save(true);
+    return a.reward;
+  };
 
   function resetRig() {
     rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { bend: 0, tension: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, ring: 0 },
@@ -288,6 +366,7 @@
     Object.keys(loc.fish).forEach(function (id) {
       const s = FZ.SP[id];
       let m = s.season[sess.season] * s.time[sess.period] * (s.kind === "pred" ? wx.pred : wx.peace);
+      if (sess.firstIce && (id === "perch" || id === "palia" || id === "whitefish" || id === "roach" || id === "smelt")) m *= 1.35;
       m *= (s.methods[sess.mode] || 0);
       m *= bait ? (s.baits[bait] || (FZ.BAIT[bait].lure ? 0.03 : 0.06)) : 0;
       m *= s.depth[zone];
@@ -609,6 +688,9 @@
     if (r.record) st.records[s.id] = { w: r.w, len: r.len, loc: r.loc, date: r.date };
     st.stats.total++; st.stats.kg += r.w;
     if (r.trophy) st.stats.trophies++;
+    if (sess.firstIce) st.firstIceCatches++;
+    if (st.expedition.active) { st.expedition.catches++; st.expedition.best = Math.max(st.expedition.best, r.w); }
+    checkAchievements();
     if (!st.stats.best || r.w > st.stats.best.w) st.stats.best = { sid: s.id, w: r.w };
     // задания
     st.daily.quests.forEach(function (q) {
@@ -648,7 +730,10 @@
     if (!sess) return;
     sess.t += dt;
     // время суток: 1 игровой час ≈ 75 секунд
-    sess.hour = (sess.hour + dt / 75 * (rig.state === "fight" ? 0.3 : 1)) % 24;
+    const rawHour = sess.hour + dt / 75 * (rig.state === "fight" ? 0.3 : 1);
+    const passedDays = Math.floor(rawHour / 24);
+    sess.hour = rawHour % 24;
+    for (let day = 0; day < passedDays; day++) expeditionDayPassed();
     const p = FZ.Scene.period(sess.hour, sess.season);
     if (p !== sess.period) { sess.period = p; emit("time"); }
     // пятна активности
