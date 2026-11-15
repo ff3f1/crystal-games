@@ -16,6 +16,7 @@ on:
       - "tests/test_fish.py"
       - "tests/record_fish_promo.py"
       - "tests/promo_voiceover.txt"
+      - "tests/promo_captions.srt"
       - ".github/workflows/fish-tests.yml"
   workflow_dispatch:
 
@@ -48,7 +49,7 @@ jobs:
           mkdir -p promo-output
           python tests/record_fish_promo.py promo-output
           espeak -v ru -s 158 -p 38 -a 190 -f tests/promo_voiceover.txt -w promo-output/voiceover.wav
-          ffmpeg -y -i promo-output/fish-gameplay-promo.webm -i promo-output/voiceover.wav -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 160k -af "apad,afade=t=out:st=24:d=2" -shortest promo-output/fish-gameplay-promo.mp4
+          ffmpeg -y -i promo-output/fish-gameplay-promo.webm -i promo-output/voiceover.wav -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 160k -vf "subtitles=tests/promo_captions.srt:force_style=FontName=DejaVu\\ Sans,FontSize=16,PrimaryColour=&H00FFFFFF,OutlineColour=&H80000000,BorderStyle=3,Outline=1,Alignment=2,MarginV=90" -af "apad,afade=t=out:st=24:d=2" -shortest promo-output/fish-gameplay-promo.mp4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
