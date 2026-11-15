@@ -242,7 +242,7 @@
       case "achievement": UI.toast("Достижение открыто: " + e.achievement.n, "gold", 3200); break;
       case "expedition":
         if (e.started) UI.toast("Экспедиция началась: " + e.loc.n, "gold", 3000);
-        else if (e.dayPassed) UI.toast("Новый день экспедиции. Осталось: " + e.daysLeft, "gold", 2600);
+        else if (e.dayPassed) UI.toast("Новый день: " + (e.event ? e.event.name + ". " + e.event.text : "") + " Осталось: " + e.daysLeft, "gold", 3600);
         else if (e.completed) UI.toast("Экспедиция завершена! Возвращайтесь за наградой", "gold", 3600);
         else if (e.returned) UI.toast("Возвращение домой: +" + U.money(e.reward), "gold", 3200);
         break;
@@ -358,6 +358,9 @@
         '<div class="row"><div class="body"><div class="t">Дни в пути</div><div class="d">' + trip.daysSpent + " / " + trip.daysTotal + "</div></div></div>" +
         '<div class="row"><div class="body"><div class="t">Осталось дней</div><div class="d">' + trip.daysLeft + "</div></div></div>" +
         '<div class="row"><div class="body"><div class="t">Улов в экспедиции</div><div class="d">' + trip.catches + " рыб · рекорд " + (trip.best ? U.kg(trip.best) : "пока нет") + "</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Рюкзак трофеев</div><div class="d">' + trip.bagUsed + " / " + trip.bagCapacity + " мест · при заполнении рыбу придётся отпускать</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Провизия</div><div class="d">' + trip.provisions + " дневных пайков</div></div></div>" +
+        (trip.event ? '<div class="row"><div class="body"><div class="t">' + trip.event.name + '</div><div class="d">' + trip.event.text + "</div></div></div>" : "") +
         '<button class="btn brass" id="exReturn" style="width:100%;margin-top:12px">' + (trip.completed ? "Забрать награду и вернуться" : "Завершить досрочно и вернуться") + "</button></div>";
       const sh = UI.sheet(html);
       sh.querySelector("#exReturn").onclick = () => { const reward = G.returnExpedition(); UI.closeSheet(); if (UI.menuOpen) UI.showMenu(); };
@@ -665,7 +668,7 @@
       '<div class="wt" id="cWt">0 г</div><div class="nm">' + s.n + '</div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
-      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (s.release === "Красная книга" ? "вид из Красной книги" : "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
+      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
       '<div class="acts">' +
         '<button class="dbl" id="cDbl"><span class="adtag">реклама</span> Удвоить награду</button>' +
         '<div class="two">' +
