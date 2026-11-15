@@ -238,7 +238,7 @@
       depth: { top: 0, mid: .2, bottom: 1.6 }, time: { dawn: 1, day: .8, dusk: 1.1, night: 1.2 }, season: { spring: 1, summer: 1.1, autumn: 1, winter: .1 },
       bite: "drag", fight: { power: 1.35, stamina: 1.5, runs: .6, jump: .05, shake: .3 },
       look: { h: .15, back: "#3e4a4a", side: "#7a8686", belly: "#e0dccc", fin: "#5a6464", eye: "#a8a890", pat: "scutes", head: "stur", dorsal: "stur", tail: "stur", whisk: 4 },
-      desc: "Древняя рыба, ровесница динозавров. В дикой природе её ловить запрещено, а на платниках действует правило «поймал — отпустил». Сила у осетра огромная." }
+      desc: "Древняя рыба, ровесница динозавров. В дикой природе её ловить запрещено, а на платниках действует правило «поймал — отпустил». Сила у осетра огромная." },
 
     { id: "palia", n: "Палия", lat: "Salvelinus alpinus", en: "Arctic char", kind: "pred", rar: 4,
       min: .25, med: 1.1, trophy: 3.8, max: 9, refL: 42, refW: .9, price: 620,
