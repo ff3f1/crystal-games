@@ -647,8 +647,8 @@
     const st = G.state(), s = G.sess();
     if (st.tut === 3) { st.tut = 4; G.save(true); setTimeout(() => UI.toast("Отлично! В меню «Снасти» есть фидер и спиннинг — с ними клюёт крупнее", "", 4200), 700); return; }
     // просьба оценить — после удачи
-    if (!st.rateAsked && (st.stats.trophies >= 2 || st.stats.total >= 18) && (r.trophy || r.record)) {
-      st.rateAsked = 1; G.save(true);
+    if (st.rateAsked !== 2 && (st.stats.total >= 5 || st.stats.trophies >= 1) && (!st.rateAsked || Date.now() - (st.rateLater || 0) >= 259200000)) {
+      st.rateAsked = 1; st.rateLater = Date.now(); G.save(true);
       const sh = UI.sheet("<h2>Нравится рыбалка?</h2><div class=\"sub\">Оценка в RuStore помогает другим рыбакам найти игру</div><div style=\"display:flex;gap:8px;margin-top:8px\"><button class=\"btn ghost\" id=\"rLater\" style=\"flex:1\">Позже</button><button class=\"btn brass\" id=\"rGo\" style=\"flex:1\">" + ic("star") + " Оценить</button></div>");
       sh.querySelector("#rLater").onclick = () => UI.closeSheet();
       sh.querySelector("#rGo").onclick = () => { st.rateAsked = 2; G.save(true); UI.closeSheet(); FZ.Platform.rate(); };
