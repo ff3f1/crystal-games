@@ -458,7 +458,7 @@
       });
       html += '<div class="sub" style="margin-top:10px">Приманка служит долго, но при обрыве лески теряется.</div>';
     } else {
-      Object.keys(FZ.EXTRAS).forEach(function (id) { const x = FZ.EXTRAS[id]; html += '<div class="row"><div class="pic">' + ic(id === "echo" ? "wave" : id === "gaff" ? "fish" : "ice") + '</div><div class="body"><div class="t">' + x.n + '</div><div class="d">' + x.note + "</div></div>" + priceBtn("extra", id, x, G.owned("extra", id)) + "</div>"; });
+      Object.keys(FZ.EXTRAS).forEach(function (id) { const x = FZ.EXTRAS[id]; html += '<div class="row"><div class="pic">' + ic(id === "echo" ? "wave" : id === "gaff" ? "fish" : id === "expBag" ? "bag" : id === "tent" ? "map" : "ice") + '</div><div class="body"><div class="t">' + x.n + '</div><div class="d">' + x.note + "</div></div>" + priceBtn("extra", id, x, G.owned("extra", id)) + "</div>"; });
     }
     html += "</div>";
     const sh = UI.sheet(html, () => UI.refreshTools());
