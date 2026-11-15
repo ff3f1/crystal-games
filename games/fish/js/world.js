@@ -160,6 +160,12 @@
     };
   };
 
+  W.EXPEDITION_EVENTS = [
+    { id: "baitball", name: "Котёл малька", text: "У переката собралась мелочь — хищник активнее.", kind: "pred", multiplier: 1.3 },
+    { id: "warmrain", name: "Тёплый дождь", text: "Дождь поднял корм со дна — мирная рыба активнее.", kind: "peace", multiplier: 1.25 },
+    { id: "quietwater", name: "Тихая вода", text: "Ветер стих. Рыба осторожнее, но клёв ровнее.", kind: "all", multiplier: 1.1 }
+  ];
+
   // ---------- Достижения ----------
   W.ACHIEVEMENTS = [
     { id: "first_catch", n: "Первый улов", d: "Поймать первую рыбу", stat: "total", need: 1, reward: 150 },
