@@ -2,56 +2,117 @@
 (function (FZ) {
   "use strict";
 
-  // ===== Настройки издателя (меняются здесь) =====
   FZ.CONFIG = {
     pkg: "ru.crystalgames.fishing",
     store: "https://www.rustore.ru/catalog/app/ru.crystalgames.fishing",
-    youtube: "https://youtube.com/@shpargalka_rybaka", // ссылка на YouTube-канал (кнопка в настройках появится, когда заполнено)
+    youtube: "https://youtube.com/@shpargalka_rybaka",
     title: "Рыбалка: Клюёт!",
-    interGap: 90           // секунд между межстраничной рекламой
+    interGap: 90
   };
 
   const platform = window.AndroidAds ? "android" : (/vk_app_id=/.test(location.search) ? "vk" : "web");
+  const AD_TIMEOUT = 30000;
   let bridge = null, busy = false, lastInter = Date.now() - 60e3, seq = 0;
-  const pending = {};
-  window.__adResult = function (id, ok) { if (pending[id]) { pending[id](!!ok); delete pending[id]; } };
+  const pending = Object.create(null);
+
+  // Android вызывает этот callback после показа/закрытия рекламы.
+  window.__adResult = function (id, ok) {
+    const job = pending[id];
+    if (!job) return;
+    clearTimeout(job.timer);
+    delete pending[id];
+    job.resolve(!!ok);
+  };
+
+  function androidAd(kind) {
+    return new Promise(function (resolve) {
+      const id = ++seq;
+      const method = kind === "reward" ? "showRewarded" : "showInterstitial";
+      const job = { resolve, timer: null };
+      pending[id] = job;
+      job.timer = setTimeout(function () {
+        if (!pending[id]) return;
+        delete pending[id];
+        resolve(false);
+      }, AD_TIMEOUT);
+      try {
+        if (!window.AndroidAds || typeof window.AndroidAds[method] !== "function") {
+          clearTimeout(job.timer);
+          delete pending[id];
+          resolve(false);
+          return;
+        }
+        window.AndroidAds[method](id);
+      } catch (e) {
+        clearTimeout(job.timer);
+        delete pending[id];
+        resolve(false);
+      }
+    });
+  }
 
   async function show(kind) {
-    if (busy) return false; busy = true; FZ.Sound.suspend(); let ok = false;
+    if (busy) return false;
+    busy = true;
+    let ok = false;
     try {
-      if (platform === "vk" && bridge) { const r = await bridge.send("VKWebAppShowNativeAds", { ad_format: kind === "reward" ? "reward" : "interstitial" }); ok = !!(r && r.result); }
-      else if (platform === "android") {
-        ok = await new Promise(function (res) {
-          const id = ++seq; pending[id] = res;
-          kind === "reward" ? window.AndroidAds.showRewarded(id) : window.AndroidAds.showInterstitial(id);
-          setTimeout(function () { if (pending[id]) { pending[id](false); delete pending[id]; } }, 60e3);
-        });
-      } else { // в браузере — имитация
-        const o = document.getElementById("ovAd"); o.classList.add("on");
-        await new Promise((r) => setTimeout(r, 1200)); o.classList.remove("on"); ok = true;
+      if (FZ.Sound && FZ.Sound.suspend) FZ.Sound.suspend();
+      if (platform === "android") {
+        ok = await androidAd(kind);
+      } else if (platform === "vk") {
+        // Не подменяем недоступную VK-рекламу браузерной имитацией.
+        if (bridge) {
+          const r = await Promise.race([
+            bridge.send("VKWebAppShowNativeAds", { ad_format: kind === "reward" ? "reward" : "interstitial" }),
+            new Promise((resolve) => setTimeout(() => resolve(null), AD_TIMEOUT))
+          ]);
+          ok = !!(r && r.result);
+        }
+      } else {
+        const o = document.getElementById("ovAd");
+        if (!o) return false;
+        o.classList.add("on");
+        await new Promise((r) => setTimeout(r, 1200));
+        o.classList.remove("on");
+        ok = true;
       }
-    } catch (e) { ok = false; }
-    busy = false; FZ.Sound.resume(); return ok;
+    } catch (e) {
+      ok = false;
+    } finally {
+      busy = false;
+      if (FZ.Sound && FZ.Sound.resume) FZ.Sound.resume();
+    }
+    return ok;
   }
 
   FZ.Ads = {
     platform,
     init: function () {
       if (platform !== "vk") return;
-      const s = document.createElement("script"); s.src = "vk-bridge.min.js";
-      s.onerror = function () { const c = document.createElement("script"); c.src = "https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"; c.onload = s.onload; document.head.appendChild(c); };
-      s.onload = function () { bridge = window.vkBridge; try { bridge.send("VKWebAppInit"); } catch (e) {} };
+      const s = document.createElement("script");
+      s.src = "vk-bridge.min.js";
+      s.onerror = function () {
+        const c = document.createElement("script");
+        c.src = "https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js";
+        c.onload = function () { bridge = window.vkBridge || null; try { if (bridge) bridge.send("VKWebAppInit"); } catch (e) {} };
+        document.head.appendChild(c);
+      };
+      s.onload = function () {
+        bridge = window.vkBridge || null;
+        try { if (bridge) bridge.send("VKWebAppInit"); } catch (e) {}
+      };
       document.head.appendChild(s);
     },
     rewarded: () => show("reward"),
     interstitial: async function (force) {
       if (!force && Date.now() - lastInter < FZ.CONFIG.interGap * 1000) return false;
-      const ok = await show("inter"); if (ok) lastInter = Date.now(); return ok;
+      const ok = await show("inter");
+      if (ok) lastInter = Date.now();
+      return ok;
     },
     bridge: () => bridge
   };
 
-  // ===== Ссылки и шаринг =====
   FZ.Platform = {
     openUrl: function (url) {
       if (!url) return;
@@ -63,7 +124,6 @@
       if (window.AndroidShare && window.AndroidShare.rate) { window.AndroidShare.rate(); return; }
       FZ.Platform.openUrl(FZ.CONFIG.store);
     },
-    // Поделиться картинкой (canvas) с подписью
     shareImage: async function (canvas, text) {
       const url = FZ.CONFIG.store;
       const full = text + "\n" + url;
@@ -76,6 +136,7 @@
       }
       try {
         const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.9));
+        if (!blob) return false;
         const file = new File([blob], "ulov.jpg", { type: "image/jpeg" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: full }); return true; }
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ulov.jpg"; document.body.appendChild(a); a.click(); a.remove();
