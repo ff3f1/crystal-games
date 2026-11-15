@@ -14,6 +14,8 @@ on:
     paths:
       - "games/fish/**"
       - "tests/test_fish.py"
+      - "tests/record_fish_promo.py"
+      - "tests/promo_voiceover.txt"
       - ".github/workflows/fish-tests.yml"
   workflow_dispatch:
 
@@ -30,6 +32,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install video and voice tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak
       - name: Install Playwright
         run: |
           python -m pip install --upgrade pip
@@ -43,6 +47,8 @@ jobs:
         run: |
           mkdir -p promo-output
           python tests/record_fish_promo.py promo-output
+          espeak -v ru -s 158 -p 38 -a 190 -f tests/promo_voiceover.txt -w promo-output/voiceover.wav
+          ffmpeg -y -i promo-output/fish-gameplay-promo.webm -i promo-output/voiceover.wav -map 0:v:0 -map 1:a:0 -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 160k -af "apad,afade=t=out:st=24:d=2" -shortest promo-output/fish-gameplay-promo.mp4
       - uses: actions/upload-artifact@v4
         if: always()
         with:
