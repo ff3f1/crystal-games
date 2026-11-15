@@ -237,7 +237,7 @@
       case "gear": case "money": UI.refreshTools(); break;
       case "hole": G.rig().castAt = s.t; UI.toast("Лунка готова, глубина " + e.depth.toFixed(1).replace(".", ",") + " м"); UI.refreshTools(); break;
       case "time": UI.ambience(); break;
-      case "session": UI.refreshTools(); UI.ambience(); break;
+      case "session": UI.refreshTools(); UI.ambience(); if (s.firstIce) UI.toast("Событие «Перволёд» активно — зимняя рыба клюёт чаще!", "gold", 3600); break;
       case "revived": UI.toast("Рыба снова на крючке!", "gold"); break;
       case "achievement": UI.toast("Достижение открыто: " + e.achievement.n, "gold", 3200); break;
       case "expedition":
