@@ -1,6 +1,6 @@
 """Record a vertical gameplay promo clip from the real Fish game.
 Run: python3 tests/record_fish_promo.py <output_dir>
-The MP4 is produced by Playwright Chromium video recording (WebM); no mocked gameplay.
+Captures real game runtime to WebM; CI adds Russian voiceover and exports MP4.
 """
 import sys, os, functools, threading, http.server, time
 from playwright.sync_api import sync_playwright
