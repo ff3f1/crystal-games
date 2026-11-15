@@ -19,10 +19,10 @@ URL = f"http://127.0.0.1:{srv.server_address[1]}/fish/index.html"
 with sync_playwright() as p:
     browser = p.chromium.launch()
     context = browser.new_context(
-        viewport={"width": 390, "height": 844},
+        viewport={"width": 450, "height": 800},
         device_scale_factor=2,
         record_video_dir=OUT,
-        record_video_size={"width": 780, "height": 1688},
+        record_video_size={"width": 1080, "height": 1920},
     )
     page = context.new_page()
     errors = []
@@ -36,9 +36,9 @@ with sync_playwright() as p:
     page.wait_for_timeout(1800)  # establish the fishing location
 
     # Cast into the water and show the bite.
-    page.mouse.move(195, 470)
+    page.mouse.move(225, 445)
     page.mouse.down()
-    page.mouse.move(185, 460, steps=8)
+    page.mouse.move(213, 436, steps=8)
     page.mouse.up()
     page.wait_for_timeout(1800)
     for _ in range(45):
@@ -50,12 +50,12 @@ with sync_playwright() as p:
 
     # Hook and reel in, preserving the real game animation.
     if page.evaluate("__game.G.rig().state") == "bite":
-        page.mouse.move(195, 640)
+        page.mouse.move(225, 606)
         page.mouse.down()
-        page.mouse.move(195, 540, steps=10)
+        page.mouse.move(225, 511, steps=10)
         page.mouse.up()
         page.wait_for_timeout(350)
-        page.mouse.move(250, 650)
+        page.mouse.move(288, 616)
         page.mouse.down()
         for _ in range(100):
             if page.evaluate("__game.G.rig().state") != "fight":
@@ -90,5 +90,5 @@ with sync_playwright() as p:
     if os.path.abspath(video_path) != os.path.abspath(target):
         os.replace(video_path, target)
     print(f"RECORDED: {target}")
-    print("FORMAT: WebM, vertical 780x1688, captured from live game runtime")
+    print("FORMAT: WebM, vertical 1080x1920, captured from live game runtime")
     srv.shutdown()
