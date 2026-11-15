@@ -91,7 +91,7 @@
   function addInv(id, n) { st.inv[id] = (st.inv[id] || 0) + n; }
 
   // ---------- Снасти ----------
-  G.season = function () { return st.seasonPick || (Wd.firstIceActive("winter") ? "winter" : U.seasonOf()); };
+  G.season = function () { return st.seasonPick || U.seasonOf(); };
   G.modeFor = function (season) { return season === "winter" ? "ice" : (st.load[st.active] && st.load[st.active].rod ? st.active : "float"); };
   G.loadout = function (mode) { return st.load[mode || G.mode()]; };
   G.mode = () => (sess ? sess.mode : G.modeFor(G.season()));
