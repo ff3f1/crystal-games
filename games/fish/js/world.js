@@ -145,5 +145,48 @@
 
   W.DAILY_GIFTS = [150, 250, 400, 600, 800, 1100, 2000];
 
-  FZ.World = W;
+  // ---------- Сезонное событие: Перволёд ----------
+  W.firstIceActive = function (season, date) {
+    const d = date || new Date();
+    const m = d.getMonth(), day = d.getDate();
+    return season === "winter" && ((m === 10 && day >= 15) || (m === 11 && day <= 15));
+  };
+  W.firstIceInfo = function () {
+    return {
+      id: "first-ice",
+      name: "Перволёд",
+      desc: "Первый лёд собрал рыбу на зимовальных глубинах. Окунь, палия, сиг, плотва и корюшка активнее обычного.",
+      bonus: "Повышенный клёв зимней рыбы"
+    };
+  };
+
+  W.EXPEDITION_EVENTS = [
+    { id: "baitball", name: "Котёл малька", text: "У переката собралась мелочь — хищник активнее.", kind: "pred", multiplier: 1.3 },
+    { id: "warmrain", name: "Тёплый дождь", text: "Дождь поднял корм со дна — мирная рыба активнее.", kind: "peace", multiplier: 1.25 },
+    { id: "quietwater", name: "Тихая вода", text: "Ветер стих. Рыба осторожнее, но клёв ровнее.", kind: "all", multiplier: 1.1 }
+  ];
+
+  // ---------- Достижения ----------
+  W.ACHIEVEMENTS = [
+    { id: "first_catch", n: "Первый улов", d: "Поймать первую рыбу", stat: "total", need: 1, reward: 150 },
+    { id: "ten_catches", n: "Рыбак выходного дня", d: "Поймать 10 рыб", stat: "total", need: 10, reward: 350 },
+    { id: "hundred_catches", n: "Своя стихия", d: "Поймать 100 рыб", stat: "total", need: 100, reward: 1200 },
+    { id: "first_trophy", n: "Трофей!", d: "Поймать трофейную рыбу", stat: "trophies", need: 1, reward: 500 },
+    { id: "catch_release", n: "Бережный рыбак", d: "Отпустить 10 рыб", stat: "released", need: 10, reward: 600 },
+    { id: "atlas_10", n: "Коллекционер", d: "Открыть 10 видов в атласе", stat: "species", need: 10, reward: 900 },
+    { id: "heavy_bag", n: "Тяжёлый садок", d: "Наловить суммарно 50 кг", stat: "kg", need: 50, reward: 1000 },
+    { id: "expedition", n: "Следопыт", d: "Завершить первую экспедицию", stat: "expeditions", need: 1, reward: 800 },
+    { id: "first_ice", n: "По первому льду", d: "Поймать рыбу во время события «Перволёд»", stat: "firstIce", need: 1, reward: 700 }
+  ];
+
+  W.achievementValue = function (id, state) {
+    const s = state || {};
+    if (id === "species") return Object.keys(s.caught || {}).length;
+    if (id === "expeditions") return s.expeditionsCompleted || 0;
+    if (id === "firstIce") return s.firstIceCatches || 0;
+    if (id === "kg") return Math.floor((s.stats && s.stats.kg || 0) * 10) / 10;
+    return s.stats && s.stats[id] || 0;
+  };
+
+    FZ.World = W;
 })(window.FZ);

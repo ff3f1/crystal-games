@@ -238,7 +238,36 @@
       depth: { top: 0, mid: .2, bottom: 1.6 }, time: { dawn: 1, day: .8, dusk: 1.1, night: 1.2 }, season: { spring: 1, summer: 1.1, autumn: 1, winter: .1 },
       bite: "drag", fight: { power: 1.35, stamina: 1.5, runs: .6, jump: .05, shake: .3 },
       look: { h: .15, back: "#3e4a4a", side: "#7a8686", belly: "#e0dccc", fin: "#5a6464", eye: "#a8a890", pat: "scutes", head: "stur", dorsal: "stur", tail: "stur", whisk: 4 },
-      desc: "Древняя рыба, ровесница динозавров. В дикой природе её ловить запрещено, а на платниках действует правило «поймал — отпустил». Сила у осетра огромная." }
+      desc: "Древняя рыба, ровесница динозавров. В дикой природе её ловить запрещено, а на платниках действует правило «поймал — отпустил». Сила у осетра огромная." },
+
+    { id: "palia", n: "Палия", lat: "Salvelinus alpinus", en: "Arctic char", kind: "pred", rar: 4,
+      min: .25, med: 1.1, trophy: 3.8, max: 9, refL: 42, refW: .9, price: 620,
+      methods: { spin: 1.1, ice: 1.3, float: .5 }, baits: { mormy: 1.3, icespoon: 1.2, balancer: 1.1, jig: 1, livebait: .8, amphipod: 1 },
+      depth: { top: .2, mid: 1, bottom: 1.3 }, time: { dawn: 1.2, day: .8, dusk: 1.3, night: .7 }, season: { spring: .8, summer: .5, autumn: 1.2, winter: 1.5 },
+      bite: "drag", fight: { power: 1.1, stamina: 1, runs: .65, jump: .2, shake: .35 },
+      look: { h: .28, back: "#304a4a", side: "#9aaea0", belly: "#e8e4d6", fin: "#a85842", eye: "#d8b86a", pat: "dots", adipose: true },
+      desc: "Холодолюбивая родственница гольцов. Держится глубже, а зимой выходит кормиться подо льдом. Сильная рыба с красивыми светлыми пятнами." },
+    { id: "brooktrout", n: "Форель ручьевая", lat: "Salvelinus fontinalis", en: "brook trout", kind: "pred", rar: 3,
+      min: .12, med: .55, trophy: 1.8, max: 4.2, refL: 32, refW: .45, price: 520,
+      methods: { spin: 1.2, float: .8, ice: .5 }, baits: { grasshopper: 1.2, worm: .8, spinner: 1.3, wobbler: 1.1, maggot: .6 },
+      depth: { top: 1.1, mid: 1, bottom: .5 }, time: { dawn: 1.3, day: .9, dusk: 1.2, night: .2 }, season: { spring: 1.1, summer: .8, autumn: 1.2, winter: .3 },
+      bite: "drag", fight: { power: 1, stamina: .8, runs: .6, jump: .35, shake: .3 },
+      look: { h: .27, back: "#344b35", side: "#b28a5a", belly: "#e8d8c4", fin: "#d05a42", eye: "#d8b86a", pat: "trout", adipose: true },
+      desc: "Небольшая яркая форель холодных ручьёв. Любит перекаты, насекомых и лёгкие блёсны. Часто выпрыгивает из воды во время вываживания." },
+    { id: "nase", n: "Подуст", lat: "Chondrostoma nasus", en: "nase", kind: "peace", rar: 2,
+      min: .12, med: .55, trophy: 1.8, max: 3.5, refL: 32, refW: .5, price: 180,
+      methods: { float: .8, feeder: 1.2 }, baits: { maggot: 1.1, worm: 1, barley: 1.2, bread: .7, bloodworm: .8 },
+      depth: { top: .1, mid: .7, bottom: 1.3 }, time: { dawn: 1.2, day: .8, dusk: 1.1, night: .4 }, season: { spring: 1.2, summer: 1, autumn: .9, winter: .4 },
+      bite: "twitch", fight: { power: .85, stamina: .7, runs: .4, jump: 0, shake: .2 },
+      look: { h: .25, back: "#4a5c50", side: "#b4bba8", belly: "#e8e8dc", fin: "#9a7860", eye: "#c8b88a", head: "small" },
+      desc: "Речная рыба с характерным ртом, приспособленным соскребать корм с камней. Держится на течении у дна и любит растительные насадки." },
+    { id: "sterlet", n: "Стерлядь", lat: "Acipenser ruthenus", en: "sterlet", kind: "peace", rar: 4, release: "охраняемый вид",
+      min: .4, med: 1.8, trophy: 4.5, max: 7, refL: 55, refW: 1.7, price: 0,
+      methods: { feeder: 1.2, float: .3 }, baits: { crawler: 1.3, worm: 1.1, boilie: .5 },
+      depth: { top: 0, mid: .2, bottom: 1.5 }, time: { dawn: .9, day: .7, dusk: 1.1, night: 1.3 }, season: { spring: 1, summer: .9, autumn: 1, winter: .25 },
+      bite: "drag", fight: { power: 1.1, stamina: 1, runs: .55, jump: .05, shake: .25 },
+      look: { h: .15, back: "#3a4a46", side: "#82948a", belly: "#dedccc", fin: "#68786e", eye: "#b8b08a", pat: "scutes", head: "stur", dorsal: "stur", tail: "stur", whisk: 4 },
+      desc: "Небольшой осетровый с костными щитками вдоль тела. Держится у каменистого дна и требует бережного обращения: в игре действует правило обязательного отпускания." }
   ];
   FZ.SPECIES = S;
   FZ.SP = {};
@@ -276,7 +305,13 @@
       fish: { omul: 25, grayling: 14, whitefish: 10, perch: 14, pike: 8, burbot: 8, roach: 12, dace: 8, ide: 4 } },
     { id: "taiga", n: "Таёжная река", reg: "Красноярский край", lvl: 25, fee: 0, zfar: 90, depth: [1, 5], current: 0.8, style: "taiga",
       desc: "Сотни километров до ближайшей дороги. Хариус, ленок и легендарный таймень.",
-      fish: { taimen: 4, lenok: 18, grayling: 30, pike: 10, burbot: 6, dace: 18, ide: 6, perch: 8 } }
+      fish: { taimen: 4, lenok: 18, grayling: 30, pike: 10, burbot: 6, dace: 18, ide: 6, perch: 8 } },
+    { id: "northstream", n: "Северная протока", reg: "Карелия", lvl: 10, fee: 0, zfar: 145, depth: [1.2, 8], current: 0.75, style: "river", expedition: true,
+      desc: "Холодная протока среди сосен и каменных берегов. На перекатах охотится голавль, а в ямах стоит крупная рыба.",
+      fish: { chub: 18, asp: 8, nase: 12, perch: 10, pike: 7, ide: 8, dace: 12, burbot: 5, sterlet: 2 } },
+    { id: "mountainlake", n: "Горное озеро", reg: "Алтай", lvl: 17, fee: 0, zfar: 180, depth: [2, 18], current: 0.08, style: "lake", expedition: true,
+      desc: "Прозрачная ледяная вода, осыпи и глубокие свалы. Здесь ищут палия, ручьевую форель и хариуса.",
+      fish: { palia: 16, brooktrout: 14, grayling: 14, whitefish: 10, perch: 8, pike: 3, burbot: 5 } }
   ];
   FZ.LOC = {}; FZ.LOCATIONS.forEach(function (l) { FZ.LOC[l.id] = l; });
 

@@ -79,11 +79,26 @@ with sync_playwright() as p:
     check("лунка пробурена", pg.evaluate("__game.G.rig().state") == "wait")
     pg.screenshot(path=f"{OUT}/f_ice.png")
 
+    # Новые водоёмы, событие «Перволёд», достижения и экспедиция
+    check("новые виды рыб загружены", pg.evaluate("!!FZ.SP.palia && !!FZ.SP.brooktrout && !!FZ.SP.nase && !!FZ.SP.sterlet"))
+    check("новые экспедиционные локации загружены", pg.evaluate("!!FZ.LOC.northstream && !!FZ.LOC.mountainlake"))
+    check("событие «Перволёд» по календарю", pg.evaluate("FZ.World.firstIceActive('winter',new Date('2026-11-20T12:00:00'))"))
+    pg.evaluate("__game.G.state().lvl=17; __game.G.state().money=5000")
+    trip_ok = pg.evaluate("__game.G.startExpedition('mountainlake',1)")
+    check("экспедиция начинается", trip_ok is True and pg.evaluate("__game.G.sess().loc.id") == "mountainlake")
+    pg.evaluate("__game.G.sess().hour=23.99; __game.G.update(1,0)")
+    check("игровые сутки завершают экспедиционный день", pg.evaluate("__game.G.state().expedition.completed"))
+    pg.evaluate("__game.G.returnExpedition()")
+    check("возвращение из экспедиции", not pg.evaluate("__game.G.state().expedition.active") and pg.evaluate("__game.G.state().expeditionsCompleted") == 1)
+    check("достижение первой поимки открыто", pg.evaluate("!!__game.G.state().achievements.first_catch"))
+
     # Карточка для шаринга рисуется
     ok = pg.evaluate("""()=>{const s=FZ.SP.pike;const c=FZ.Share.card({s,w:5.2,len:88,loc:'oka',date:'2026-10-23',trophy:false,record:true,newSpecies:false,pct:90});return c.width===1080&&c.toDataURL().length>50000}""")
     check("карточка улова 1080×1920", ok)
-    # Сохранение переживает перезагрузку
-    pg.evaluate("__game.G.save(true)"); pg.reload(); pg.wait_for_timeout(1500)
+    # Старый формат v1 автоматически получает новые поля экспедиции и достижений
+    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;localStorage.setItem('fz_save',JSON.stringify(old));}""")
+    pg.reload(); pg.wait_for_timeout(1500)
+    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10"))
     check("сохранение", pg.evaluate("__game.G.state().rods.indexOf('d1')>=0"))
     b.close()
 

@@ -237,8 +237,15 @@
       case "gear": case "money": UI.refreshTools(); break;
       case "hole": G.rig().castAt = s.t; UI.toast("Лунка готова, глубина " + e.depth.toFixed(1).replace(".", ",") + " м"); UI.refreshTools(); break;
       case "time": UI.ambience(); break;
-      case "session": UI.refreshTools(); UI.ambience(); break;
+      case "session": UI.refreshTools(); UI.ambience(); if (s.firstIce) UI.toast("Событие «Перволёд» активно — зимняя рыба клюёт чаще!", "gold", 3600); break;
       case "revived": UI.toast("Рыба снова на крючке!", "gold"); break;
+      case "achievement": UI.toast("Достижение открыто: " + e.achievement.n, "gold", 3200); break;
+      case "expedition":
+        if (e.started) UI.toast("Экспедиция началась: " + e.loc.n, "gold", 3000);
+        else if (e.dayPassed) UI.toast("Новый день: " + (e.event ? e.event.name + ". " + e.event.text : "") + " Осталось: " + e.daysLeft, "gold", 3600);
+        else if (e.completed) UI.toast("Экспедиция завершена! Возвращайтесь за наградой", "gold", 3600);
+        else if (e.returned) UI.toast("Возвращение домой: +" + U.money(e.reward), "gold", 3200);
+        break;
     }
   };
   UI.ambience = function () {
@@ -274,6 +281,8 @@
           '<button class="tile" id="mAtlas">' + ic("book") + "Атлас рыб</button>" +
           '<button class="tile" id="mQuests">' + ic("list") + "Задания" + (qDone ? '<span class="badge">' + qDone + "</span>" : "") + "</button>" +
           '<button class="tile" id="mTour">' + ic("cup") + "Турнир дня" + (tourBadge ? '<span class="badge">' + tourBadge + "</span>" : "") + "</button>" +
+          '<button class="tile" id="mExpedition">' + ic("map") + "Экспедиции" + (st.expedition.active ? '<span class="badge">В пути</span>' : "") + "</button>" +
+          '<button class="tile" id="mAchievements">' + ic("star") + "Достижения</button>" +
           '<button class="tile" id="mSet">' + ic("gear") + "Настройки</button>" +
         "</div></div>";
     ov.classList.add("on");
@@ -286,6 +295,8 @@
     $("mAtlas").onclick = () => UI.showAtlas();
     $("mQuests").onclick = () => UI.showQuests();
     $("mTour").onclick = () => UI.showTour();
+    $("mExpedition").onclick = () => UI.showExpedition();
+    $("mAchievements").onclick = () => UI.showAchievements();
     $("mSet").onclick = () => UI.showSettings();
     UI.menuOpen = true;
     UI.closeMenu = () => { close(); UI.menuOpen = false; };
@@ -295,10 +306,11 @@
   UI.showMap = function (seasonTab) {
     const st = G.state();
     const real = U.seasonOf();
-    let season = seasonTab || G.season();
+    let season = seasonTab || (Wd.firstIceActive("winter") ? "winter" : G.season());
     const draw = function () {
       let html = "<h2>Водоёмы</h2><div class=\"sub\">Сезон выбирайте сами: сейчас за окном " + FZ.SEASONS[real].toLowerCase() + "</div>" +
         '<div class="seg" id="mpSeason">' + FZ.SEASON_ORDER.map((x) => '<button data-s="' + x + '" class="' + (x === season ? "on" : "") + '">' + FZ.SEASONS[x] + "</button>").join("") + "</div>" +
+        (Wd.firstIceActive(season) ? '<div class="row" style="background:rgba(100,160,210,.16);border-radius:12px;padding:10px;margin:8px 0"><div class="body"><div class="t">❄ Перволёд</div><div class="d">Событие активно: зимняя рыба клюёт на 35% активнее.</div></div></div>' : "") +
         '<div class="scroll">';
       FZ.LOCATIONS.forEach(function (l) {
         const lock = st.lvl < l.lvl;
@@ -308,12 +320,13 @@
         html += '<div class="row ' + (lock ? "locked" : "") + '"><div class="pic" style="background:' + locColor(l, season) + '"><img alt="" src="' + FZ.Scene.thumb(l, season) + '">' + (lock ? '<span class="lk">' + ic("lock") + "</span>" : "") + "</div>" +
           '<div class="body"><div class="t">' + l.n + "</div><div class=\"d\">" + l.reg + ". " + l.desc + "</div>" +
           '<div class="d">Клёв ' + stars(wx.score) + (bit.length ? "<br>Клюёт: " + bit.join(", ") : "") + (l.fee ? "<br>Путёвка " + U.money(l.fee) : "") + "</div></div>" +
-          (lock ? '<span class="btn small ghost">с ' + l.lvl + " ур.</span>" : here ? '<span class="btn small ghost">Вы здесь</span>' : '<button class="btn small red" data-go="' + l.id + '">Ехать</button>') + "</div>";
+          (lock ? '<span class="btn small ghost">с ' + l.lvl + " ур.</span>" : l.expedition ? '<button class="btn small red" data-expedition="' + l.id + '">Экспедиция</button>' : here ? '<span class="btn small ghost">Вы здесь</span>' : '<button class="btn small red" data-go="' + l.id + '">Ехать</button>') + "</div>";
       });
       html += "</div>";
       const sh = UI.sheet(html);
       sh.querySelectorAll("#mpSeason button").forEach((b) => (b.onclick = () => { season = b.dataset.s; FZ.Sound.click(); draw(); }));
       sh.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => UI.travel(b.dataset.go, season)));
+      sh.querySelectorAll("[data-expedition]").forEach((b) => (b.onclick = () => UI.showExpedition(b.dataset.expedition)));
     };
     draw();
   };
@@ -323,6 +336,8 @@
   }
   UI.travel = async function (locId, season) {
     const st = G.state(), l = FZ.LOC[locId];
+    if (st.expedition.active && locId !== st.expedition.locId) { UI.toast("Сначала завершите текущую экспедицию", "bad"); return; }
+    if (l.expedition && !st.expedition.active) { UI.showExpedition(locId); return; }
     if (l.fee) { if (st.money < l.fee) { UI.toast("Не хватает на путёвку: " + U.money(l.fee), "bad"); return; } st.money -= l.fee; }
     UI.closeSheet();
     await FZ.Ads.interstitial();
@@ -331,6 +346,70 @@
     if (UI.closeMenu) UI.closeMenu();
     UI.toast(l.n + ", " + FZ.SEASONS[G.sess().season].toLowerCase());
     if (G.sess().ice && !st.load.ice.rod) setTimeout(() => UI.toast("Нужна зимняя удочка — загляните в «Снасти»", "bad", 3500), 600);
+  };
+
+  // ---------- Экспедиции ----------
+  UI.showExpedition = function (focusLoc) {
+    const st = G.state(), trip = st.expedition;
+    if (trip.active) {
+      const loc = FZ.LOC[trip.locId];
+      const status = trip.completed ? "Маршрут пройден. Можно возвращаться с добычей." : "Экспедиция продолжается. Новый день наступает после полного игрового цикла суток.";
+      const html = "<h2>Экспедиция: " + loc.n + "</h2><div class=\"sub\">" + status + "</div><div class=\"scroll\">" +
+        '<div class="row"><div class="body"><div class="t">Дни в пути</div><div class="d">' + trip.daysSpent + " / " + trip.daysTotal + "</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Осталось дней</div><div class="d">' + trip.daysLeft + "</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Улов в экспедиции</div><div class="d">' + trip.catches + " рыб · рекорд " + (trip.best ? U.kg(trip.best) : "пока нет") + "</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Рюкзак трофеев</div><div class="d">' + trip.bagUsed + " / " + trip.bagCapacity + " мест · при заполнении рыбу придётся отпускать</div></div></div>" +
+        '<div class="row"><div class="body"><div class="t">Провизия</div><div class="d">' + trip.provisions + " дневных пайков</div></div></div>" +
+        (trip.event ? '<div class="row"><div class="body"><div class="t">' + trip.event.name + '</div><div class="d">' + trip.event.text + "</div></div></div>" : "") +
+        '<button class="btn brass" id="exReturn" style="width:100%;margin-top:12px">' + (trip.completed ? "Забрать награду и вернуться" : "Завершить досрочно и вернуться") + "</button></div>";
+      const sh = UI.sheet(html);
+      sh.querySelector("#exReturn").onclick = () => { const reward = G.returnExpedition(); UI.closeSheet(); if (UI.menuOpen) UI.showMenu(); };
+      return;
+    }
+    let days = 3;
+    const draw = function () {
+      const destinations = FZ.LOCATIONS.filter((l) => l.expedition);
+      let html = "<h2>Экспедиции</h2><div class=\"sub\">Дальние выезды на 1–3 игровых дня. Время идёт вместе с игровыми сутками. По возвращении получите награду за проведённые дни и улов.</div>" +
+        '<div class="seg" id="exDays">' + [1, 2, 3].map((n) => '<button data-days="' + n + '" class="' + (days === n ? "on" : "") + '">' + n + " " + U.plural(n, "день", "дня", "дней") + "</button>").join("") + "</div><div class=\"scroll\">";
+      destinations.forEach(function (loc) {
+        const locked = st.lvl < loc.lvl;
+        html += '<div class="row"><div class="pic"><img alt="" src="' + FZ.Scene.thumb(loc, G.season()) + '"></div><div class="body"><div class="t">' + loc.n + "</div><div class=\"d\">" + loc.reg + " · " + loc.desc + "</div><div class=\"d\">Новые виды: " + Object.keys(loc.fish).filter((id) => ["palia", "brooktrout", "nase", "sterlet"].indexOf(id) >= 0).map((id) => FZ.SP[id].n).join(", ") + "</div></div>" +
+          (locked ? '<span class="btn small ghost">с ' + loc.lvl + " ур.</span>" : '<button class="btn small brass" data-start="' + loc.id + '">В путь · ' + U.money(days * 250) + "</button>") + "</div>";
+      });
+      html += "</div>";
+      const sh = UI.sheet(html);
+      sh.querySelectorAll("[data-days]").forEach((b) => (b.onclick = () => { days = +b.dataset.days; draw(); }));
+      sh.querySelectorAll("[data-start]").forEach((b) => (b.onclick = () => {
+        const result = G.startExpedition(b.dataset.start, days);
+        if (result === true) { UI.closeSheet(); if (UI.menuOpen) UI.closeMenu(); }
+        else UI.toast(result, "bad");
+      }));
+    };
+    if (focusLoc && !trip.active) {
+      const loc = FZ.LOC[focusLoc];
+      if (loc && loc.expedition && st.lvl < loc.lvl) { UI.toast("Экспедиция откроется на " + loc.lvl + " уровне", "bad"); return; }
+    }
+    draw();
+  };
+
+  // ---------- Достижения ----------
+  UI.showAchievements = function () {
+    const st = G.state();
+    let html = "<h2>Достижения</h2><div class=\"sub\">Выполняйте рыбацкие цели и забирайте награды.</div><div class=\"scroll\">";
+    Wd.ACHIEVEMENTS.forEach(function (a) {
+      const value = G.achievementProgress(a), saved = st.achievements[a.id];
+      const done = value >= a.need, claimed = !!(saved && saved.claimed);
+      const progress = U.clamp(value / a.need, 0, 1);
+      html += '<div class="row"><div class="pic">' + ic(done ? "cup" : "star") + '</div><div class="body"><div class="t">' + a.n + "</div><div class=\"d\">" + a.d + " · " + (a.stat === "kg" ? value.toFixed(1).replace(".", ",") : value) + " / " + a.need + "</div><div class=\"prog\"><i style=\"width:" + Math.round(progress * 100) + '%"></i></div><div class="d">Награда: ' + U.money(a.reward) + "</div></div>" +
+        (claimed ? '<span class="btn small ghost">Получено</span>' : done ? '<button class="btn small brass" data-ach="' + a.id + '">Забрать</button>' : '<span class="btn small ghost">В процессе</span>') + "</div>";
+    });
+    html += "</div>";
+    const sh = UI.sheet(html, () => { if (UI.menuOpen) UI.showMenu(); });
+    sh.querySelectorAll("[data-ach]").forEach((b) => (b.onclick = () => {
+      const reward = G.claimAchievement(b.dataset.ach);
+      if (reward) { FZ.Sound.trophy(); UI.toast("Достижение: +" + U.money(reward), "gold"); }
+      UI.closeSheet(); UI.showAchievements();
+    }));
   };
 
   // ---------- Снасти (магазин) ----------
@@ -379,7 +458,7 @@
       });
       html += '<div class="sub" style="margin-top:10px">Приманка служит долго, но при обрыве лески теряется.</div>';
     } else {
-      Object.keys(FZ.EXTRAS).forEach(function (id) { const x = FZ.EXTRAS[id]; html += '<div class="row"><div class="pic">' + ic(id === "echo" ? "wave" : id === "gaff" ? "fish" : "ice") + '</div><div class="body"><div class="t">' + x.n + '</div><div class="d">' + x.note + "</div></div>" + priceBtn("extra", id, x, G.owned("extra", id)) + "</div>"; });
+      Object.keys(FZ.EXTRAS).forEach(function (id) { const x = FZ.EXTRAS[id]; html += '<div class="row"><div class="pic">' + ic(id === "echo" ? "wave" : id === "gaff" ? "fish" : id === "expBag" ? "bag" : id === "tent" ? "map" : "ice") + '</div><div class="body"><div class="t">' + x.n + '</div><div class="d">' + x.note + "</div></div>" + priceBtn("extra", id, x, G.owned("extra", id)) + "</div>"; });
     }
     html += "</div>";
     const sh = UI.sheet(html, () => UI.refreshTools());
@@ -589,7 +668,7 @@
       '<div class="wt" id="cWt">0 г</div><div class="nm">' + s.n + '</div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
-      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (s.release === "Красная книга" ? "вид из Красной книги" : "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
+      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : s.release || "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
       '<div class="acts">' +
         '<button class="dbl" id="cDbl"><span class="adtag">реклама</span> Удвоить награду</button>' +
         '<div class="two">' +
