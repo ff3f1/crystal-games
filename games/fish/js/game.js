@@ -152,7 +152,9 @@
   FZ.EXTRAS = {
     echo: { id: "echo", n: "Эхолот", note: "показывает глубину и рыбу под лункой и в точке заброса", price: 3500, lvl: 5 },
     gaff: { id: "gaff", n: "Багорик", note: "помогает вытащить крупную рыбу через лунку", price: 800, lvl: 6 },
-    auger: { id: "auger", n: "Ледобур 150 мм", note: "бурит вдвое быстрее, в лунку пролезает рыба крупнее", price: 4500, lvl: 9 }
+    auger: { id: "auger", n: "Ледобур 150 мм", note: "бурит вдвое быстрее, в лунку пролезает рыба крупнее", price: 4500, lvl: 9 },
+    expBag: { id: "expBag", n: "Экспедиционный рюкзак", note: "увеличивает вместимость экспедиции с 10 до 16 трофеев", price: 6500, lvl: 10 },
+    tent: { id: "tent", n: "Экспедиционная палатка", note: "увеличивает награду за возвращение из экспедиции на 25%", price: 4800, lvl: 12 }
   };
 
   // ---------- Сессия рыбалки ----------
@@ -192,7 +194,7 @@
     if (st.money < cost) return "Для экспедиции нужно " + U.money(cost);
     trip.active = true; trip.locId = locId; trip.homeLoc = st.loc;
     trip.homeSeason = G.season(); trip.daysTotal = days; trip.daysLeft = days;
-    trip.daysSpent = 0; trip.provisions = days; trip.bagUsed = 0; trip.bagCapacity = 10;
+    trip.daysSpent = 0; trip.provisions = days; trip.bagUsed = 0; trip.bagCapacity = st.extras.expBag ? 16 : 10;
     trip.catches = 0; trip.best = 0; trip.event = U.rand.pick(Wd.EXPEDITION_EVENTS); trip.completed = false;
     st.money -= cost; st.loc = locId;
     G.startSession(locId, trip.homeSeason);
@@ -204,7 +206,8 @@
     const trip = st.expedition;
     if (!trip.active) return 0;
     const days = trip.daysSpent;
-    const reward = Math.round(days * 180 + trip.catches * 35 + trip.best * 55 + trip.bagUsed * 50);
+    const rewardBase = days * 180 + trip.catches * 35 + trip.best * 55 + trip.bagUsed * 50;
+    const reward = Math.round(rewardBase * (st.extras.tent ? 1.25 : 1));
     const home = trip.homeLoc || "pond", season = trip.homeSeason;
     st.money += reward; st.expeditionsCompleted++;
     trip.active = false; trip.locId = null; trip.daysLeft = 0; trip.provisions = 0; trip.event = null; trip.completed = false;
