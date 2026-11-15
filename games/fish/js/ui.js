@@ -668,7 +668,7 @@
       '<div class="wt" id="cWt">0 г</div><div class="nm">' + s.n + '</div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
-      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
+      (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : s.release || "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
       '<div class="acts">' +
         '<button class="dbl" id="cDbl"><span class="adtag">реклама</span> Удвоить награду</button>' +
         '<div class="two">' +
