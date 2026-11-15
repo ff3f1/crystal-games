@@ -306,7 +306,7 @@
   UI.showMap = function (seasonTab) {
     const st = G.state();
     const real = U.seasonOf();
-    let season = seasonTab || G.season();
+    let season = seasonTab || (Wd.firstIceActive("winter") ? "winter" : G.season());
     const draw = function () {
       let html = "<h2>Водоёмы</h2><div class=\"sub\">Сезон выбирайте сами: сейчас за окном " + FZ.SEASONS[real].toLowerCase() + "</div>" +
         '<div class="seg" id="mpSeason">' + FZ.SEASON_ORDER.map((x) => '<button data-s="' + x + '" class="' + (x === season ? "on" : "") + '">' + FZ.SEASONS[x] + "</button>").join("") + "</div>" +
