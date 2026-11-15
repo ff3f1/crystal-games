@@ -606,20 +606,35 @@
     const t0 = performance.now();
     const len = Math.min(rect.width * 0.95, rect.height * 2.6);
     const drops = [];
-    for (let i = 0; i < 40; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 260, r: 1 + Math.random() * 3 });
+    const particleCount = Math.min(22, Math.max(10, Math.round(rect.width / 18)));
+    for (let i = 0; i < particleCount; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 180, vy: -70 - Math.random() * 190, r: 1 + Math.random() * 2.2 });
+    const glow = g.createRadialGradient(rect.width / 2, rect.height / 2, 10, rect.width / 2, rect.height / 2, rect.width * 0.55);
+    glow.addColorStop(0, U.rgba(r.trophy ? "#f2a71b" : "#8fd3e0", 0.18));
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    let prevFrame = t0, lastWeightAt = 0;
     if (catchAnim) cancelAnimationFrame(catchAnim);
     const loop = function () {
-      const t = (performance.now() - t0) / 1000;
+      const now = performance.now();
+      const t = (now - t0) / 1000;
+      const frameDt = Math.min(0.04, Math.max(0, (now - prevFrame) / 1000));
+      prevFrame = now;
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, rect.width, rect.height);
       const k = U.clamp(t / 0.6, 0, 1);
-      const glow = g.createRadialGradient(rect.width / 2, rect.height / 2, 10, rect.width / 2, rect.height / 2, rect.width * 0.55);
-      glow.addColorStop(0, U.rgba(r.trophy ? "#f2a71b" : "#8fd3e0", 0.28 * k)); glow.addColorStop(1, "rgba(0,0,0,0)");
       g.fillStyle = glow; g.fillRect(0, 0, rect.width, rect.height);
       const x = rect.width / 2 + (1 - U.easeOutBack(k)) * rect.width * 0.8;
       FZ.Art.drawFish(g, s, x, rect.height / 2 + Math.sin(t * 2) * 4, len * 0.9, { phase: t * (t < 1.2 ? 14 : 4), amp: t < 1.2 ? 0.45 : 0.12, roll: Math.sin(t * 1.5) * 0.04 });
-      drops.forEach((d) => { if (t > 1.2) return; d.vy += 600 / 60; d.x += d.vx / 60; d.y += d.vy / 60; g.fillStyle = "rgba(220,240,250,0.8)"; g.beginPath(); g.arc(d.x, d.y, d.r, 0, Math.PI * 2); g.fill(); });
-      const kw = U.clamp((t - 0.3) / 0.9, 0, 1);
-      $("cWt").textContent = U.kg(Math.max(0.001, r.w * U.easeOut(kw)));
+      if (t < 1.2) {
+        g.fillStyle = "rgba(220,240,250,0.8)";
+        drops.forEach((p) => {
+          p.vy += 600 * frameDt; p.x += p.vx * frameDt; p.y += p.vy * frameDt;
+          g.beginPath(); g.arc(p.x, p.y, p.r, 0, Math.PI * 2); g.fill();
+        });
+      }
+      if (now - lastWeightAt > 80) {
+        lastWeightAt = now;
+        const kw = U.clamp((t - 0.3) / 0.9, 0, 1);
+        $("cWt").textContent = U.kg(Math.max(0.001, r.w * U.easeOut(kw)));
+      }
       if (ov.classList.contains("on")) catchAnim = requestAnimationFrame(loop);
     };
     loop();
@@ -636,9 +651,12 @@
     $("cShare").onclick = () => FZ.Share.share(r);
     $("cDbl").onclick = async function () {
       if (doubled) return;
+      const btn = this;
+      if (btn.disabled) return;
+      btn.disabled = true;
       const ok = await FZ.Ads.rewarded();
-      if (!ok) { UI.toast("Реклама сейчас недоступна", "bad"); return; }
-      doubled = true; this.classList.add("on"); this.textContent = "Награда удвоена";
+      if (!ok) { btn.disabled = false; UI.toast("Реклама не загрузилась. Попробуйте ещё раз", "bad"); return; }
+      doubled = true; btn.classList.add("on"); btn.textContent = "Награда удвоена";
       if ($("cKeepS")) $("cKeepS").textContent = "+" + U.money(r.price * 2);
       $("cRelS").textContent = "+" + Math.round(r.xp * (r.mustRelease ? 2 : 1.5) * 2) + " опыта";
     };
@@ -668,7 +686,20 @@
       '<button class="btn brass" id="lRev"><span class="adtag">реклама</span> Второй шанс</button><button class="btn ghost" id="lNo">Отпустить с миром</button></div>';
     ov.classList.add("on");
     $("lNo").onclick = () => { ov.classList.remove("on"); G.rig().lost = null; };
-    $("lRev").onclick = async () => { const ok = await FZ.Ads.rewarded(); ov.classList.remove("on"); if (ok) G.revive(); else UI.toast("Реклама сейчас недоступна", "bad"); };
+    $("lRev").onclick = async function () {
+      const btn = this;
+      if (btn.disabled) return;
+      btn.disabled = true;
+      btn.textContent = "Загружаем рекламу…";
+      const ok = await FZ.Ads.rewarded();
+      if (ok && G.revive()) {
+        ov.classList.remove("on");
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="adtag">реклама</span> Повторить второй шанс';
+        UI.toast("Реклама не загрузилась. Попробуйте ещё раз", "bad");
+      }
+    };
   };
 
   FZ.UI = UI;

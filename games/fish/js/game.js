@@ -539,7 +539,7 @@
       if (g.bait && g.bait.lure) { st.lures[g.bait.id] = Math.max(0, (st.lures[g.bait.id] || 1) - 1); autoBait(); emit("msg", { text: "Приманка «" + g.bait.n + "» потеряна", bad: true }); }
     } else FZ.Sound.fail();
     if (g.bait && !g.bait.lure) useBait();
-    rig.lost = { f, why, canRevive: !f.revived && why !== "spool" };
+    rig.lost = { f, why, canRevive: !f.revived };
     rig.fish = null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.tension = 0;
     emit("lost", { text, why, fish: f });
     G.save();
