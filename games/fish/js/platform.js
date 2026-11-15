@@ -8,7 +8,7 @@
     store: "https://www.rustore.ru/catalog/app/ru.crystalgames.fishing",
     youtube: "https://youtube.com/@shpargalka_rybaka", // ссылка на YouTube-канал (кнопка в настройках появится, когда заполнено)
     title: "Рыбалка: Клюёт!",
-    interGap: 150           // секунд между межстраничной рекламой
+    interGap: 90           // секунд между межстраничной рекламой
   };
 
   const platform = window.AndroidAds ? "android" : (/vk_app_id=/.test(location.search) ? "vk" : "web");
