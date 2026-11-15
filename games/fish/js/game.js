@@ -15,7 +15,7 @@
   function fresh() {
     return {
       v: 1, money: 300, xp: 0, lvl: 1, karma: 0, loc: "pond", seasonPick: null,
-      expedition: { active: false, locId: null, homeLoc: "pond", homeSeason: null, daysTotal: 0, daysLeft: 0, daysSpent: 0, catches: 0, best: 0, completed: false },
+      expedition: { active: false, locId: null, homeLoc: "pond", homeSeason: null, daysTotal: 0, daysLeft: 0, daysSpent: 0, provisions: 0, bagUsed: 0, bagCapacity: 10, catches: 0, best: 0, event: null, completed: false },
       achievements: {}, expeditionsCompleted: 0, firstIceCatches: 0,
       rods: ["f1", "i1"], lines: ["l1"], hooks: ["h1", "h2"], extras: {}, lures: {},
       inv: { worm: 40, bread: 25, gb: 2 },
@@ -191,7 +191,8 @@
     if (st.money < cost) return "Для экспедиции нужно " + U.money(cost);
     trip.active = true; trip.locId = locId; trip.homeLoc = st.loc;
     trip.homeSeason = G.season(); trip.daysTotal = days; trip.daysLeft = days;
-    trip.daysSpent = 0; trip.catches = 0; trip.best = 0; trip.completed = false;
+    trip.daysSpent = 0; trip.provisions = days; trip.bagUsed = 0; trip.bagCapacity = 10;
+    trip.catches = 0; trip.best = 0; trip.event = U.rand.pick(Wd.EXPEDITION_EVENTS); trip.completed = false;
     st.money -= cost; st.loc = locId;
     G.startSession(locId, trip.homeSeason);
     emit("expedition", { started: true, loc });
@@ -202,10 +203,10 @@
     const trip = st.expedition;
     if (!trip.active) return 0;
     const days = trip.daysSpent;
-    const reward = Math.round(days * 180 + trip.catches * 35 + trip.best * 55);
+    const reward = Math.round(days * 180 + trip.catches * 35 + trip.best * 55 + trip.bagUsed * 50);
     const home = trip.homeLoc || "pond", season = trip.homeSeason;
     st.money += reward; st.expeditionsCompleted++;
-    trip.active = false; trip.locId = null; trip.daysLeft = 0; trip.completed = false;
+    trip.active = false; trip.locId = null; trip.daysLeft = 0; trip.provisions = 0; trip.event = null; trip.completed = false;
     st.loc = home;
     G.startSession(home, season);
     checkAchievements();
@@ -217,12 +218,14 @@
     const trip = st.expedition;
     if (!trip.active || trip.completed) return;
     trip.daysSpent++;
+    trip.provisions = Math.max(0, trip.provisions - 1);
     trip.daysLeft = Math.max(0, trip.daysTotal - trip.daysSpent);
+    trip.event = U.rand.pick(Wd.EXPEDITION_EVENTS);
     if (trip.daysLeft === 0) {
       trip.completed = true;
-      emit("expedition", { completed: true });
+      emit("expedition", { completed: true, event: trip.event });
     } else {
-      emit("expedition", { dayPassed: true, daysLeft: trip.daysLeft });
+      emit("expedition", { dayPassed: true, daysLeft: trip.daysLeft, event: trip.event });
     }
     G.save(true);
   }
@@ -367,6 +370,8 @@
       const s = FZ.SP[id];
       let m = s.season[sess.season] * s.time[sess.period] * (s.kind === "pred" ? wx.pred : wx.peace);
       if (sess.firstIce && (id === "perch" || id === "palia" || id === "whitefish" || id === "roach" || id === "smelt")) m *= 1.35;
+      const tripEvent = st.expedition.active && st.expedition.event;
+      if (tripEvent && (tripEvent.kind === "all" || tripEvent.kind === s.kind)) m *= tripEvent.multiplier;
       m *= (s.methods[sess.mode] || 0);
       m *= bait ? (s.baits[bait] || (FZ.BAIT[bait].lure ? 0.03 : 0.06)) : 0;
       m *= s.depth[zone];
@@ -658,7 +663,9 @@
       s, w, len: f.lenCm, trophy, record: !rec || w > rec.w, prevRecord: rec ? rec.w : 0, newSpecies: !st.caught[s.id],
       price: s.price > 0 ? Math.max(5, Math.round(s.price * w * (trophy ? 1.4 : 1))) : 0,
       xp: Math.round((8 + 25 * Math.pow(w, 0.6)) * [1, 1, 1.3, 1.7, 2.3, 3.2][s.rar] * (trophy ? 1.6 : 1)),
-      mustRelease: !!s.release, loc: sess.loc.id, pct: Wd.percentile(s, w), mode: sess.mode, period: sess.period,
+      mustRelease: !!s.release || !!(st.expedition.active && st.expedition.bagUsed >= st.expedition.bagCapacity),
+      expeditionFull: !!(st.expedition.active && st.expedition.bagUsed >= st.expedition.bagCapacity),
+      loc: sess.loc.id, pct: Wd.percentile(s, w), mode: sess.mode, period: sess.period,
       date: U.dayKey()
     };
     // турнир дня
@@ -682,7 +689,10 @@
     const s = r.s;
     if (r.mustRelease) keep = false;
     let money = 0, xp = r.xp;
-    if (keep) { money = r.price * (doubled ? 2 : 1); st.money += money; }
+    if (keep) {
+      money = r.price * (doubled ? 2 : 1); st.money += money;
+      if (st.expedition.active) st.expedition.bagUsed = Math.min(st.expedition.bagCapacity, st.expedition.bagUsed + 1);
+    }
     else { xp = Math.round(xp * (r.mustRelease ? 2 : 1.5) * (doubled ? 2 : 1)); st.karma++; st.stats.released++; }
     st.caught[s.id] = (st.caught[s.id] || 0) + 1;
     if (r.record) st.records[s.id] = { w: r.w, len: r.len, loc: r.loc, date: r.date };
