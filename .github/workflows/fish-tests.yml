@@ -8,6 +8,7 @@ on:
     paths:
       - "games/fish/**"
       - "tests/test_fish.py"
+      - "tests/record_fish_promo.py"
       - ".github/workflows/fish-tests.yml"
   pull_request:
     paths:
@@ -38,9 +39,15 @@ jobs:
         run: |
           mkdir -p test-output
           python tests/test_fish.py test-output
+      - name: Record vertical gameplay promo
+        run: |
+          mkdir -p promo-output
+          python tests/record_fish_promo.py promo-output
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: fishing-browser-screenshots
-          path: test-output/
+          name: fishing-browser-screenshots-and-promo
+          path: |
+            test-output/
+            promo-output/
           if-no-files-found: ignore
