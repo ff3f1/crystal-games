@@ -125,6 +125,12 @@ with sync_playwright() as p:
 
 
  # Native Chromium touch events exercise browser pointer capture and two fingers.
+ page.evaluate("""()=>{
+   window.__pointerTrace=[];
+   for(const node of [document.getElementById('cv'),document.getElementById('bAct')])
+     for(const type of ['pointerdown','pointerup','pointercancel','lostpointercapture'])
+       node.addEventListener(type,e=>window.__pointerTrace.push({target:e.currentTarget.id,type,id:e.pointerId,at:performance.now()}));
+ }""")
  page.click('#mGo');page.wait_for_timeout(500)
  for width,height in [(360,800),(390,844),(412,915)]:
   page.set_viewport_size({'width':width,'height':height})
@@ -148,7 +154,12 @@ with sync_playwright() as p:
   rod['x']+=40;touch('touchMove',[reel,rod]);page.wait_for_timeout(120)
   assert page.evaluate('__game.G.rig().tilt>0 && __game.G.rig().reeling')
   assert page.evaluate('__game.G.rig().rod.reelAngle')>angle
-  touch('touchEnd',[reel]);assert page.evaluate('__game.G.rig().reeling')
+  touch('touchEnd',[reel]);page.wait_for_timeout(60)
+  after_release=page.evaluate("""()=>({input:FZ.Input.snapshot(),reeling:__game.G.rig().reeling,
+    state:__game.G.rig().state,mode:__game.G.sess().mode,open:__game.UI.anyOpen(),
+    button:document.getElementById('bAct').className,
+    trace:window.__pointerTrace.slice(-20)})""")
+  assert after_release['reeling'],f'multitouch release {width}x{height}: {after_release}'
   touch('touchEnd',[]);page.wait_for_timeout(100)
   assert not page.evaluate('__game.G.rig().reeling')
   angle=page.evaluate('__game.G.rig().rod.reelAngle');page.wait_for_timeout(100)
