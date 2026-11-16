@@ -9,10 +9,10 @@
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const meshes=[],guides=[],rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
-  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
+  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
   const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
   const fragment=`precision highp float;
-    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,holeOn,cloudCover;
+    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,holeOn,cloudCover,drillProgress;
     uniform vec2 resolution,photoSize,hole,holeRadius,sun;uniform vec3 colorNear,colorFar;uniform vec4 ripples[12];varying vec2 vUv;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
@@ -73,6 +73,15 @@
           c-=cracks*.075;
           float bank=1.-smoothstep(.0,.065,depth+sin(uv.x*32.)*.002);
           c=mix(c,vec3(.90,.94,.96),bank*.65);
+          if(drillProgress>.0 && holeOn<.5){
+            // Shaved ice and cracks spread as the drill progresses.
+            float dr=length((uv-hole)/holeRadius);
+            float drillEdge=.24+drillProgress*.76;
+            float shaving=(1.-smoothstep(drillEdge*.67,drillEdge,dr))*(.4+.6*noise(uv*vec2(180.,220.)));
+            float ring=exp(-pow((dr-drillEdge)*11.,2.));
+            c=mix(c,vec3(.92,.95,.97),shaving*.48*drillProgress);
+            c+=ring*vec3(.13,.16,.16)*drillProgress;
+          }
           if(holeOn>.5){
             float hr=length((uv-hole)/holeRadius);
             float aperture=1.-smoothstep(.92,1.02,hr);
@@ -102,7 +111,7 @@
   function sphere(group,x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.SphereGeometry(1,18,12),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;}
   function torus(group,r,t,mat,x,y,z){const m=new T.Mesh(new T.TorusGeometry(r,t,6,36),mat);m.position.set(x,y,z);group.add(m);return m;}
   function connect(mesh,a,b){mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());mesh.scale.y=a.distanceTo(b);}
-  let gripSprite,reelSprite,reelCrank,reelRotor;
+  let gripSprite,reelSprite,reelCrank,reelRotor,ferrule;
   let root,handle,reelHandle,hemisphere,keyLight,rimLight;
   function buildTackle(){
     root=new T.Group();scene.add(root);
@@ -138,6 +147,9 @@
     const artLoader=new T.TextureLoader();
     function photo(name,done){artLoader.load('assets/equipment/'+name+'.png',tx=>{tx.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:tx,transparent:true,alphaTest:.08,depthTest:false}));m.renderOrder=5;scene.add(m);done(m,tx.image.width/tx.image.height);});}
     photo('grip',(m,a)=>{gripSprite=m;m.userData.aspect=a;});photo('reel',(m,a)=>{reelSprite=m;m.userData.aspect=a;});
+    // Ferrule bridges the grip sprite and the blank to avoid a floating joint.
+    ferrule=new T.Mesh(new T.CylinderGeometry(2.9,3.7,1,14),carbon);
+    root.add(ferrule);
     // 2D moving handle and rotor on the existing reel illustration.
     const silver=new T.MeshBasicMaterial({color:'#b9c4c3',side:T.DoubleSide,depthTest:false});
     const charcoal=new T.MeshBasicMaterial({color:'#303a3d',side:T.DoubleSide,depthTest:false});
@@ -217,7 +229,12 @@
     const base=V(W*(isIce?.74:.70),H*(isIce?.90:.79)+idleSway,40);
     const tip=V(W*(isIce?.54:.34)+(tilt*W*(isIce?.055:.12)),H*(isIce?.72:.29)+idleSway,30);
     if(v.tackle.state==='fly'){tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;}
-    const rodBase=base.clone().addScaledVector(tip.clone().sub(base).normalize(),isIce?-6:-16);
+    const rodAxis=tip.clone().sub(base).normalize();
+    const rodBase=base.clone().addScaledVector(rodAxis,isIce?10:21);
+    if(ferrule){const jointStart=base.clone().addScaledVector(rodAxis,isIce?4:8);
+      const jointEnd=base.clone().addScaledVector(rodAxis,isIce?16:28);
+      connect(ferrule,jointStart,jointEnd);ferrule.scale.x=ferrule.scale.z=isIce?.68:1;
+    }
     const pts=[];for(let i=0;i<=28;i++)pts.push(rodPoint(rodBase,tip,bend,i/28));
     for(let i=0;i<28;i++){connect(meshes[i],pts[i],pts[i+1]);const taper=(1-i/28)*2.6+.6;meshes[i].scale.x=meshes[i].scale.z=taper;}
     for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(base,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
@@ -284,7 +301,7 @@
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
     uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
-    uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0;uniforms.ice.value=v.ice?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;
+    uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0;uniforms.ice.value=v.ice?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
     const lightLevel=1-U.clamp(L.dark/.6,0,1)*.96;hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
     weather.visible=['rain','storm','snow'].includes(v.wx.sky);weatherStreaks.visible=weather.visible&&v.wx.sky!=='snow';weather.material.size=v.wx.sky==='snow'?3:1.4;
     if(weather.visible){const p=weather.geometry.attributes.position;const speed=v.wx.sky==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
@@ -300,6 +317,6 @@
   const oldSnapshot=R.snapshot;
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;c.getContext('2d').drawImage(canvas,0,0);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
-    hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value}:null,
+    hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value,drilling:uniforms.drillProgress.value}:null,
     reelCrankAngle:enabled&&reelCrank?reelCrank.rotation.z:null});
 })(window.FZ);

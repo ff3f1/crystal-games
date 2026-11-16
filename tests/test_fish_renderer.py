@@ -70,6 +70,15 @@ with sync_playwright() as p:
    return Math.abs(end-start);
  }""")
  assert turned>1.5,turned
+ # A drill must animate on ice without opening the hole early.
+ drilling=page.evaluate("""()=>{
+   const G=__game.G,r=G.rig(),S=FZ.Scene;
+   G.startSession('pond','winter');r.state='drill';r.drillT=1;r.drillDur=2;
+   S.render(G.view(1.5),.016);
+   const h=S.graphicsInfo().hole;
+   return {open:h.open,drilling:h.drilling};
+ }""")
+ assert drilling['open']==0 and .49<drilling['drilling']<.51,drilling
  # Winter seas stay open, inland lakes keep the ice-fishing mechanic.
  coasts=page.evaluate("""()=>{
    return ['blacksea','kamchatka','barents'].map(id=>{

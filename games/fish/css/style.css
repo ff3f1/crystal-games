@@ -400,3 +400,13 @@ h3 { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px;
 @media (max-width:350px) {
   #ovMenu .tile { font-size:11px;line-height:1.15;padding:0 2px; }
 }
+
+/* Accessible and compact menu controls across phone sizes. */
+#ovMenu button:focus-visible,.sheet button:focus-visible{outline:3px solid #ffe09a;outline-offset:2px;}
+#ovMenu .tile{touch-action:manipulation;line-height:1.22;}
+#ovMenu .tile:active{filter:brightness(1.12);}
+#ovMenu .go{min-height:50px;touch-action:manipulation;}
+#ovMenu .today,#ovMenu .today>div:last-child{min-width:0;}
+#ovMenu .today .d{overflow-wrap:anywhere;}
+@media(max-width:380px){#ovMenu .tile{padding:5px 3px;}#ovMenu .today .t{font-size:12px;}#ovMenu .today .d{font-size:11px;}}
+@media(prefers-reduced-motion:reduce){#ovMenu .go,#ovMenu .tile{transition:none!important;}}
