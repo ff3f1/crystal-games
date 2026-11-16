@@ -80,8 +80,10 @@ with sync_playwright() as p:
     pg.screenshot(path=f"{OUT}/f_ice.png")
 
     # Новые водоёмы, событие «Перволёд», достижения и экспедиция
-    check("новые виды рыб загружены", pg.evaluate("!!FZ.SP.palia && !!FZ.SP.brooktrout && !!FZ.SP.nase && !!FZ.SP.sterlet"))
+    check("новые виды рыб загружены", pg.evaluate("!!FZ.SP.palia && !!FZ.SP.brooktrout && !!FZ.SP.nase && !!FZ.SP.sterlet && !!FZ.SP.chekhon && !!FZ.SP.rybets && !!FZ.SP.nelma && !!FZ.SP.muksun && !!FZ.SP.chir"))
     check("новые экспедиционные локации загружены", pg.evaluate("!!FZ.LOC.northstream && !!FZ.LOC.mountainlake"))
+    check("новые регионы Дон и Полярье загружены", pg.evaluate("!!FZ.LOC.don && !!FZ.LOC.polar && FZ.LOC.don.lvl===22 && FZ.LOC.polar.lvl===28"))
+    check("новые виды привязаны к водоёмам", pg.evaluate("FZ.LOC.don.fish.chekhon>0 && FZ.LOC.don.fish.rybets>0 && FZ.LOC.polar.fish.nelma>0 && FZ.LOC.polar.fish.muksun>0 && FZ.LOC.polar.fish.chir>0"))
     check("событие «Перволёд» по календарю", pg.evaluate("FZ.World.firstIceActive('winter',new Date('2026-11-20T12:00:00'))"))
     pg.evaluate("__game.G.state().lvl=17; __game.G.state().money=5000")
     trip_ok = pg.evaluate("__game.G.startExpedition('mountainlake',1)")
