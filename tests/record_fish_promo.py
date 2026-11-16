@@ -41,7 +41,7 @@ errors = []
 with sync_playwright() as p:
     browser = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
     context = browser.new_context(
-        viewport={"width": 324, "height": 576},
+        viewport={"width": 288, "height": 512},
         device_scale_factor=1,
     )
     # Capture the actual game compressor output, before browser speakers, not
@@ -103,7 +103,7 @@ with sync_playwright() as p:
         if(t-lastFrame>=31) {
           staging.drawImage(cv,0,0,stage.width,stage.height);
           window.__promoJpegs.push({t,
-            data:stage.toDataURL('image/jpeg',.84).split(',')[1]});
+            data:stage.toDataURL('image/jpeg',.78).split(',')[1]});
           lastFrame=t;
         }
         requestAnimationFrame(sample);
@@ -130,9 +130,9 @@ with sync_playwright() as p:
     assert page.evaluate("__game.G.cast(0,27)"), "Cast did not start"
     until(5.5)
     page.evaluate("FZ.Input.actionDown('promo-reel')")
-    page.mouse.move(104, 382)
+    page.mouse.move(96, 344)
     page.mouse.down()
-    page.mouse.move(145, 357, steps=9)
+    page.mouse.move(130, 325, steps=9)
     page.mouse.up()
     a0=page.evaluate("__game.G.rig().rod.reelAngle")
     until(7.3)
