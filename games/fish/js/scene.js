@@ -438,7 +438,10 @@
     R.drawBirds(L, dt, t);
 
     if (v.ice) R.drawIceField(v, L, t);
-    else R.drawWater(v, L, t, windF, over);
+    else {
+      R.drawWater(v, L, t, windF, over);
+      R.drawWaterDetail(v, L, t, dt, windF, over);
+    }
     R.drawAtmosphere(v, L, t, dt, over);
 
     R.drawWorldFx(v, L, dt);
@@ -449,6 +452,79 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
+
+
+  // ---------- Детализация воды: глубина, преломления и пена у берега ----------
+  const waterGlints = [];
+  function seedWaterGlints() {
+    waterGlints.length = 0;
+    const r = U.rng("water-glints-v2");
+    for (let i = 0; i < 58; i++) waterGlints.push({
+      X: r.range(-1, 1), Z: r.range(3.8, 34), phase: r() * Math.PI * 2,
+      length: r.range(0.12, 0.52), width: r.range(0.5, 1.7), drift: r.range(0.45, 1.4)
+    });
+  }
+  R.drawWaterDetail = function (v, L, t, dt, windF, over) {
+    if (!waterGlints.length) seedWaterGlints();
+    const dim = 1 - L.dark;
+    const calm = U.clamp(1 - (v.wx.wind || 0) / 18, 0.18, 1);
+    const intensity = (over ? 0.28 : 1) * dim * (0.42 + calm * 0.58);
+    if (intensity <= 0.02) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, shoreY + 1, W, H - shoreY); ctx.clip();
+
+    // Подводные световые дорожки: короткие вытянутые блики с перспективным масштабом.
+    ctx.globalCompositeOperation = "screen";
+    const limit = quality === "lo" ? 18 : quality === "mid" ? 34 : 58;
+    for (let i = 0; i < limit; i++) {
+      const g = waterGlints[i];
+      const phase = t * (0.42 + g.drift * 0.3) + g.phase;
+      const X = g.X * R.maxLat(g.Z) * 0.72 + Math.sin(phase * 0.6) * g.length * 0.4;
+      const Z = g.Z + Math.sin(phase) * 0.22;
+      const p = R.proj(X, Z);
+      const fade = U.clamp((g.Z - 3.5) / 30, 0.15, 1);
+      const pulse = Math.max(0, Math.sin(phase * 1.7));
+      const len = Math.max(1.2, p.s * g.length * 0.48);
+      ctx.globalAlpha = intensity * (0.035 + pulse * 0.13) * fade;
+      ctx.strokeStyle = L.sunUp && !over ? "#fff0c8" : "#ccefff";
+      ctx.lineWidth = Math.max(0.55, p.s * 0.012 * g.width);
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p.x - len, p.y);
+      ctx.quadraticCurveTo(p.x, p.y + Math.sin(phase) * len * 0.05, p.x + len, p.y + Math.sin(phase + 0.8) * len * 0.04);
+      ctx.stroke();
+    }
+
+    // Тонкая пена и преломлённый свет вдоль кромки воды.
+    ctx.globalCompositeOperation = "screen";
+    const shorePulse = 0.5 + 0.5 * Math.sin(t * 0.7);
+    const foam = ctx.createLinearGradient(0, shoreY, 0, shoreY + Math.min(44, (H - shoreY) * 0.12));
+    foam.addColorStop(0, "rgba(225,245,248," + (0.055 + shorePulse * 0.025) * intensity + ")");
+    foam.addColorStop(0.28, "rgba(180,225,235," + (0.025 * intensity) + ")");
+    foam.addColorStop(1, "rgba(180,225,235,0)");
+    ctx.fillStyle = foam;
+    ctx.fillRect(0, shoreY, W, Math.min(48, H - shoreY));
+
+    // Небольшие круги от капель и насекомых в прибрежной зоне.
+    if (!over && calm > 0.45) {
+      const n = quality === "lo" ? 2 : 5;
+      for (let i = 0; i < n; i++) {
+        const phase = t * (0.22 + i * 0.013) + i * 9.17;
+        const X = Math.sin(phase) * R.maxLat(5.5 + i * 1.6) * 0.72;
+        const Z = 5.5 + i * 1.6;
+        const p = R.proj(X, Z);
+        const k = (phase % 1 + 1) % 1;
+        const radius = p.s * (0.025 + k * 0.12);
+        ctx.globalAlpha = (1 - k) * 0.12 * intensity;
+        ctx.strokeStyle = "#e8fbff";
+        ctx.lineWidth = Math.max(0.6, p.s * 0.006);
+        ctx.beginPath(); ctx.ellipse(p.x, p.y, radius, radius * 0.24, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+  };
 
   // ---------- Кинематографические эффекты: атмосферная перспектива и живые блики ----------
   const ambientMotes = [];
@@ -826,7 +902,7 @@
     // прыжки рыбы вдали
     for (let i = R.jumps.length - 1; i >= 0; i--) {
       const j = R.jumps[i]; j.age += dt;
-      if (j.age > 0.8) { R.jumps.splice(i, 1); R.ring(j.X, j.Z, 0.7, 2); continue; }
+      if (j.age > 0.8) { R.jumps.splice(i, 1); R.splash(j.X, j.Z, 0.58, "rgba(225,244,250,0.92)"); continue; }
       if (v.ice) continue;
       const q = R.proj(j.X, j.Z); const k = j.age / 0.8;
       const hgt = Math.sin(k * Math.PI) * q.s * 0.5;
