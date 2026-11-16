@@ -268,7 +268,7 @@
   };
 
   function resetRig() {
-    rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { bend: 0, tension: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, ring: 0 },
+    rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { bend: 0, tension: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, reelRate: 0, ring: 0 },
       bite: null, fish: null, reeling: false, tilt: 0, still: 0, idleT: 0, landing: null, msgT: 0 };
     if (sess && sess.ice && sess.hole) { rig.state = "wait"; rig.lure = sess.hole.lure; }
   }
@@ -571,7 +571,7 @@
       else if (r < runP) {
         f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
         f.vx = U.rand.range(0.6, 2.2) * (U.rand() < 0.5 ? -1 : 1) * (sess.ice ? 0 : 1);
-        if (rig.reeling) f.T += 0.35 * f.Fmax; // рывок
+        if (rig.reeling) f.surge = Math.max(f.surge || 0, 0.26); // smoothed run load
         if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
@@ -590,9 +590,10 @@
     const targetEffort = Math.max(0, eff * (1 + burst));
     f.muscle = U.damp(f.muscle == null ? targetEffort : f.muscle, targetEffort, 3.2 / mass + 2, dt);
     const fishPull = f.Fmax * f.muscle;
+    f.surge = U.damp(f.surge || 0, 0, 3.5, dt);
     const reeling = rig.reeling;
     let Tt = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
-    Tt += currentLoad*f.Fmax*(.3+.7*Math.abs(f.vx)/2);
+    Tt += currentLoad*f.Fmax*(.3+.7*Math.abs(f.vx)/2) + (f.surge||0)*f.Fmax;
     if (f.phase === "toward") Tt = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") Tt = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
     // Rod spring and elastic line filter sharp impulses.
@@ -612,7 +613,14 @@
     if (f.T > lineT) return lose("snap");
     // подмотка
     const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1)) * (st.tut < 3 ? 1.35 : 1);
-    if (reeling && !slipping) { if (sess.ice) f.D -= reelSp * 0.55 * dt; else f.Z -= reelSp * dt; FZ.Sound.reel(rod.reel); rig.rod.reelAngle += dt * 14; }
+    // A slipping drag does not turn the handle or retrieve line. The reel
+    // animation follows the actual intake speed and eases to a stop.
+    const intake = reeling && !slipping ? Math.max(0,reelSp) : 0;
+    rig.rod.reelRate=U.damp(rig.rod.reelRate||0,intake/Math.max(.1,rod.reel),12,dt);
+    if(intake>0) {
+      if(sess.ice) f.D-=intake*.55*dt; else f.Z-=intake*dt;
+      FZ.Sound.reel(rod.reel);
+    }
     if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
     // поперёк
     if (!sess.ice) {
@@ -885,13 +893,16 @@
     }
     if (r.state !== "fight") { r.rod.tension = U.damp(r.rod.tension, 0, 6, dt); }
     biteAnim(dt, t);
+    if(r.state!=='fight' && (r.state!=='wait' || sess.mode!=='spin' || !r.reeling))
+      r.rod.reelRate=U.damp(r.rod.reelRate||0,0,12,dt);
+    r.rod.reelAngle+=dt*14*(r.rod.reelRate||0);
   };
   // Спиннинг: проводка
   function spinTick(dt) {
     const r = rig;
     if (r.reeling) {
       const g = G.gear(sess.mode);
-      r.Z -= g.rod.reel * 0.8 * dt; r.spinPause = 0; r.rod.reelAngle += dt * 12; FZ.Sound.reel(g.rod.reel);
+      r.Z -= g.rod.reel * 0.8 * dt; r.spinPause = 0; r.rod.reelRate=U.damp(r.rod.reelRate||0,.8,12,dt); FZ.Sound.reel(g.rod.reel);
       r.X *= Math.pow(0.85, dt);
       if (r.Z < 4.2) { r.state = "idle"; emit("msg", { text: "Проводка закончена — бросайте снова" }); }
     } else r.spinPause += dt;
