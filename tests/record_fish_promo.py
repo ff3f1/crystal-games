@@ -4,7 +4,6 @@ Requires: playwright, Pillow, ffmpeg, ffprobe. Output includes validation eviden
 """
 import base64
 import functools
-from fractions import Fraction
 import http.server
 import json
 import pathlib
@@ -40,7 +39,7 @@ errors = []
 with sync_playwright() as p:
     browser = p.chromium.launch(args=["--autoplay-policy=no-user-gesture-required"])
     context = browser.new_context(
-        viewport={"width": 540, "height": 960},
+        viewport={"width": 324, "height": 576},
         device_scale_factor=1,
     )
     # Capture the actual game compressor output, before browser speakers, not
@@ -122,9 +121,9 @@ with sync_playwright() as p:
     assert page.evaluate("__game.G.cast(0,27)"), "Cast did not start"
     until(5.5)
     page.evaluate("FZ.Input.actionDown('promo-reel')")
-    page.mouse.move(135, 570)
+    page.mouse.move(104, 382)
     page.mouse.down()
-    page.mouse.move(180, 545, steps=9)
+    page.mouse.move(145, 357, steps=9)
     page.mouse.up()
     a0=page.evaluate("__game.G.rig().rod.reelAngle")
     until(7.3)
@@ -266,9 +265,15 @@ source_probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(OUT / "fish-gameplay-original.webm")))
 source_video = next(st for st in source_probe["streams"] if st["codec_type"] == "video")
-rate=source_video.get("avg_frame_rate","0/0")
-source_fps = float(Fraction(rate)) if rate not in ("0/0","0/1","N/A") else 0
-print("PROMO FRAME DIAGNOSTICS:", json.dumps({"browser":fps,"source":source_video,"source_fps":source_fps}),flush=True)
+# Browser MediaRecorder often writes WebM with avg_frame_rate=0/0 and no duration;
+# count distinct encoded source packets and measure their original timestamps.
+source_pts = [float(t) for t in cmd("ffprobe", "-v", "error", "-select_streams", "v:0",
+    "-show_entries", "packet=pts_time", "-of", "csv=p=0",
+    str(OUT / "fish-gameplay-original.webm")).splitlines() if t.strip()]
+source_duration = source_pts[-1]-source_pts[0] if len(source_pts)>1 else 0
+source_fps = (len(source_pts)-1)/source_duration if source_duration>0 else 0
+print("PROMO FRAME DIAGNOSTICS:", json.dumps({"browser":fps,"video_frame_count":len(source_pts),
+    "source_duration":source_duration,"source_fps":source_fps}),flush=True)
 # Reject low-FPS captures rather than presenting duplicated 10 FPS as 30 FPS.
 assert fps["measuredFps"] >= 24, ("Browser render FPS below release target", fps)
 assert source_fps >= 24, ("Video capture FPS below release target", source_fps)
@@ -300,8 +305,8 @@ report = {
     "actual_browser_fps":fps,
     "captured_source_fps":source_fps,
     "fps_mode":"Variable frame rate, original capture timestamps; no synthetic duplication",
-    "playwright_webm_capture_fps":source_video["avg_frame_rate"],
-    "playwright_webm_capture_duration":float(source_probe.get("format",{}).get("duration") or fps["seconds"]),
+    "playwright_webm_capture_fps":source_fps,
+    "playwright_webm_capture_duration":source_duration,
     "source_video_codec":source_video["codec_name"],
     "frame_motion_mean_differences":movement,
     "audio_processing":"EBU R128 normalisation to -22 LUFS, ceiling -3 dBTP",
