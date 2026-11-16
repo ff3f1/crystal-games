@@ -149,7 +149,7 @@
     const cap=new T.Mesh(new T.CircleGeometry(1.5,20),silver);cap.position.y=-13;reelCrank.add(cap);
     reelCrank.children.forEach(m=>m.renderOrder=8);reelCrank.visible=false;
     reelRotor=new T.Group();scene.add(reelRotor);
-    const hoop=new T.Mesh(new T.RingGeometry(8.8,9.6,40),silver);reelRotor.add(hoop);
+    const rotorHoop=new T.Mesh(new T.RingGeometry(8.8,9.6,40),silver);reelRotor.add(rotorHoop);
     const flash=new T.Mesh(new T.PlaneGeometry(2,7),brass);flash.position.y=9;reelRotor.add(flash);
     reelRotor.children.forEach(m=>m.renderOrder=7);reelRotor.visible=false;
     float=new T.Group();scene.add(float);
