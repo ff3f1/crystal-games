@@ -72,8 +72,9 @@ with sync_playwright() as p:
  assert turned>1.5,turned
  # A drill must animate on ice without opening the hole early.
  drilling=page.evaluate("""()=>{
-   const G=__game.G,r=G.rig(),S=FZ.Scene;
-   G.startSession('pond','winter');r.state='drill';r.drillT=1;r.drillDur=2;
+   const G=__game.G,S=FZ.Scene;
+   G.startSession('pond','winter');
+   const r=G.rig();r.state='drill';r.drillT=1;r.drillDur=2;
    S.render(G.view(1.5),.016);
    const h=S.graphicsInfo().hole;
    return {open:h.open,drilling:h.drilling};
