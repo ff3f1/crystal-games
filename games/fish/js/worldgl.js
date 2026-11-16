@@ -90,16 +90,22 @@
           }
           if(holeOn>.5){
             float hr=length((uv-hole)/holeRadius);
-            float aperture=1.-smoothstep(.92,1.02,hr);
-            float waterTexture=noise(uv*vec2(90.,70.)+clock*.08)*.045;
-            vec3 inside=mix(vec3(.02,.065,.085),vec3(.08,.17,.20),clamp(hr*.55+waterTexture,0.,1.));
+            float aperture=1.-smoothstep(.90,1.01,hr);
+            float waterTexture=noise(uv*vec2(90.,70.)+clock*.08)*.075;
+            vec3 inside=mix(vec3(.025,.08,.105),vec3(.085,.18,.22),clamp(hr*.56+waterTexture,0.,1.));
             c=mix(c,inside,aperture);
-            c+=vec3(.44,.51,.52)*exp(-pow((hr-1.06)*9.,2.))*.22;
+            // Broken frost, slush and an ice lip frame the actual water opening.
+            float broken=exp(-pow((hr-1.12)*14.,2.));
+            float flakes=.55+.45*noise(uv*vec2(160.,190.));
+            c=mix(c,vec3(.86,.91,.94),broken*flakes*.38);
+            c+=vec3(.38,.47,.50)*exp(-pow((hr-1.015)*11.,2.))*.24;
           }
         }
       }
       float night=clamp(dark/.60,0.,1.);
-      c*=mix(vec3(1.),vec3(.045,.065,.105),night);
+      // Moonlit visibility: the previous near-black multiplier hid line,
+      // ice and fish on mobile screens even with maximum brightness.
+      c*=mix(vec3(1.),vec3(.12,.17,.23),night);
       c=mix(c,vec3(dot(c,vec3(.2126,.7152,.0722)))*.63,cloudCover*.55);
       if(uv.y<shore*.66){
         float star=step(.9992,hash(floor(uv*resolution*.55)))*night*(1.-cloudCover);
@@ -278,7 +284,7 @@
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
     uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
     uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.ice?0:(v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0);uniforms.ice.value=v.ice?1:0;uniforms.winter.value=v.season==='winter'?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
-    const lightLevel=1-U.clamp(L.dark/.6,0,1)*.96;hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
+    const lightLevel=Math.max(.18,1-U.clamp(L.dark/.6,0,1)*.96);hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
     const precipitation=v.ice&&(v.wx.sky==='rain'||v.wx.sky==='storm')?'snow':v.wx.sky;
     weather.visible=['rain','storm','snow'].includes(precipitation);weatherStreaks.visible=weather.visible&&precipitation!=='snow';weather.material.size=precipitation==='snow'?3:1.4;
     if(weather.visible){const p=weather.geometry.attributes.position;const speed=precipitation==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;

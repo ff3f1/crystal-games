@@ -111,6 +111,14 @@ with sync_playwright() as p:
     pg.click("#bAct"); pg.wait_for_timeout(2800)
     check("лунка пробурена", pg.evaluate("__game.G.rig().state") == "wait")
     pg.screenshot(path=f"{OUT}/f_ice.png")
+    jigging = pg.evaluate("""()=>{
+      const G=__game.G, r=G.rig();
+      G.jig(); const first=r.jig;
+      for(let i=0;i<90;i++)G.update(1/60,10+i/60);
+      return {first,after:r.jig,pause:r.jigPause,attract:FZ.FightPhysics.iceAttraction(FZ.SP.perch,first,0)};
+    }""")
+    check("мормышка подыгрывается и затухает на паузе", jigging["first"]>0.4 and jigging["after"]<0.1 and jigging["pause"]>1)
+    check("игра мормышкой усиливает интерес хищника", jigging["attract"]>0.9)
 
     # Новые водоёмы, событие «Перволёд», достижения и экспедиция
     check("новые виды рыб загружены", pg.evaluate("!!FZ.SP.palia && !!FZ.SP.brooktrout && !!FZ.SP.nase && !!FZ.SP.sterlet && !!FZ.SP.chekhon && !!FZ.SP.rybets && !!FZ.SP.nelma && !!FZ.SP.muksun && !!FZ.SP.chir"))
