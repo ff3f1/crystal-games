@@ -113,12 +113,25 @@
     bridge: () => bridge
   };
 
+  let reviewSeq = 0;
+  const reviewPending = Object.create(null);
+  window.__reviewResult = function (id, ok) { const done = reviewPending[id]; if (done) { delete reviewPending[id]; done(!!ok); } };
+
   FZ.Platform = {
     openUrl: function (url) {
       if (!url) return;
       if (window.AndroidShare && window.AndroidShare.openUrl) { window.AndroidShare.openUrl(url); return; }
       if (platform === "vk" && bridge) { try { bridge.send("VKWebAppOpenApp", {}); } catch (e) {} }
       window.open(url, "_blank");
+    },
+    requestReview: function () {
+      if (platform !== "android" || !window.AndroidShare || typeof window.AndroidShare.requestReview !== "function") return Promise.resolve(false);
+      return new Promise(function (resolve) {
+        const id = ++reviewSeq;
+        reviewPending[id] = resolve;
+        try { window.AndroidShare.requestReview(id); } catch (e) { delete reviewPending[id]; resolve(false); }
+        setTimeout(function () { if (reviewPending[id]) { delete reviewPending[id]; resolve(false); } }, 12000);
+      });
     },
     rate: function () {
       if (window.AndroidShare && window.AndroidShare.rate) { window.AndroidShare.rate(); return; }
