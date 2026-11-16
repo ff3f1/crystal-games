@@ -174,7 +174,7 @@
     const loc = FZ.LOC[trip && trip.active ? trip.locId : (locId || st.loc)];
     st.loc = loc.id;
     const season = G.season();
-    if(FZ.Assets && FZ.Assets.ensure)FZ.Assets.ensure("bg/"+loc.id+"_"+season);
+    if(FZ.Assets && FZ.Assets.ensure)FZ.Assets.ensure(FZ.Assets.backdropKey(loc.id,season));
     const now = new Date();
     sess = {
       loc, season, ice: G.isFrozen(loc, season), firstIce: Wd.firstIceActive(season) && G.isFrozen(loc, season), mode: G.modeFor(season, loc),
