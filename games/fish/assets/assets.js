@@ -35,6 +35,14 @@ window.FZ_ASSETS = {
   "bg/taiga_summer": "bg/taiga_summer.webp",
   "bg/taiga_autumn": "bg/taiga_autumn.webp",
   "bg/taiga_winter": "bg/taiga_winter.webp",
+  "bg/polar_winter": "bg/polar_winter.svg",
+  "bg/polar_autumn": "bg/polar_autumn.svg",
+  "bg/polar_summer": "bg/polar_summer.svg",
+  "bg/polar_spring": "bg/polar_spring.svg",
+  "bg/don_winter": "bg/don_winter.svg",
+  "bg/don_autumn": "bg/don_autumn.svg",
+  "bg/don_summer": "bg/don_summer.svg",
+  "bg/don_spring": "bg/don_spring.svg",
   "fish/bleak": "fish/bleak.webp",
   "fish/roach": "fish/roach.webp",
   "fish/rudd": "fish/rudd.webp",
@@ -63,6 +71,11 @@ window.FZ_ASSETS = {
   "fish/taimen": "fish/taimen.webp",
   "fish/trout": "fish/trout.webp",
   "fish/sturgeon": "fish/sturgeon.webp",
+  "fish/chir": "fish/chir.svg",
+  "fish/muksun": "fish/muksun.svg",
+  "fish/nelma": "fish/nelma.svg",
+  "fish/rybets": "fish/rybets.svg",
+  "fish/chekhon": "fish/chekhon.svg",
   "items/maggot": "items/maggot.webp",
   "items/bloodworm": "items/bloodworm.webp",
   "items/bread": "items/bread.webp",
@@ -124,7 +137,9 @@ window.FZ_ASSETS = {
    "bg/taiga_spring": 0.5,
    "bg/taiga_summer": 0.56,
    "bg/taiga_autumn": 0.5,
-   "bg/taiga_winter": 0.42
+   "bg/taiga_winter": 0.42,
+   "bg/don_spring": 0.50, "bg/don_summer": 0.50, "bg/don_autumn": 0.50, "bg/don_winter": 0.50,
+   "bg/polar_spring": 0.51, "bg/polar_summer": 0.51, "bg/polar_autumn": 0.51, "bg/polar_winter": 0.51
   }
  }
 };
