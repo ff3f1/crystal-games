@@ -31,32 +31,38 @@ WATERS = {
     "pond": ("forest pond reflection shore","forest pond winter snow"),
     "oka": ("Oka river Russia landscape","Russian river snow"),
     "platnik": ("fishing lake reeds forest","frozen pond forest"),
-    "volga": ("Volga river landscape","Volga river winter"),
+    "volga": ("Volga river Russia countryside landscape","Volga river winter"),
     "ladoga": ("Lake Ladoga shore water","Lake Ladoga winter"),
     "akhtuba": ("Akhtuba river landscape","Volga delta winter river"),
     "baikal": ("Lake Baikal landscape shore","Lake Baikal frozen lake"),
-    "taiga": ("Siberian forest river taiga","Siberian snowy river"),
-    "northstream": ("Karelia river forest landscape","Karelia river winter"),
+    "taiga": ("Siberian taiga river valley landscape","Siberian taiga winter river"),
+    "northstream": ("Karelia river forest landscape","Karelia forest frozen river"),
     "mountainlake": ("Altai mountain lake landscape","Altai mountain lake winter"),
-    "don": ("Don river Russia landscape","Don river winter Russia"),
-    "polar": ("Yamal tundra river landscape","Yamal tundra snow river"),
-    "kamchatka": ("Kamchatka volcano bay landscape","Kamchatka volcano snow sea"),
+    "don": ("Don River Rostov Russia summer landscape","Don river winter Rostov Russia"),
+    "polar": ("Yamal tundra river panorama","Yamal arctic tundra winter river"),
+    "kamchatka": ("Kamchatka peninsula volcano lake","Kamchatka snowy volcano mountain sea"),
     "seliger": ("Lake Seliger landscape","Lake Seliger winter frozen"),
     "onega": ("Lake Onega landscape shore","Lake Onega winter"),
     "katun": ("Katun river Altai landscape","Katun river winter Altai"),
-    "kola": ("Kola Peninsula river landscape","Kola Peninsula winter river"),
+    "kola": ("Tuloma river Murmansk Kola peninsula","Kola peninsula snowy river landscape"),
     "amur": ("Amur river Khabarovsk landscape","Amur river winter snow"),
-    "blacksea": ("Black Sea Russia coast landscape","Black Sea coast winter waves"),
-    "barents": ("Barents Sea Norway coast landscape","Barents Sea snowy coast"),
+    "blacksea": ("Crimea Black Sea rocky coast","Crimea Black Sea winter coastline"),
+    "barents": ("Barents sea coast Murmansk Teriberka","Arctic Norway coast snowy fjord"),
 }
 DEFAULT_SEARCH = (
-    "mountain lake landscape photograph",
-    "river forest landscape photograph",
-    "coastal landscape photograph",
+    "lake forest mountains water reflection landscape",
+    "river green forest landscape",
+    "sea rocky coast mountain landscape",
 )
 # Commerical reuse permitted; attribution and share-alike terms are written to credits.
 LICENSE_RX = re.compile(r"(CC0|PUBLIC DOMAIN|CC BY(?:-SA)?(?:\s+\d(?:\.\d)?)?)", re.I)
-FORBIDDEN = re.compile(r"(painting|drawing|artwork|illustrat|vector|map of|flag of|coat of arms|postcard|portrait|watercolor|oil on canvas|digital art)", re.I)
+FORBIDDEN = re.compile(
+    r"(painting|drawing|artwork|illustrat|vector|map of|flag of|coat of arms|postcard|"
+    r"portrait|watercolor|oil on canvas|digital art|satellite|modis|landsat|aerial|"
+    r"NASA|NOAA|NESDIS|ISS-|topographic|terrain map|diagram|drawing|sheet [0-9]|"
+    r"bridge|monument|memorial|statue|grave|corpses|corpse|terror|death|dead body|"
+    r"rescu|elk|deer|capreolus|animal|wildlife|seal|whale|fish|plankton|bloom|"
+    r"dam construction|city skyline|panorama of a city|Sydney|Australia|Fayette)", re.I)
 client = requests.Session()
 client.headers.update({"User-Agent": UA, "Accept": "application/json"})
 
@@ -82,10 +88,12 @@ def api_search(query: str):
 def clean(text):
     return html.unescape(re.sub("<[^>]+>", "", text or "")).strip()
 
-def score(page, query):
+def score(page, query, season):
     ii = (page.get("imageinfo") or [{}])[0]
     title = page.get("title", "")
     if FORBIDDEN.search(title) or not ii.get("mime", "").startswith("image/"):
+        return None
+    if season=="summer" and re.search(r"(frozen|freezing|frost|ice surface|winter|snow)",title,re.I):
         return None
     w, h = ii.get("width", 0), ii.get("height", 0)
     if w < 750 or h < 430 or not 1.25 <= w / max(1, h) <= 3.8:
@@ -109,9 +117,11 @@ def score(page, query):
     }
 
 def pick_photo(label, query, generic):
+    season="winter" if label.endswith("/winter") else "summer"
+    # Try the geographically correct place first, broader scenic searches last.
     for q in (query, generic, *DEFAULT_SEARCH):
         pages = api_search(q)
-        cand = [score(x, query) for x in pages]
+        cand = [score(x, query, season) for x in pages]
         cand = sorted((x for x in cand if x), key=lambda x: x[0], reverse=True)
         for val, d in cand[:10]:
             try:
