@@ -404,7 +404,9 @@
       const tripEvent = st.expedition.active && st.expedition.event;
       if (tripEvent && (tripEvent.kind === "all" || tripEvent.kind === s.kind)) m *= tripEvent.multiplier;
       m *= (s.methods[sess.mode] || 0);
-      m *= bait ? (s.baits[bait] || (FZ.BAIT[bait].lure ? 0.03 : 0.06)) : 0;
+      // No fallback chance for an unsupported bait: a bream must never take livebait.
+      // The positive entries in each species' baits table are authoritative.
+      m *= bait ? (s.baits[bait] || 0) : 0;
       m *= s.depth[zone];
       if (edge && EDGE_FISH[id]) m *= 1.35;
       if (deep && DEEP_FISH[id]) m *= 1.3;
