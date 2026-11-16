@@ -211,7 +211,7 @@
     const showingLine=!menu&&v.tackle.state!=='none';
     root.visible=!menu;line.visible=showingLine;
     // Keep the reel line while a fish is hooked, but hide the stationary float.
-    float.visible=showingLine&&!f&&(isIce||v.mode==='float');
+    float.visible=showingLine&&!f&&!isIce&&v.mode==='float';
     const idleSway=Math.sin(t*.71)*2.2;
     // Winter ice-fishing equipment is short, not a summer-length rod.
     const base=V(W*(isIce?.74:.70),H*(isIce?.90:.79)+idleSway,40);
@@ -250,14 +250,14 @@
     }
     const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
     let p=R.proj(lineX,Math.max(3.6,lineZ));
-    if(isIce)p={x:W*.50,y:H*.68,s:20};
+    if(isIce){const h=R.holeGeom();p={x:h.x,y:h.y+h.ry*.2,s:20};}
     const pos=V(p.x+(v.tackle.dx||0),p.y+(v.tackle.sink||0)*9,8);
     if(v.tackle.state==='fly')pos.y+=Math.sin(U.clamp(v.tackle.flyT,0,1)*Math.PI)*H*.22;
     float.position.copy(pos);float.rotation.z=-(v.tackle.tilt||0)*.65+Math.sin(t*1.8)*.045;
     const floatScale=U.clamp(p.s*.15,2.4,8);float.scale.setScalar(floatScale);if(v.mode!=='float'&&!isIce)float.scale.setScalar(floatScale*.25);
     const linePos=line.geometry.attributes.position;
-    const top=pts[28], target=pos.clone().add(new T.Vector3(0,floatScale*4,0));
-    const sag=f?Math.max(1,1-(f.tension||0))*H*.028:H*.075;
+    const top=pts[28], target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
+    const sag=isIce?H*.004:(f?Math.max(1,1-(f.tension||0))*H*.028:H*.075);
     for(let i=0;i<65;i++){const u=i/64,point=top.clone().lerp(target,u);point.y-=Math.sin(u*Math.PI)*sag;linePos.setXYZ(i,point.x,point.y,point.z);}
     linePos.needsUpdate=true;
     net.visible=!!v.landing&&!menu;if(net.visible){net.position.copy(V(W*.43,H*(.85-v.landing.k*.20),50));net.rotation.z=-.2;net.scale.setScalar(1+v.landing.k*.4);}
