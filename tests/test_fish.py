@@ -25,7 +25,7 @@ def check(name, ok):
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(viewport={"width": 390, "height": 844}, device_scale_factor=2)
-    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.on("pageerror", lambda e: errors.append(str(e) + "\n" + str(getattr(e, "stack", ""))))
     pg.on("console", lambda m: m.type == "error" and errors.append(m.text))
     pg.goto(URL); pg.wait_for_timeout(1500)
     pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(1500)
@@ -165,6 +165,7 @@ with sync_playwright() as p:
     check("прилив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Полная вода'"))
     pg.evaluate("__game.G.sess().hour=11"); pg.wait_for_function("!!FZ.Assets.bg('kamchatka','summer')", timeout=20000); pg.wait_for_timeout(800)
     pg.screenshot(path=f"{OUT}/f_kamchatka.png")
+    check("Камчатка: рендер морской воды без ошибок JS", not errors)
     pg.evaluate("__game.G.sess().hour=9")
     check("отлив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Малая вода'"))
     pg.evaluate("__game.G.startSession('pond'); __game.G.state().lvl=40; __game.G.state().loc='pond'")

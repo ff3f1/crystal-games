@@ -310,7 +310,8 @@
     return e;
   };
   const WCOL = { pond: ["#5a7a62", "#1c3a30"], river: ["#5a7a84", "#1d3440"], platnik: ["#5a7a6a", "#1e3a34"], reservoir: ["#64849a", "#1e3448"],
-    lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"] };
+    lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"],
+    coast: ["#42718b", "#102e43"] };
 
   function buildBase(v, L, over) {
     const loc = v.loc, season = v.season, wx = v.wx;
@@ -409,7 +410,8 @@
     const span = H - shoreY;
     const a = mk(W + 16, span, "refl"), g = a[1];
     g.translate(8, 0);
-    const WC = WCOL[v.loc.style];
+    // Unrecognised landscape themes still get water instead of crashing a frame.
+    const WC = WCOL[v.loc.style] || WCOL.lake;
     let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
     if (v.season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
     if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
