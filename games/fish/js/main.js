@@ -78,7 +78,20 @@
     t += dt;
     const paused = UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on");
     if (!paused) G.update(dt, t);
-    G.events().forEach(UI.onEvent);
+    G.events().forEach(function (event) {
+      UI.onEvent(event);
+      // Просим оценку только после реального игрового опыта: пятая завершённая поимка.
+      // Никаких вопросов о желаемой оценке и никаких наград за отзыв.
+      if (event.type === "resolved" && G.state().stats.total >= 5) {
+        const st = G.state(), lastAsk = Number(st.rateAsked || 0);
+        if (FZ.Ads.platform === "android" && Date.now() - lastAsk > 90 * 86400000) {
+          st.rateAsked = Date.now(); G.save(true);
+          FZ.Platform.requestReview().then(function (ok) {
+            if (!ok) { st.rateAsked = Math.max(0, Date.now() - 80 * 86400000); G.save(true); }
+          });
+        }
+      }
+    });
     const s = G.sess();
     if (s) {
       if (r) r.idleHint = r.state === "idle" ? (r.idleHint || 0) + dt : 0;
