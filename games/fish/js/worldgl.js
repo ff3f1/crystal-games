@@ -6,13 +6,13 @@
   if(!T)return;
   const previous={init:R.init,resize:R.resize,setQuality:R.setQuality,render:R.render,drawAim:R.drawAim};
   let renderer,scene,camera,W=390,H=844,quality='hi',enabled=false,canvas,legacy;
-  let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather;
+  let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const meshes=[],guides=[],rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
-  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},ice:{value:0},hole:{value:new T.Vector2(.5,.68)},holeOn:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
+  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},hole:{value:new T.Vector2(.5,.68)},holeOn:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
   const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
   const fragment=`precision highp float;
-    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,holeOn;
+    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,holeOn,cloudCover;
     uniform vec2 resolution,photoSize,hole,sun;uniform vec3 colorNear,colorFar;uniform vec4 ripples[12];varying vec2 vUv;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
@@ -20,7 +20,9 @@
     vec3 samplePhoto(vec2 uv){
       float sc=max(resolution.x/photoSize.x,resolution.y*shore/(photoSize.y*waterline));
       vec2 xy=vec2((uv.x-.5)*resolution.x/sc+photoSize.x*.5,photoSize.y*waterline-(shore-uv.y)*resolution.y/sc);
-      return texture2D(photo,vec2(clamp(xy.x/photoSize.x,.002,.998),1.-clamp(xy.y/photoSize.y,.002,.998))).rgb;
+      vec3 sceneColor=texture2D(photo,vec2(clamp(xy.x/photoSize.x,.002,.998),1.-clamp(xy.y/photoSize.y,.002,.998))).rgb;
+      vec3 upperSky=mix(vec3(.31,.52,.73),vec3(.68,.77,.83),clamp(uv.y/shore,0.,1.));
+      return sceneColor;
     }
     void main(){
       vec2 uv=vec2(vUv.x,1.-vUv.y);float depth=clamp((uv.y-shore)/(1.-shore),0.,1.);
@@ -40,14 +42,14 @@
           }
         }
         // Wind ripples distort reflected shore and sky continuously in two axes.
-        vec2 refl=vec2(uv.x+normal.x*(.012+depth*.11),shore-depth*shore*.95+normal.y*.09);
+        vec2 refl=vec2(uv.x+normal.x*(.012+depth*.11),shore-min(depth*shore*.72,shore*.65)+normal.y*.022);
         vec3 reflection=hasPhoto>.5?samplePhoto(refl):sky;
-        float fresnel=.30+.65*pow(1.-depth,.8);
+        float fresnel=.12+.58*exp(-depth*4.5);
         vec3 water=mix(colorFar,colorNear,pow(depth,.65));
         c=mix(water,reflection,fresnel);
         float spec=pow(max(0.,1.-length(normal-vec2(.045,-.015))*5.),48.);
         float lightPath=exp(-pow((uv.x-sun.x+normal.x*.2)/(.035+depth*.18),2.));
-        c+=vec3(.92,.84,.63)*spec*lightPath*(1.-dark)*(.3+warm*2.);
+        c+=vec3(.92,.84,.63)*spec*lightPath*(1.-dark)*(.07+warm*.3)*(1.-cloudCover);
         float fine=noise(p*4.+clock*.15);c+=vec3(.16,.20,.19)*(fine-.5)*(.025+depth*.12)*strength;
         c+=ringLight;
         c=mix(c,vec3(.70,.75,.72),exp(-depth*34.)*.18);
@@ -60,7 +62,13 @@
           if(holeOn>.5){float edge=smoothstep(.108,.095,hr);vec3 inside=mix(vec3(.035,.09,.12),vec3(.08,.20,.23),hr*6.);c=mix(c,inside,edge);c+=vec3(.4,.45,.44)*exp(-pow((hr-.104)*250.,2.));}
         }
       }
-      c=mix(c,c*vec3(.20,.29,.48),dark*.90);c=mix(c,c*vec3(1.12,.92,.74),warm*.40);
+      float night=clamp(dark/.60,0.,1.);
+      c*=mix(vec3(1.),vec3(.045,.065,.105),night);
+      c=mix(c,vec3(dot(c,vec3(.2126,.7152,.0722)))*.63,cloudCover*.55);
+      if(uv.y<shore*.66){
+        float star=step(.9992,hash(floor(uv*resolution*.55)))*night*(1.-cloudCover);
+        c+=vec3(.55,.64,.8)*star;
+      }c=mix(c,c*vec3(1.12,.92,.74),warm*.40);
       c=mix(c,vec3(dot(c,vec3(.2126,.7152,.0722)))*.75,rain*.25);
       float vignette=1.-.23*pow(length((uv-.5)*vec2(.7,1.1)),1.7);c*=vignette;
       gl_FragColor=vec4(c,1.);
@@ -90,7 +98,7 @@
     handle=new T.Group();root.add(handle);
     cylinder(handle,6,7,89,cork,0,0,0);cylinder(handle,7.2,7.2,7,rubber,0,-43,0);cylinder(handle,6.5,6.5,22,carbon,0,58,0);
     for(const y of [43,46,69])cylinder(handle,7,7,2,chrome,0,y,0);
-    const reel=new T.Group();handle.add(reel);reel.position.set(-10,27,6);
+    const reel=new T.Group();handle.add(reel);reel.position.set(-10,27,6);reel.rotation.y=-.65;reel.rotation.x=.18;
     sphere(reel,0,0,0,15,20,12,carbon);cylinder(reel,15,16,20,chrome,-2,21,0,Math.PI/2);
     cylinder(reel,12,12,19,gold,-2,21,2,Math.PI/2);
     for(let i=0;i<12;i++)torus(reel,12,.33,material('#546653',.65,.2),-2,21,-7+i*1.45);
@@ -102,7 +110,7 @@
     const fabric=document.createElement('canvas');fabric.width=fabric.height=256;const fg=fabric.getContext('2d');fg.fillStyle='#77806c';fg.fillRect(0,0,256,256);
     for(let i=0;i<256;i+=3){fg.fillStyle=i%2?'#696f5e':'#858b76';fg.fillRect(i,0,1,256);fg.fillRect(0,i,256,1);}glove.map=new T.CanvasTexture(fabric);glove.bumpMap=glove.map;glove.bumpScale=.11;
     sleeve.map=glove.map;surface(glove,'glove_fabric',2);surface(sleeve,'glove_fabric',2);
-    sphere(handle,9,-24,6,17,28,11,glove);cylinder(handle,20,23,49,sleeve,12,-67,0,0,-.13);
+    sphere(handle,9,-24,6,13,24,9,glove);cylinder(handle,20,23,49,sleeve,12,-67,0,0,-.13);
     for(let i=0;i<4;i++){sphere(handle,-2,-6-i*11,12,11,5.5,8,glove);sphere(handle,-7,-5-i*11,13,5.2,5.1,6,skin);}
     sphere(handle,15,1,11,7,17,7,glove);
     float=new T.Group();scene.add(float);
@@ -115,12 +123,14 @@
     for(let i=-4;i<=4;i++){const gg=new T.BufferGeometry().setFromPoints([new T.Vector3(-45,i*7,-2),new T.Vector3(45,i*7,-2)]);net.add(new T.Line(gg,new T.LineBasicMaterial({color:'#555f4c',transparent:true,opacity:.55})));}net.visible=false;
     const wp=new Float32Array(150*3),wr=U.rng('weather');for(let i=0;i<150;i++){wp[i*3]=(wr()-.5)*W;wp[i*3+1]=(wr()-.5)*H;wp[i*3+2]=30;}
     const wg=new T.BufferGeometry();wg.setAttribute('position',new T.BufferAttribute(wp,3));weather=new T.Points(wg,new T.PointsMaterial({color:'#dce9e7',size:1.7,transparent:true,opacity:.4}));scene.add(weather);weather.visible=false;
+    const streaks=new T.BufferGeometry();streaks.setAttribute('position',new T.BufferAttribute(new Float32Array(150*6),3));
+    weatherStreaks=new T.LineSegments(streaks,new T.LineBasicMaterial({color:'#a6bdc8',transparent:true,opacity:.27}));scene.add(weatherStreaks);weatherStreaks.visible=false;
   }
   R.init=function(cv){
     canvas=cv;legacy=document.createElement('canvas');previous.init.call(R,legacy);
     try{
       renderer=new T.WebGLRenderer({canvas:cv,antialias:true,alpha:false,powerPreference:'high-performance'});
-      renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+      renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;
       scene=new T.Scene();camera=new T.OrthographicCamera(-W/2,W/2,H/2,-H/2,.1,4000);camera.position.z=1000;
       const pm=new T.ShaderMaterial({uniforms,vertexShader:vertex,fragmentShader:fragment,depthWrite:false});plane=new T.Mesh(new T.PlaneGeometry(1,1),pm);plane.position.z=-100;scene.add(plane);
       hemisphere=new T.HemisphereLight(0xdae8ee,0x343d29,2);scene.add(hemisphere);
@@ -138,7 +148,7 @@
     ['pointerdown','pointermove','pointerup','pointercancel'].forEach(type=>fallback.addEventListener(type,e=>cv.dispatchEvent(new PointerEvent(type,e))));
     document.body.dataset.renderer='canvas';
   };
-  R.resize=function(){previous.resize.call(R);if(!enabled)return;W=innerWidth;H=innerHeight;const ratio=Math.min(devicePixelRatio||1,{hi:1.75,mid:1.25,lo:1}[quality]||1.25);renderer.setPixelRatio(ratio);renderer.setSize(W,H);camera.left=-W/2;camera.right=W/2;camera.top=H/2;camera.bottom=-H/2;camera.updateProjectionMatrix();plane.scale.set(W,H,1);uniforms.resolution.value.set(W,H);uniforms.shore.value=R.size().shoreY/H;};
+  R.resize=function(){previous.resize.call(R);if(!enabled)return;W=innerWidth;H=innerHeight;const ratio=Math.min(devicePixelRatio||1,{hi:2,mid:1.5,lo:1}[quality]||1.25);renderer.setPixelRatio(ratio);renderer.setSize(W,H);camera.left=-W/2;camera.right=W/2;camera.top=H/2;camera.bottom=-H/2;camera.updateProjectionMatrix();plane.scale.set(W,H,1);uniforms.resolution.value.set(W,H);uniforms.shore.value=R.size().shoreY/H;};
   R.setQuality=function(q){quality=q;previous.setQuality.call(R,q);R.resize();};
   const colors={pond:['#203c2b','#7b9581'],river:['#233f3d','#809795'],platnik:['#193b30','#7c9280'],reservoir:['#1d3c4a','#70939e'],lake:['#183847','#6d9299'],delta:['#324332','#8e9d7f'],baikal:['#153e4d','#7fb5be'],taiga:['#233f36','#7b9286'],coast:['#173b50','#6e9cae']};
   function loadBackdrop(v){
@@ -146,7 +156,7 @@
     const im=FZ.Assets.bg(v.loc.id,v.season);
     if(k!==requested){requested=k;asset=null;uniforms.hasPhoto.value=0;}
     if(im && asset!==im){
-      asset=im;oldTexture=texture;texture=new T.Texture(im);texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;texture.mapping=T.EquirectangularReflectionMapping;scene.environment=texture;texture.minFilter=T.LinearFilter;texture.generateMipmaps=false;
+      asset=im;oldTexture=texture;texture=new T.Texture(im);texture.colorSpace=T.SRGBColorSpace;texture.needsUpdate=true;scene.environment=null;texture.minFilter=T.LinearFilter;texture.generateMipmaps=false;
       uniforms.photo.value=texture;uniforms.photoSize.value.set(im.width,im.height);uniforms.waterline.value=FZ.Assets.waterline(v.loc.id,v.season);uniforms.hasPhoto.value=1;if(oldTexture)oldTexture.dispose();
     }
   }
@@ -196,10 +206,12 @@
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
     uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
-    uniforms.rain.value=v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0;uniforms.ice.value=v.ice?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole?1:0;
-    hemisphere.intensity=2*(1-L.dark*.75);keyLight.intensity=2.9*(1-L.dark*.88);rimLight.intensity=1.4*(1-L.dark*.65);
-    weather.visible=['rain','storm','snow'].includes(v.wx.sky);weather.material.size=v.wx.sky==='snow'?3:1.4;
-    if(weather.visible){const p=weather.geometry.attributes.position;const speed=v.wx.sky==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;}
+    uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0;uniforms.ice.value=v.ice?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole?1:0;
+    const lightLevel=1-U.clamp(L.dark/.6,0,1)*.96;hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
+    weather.visible=['rain','storm','snow'].includes(v.wx.sky);weatherStreaks.visible=weather.visible&&v.wx.sky!=='snow';weather.material.size=v.wx.sky==='snow'?3:1.4;
+    if(weather.visible){const p=weather.geometry.attributes.position;const speed=v.wx.sky==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
+      if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=v.wx.sky==='snow'?.45:0;
+    }
     tackle(v);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
     renderer.render(scene,camera);R.metrics={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio()};

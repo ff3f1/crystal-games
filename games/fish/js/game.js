@@ -268,6 +268,10 @@
   G.skipTo = function (period) {
     const st2 = FZ.Scene.sunTimes(sess.season);
     const target = { dawn: st2[0] + 0.4, day: (st2[0] + st2[1]) / 2 - 1, dusk: st2[1] - 1, night: (st2[1] + 2.5) % 24 }[period];
+    const waitedHours=(target-sess.hour+24)%24;
+    sess.weatherAge=(sess.weatherAge||0)+waitedHours*75;
+    const front=Math.floor(sess.weatherAge/150);
+    if(front>(sess.weatherFront||0)){sess.weatherFront=front;sess.wx=Wd.front(sess.loc.id,sess.season,front,sess.wx);}
     sess.hour = (target + 24) % 24;
     sess.period = FZ.Scene.period(sess.hour, sess.season);
     emit("time");
@@ -792,6 +796,12 @@
     if (saveT > 0) { saveT -= dt; if (saveT <= 0) G.save(true); }
     if (!sess) return;
     sess.t += dt;
+    sess.weatherAge=(sess.weatherAge||0)+dt;
+    const front=Math.floor(sess.weatherAge/150);
+    if(front>(sess.weatherFront||0)){
+      sess.weatherFront=front;sess.wx=Wd.front(sess.loc.id,sess.season,front,sess.wx);
+      emit('time');
+    }
     // время суток: 1 игровой час ≈ 75 секунд
     const rawHour = sess.hour + dt / 75 * (rig.state === "fight" ? 0.3 : 1);
     const passedDays = Math.floor(rawHour / 24);

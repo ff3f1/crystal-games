@@ -44,6 +44,15 @@
     return { pressure, trend, wind, dir, dirFull: DIR_FULL[dir], sky, temp, peace, pred, score };
   };
 
+  // Gameplay fronts advance independently of the real calendar day.
+  W.front=function(loc,season,index,previous){
+    const next=W.weather(loc,season,U.dayKey()+'|front|'+index);
+    if(previous && next.sky===previous.sky){
+      const sequence=season==='winter'?['clear','cloudy','overcast','snow']:['clear','cloudy','overcast','rain'];
+      const i=sequence.indexOf(next.sky);next.sky=sequence[(i+1+sequence.length)%sequence.length];
+    }
+    return next;
+  };
   W.skyName = (s) => ({ clear: "Ясно", cloudy: "Облачно", overcast: "Пасмурно", rain: "Дождь", storm: "Гроза", snow: "Снег" }[s]);
   W.skyIcon = (s, night) => ({ clear: night ? "🌙" : "☀️", cloudy: "⛅", overcast: "☁️", rain: "🌧️", storm: "⛈️", snow: "🌨️" }[s]);
   W.trendName = (t) => ({ up: "растёт", down: "падает", flat: "стабильное" }[t]);

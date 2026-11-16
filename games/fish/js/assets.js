@@ -13,7 +13,7 @@
       const i=fishRecent.indexOf(key);if(i>=0)fishRecent.splice(i,1);fishRecent.push(key);
       while(fishRecent.length>4)delete A.img[fishRecent.shift()];return;
     }
-    if(key.indexOf("bg/")!==0)return;
+    if(key.indexOf("bg/")!==0 && key.indexOf("base/")!==0)return;
     const index=bgRecent.indexOf(key);if(index>=0)bgRecent.splice(index,1);
     bgRecent.push(key);
     while(bgRecent.length>3) {
@@ -46,7 +46,7 @@
     const st=FZ.Game&&FZ.Game.state&&FZ.Game.state();
     const current=(st&&st.loc)||"pond",season=(st&&st.seasonPick)||FZ.U.seasonOf();
     const keys=Object.keys(M.images||{}).filter(function(k){
-      return k.indexOf("fish/")!==0 && k.indexOf("fishhd/")!==0 && (k.indexOf("bg/")!==0 || k==="bg/"+current+"_"+season);
+      return k.indexOf("base/")!==0 && k.indexOf("fish/")!==0 && k.indexOf("fishhd/")!==0 && (k.indexOf("bg/")!==0 || k==="bg/"+current+"_"+season);
     });
     if (!keys.length) { A.ok = true; return Promise.resolve(); }
     let done = 0;
@@ -74,8 +74,9 @@
   A.setStyle = function () { A.style = "paint"; A.version++; };
   const on = () => true;
   A.get = (k) => A.img[k] || null;
+  A.backdropKey=(loc,season)=>season!=="winter" && M.images["base/"+loc]?"base/"+loc:"bg/"+loc+"_"+season;
   A.bg=function(loc,season) {
-    const key="bg/"+loc+"_"+season;
+    const key=A.backdropKey(loc,season);
     const im=A.img[key];
     if(im){bgTouch(key);return im;}
     if(on())A.ensure(key);
@@ -85,7 +86,7 @@
   A.item = (id) => (on() && A.img["items/" + id]) || null;
   A.audio = (k) => (M.audio && M.audio[k] ? "assets/" + M.audio[k] : null);
   // Где у фоновой картинки линия воды (доля высоты), если отличается от стандартной
-  A.waterline = (loc, season) => ((A.tuning.waterline || {})["bg/" + loc + "_" + season]) || 0.97;
+  A.waterline = (loc, season) => ((A.tuning.waterline || {})[A.backdropKey(loc,season)]) || 0.97;
 
   FZ.Assets = A;
 })(window.FZ);

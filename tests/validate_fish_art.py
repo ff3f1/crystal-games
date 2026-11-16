@@ -43,4 +43,13 @@ for key, file in scenes.items():
     digest = hashlib.sha256((A / file).read_bytes()).hexdigest()
     # Legacy scene duplicates remain a tracked art limitation.
     scene_hashes.add(digest)
-print(f'PASS: {len(profiles)} original HD portraits, 124 thumbnails, 80 available backdrop slots (79 legacy); no aliases or upscaling.')
+bases={k:v for k,v in manifest['images'].items() if k.startswith('base/')}
+assert len(bases)==19,len(bases)
+seen=set()
+for key,file in bases.items():
+    with Image.open(A/file) as im:
+        assert im.size==(1122,1402),(key,im.size)
+        digest=hashlib.sha256(im.convert('RGB').tobytes()).hexdigest()
+        assert digest not in seen,key
+        seen.add(digest)
+print(f'PASS: {len(profiles)} original HD portraits, 124 thumbnails, 80 seasonal fallback slots + 19 approved portrait bases; no aliases or upscaling.')

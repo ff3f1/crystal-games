@@ -22,9 +22,10 @@
     if (blocked()) return;
     P.down = true; P.id = e.pointerId; P.x = P.sx = e.clientX; P.y = P.sy = e.clientY; P.st = performance.now(); P.moved = 0;
     try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+    P.startTilt=(G.rig()&&G.rig().tilt)||0;
     const s = rigState(), r = G.rig(), mode = G.sess().mode;
     if (s === "idle" && !G.sess().ice) setAim(e.clientX, e.clientY);
-    if (s === "fight") { r.reeling = true; r.tilt = tiltOf(e.clientX); }
+    if (s === "fight") { r.reeling = true; r.tilt=P.startTilt; }
     if ((s === "wait" || s === "bite") && mode === "spin") r.reeling = true;
   });
   cv.addEventListener("pointermove", function (e) {
@@ -32,7 +33,7 @@
     P.moved = Math.max(P.moved, Math.hypot(e.clientX - P.sx, e.clientY - P.sy));
     P.x = e.clientX; P.y = e.clientY;
     if (aim) setAim(e.clientX, e.clientY);
-    const r = G.rig(); if (r && r.state === "fight") r.tilt = tiltOf(e.clientX);
+    const r = G.rig(); if (r && r.state === "fight") r.tilt = U.clamp(P.startTilt+(e.clientX-P.sx)/(Sc.size().W*.35),-1,1);
   });
   function up(e) {
     if (!P.down || (e && e.pointerId !== P.id)) return;
@@ -70,6 +71,9 @@
     if (e.code === "ArrowUp" && !UI.anyOpen()) G.strike && G.rig() && G.strike();
   });
   window.addEventListener("keyup", function (e) { if (e.code === "Space") Input.actionUp(); });
+  function releaseInput(){P.down=false;aim=null;const r=G.rig();if(r){r.reeling=false;r.tilt=0;}}
+  window.addEventListener('blur',releaseInput);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseInput();});
   FZ.Input = Input;
 
   // ---------- Цикл ----------

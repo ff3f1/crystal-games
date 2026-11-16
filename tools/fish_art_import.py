@@ -19,6 +19,20 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def defringe(image):
+    """Bleed nearby opaque RGB into translucent edges without eroding alpha/fins."""
+    import numpy as np
+    from scipy.ndimage import distance_transform_edt
+    pixels=np.array(image)
+    opaque=pixels[:,:,3]>=245
+    distance,indices=distance_transform_edt(~opaque,return_indices=True)
+    edge=(pixels[:,:,3]<245)&(distance<=4)
+    near=pixels[indices[0],indices[1],:3]
+    strength=(1-pixels[:,:,3].astype(float)/255)*edge
+    pixels[:,:,:3]=np.rint(pixels[:,:,:3]*(1-strength[:,:,None])+near*strength[:,:,None]).astype('uint8')
+    return Image.fromarray(pixels,'RGBA')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
@@ -31,12 +45,13 @@ def main():
     for species, filename in sorted(inputs.items()):
         source = Path(filename)
         source_hash = digest(source)
-        if provenance.get(species, {}).get('source_sha256') == source_hash:
+        if provenance.get(species, {}).get('source_sha256') == source_hash and provenance.get(species, {}).get('edge_pipeline') == 1:
             continue
         image = Image.open(source).convert('RGBA')
         if image.width < 1600 or image.getchannel('A').getextrema() != (0, 255):
             raise ValueError(f'{species}: requires native 1600px+ art and genuine alpha: {image.size}')
         hd = ASSETS / 'fish-hd' / f'{species}.webp'
+        image = defringe(image)
         image.save(hd, quality=92, method=3)
         native = list(image.size)
         bbox = image.getchannel('A').getbbox()
@@ -52,6 +67,7 @@ def main():
             'native_size': native,
             'alpha_bbox': bbox,
             'upscaled': False,
+            'edge_pipeline': 1,
             'output_sha256': digest(hd),
         }
     provenance_file.write_text(json.dumps(provenance, ensure_ascii=False, indent=2) + '\n')

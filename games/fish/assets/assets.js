@@ -1,4 +1,3 @@
-/* Bundled art manifest. HD portraits are loaded on demand. */
 window.FZ_ASSETS = {
  "images": {
   "bg/barents_winter": "bg/barents_winter.webp",
@@ -163,7 +162,26 @@ window.FZ_ASSETS = {
   "fishhd/osman": "fish-hd/osman.webp",
   "fishhd/amurpike": "fish-hd/amurpike.webp",
   "fishhd/redmullet": "fish-hd/redmullet.webp",
-  "fishhd/blackseagoby": "fish-hd/blackseagoby.webp"
+  "fishhd/blackseagoby": "fish-hd/blackseagoby.webp",
+  "base/katun": "base/katun.webp",
+  "base/kola": "base/kola.webp",
+  "base/onega": "base/onega.webp",
+  "base/amur": "base/amur.webp",
+  "base/seliger": "base/seliger.webp",
+  "base/barents": "base/barents.webp",
+  "base/platnik": "base/platnik.webp",
+  "base/volga": "base/volga.webp",
+  "base/ladoga": "base/ladoga.webp",
+  "base/baikal": "base/baikal.webp",
+  "base/oka": "base/oka.webp",
+  "base/akhtuba": "base/akhtuba.webp",
+  "base/pond": "base/pond.webp",
+  "base/kamchatka": "base/kamchatka.webp",
+  "base/polar": "base/polar.webp",
+  "base/northstream": "base/northstream.webp",
+  "base/mountainlake": "base/mountainlake.webp",
+  "base/taiga": "base/taiga.webp",
+  "base/don": "base/don.webp"
  },
  "audio": {
   "music_autumn": "audio/music_autumn.mp3",
@@ -253,7 +271,26 @@ window.FZ_ASSETS = {
    "bg/polar_spring": 0.53,
    "bg/polar_summer": 0.53,
    "bg/polar_autumn": 0.53,
-   "bg/polar_winter": 0.53
+   "bg/polar_winter": 0.53,
+   "base/katun": 0.39,
+   "base/kola": 0.37,
+   "base/onega": 0.38,
+   "base/amur": 0.39,
+   "base/seliger": 0.38,
+   "base/barents": 0.39,
+   "base/platnik": 0.38,
+   "base/volga": 0.38,
+   "base/ladoga": 0.38,
+   "base/baikal": 0.34,
+   "base/oka": 0.38,
+   "base/akhtuba": 0.4,
+   "base/pond": 0.39,
+   "base/kamchatka": 0.38,
+   "base/polar": 0.39,
+   "base/northstream": 0.38,
+   "base/mountainlake": 0.39,
+   "base/taiga": 0.37,
+   "base/don": 0.4
   }
  }
 };

@@ -36,5 +36,5 @@
   };
   UI.showMap=function(){map.apply(UI,arguments);const sh=document.querySelector('#ovSheet .sheet');if(sh)sh.classList.add('water-cards');};
   // Preview uses the exact season resource; it never draws a generic landscape.
-  FZ.Scene.thumb=(l,season)=>'assets/'+FZ.Assets.manifest.images['bg/'+l.id+'_'+season];
+  FZ.Scene.thumb=(l,season)=>'assets/'+FZ.Assets.manifest.images[FZ.Assets.backdropKey(l.id,season)];
 })(window.FZ);

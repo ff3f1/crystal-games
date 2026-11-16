@@ -15,9 +15,10 @@ were checked for native dimensions and actual alpha; some anatomy and patterns
 still need expert review (notably salmon and the similar northern whitefish).
 This is not a claim of biological or photographic ground truth.
 
-Only pond_summer is a newly supplied environment. The other 79 seasonal slots
-retain legacy art; several have composition/geographic/season problems recorded
-in the original handoff. They have NOT been upgraded merely by changing shaders.
+19 approved user-supplied portrait bases now serve spring/summer/autumn. The
+Black Sea submission is pixel-identical to Baikal and is excluded. Existing winter
+scenes and the existing Black Sea remain fallback art. These bases are not a
+claim of complete seasonal foliage changes; see asset-delivery-review.md.
 
 Five uploaded material maps are bound to tackle surfaces; wet_wood is imported
 for a future wooden surface. No new asset generation was requested or used
