@@ -191,6 +191,7 @@
   R.splash=function(X,Z,k){if(!enabled)return oldSplash.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));for(let i=0;i<3;i++)addRipple(p.x/W+(i-1)*.007,p.y/H,uniforms.clock.value+i*.09,(k||1)*(1-i*.2));R.shakeA=Math.max(R.shakeA,(k||1)*2);};
   R.render=function(v,dt){
     if(!enabled)return previous.render.call(R,v,dt);if(contextLost)return;
+    R.fx.length=0;R.parts.length=0;R.jumps.length=0;R.rings.length=0;
     if(R.size().shoreY/H!==uniforms.shore.value)R.resize();if(v.loc.zfar!==R._glFar){R.setFar(v.loc.zfar);R._glFar=v.loc.zfar;}
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
@@ -204,6 +205,8 @@
     renderer.render(scene,camera);R.metrics={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio()};
   };
   R.drawAim=function(v,a){if(!enabled)return previous.drawAim.call(R,v,a);const p=R.proj(a.X,a.Z);aimMesh.visible=true;aimMesh.position.copy(V(p.x,p.y,20));renderer.render(scene,camera);};
+  const oldClear=R.clearFx;
+  R.clearFx=function(){oldClear();rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;};
   const oldSnapshot=R.snapshot;
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;c.getContext('2d').drawImage(canvas,0,0);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null});
