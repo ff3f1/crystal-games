@@ -294,7 +294,7 @@
     ov.classList.add("on");
     $("hud").classList.add("hide");
     const close = () => { ov.classList.remove("on"); $("hud").classList.remove("hide"); UI.menuOpen = false; };
-    $("mGo").onclick = () => { FZ.Sound.unlock(); FZ.Sound.click(); close(); UI.ambience(); if (G.giftAvailable() && G.state().tut >= 3) setTimeout(UI.showGift, 400); };
+    $("mGo").onclick = () => { FZ.Sound.unlock(); FZ.Sound.click(); close(); UI.ambience(); if (G.giftAvailable() && G.state().tut >= 3) UI.toast("Подарок ждёт в меню «Задания»", "gold", 3200); };
     $("mToday").onclick = () => UI.showForecast();
     $("mMap").onclick = () => UI.showMap();
     $("mShop").onclick = () => UI.showShop();

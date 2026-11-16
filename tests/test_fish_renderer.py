@@ -46,13 +46,17 @@ with sync_playwright() as p:
  page.evaluate('__game.G.save(true)');page.reload();page.wait_for_function('window.__game')
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
 
- # Simulate renderer fallback and verify the new visible canvas still handles casts.
+ # A delayed reward popup must not interrupt the cast after pressing Fish.
  page.click('#mGo')
+ page.wait_for_timeout(500)
+ assert not page.evaluate("__game.UI.anyOpen()")
+ page.evaluate("__game.G.startSession('pond','summer')")
  page.evaluate("FZ.Scene.initFallback(document.getElementById('cv'))")
  assert page.evaluate("FZ.Scene.graphicsInfo().renderer")=='canvas'
- page.mouse.move(195,470);page.mouse.down();page.mouse.move(190,480);page.mouse.up()
- page.wait_for_timeout(250)
- assert page.evaluate("__game.G.rig().state") in ('fly','settle','wait'),page.evaluate("__game.G.rig().state")
+ page.mouse.move(195,470);page.mouse.down()
+ assert page.evaluate("__game.aim()!==null"),'fallback failed to forward pointerdown'
+ page.mouse.move(190,480);page.mouse.up()
+ assert page.evaluate("__game.aim()===null"),'fallback failed to forward pointerup'
  assert not errors,errors
  (out/'portrait-validation.json').write_text(json.dumps(results,indent=2))
  print('PASS WebGL; 62 native portraits; bounded cache; snapshot; 3 viewports; mixer save migration')
