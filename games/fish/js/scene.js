@@ -179,6 +179,7 @@
     const P = PAL[season];
     const st = loc.style;
     const sy = shoreY;
+    const base = sy - 4; // available to coastal geometry during lazy photo loading
     const haze = season === "winter" ? "#c8d4e2" : "#a8bccb";
     // дальние горы/холмы
     if (st === "coast") {
@@ -214,7 +215,6 @@
     const hz = g.createLinearGradient(0, sy * 0.4, 0, sy); hz.addColorStop(0, U.rgba(haze, 0)); hz.addColorStop(1, U.rgba(haze, 0.35));
     g.fillStyle = hz; g.fillRect(0, sy * 0.4, W, sy * 0.6);
     // линия леса
-    const base = sy - 4;
     if (st === "pond") {
       treeline(g, r, P, -10, W + 10, base - 2, sy * 0.06, sy * 0.13, ["birch", "birch", "willow", "spruce"], 1);
       church(g, W * 0.72, base - sy * 0.07, sy * 0.06, P);

@@ -41,7 +41,12 @@
 
   // ---------- Общие слои ----------
   let openOv = null;
+  let lastToastKey="",lastToastTime=0;
   UI.toast = function (text, cls, ms) {
+    const key=String(text)+"|"+String(cls||"");
+    const now=Date.now();
+    if(key===lastToastKey&&now-lastToastTime<4200)return;
+    lastToastKey=key;lastToastTime=now;
     const t = U.el("div", "toast " + (cls || ""), text);
     $("toast").appendChild(t);
     while ($("toast").children.length > 3) $("toast").firstChild.remove();

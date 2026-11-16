@@ -165,6 +165,7 @@
     const loc = FZ.LOC[trip && trip.active ? trip.locId : (locId || st.loc)];
     st.loc = loc.id;
     const season = G.season();
+    if(FZ.Assets && FZ.Assets.ensure)FZ.Assets.ensure("bg/"+loc.id+"_"+season);
     const now = new Date();
     sess = {
       loc, season, ice: season === "winter", firstIce: Wd.firstIceActive(season), mode: G.modeFor(season),
