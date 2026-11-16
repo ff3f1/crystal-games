@@ -283,6 +283,7 @@
           '<button class="tile" id="mTour">' + ic("cup") + "Турнир дня" + (tourBadge ? '<span class="badge">' + tourBadge + "</span>" : "") + "</button>" +
           '<button class="tile" id="mExpedition">' + ic("map") + "Экспедиции" + (st.expedition.active ? '<span class="badge">В пути</span>' : "") + "</button>" +
           '<button class="tile" id="mAchievements">' + ic("star") + "Достижения</button>" +
+          '<button class="tile" id="mJournal">' + ic("book") + "Журнал рыбака</button>" +
           '<button class="tile" id="mSet">' + ic("gear") + "Настройки</button>" +
         "</div></div>";
     ov.classList.add("on");
@@ -297,6 +298,7 @@
     $("mTour").onclick = () => UI.showTour();
     $("mExpedition").onclick = () => UI.showExpedition();
     $("mAchievements").onclick = () => UI.showAchievements();
+    $("mJournal").onclick = () => UI.showJournal();
     $("mSet").onclick = () => UI.showSettings();
     UI.menuOpen = true;
     UI.closeMenu = () => { close(); UI.menuOpen = false; };
@@ -575,6 +577,48 @@
       (s.release ? "<span>Правило</span><b style=\"color:var(--ok)\">только отпустить (" + s.release + ")</b>" : "") +
       "</div>" + (c ? "<p>" + s.desc + "</p>" : '<p style="color:var(--muted)">Описание откроется после первой поимки.</p>') + "</div></div>";
     UI.sheet(html, () => UI.showAtlas());
+  };
+
+  // ---------- Личный журнал рыбака ----------
+  UI.showJournal = function (tab) {
+    const st = G.state(), entries = Array.isArray(st.journal) ? st.journal : [];
+    tab = tab || "recent";
+    const tabs = [["recent", "Уловы"], ["records", "Рекорды"], ["stats", "Статистика"]];
+    let html = '<h2>Журнал рыбака</h2><div class="sub">Последние 60 поимок, личные рекорды и статистика</div>' +
+      '<div class="tabs">' + tabs.map((x) => '<button class="tab ' + (x[0] === tab ? "on" : "") + '" data-jtab="' + x[0] + '">' + x[1] + '</button>').join("") + '</div><div class="scroll">';
+    if (tab === "recent") {
+      if (!entries.length) html += '<div class="empty">Первый улов появится здесь после завершения рыбалки.</div>';
+      entries.forEach(function (e) {
+        const sp = FZ.SP[e.sid], loc = FZ.LOC[e.loc], method = FZ.METHODS[e.mode];
+        if (!sp) return;
+        html += '<div class="row"><div class="pic">' + fishImg(sp, 120) + '</div><div class="body"><div class="t">' + sp.n + (e.trophy ? ' <span style="color:var(--brass)">★</span>' : '') + '</div>' +
+          '<div class="d">' + U.kg(e.w) + ' · ' + e.len + ' см · ' + (loc ? loc.n : "водоём") + '</div>' +
+          '<div class="d">' + (e.date || "") + ' · ' + (method ? method.n : "рыбалка") + ' · ' + (FZ.TIMES[e.period] || "") + ' · ' + skyIc(e.sky, e.period === "night") + (e.temp != null ? " " + (e.temp > 0 ? "+" : "") + e.temp + "°" : "") + '</div></div>' +
+          '<span class="btn small ' + (e.kept ? "ghost" : "brass") + '">' + (e.kept ? "В садок" : "Отпущена") + '</span></div>';
+      });
+    } else if (tab === "records") {
+      const recs = Object.keys(st.records || {}).map((id) => ({ sid: id, rec: st.records[id] })).sort((a, b) => b.rec.w - a.rec.w);
+      if (!recs.length) html += '<div class="empty">Личные рекорды появятся после первых поимок.</div>';
+      recs.forEach(function (x) {
+        const sp = FZ.SP[x.sid], loc = FZ.LOC[x.rec.loc];
+        if (!sp) return;
+        html += '<div class="row"><div class="pic">' + fishImg(sp, 120) + '</div><div class="body"><div class="t">' + sp.n + '</div><div class="d">' + U.kg(x.rec.w) + ' · ' + x.rec.len + ' см · ' + (loc ? loc.n : "водоём") + '</div><div class="d">' + (x.rec.date || "") + '</div></div><span style="color:var(--brass);font-weight:800">★</span></div>';
+      });
+    } else {
+      const species = Object.keys(st.caught || {}).length;
+      const biggest = st.stats.best, bestSp = biggest && FZ.SP[biggest.sid];
+      const bestText = biggest && bestSp ? bestSp.n + " · " + U.kg(biggest.w) : "—";
+      html += '<div class="row"><div class="body"><div class="t">Всего поймано</div><div class="d">Все завершённые поимки</div></div><b>' + (st.stats.total || 0) + '</b></div>' +
+        '<div class="row"><div class="body"><div class="t">Общий вес</div><div class="d">Суммарная масса улова</div></div><b>' + U.kg(st.stats.kg || 0) + '</b></div>' +
+        '<div class="row"><div class="body"><div class="t">Открыто видов</div><div class="d">Из ' + FZ.SPECIES.length + ' в атласе</div></div><b>' + species + '</b></div>' +
+        '<div class="row"><div class="body"><div class="t">Трофеи</div><div class="d">Рыбы тяжелее трофейного порога</div></div><b>' + (st.stats.trophies || 0) + '</b></div>' +
+        '<div class="row"><div class="body"><div class="t">Отпущено</div><div class="d">Рыба возвращена в водоём</div></div><b>' + (st.stats.released || 0) + '</b></div>' +
+        '<div class="row"><div class="body"><div class="t">Самая крупная рыба</div><div class="d">' + bestText + '</div></div></div>' +
+        '<div class="row"><div class="body"><div class="t">Рыбацких дней</div><div class="d">Дней с активностью в игре</div></div><b>' + (st.stats.days || 0) + '</b></div>';
+    }
+    html += '</div>';
+    const sh = UI.sheet(html, () => { if (UI.menuOpen) UI.showMenu(); });
+    sh.querySelectorAll("[data-jtab]").forEach((b) => (b.onclick = () => { FZ.Sound.click(); UI.showJournal(b.dataset.jtab); }));
   };
 
   // ---------- Задания и подарок ----------
