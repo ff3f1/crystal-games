@@ -310,6 +310,37 @@ h3 { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px;
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+/* ---------- 1.2: polished glass, cinematic depth, readable mobile HUD ---------- */
+:root{--omut:#091923;--omut-a:rgba(5,18,27,.8);--tina:#284b49;--foam:#f4f7f4;--brass:#f5c967;--line:#8dd5e2;--ok:#93d778}
+#ovMenu .shade{background:linear-gradient(180deg,rgba(2,9,15,.26),rgba(2,9,15,.08) 25%,rgba(2,9,15,.67) 67%,rgba(1,9,14,.92))}
+#ovMenu .logo{filter:drop-shadow(0 5px 14px rgba(0,0,0,.78))}
+#ovMenu .logo .w1[data-release]::after{content:"  " attr(data-release);font-family:Rubik,sans-serif;font-size:11px;letter-spacing:.08em;vertical-align:top;color:#ffd98b;text-shadow:0 2px 4px #000}
+#ovMenu .menu-bottom{background:linear-gradient(0deg,rgba(2,13,21,.68),rgba(2,13,21,0));padding-top:10px}
+#ovMenu .go{background:linear-gradient(120deg,#3d8e53,#72be67 48%,#1d6c42);border:1px solid rgba(229,255,214,.45);box-shadow:0 9px 30px rgba(5,19,13,.5),inset 0 1px 0 rgba(255,255,255,.27);text-shadow:0 2px 9px rgba(1,20,10,.8)}
+#ovMenu .tile{background:linear-gradient(135deg,rgba(7,27,34,.82),rgba(8,34,40,.74));border:1px solid rgba(189,227,226,.19);box-shadow:inset 0 1px rgba(255,255,255,.12),0 6px 22px rgba(0,8,15,.2)}
+#ovMenu .tile:active{background:rgba(37,88,75,.9)}
+#ovMenu .today{background:linear-gradient(115deg,rgba(6,28,37,.9),rgba(4,25,31,.73));border:1px solid rgba(202,234,231,.15);backdrop-filter:blur(12px)}
+.sheet{background:linear-gradient(170deg,rgba(11,34,44,.97),rgba(4,17,26,.99));box-shadow:0 -12px 68px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.14)}
+.acard{background:radial-gradient(ellipse at 45% 0,rgba(114,165,171,.19),rgba(5,25,34,.66) 65%);border:1px solid rgba(171,216,215,.19)}
+.acard img{filter:drop-shadow(0 7px 6px rgba(0,0,0,.34))}
+.detail img.big{filter:drop-shadow(0 16px 19px rgba(0,0,0,.48))}
+#ovCatch .dim{background:radial-gradient(ellipse at 50% 35%,rgba(18,53,58,.6),rgba(0,5,12,.94) 75%);backdrop-filter:blur(13px)}
+.catch{background:radial-gradient(ellipse at 50% 12%,rgba(68,104,110,.3),rgba(6,19,28,0) 65%)}
+.catch #cFish{filter:drop-shadow(0 16px 22px rgba(0,0,0,.55))}
+.catch .nm{letter-spacing:-.025em;text-shadow:0 4px 12px rgba(0,0,0,.5)}
+.catch .wt{color:#ffe7a7;text-shadow:0 2px 20px rgba(244,189,88,.21)}
+.catch .two .btn{min-height:57px;border:1px solid rgba(255,255,255,.21);box-shadow:0 7px 18px rgba(0,0,0,.25)}
+.pill,.tool .ic,.drag,.echo{background:linear-gradient(150deg,rgba(17,44,53,.87),rgba(4,20,29,.87));border:1px solid rgba(214,239,235,.2)}
+.act{background:radial-gradient(circle at 35% 28%,#ffad84,#e94b30 44%,#8a2017 95%);border:1px solid rgba(255,227,197,.75)}
+.waterreport{padding:0 0 36px}.waterreport-summary{display:flex;align-items:center;gap:22px;border-radius:16px;background:linear-gradient(120deg,#1c5260,#0c2832);padding:15px;margin-bottom:13px}
+.waterreport-summary b{font-size:34px;color:#f5d58d}.waterreport-summary span{font-size:13px;line-height:1.5;color:#c9e5e8}
+.waterreport-row{display:flex;gap:12px;align-items:center;padding:7px 10px;border-bottom:1px solid rgba(184,225,224,.13)}
+.waterreport-row img{width:80px;height:48px;object-fit:contain;filter:drop-shadow(0 3px 4px #000)}
+.waterreport-num{font-size:11px;color:#e8c680;min-width:13px}.waterreport-row div{min-width:0}
+.waterreport-row b{font-size:13px;display:block}.waterreport-row small{color:#a1c3c8;font-size:11px;display:block;margin-top:3px}
+.waterreport-tip{font-size:12px;line-height:1.5;color:#a4c6c8;padding:12px}
+@media(max-width:380px){#ovMenu .tile{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.act,.tool .ic,.tile{animation:none!important}}
 
 /* ---------- Mega 1.1: Трофейная охота ---------- */
 .huntHero{position:relative;overflow:hidden;padding:18px 16px 15px;margin:0 0 14px;border:1px solid rgba(157,218,229,.24);border-radius:18px;background:linear-gradient(135deg,rgba(27,83,103,.96),rgba(9,35,52,.98) 62%,rgba(8,24,38,.98));box-shadow:0 12px 32px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.12)}

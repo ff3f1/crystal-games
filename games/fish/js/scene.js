@@ -457,6 +457,7 @@
     else {
       R.drawWater(v, L, t, windF, over);
       R.drawWaterDetail(v, L, t, dt, windF, over);
+      R.drawMicroWaves(v, L, t, windF, over);
     }
     R.drawAtmosphere(v, L, t, dt, over);
 
@@ -469,6 +470,37 @@
   };
 
 
+
+  // Close-range capillary waves with perspective, wind-driven drift and
+  // moving reflected glints. Screen-space strokes stay cheap on mobile GPUs.
+  R.drawMicroWaves = function(v, L, t, windF, over) {
+    const n = quality==="lo"?12:quality==="mid"?24:38;
+    const wx=v.wx, strength=Math.min(1.8,.25+wx.wind*.16);
+    ctx.save();ctx.beginPath();ctx.rect(0,shoreY,W,H-shoreY);ctx.clip();
+    ctx.lineCap="round";
+    for(let i=0;i<n;i++){
+      const seed=i*12.9898+.47;
+      const y0=shoreY+(H-shoreY)*(0.08+((i*.6180339)%1)*.9);
+      const scale=Math.pow((y0-shoreY)/(H-shoreY),1.4);
+      const drift=(t*(wx.wind*.31+.45)+seed*11.1)% (W+180);
+      const x=(seed*61.13+drift)%(W+150)-75;
+      const pulse=.55+.45*Math.sin(t*(1.9+i%4*.38)+seed);
+      const len=(9+scale*64)*(0.6+pulse*.5)*strength;
+      const wav=(.8+scale*3.8)*Math.sin(t*1.3+seed);
+      ctx.globalAlpha=(over?.06:.1)*(1-L.dark)*(0.5+scale*.6)*pulse;
+      ctx.lineWidth=.6+scale*.7;
+      ctx.strokeStyle=L.sunUp&&!over?"#fce9be":"#cbe9f4";
+      ctx.beginPath();ctx.moveTo(x-len*.5,y0);
+      ctx.quadraticCurveTo(x,y0+wav,x+len*.5,y0+wav*.4);ctx.stroke();
+      // Soft dark trough below the illuminated crest.
+      if(scale>.35){
+        ctx.globalAlpha*=.6;ctx.strokeStyle="#0c3442";
+        ctx.beginPath();ctx.moveTo(x-len*.4,y0+2+scale*2);
+        ctx.lineTo(x+len*.4,y0+2+scale*2);ctx.stroke();
+      }
+    }
+    ctx.restore();ctx.globalAlpha=1;
+  };
 
   // ---------- Детализация воды: глубина, преломления и пена у берега ----------
   const waterGlints = [];
@@ -1040,6 +1072,16 @@
       rodPoly(0.8, 1, U.mix(night ? "#7aff6a" : "#ff6a12", "#000000", L.dark * 0.3));
       if (!night) { rodPoly(0.86, 0.9, "#ffffff"); rodPoly(0.94, 0.97, "#ffffff"); }
     } else rodPoly(0, 1, body);
+    // Graphite blank highlights: tapered carbon reflections and metallic rings.
+    ctx.save();
+    const carbon=ctx.createLinearGradient(bx,by,tip.x,tip.y);
+    carbon.addColorStop(0,"rgba(255,255,255,.45)");
+    carbon.addColorStop(.22,"rgba(180,215,220,.21)");
+    carbon.addColorStop(.65,"rgba(240,248,252,.13)");
+    carbon.addColorStop(1,"rgba(255,255,255,.26)");
+    ctx.strokeStyle=carbon;ctx.lineWidth=1.15;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(bx-2,by-2);ctx.quadraticCurveTo(mx-1,my-3,tip.x,tip.y);ctx.stroke();
+    ctx.restore();
     // кольца одним контуром
     ctx.strokeStyle = U.mix("#c8ccd0", "#303848", L.dark); ctx.lineWidth = 1.2;
     ctx.beginPath();

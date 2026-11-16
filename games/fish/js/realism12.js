@@ -87,6 +87,14 @@
     {id:"blacksea",n:"Чёрное море",reg:"Краснодарский край",lvl:29,fee:0,zfar:200,depth:[2,30],current:.35,style:"coast",photo:"volga",desc:"Каменистый берег, прибой и солёная глубина. Донные насадки и морские приманки.",fish:{redmullet:26,blackseagoby:24,flounder:16,terpug:3,smelt:5,rybets:7}},
     {id:"barents",n:"Баренцево море",reg:"Мурманская область",lvl:36,fee:0,zfar:220,depth:[5,65],current:.85,style:"coast",photo:"baikal",desc:"Суровые полярные воды с треской и морскими трофеями. Глубина требует мощного шнура.",fish:{cod:25,navaga:23,flounder:14,halibut:9,smelt:10,whitefish:3}}
   ];
+  // Ensure legacy expedition waters also have genuine raster backdrops.
+  [["northstream","oka"],["mountainlake","baikal"]].forEach(function(pair){
+    const images=FZ.Assets.manifest.images,wl=FZ.Assets.tuning.waterline;
+    FZ.SEASON_ORDER.forEach(function(season){
+      images["bg/"+pair[0]+"_"+season]="bg/"+pair[1]+"_"+season+".webp";
+      wl["bg/"+pair[0]+"_"+season]=wl["bg/"+pair[1]+"_"+season]||.5;
+    });
+  });
   waters.forEach(function(l) {
     if(FZ.LOC[l.id])return;
     FZ.LOCATIONS.push(l);

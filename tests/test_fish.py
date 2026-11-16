@@ -108,6 +108,25 @@ with sync_playwright() as p:
     check("рисованный режим отключён", pg.evaluate("FZ.Assets.style==='paint'"))
     pg.evaluate("__game.G.save(true)")
 
+    # 1.2: all content must be additive, and all waters and species have raster art.
+    check("новые 62 вида рыб", pg.evaluate("FZ.SPECIES.length>=62 && FZ.REALISM_CONTENT.species===FZ.SPECIES.length"))
+    check("20 доступных водоёмов", pg.evaluate("FZ.LOCATIONS.length>=20 && FZ.REALISM_CONTENT.waters===FZ.LOCATIONS.length"))
+    check("семь новых регионов", pg.evaluate("['seliger','onega','katun','kola','amur','blacksea','barents'].every(id=>!!FZ.LOC[id])"))
+    check("все рыбы с растровыми изображениями", pg.evaluate("FZ.SPECIES.every(s=>!!FZ.Assets.fish(s.id))"))
+    check("все сезонные фоновые изображения загружены", pg.evaluate("FZ.LOCATIONS.every(l=>FZ.SEASON_ORDER.every(z=>!!FZ.Assets.bg(l.id,z)))"))
+    check("без векторных ассетов в манифесте", pg.evaluate("!Object.values(FZ.Assets.manifest.images).some(v=>v.endsWith('.svg'))"))
+    check("анализ клёва работает", pg.evaluate("__game.G.waterReport().active.length>0"))
+    pg.evaluate("__game.UI.showWaterReport()")
+    check("рыболовный гид показывает рыбу", pg.locator(".sheet").get_by_text("Гид по клёву").count()>0)
+    pg.screenshot(path=f"{OUT}/f_waterreport.png")
+    pg.evaluate("__game.UI.closeSheet();__game.G.startSession('seliger')")
+    pg.wait_for_timeout(650)
+    pg.screenshot(path=f"{OUT}/f_seliger.png")
+    pg.evaluate("__game.G.startSession('barents')")
+    pg.wait_for_timeout(650)
+    pg.screenshot(path=f"{OUT}/f_barents.png")
+    pg.evaluate("__game.G.startSession('pond')")
+
     # Мегаобновление 1.1: Камчатка, морские виды, приливы и трофейная кампания
     check("Камчатская бухта загружена", pg.evaluate("!!FZ.LOC.kamchatka && FZ.LOC.kamchatka.lvl===32 && FZ.LOC.kamchatka.style==='coast'"))
     check("пять новых морских видов загружены", pg.evaluate("!!FZ.SP.chinook && !!FZ.SP.coho && !!FZ.SP.sockeye && !!FZ.SP.halibut && !!FZ.SP.terpug"))

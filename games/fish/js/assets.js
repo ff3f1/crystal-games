@@ -19,6 +19,23 @@
     });
   }
   A.tuning = M.tuning || {};
+  // Every species must have a raster portrait, including newly added fish.
+  // Keep silhouettes generated from the photographic sprite instead of
+  // accidentally falling back to the retired vector renderer.
+  function expandVariants() {
+    FZ.SPECIES.forEach(function (s) {
+      if (A.img["fish/" + s.id] || !s.assetAlias) return;
+      const src = A.img["fish/" + s.assetAlias];
+      if (!src) return;
+      const c = document.createElement("canvas"); c.width=src.width; c.height=src.height;
+      const g=c.getContext("2d"); g.drawImage(src,0,0);
+      if (s.assetTint) {
+        g.save();g.globalCompositeOperation="source-atop";g.globalAlpha=.19;
+        g.fillStyle=s.assetTint;g.fillRect(0,0,c.width,c.height);g.restore();
+      }
+      A.img["fish/" + s.id]=c;
+    });
+  }
 
   A.load = function (onProgress) {
     const keys = Object.keys(M.images || {});
@@ -39,7 +56,7 @@
         im.onerror = function () { done++; onProgress && onProgress(done / keys.length); res(); };
         im.src = "assets/" + M.images[k];
       });
-    })).then(function () { expandFishAtlas(); A.ok = true; });
+    })).then(function () { expandFishAtlas(); expandVariants(); A.ok = true; });
   };
 
   // Две версии графики: «paint» — сгенерированные картинки, «art» — нарисованная кодом
@@ -49,7 +66,7 @@
   const on = () => true;
   A.get = (k) => A.img[k] || null;
   A.bg = (loc, season) => (on() && A.img["bg/" + loc + "_" + season]) || null;
-  A.fish = (id) => (on() && A.img["fish/" + id]) || null;
+  A.fish = (id) => (on() && (A.img["fish/" + id] || (FZ.SP[id] && A.img["fish/" + FZ.SP[id].assetAlias]))) || null;
   A.item = (id) => (on() && A.img["items/" + id]) || null;
   A.audio = (k) => (M.audio && M.audio[k] ? "assets/" + M.audio[k] : null);
   // Где у фоновой картинки линия воды (доля высоты), если отличается от стандартной
