@@ -42,7 +42,29 @@ with sync_playwright() as p:
   page.screenshot(path=str(out/f'menu_{size[0]}.png'))
  page.set_viewport_size({'width':390,'height':844})
  page.evaluate("__game.UI.closeMenu()")
- # Winter ice hole must agree with the legacy canvas coordinates, including after drilling.
+ # Cover all 20 seasonal locations without loading all photos at once.
+ winter_waters=page.evaluate("""()=>{
+   const G=__game.G;
+   return FZ.LOCATIONS.map(l=>({
+     id:l.id,coast:l.style==='coast',
+     ice:G.isFrozen(l,'winter'),mode:G.modeFor('winter',l)
+   }));
+ }""")
+ assert len(winter_waters)>=20,winter_waters
+ assert all(x['ice']!=x['coast'] and (x['mode']=='ice')==x['ice'] for x in winter_waters),winter_waters
+ # The winter tip clears the ice opening; both rod blanks overlap their ferrules.
+ dimensions=page.evaluate("""()=>{
+   const G=__game.G,S=FZ.Scene;
+   G.startSession('pond','summer');S.render(G.view(4),.016);
+   const warm=S.graphicsInfo().tackle;
+   G.startSession('pond','winter');S.render(G.view(4.1),.016);
+   return {warm,cold:S.graphicsInfo().tackle};
+ }""")
+ assert dimensions['warm']['rodLength']>dimensions['cold']['rodLength']*1.8,dimensions
+ assert dimensions['cold']['tipScreenY']<dimensions['cold']['holeScreenY'],dimensions
+ assert dimensions['warm']['jointOverlap']>0 and dimensions['cold']['jointOverlap']>0,dimensions
+ assert not dimensions['cold']['reelVisible'],dimensions
+  # Winter ice hole must agree with the legacy canvas coordinates, including after drilling.
  page.evaluate("__game.G.startSession('pond','winter')")
  page.wait_for_timeout(400)
  winter=page.evaluate("""()=>{
