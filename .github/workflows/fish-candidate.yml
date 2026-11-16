@@ -19,6 +19,7 @@ jobs:
         run: |
           pip install Pillow
           python tests/validate_fish_art.py
+          python tests/test_rod_art.py
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

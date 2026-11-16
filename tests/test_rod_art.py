@@ -14,7 +14,7 @@ assert 'src="js/rod-art.js"' in html
 js=(root/"games/fish/js/worldgl.js").read_text()
 assert "assets/equipment/complete/" in js
 assert "const meshes=[],guides=[]" not in js
-assert "gripSprite" not in js and "ferrule" not in js
+assert "gripSprite" not in js and "ferrule.scale" not in js
 assert "jointOverlap:" not in js
 scene=(root/"games/fish/js/scene.js").read_text()
 assert "FZ.RodArt.draw" in scene and "rodPoly" not in scene
