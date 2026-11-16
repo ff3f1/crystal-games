@@ -2,7 +2,7 @@ name: Build games
 
 on:
   push:
-    branches: [main]
+    branches: [main, fish-rc-1.2]
   workflow_dispatch:
 
 permissions:
@@ -99,6 +99,7 @@ jobs:
 
   vk:
     name: VK — архивы игр
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -124,6 +125,7 @@ jobs:
 
   builds:
     name: Готовые файлы в ветку builds
+    if: github.ref == 'refs/heads/main'
     needs: [android, vk]
     runs-on: ubuntu-latest
     steps:
