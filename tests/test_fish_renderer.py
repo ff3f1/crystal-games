@@ -20,6 +20,17 @@ with sync_playwright() as p:
  page.click('#mGo');page.evaluate("__game.G.state().tut=4;__game.G.startSession('pond','summer');__game.G.sess().hour=9")
  page.wait_for_function("FZ.Assets.bg('pond','summer')")
  page.screenshot(path=str(out/'new_pond.png'))
+ # Regression: the line must follow the hooked fish rather than the cast point.
+ alignment=page.evaluate('''()=>{
+   const G=__game.G,r=G.rig(),saved={state:r.state,fish:r.fish,X:r.X,Z:r.Z};
+   try{
+     r.state='fight';r.X=3;r.Z=38;r.fish={hooked:true,X:-4.5,Z:11};
+     const v=G.view(1);
+     return {state:v.tackle.state,X:v.tackle.X,Z:v.tackle.Z};
+   }finally{r.state=saved.state;r.fish=saved.fish;r.X=saved.X;r.Z=saved.Z;}
+ }''')
+ assert alignment=={'state':'fight','X':-4.5,'Z':11},alignment
+
  snap=page.evaluate('''()=>{const c=FZ.Scene.snapshot(),g=c.getContext('2d');return Array.from(g.getImageData(c.width/2,c.height/2,1,1).data);}''')
  assert snap[3]==255 and sum(snap[:3])>20,snap
  for size in [(360,640),(390,844),(800,1280)]:
@@ -34,6 +45,14 @@ with sync_playwright() as p:
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
  page.evaluate('__game.G.save(true)');page.reload();page.wait_for_function('window.__game')
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
+
+ # Simulate renderer fallback and verify the new visible canvas still handles casts.
+ page.click('#mGo')
+ page.evaluate("FZ.Scene.initFallback(document.getElementById('cv'))")
+ assert page.evaluate("FZ.Scene.graphicsInfo().renderer")=='canvas'
+ page.mouse.move(195,470);page.mouse.down();page.mouse.move(190,480);page.mouse.up()
+ page.wait_for_timeout(250)
+ assert page.evaluate("__game.G.rig().state") in ('fly','settle','wait'),page.evaluate("__game.G.rig().state")
  assert not errors,errors
  (out/'portrait-validation.json').write_text(json.dumps(results,indent=2))
  print('PASS WebGL; 62 native portraits; bounded cache; snapshot; 3 viewports; mixer save migration')

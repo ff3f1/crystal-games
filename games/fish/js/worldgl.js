@@ -149,7 +149,11 @@
     // A browser cannot switch an acquired WebGL canvas to 2D.
     const fallback=document.createElement('canvas');fallback.id='cv';cv.replaceWith(fallback);canvas=fallback;enabled=false;previous.init.call(R,fallback);
     // Preserve input listeners on the original element through event forwarding.
-    ['pointerdown','pointermove','pointerup','pointercancel'].forEach(type=>fallback.addEventListener(type,e=>cv.dispatchEvent(new PointerEvent(type,e))));
+    ['pointerdown','pointermove','pointerup','pointercancel'].forEach(type=>fallback.addEventListener(type,e=>{
+      // Capture on the visible replacement canvas, not the detached original.
+      if(type==='pointerdown')try{fallback.setPointerCapture(e.pointerId);}catch(_){ }
+      cv.dispatchEvent(new PointerEvent(type,e));
+    }));
     document.body.dataset.renderer='canvas';
   };
   R.resize=function(){previous.resize.call(R);if(!enabled)return;W=innerWidth;H=innerHeight;const ratio=Math.min(devicePixelRatio||1,{hi:2,mid:1.5,lo:1}[quality]||1.25);renderer.setPixelRatio(ratio);renderer.setSize(W,H);camera.left=-W/2;camera.right=W/2;camera.top=H/2;camera.bottom=-H/2;camera.updateProjectionMatrix();plane.scale.set(W,H,1);uniforms.resolution.value.set(W,H);uniforms.shore.value=R.size().shoreY/H;};
@@ -166,9 +170,13 @@
   }
   function rodPoint(a,b,bend,u){return a.clone().lerp(b,u).add(new T.Vector3(-bend*40*u*u, -bend*100*u*u*u,0));}
   function tackle(v,dt){
-    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const flexTarget=v.rod.bend||0;const flexDt=Math.min(.05,dt);R._flex.v+=(flexTarget-R._flex.x)*90*flexDt;R._flex.v*=Math.exp(-12*flexDt);R._flex.x+=R._flex.v*flexDt;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
+    // Game physics already supplies spring-damped bend; avoid a second lagging spring.
+    const t=v.t, f=v.fish, bend=U.clamp(v.rod.bend||0,0,1.5), tilt=v.rod.tilt||0, isIce=!!v.ice;
     const menu=document.getElementById("ovMenu").classList.contains("on");
-    root.visible=!menu;float.visible=!menu&&v.tackle.state!=='none';line.visible=float.visible;
+    const showingLine=!menu&&v.tackle.state!=='none';
+    root.visible=!menu;line.visible=showingLine;
+    // Keep the reel line while a fish is hooked, but hide the stationary float.
+    float.visible=showingLine&&!f&&(isIce||v.mode==='float');
     const idleSway=Math.sin(t*.71)*2.2;
     const base=V(W*.70,H*.79+idleSway,40),tip=V(W*(isIce?.68:.34)+(tilt*W*.12),H*(isIce?.59:.29)+idleSway,30);
     if(v.tackle.state==='fly'){tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;}
@@ -192,7 +200,8 @@
       const reelFoot=new T.Vector3(0,32*scale/reelSprite.userData.aspect,0).applyAxisAngle(new T.Vector3(0,0,1),reelAngle);
       reelSprite.rotation.z=reelAngle;reelSprite.position.copy(base).add(socket).sub(reelFoot);reelSprite.position.z=90;
     }
-    let p=R.proj(v.tackle.X||0,Math.max(3.6,v.tackle.Z||20));
+    const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
+    let p=R.proj(lineX,Math.max(3.6,lineZ));
     if(isIce)p={x:W*.50,y:H*.68,s:20};
     const pos=V(p.x+(v.tackle.dx||0),p.y+(v.tackle.sink||0)*9,8);
     if(v.tackle.state==='fly')pos.y+=Math.sin(U.clamp(v.tackle.flyT,0,1)*Math.PI)*H*.22;

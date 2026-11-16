@@ -891,10 +891,13 @@
   // Данные для отрисовки
   G.view = function (t) {
     const r = rig;
+    // Follow the hooked fish rather than the original cast point.
+    const hookedFish = r.fish && r.fish.hooked ? r.fish : null;
+    const tackleState = r.state === "fly" ? "fly" : (r.state === "idle" || r.state === "nohole" || r.state === "drill" || r.state === "result") ? "none" : r.state === "fight" ? "fight" : "water";
     const v = {
       loc: sess.loc, season: sess.season, hour: sess.hour, period: sess.period, wx: sess.wx, t, ice: sess.ice ? { holeId: sess.hole ? sess.hole.id : 0 } : null,
       mode: sess.mode, spots: sess.spots, fedSpot: sess.fedSpot,
-      rod: r.rod, tackle: { state: r.state === "fly" ? "fly" : (r.state === "idle" || r.state === "nohole" || r.state === "drill" || r.state === "result") ? "none" : "water", X: r.X, Z: r.Z, flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
+      rod: r.rod, tackle: { state: tackleState, X: hookedFish ? hookedFish.X : r.X, Z: hookedFish ? hookedFish.Z : r.Z, flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };
