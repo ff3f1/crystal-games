@@ -137,7 +137,7 @@ with sync_playwright() as p:
     page.evaluate("""() => {
       const G=__game.G,r=G.rig(),rand=FZ.U.rand;
       if(r.state!=='bite') throw new Error('Fish dropped the bite before strike');
-      FZ.U.rand=()=>0;
+      FZ.U.rand=Object.assign(()=>0,{range:rand.range,int:rand.int,pick:rand.pick,normal:rand.normal});
       try {G.strike();} finally {FZ.U.rand=rand;}
       if(r.state!=='fight') throw new Error('Strike did not hook the fish');
       G.state().tut=4;
