@@ -124,6 +124,23 @@ with sync_playwright() as p:
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
 
 
+ # Enforce bait tables in the actual running game, not only in data fixtures.
+ bait_check=page.evaluate("""()=>{
+   const G=__game.G,loc=FZ.LOCATIONS.find(l=>l.fish.bream);
+   if(!loc)throw Error('No bream habitat');
+   G.startSession(loc.id,'summer');G.sess().mode='float';
+   G.sess().hour=12;G.sess().period='day';
+   const load=G.state().load.float,old=load.bait;
+   try{
+     load.bait='livebait';
+     const predatorBait=G.biteTable().filter(([s])=>s.id==='bream').length;
+     load.bait='worm';
+     const worm=G.biteTable().filter(([s])=>s.id==='bream').length;
+     return {predatorBait,worm};
+   }finally{load.bait=old;}
+ }""")
+ assert bait_check=={'predatorBait':0,'worm':1},bait_check
+
  # Native Chromium touch events exercise browser pointer capture and two fingers.
  page.evaluate("""()=>{
    window.__pointerTrace=[];
@@ -207,23 +224,6 @@ with sync_playwright() as p:
    FZ.Scene.render(G.view(10.1),.016);
  }""")
  page.screenshot(path=str(out/'reel-turn.png'))
-
- # Enforce bait tables in the actual running game, not only in data fixtures.
- bait_check=page.evaluate("""()=>{
-   const G=__game.G,loc=FZ.LOCATIONS.find(l=>l.fish.bream);
-   if(!loc)throw Error('No bream habitat');
-   G.startSession(loc.id,'summer');G.sess().mode='float';
-   G.sess().hour=12;G.sess().period='day';
-   const load=G.state().load.float,old=load.bait;
-   try{
-     load.bait='livebait';
-     const predatorBait=G.biteTable().filter(([s])=>s.id==='bream').length;
-     load.bait='worm';
-     const worm=G.biteTable().filter(([s])=>s.id==='bream').length;
-     return {predatorBait,worm};
-   }finally{load.bait=old;}
- }""")
- assert bait_check=={'predatorBait':0,'worm':1},bait_check
 
  # Visual evidence: every water has a summer and winter scene, in daylight and
  # adverse weather. Capture the game canvas itself rather than a mocked render.
