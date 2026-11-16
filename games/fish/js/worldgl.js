@@ -188,7 +188,9 @@
       gripSprite.scale.set(gw,gh,1);gripSprite.rotation.z=angle;gripSprite.position.copy(base).sub(anchor);gripSprite.position.z=80;
       const socket=new T.Vector3(12*scale,-22*scale,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
       reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);
-      reelSprite.rotation.z=angle;reelSprite.position.copy(base).add(socket).add(new T.Vector3(-10*scale,-32*scale,0));reelSprite.position.z=90;
+      const reelAngle=Math.atan2(axis.y,axis.x)-Math.PI;
+      const reelFoot=new T.Vector3(0,32*scale/reelSprite.userData.aspect,0).applyAxisAngle(new T.Vector3(0,0,1),reelAngle);
+      reelSprite.rotation.z=reelAngle;reelSprite.position.copy(base).add(socket).sub(reelFoot);reelSprite.position.z=90;
     }
     let p=R.proj(v.tackle.X||0,Math.max(3.6,v.tackle.Z||20));
     if(isIce)p={x:W*.50,y:H*.68,s:20};
