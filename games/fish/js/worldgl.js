@@ -68,9 +68,9 @@
           float grain=noise(uv*vec2(175.,295.))*.065+noise(uv*vec2(33.,52.))*.06;
           float cracks=pow(1.-abs(sin((uv.x+noise(uv*7.)*.16)*55.+uv.y*10.)),42.);
           float bluePatch=smoothstep(.54,.77,noise(uv*vec2(15.,24.)))*.19;
-          c=mix(vec3(.57,.72,.78),vec3(.86,.91,.94),clamp(depth*.64+grain+.16,0.,1.));
-          c=mix(c,vec3(.41,.59,.70),bluePatch*(1.-depth*.5));
-          c+=cracks*.052;
+          c=mix(vec3(.50,.65,.73),vec3(.78,.85,.89),clamp(depth*.61+grain+.15,0.,1.));
+          c=mix(c,vec3(.37,.56,.66),bluePatch*1.65*(1.-depth*.4));
+          c-=cracks*.075;
           float bank=1.-smoothstep(.0,.065,depth+sin(uv.x*32.)*.002);
           c=mix(c,vec3(.90,.94,.96),bank*.65);
           if(holeOn>.5){
@@ -240,7 +240,9 @@
       reelSprite.rotation.z=reelAngle;reelSprite.position.copy(base).add(socket).sub(reelFoot);reelSprite.position.z=90;
       const a=v.rod.reelAngle||0,zAxis=new T.Vector3(0,0,1);
       if(reelCrank&&reelRotor){
-        reelCrank.visible=reelRotor.visible=!menu;
+        reelCrank.visible=!menu;
+        // The baked reel already contains a spool; avoid a duplicate rotor silhouette.
+        reelRotor.visible=false;
         reelCrank.scale.setScalar(scale);reelRotor.scale.setScalar(scale);
         reelCrank.position.copy(reelSprite.position).add(new T.Vector3(11*scale,-6*scale,0).applyAxisAngle(zAxis,reelAngle));
         reelCrank.position.z=104;reelCrank.rotation.z=reelAngle+a;
