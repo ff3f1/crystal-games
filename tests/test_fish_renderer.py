@@ -42,6 +42,10 @@ with sync_playwright() as p:
   page.screenshot(path=str(out/f'menu_{size[0]}.png'))
  page.set_viewport_size({'width':390,'height':844})
  page.evaluate("__game.UI.closeMenu()")
+ # All four complete rod assets share the same calibrated screen projection.
+ page.wait_for_function("Object.keys(FZ.RodArt.info('spin')).includes('reelX')")
+ for mode in ['float','feeder','spin','ice']:
+  assert page.evaluate("(m)=>FZ.RodArt.image(m).naturalWidth===1440",mode),mode
  # Cover all 20 seasonal locations without loading all photos at once.
  winter_waters=page.evaluate("""()=>{
    const G=__game.G;
@@ -52,7 +56,7 @@ with sync_playwright() as p:
  }""")
  assert len(winter_waters)>=20,winter_waters
  assert all(x['ice']!=x['coast'] and (x['mode']=='ice')==x['ice'] for x in winter_waters),winter_waters
- # The winter tip clears the ice opening; both rod blanks overlap their ferrules.
+ # New single-image rods must load in both climates; no ferrules or joint sprites.
  dimensions=page.evaluate("""()=>{
    const G=__game.G,S=FZ.Scene;
    G.startSession('pond','summer');S.render(G.view(4),.016);
@@ -62,8 +66,9 @@ with sync_playwright() as p:
  }""")
  assert dimensions['warm']['rodLength']>dimensions['cold']['rodLength']*1.8,dimensions
  assert dimensions['cold']['tipScreenY']<dimensions['cold']['holeScreenY'],dimensions
- assert dimensions['warm']['jointOverlap']>0 and dimensions['cold']['jointOverlap']>0,dimensions
- assert not dimensions['cold']['reelVisible'],dimensions
+ assert dimensions['warm']['assetMode']=='float' and dimensions['cold']['assetMode']=='ice',dimensions
+ assert dimensions['warm']['assetReady'] and dimensions['cold']['assetReady'],dimensions
+ assert not dimensions['cold']['reelVisible'] and dimensions['cold']['iceDrumVisible'],dimensions
   # Winter ice hole must agree with the legacy canvas coordinates, including after drilling.
  page.evaluate("__game.G.startSession('pond','winter')")
  page.wait_for_timeout(400)

@@ -965,16 +965,16 @@
 
   // ---------- Снасть: удилище, леска, поплавок, рыба ----------
   function rodGeom(v) {
-    const m = v.mode;
-    let base, tip;
-    if (m === "feeder") { base = { x: W * 1.02, y: H * 1.02 }; tip = { x: W * 0.3, y: H * 0.5 }; }
-    else if (m === "spin") { base = { x: W * 0.98, y: H * 1.06 }; tip = { x: W * 0.56, y: H * 0.56 }; }
-    else if (m === "ice") { base = { x: W * 1.0, y: H * 0.95 }; tip = { x: W * 0.7, y: H * 0.55 }; }
-    else { base = { x: W * 0.92, y: H * 1.06 }; tip = { x: W * 0.55, y: H * 0.47 }; }
-    const rod = v.rod || {};
-    tip.x += (rod.tilt || 0) * W * 0.24;
-    tip.y += (rod.lift || 0) * H * 0.05;
-    return { base, tip };
+    // Screen anchors match the WebGL camera and keep handles inside phone viewports.
+    const m=v.ice?"ice":v.mode,rod=v.rod||{};
+    const anchors={
+      float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
+      spin:[.74,.82,.40,.36],ice:[.74,.82,.54,.59]
+    };
+    const a=anchors[m]||anchors.float;
+    const base={x:W*a[0],y:H*a[1]},tip={x:W*(a[2]+(rod.tilt||0)*(m==="ice"?.055:.12)),y:H*a[3]+(rod.lift||0)*H*.05};
+    if(v.tackle&&v.tackle.state==="fly")tip.y-=Math.sin((v.tackle.flyT||0)*Math.PI*2)*H*.14;
+    return {base,tip};
   }
   R.rodTip = function (v) { const g = rodGeom(v); return g.tip; };
 
@@ -1042,72 +1042,8 @@
     }
     if (v.landing) R.drawLanding(v, L, t);
 
-    // удилище
-    const bx = G.base.x, by = G.base.y;
-    const mx = (bx + tip.x) / 2 - (tip.y - by) * 0.04 * bend, my = (by + tip.y) / 2 + bend * 40 + 10;
-    const rodCol = { float: "#2a2420", feeder: "#22384a", spin: "#1a1a1c", ice: "#c8a46a" }[v.mode];
-    if (v.mode === "feeder") { // подставка (род-под)
-      const p = qb(bx, by, mx, my, tip.x, tip.y, 0.42);
-      ctx.strokeStyle = U.mix("#6a6e74", "#1a2030", L.dark * 0.8); ctx.lineWidth = 4; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(p.x - 18, H + 10); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 18, H + 10); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(p.x - 10, p.y - 4); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 10, p.y - 4); ctx.stroke();
-    }
-    // удилище — одна сужающаяся фигура вдоль кривой (вершинка фидера — отдельно)
-    const w0 = v.mode === "ice" ? 8 : v.mode === "feeder" ? 10 : 9, w1 = v.mode === "feeder" ? 2.6 : 1.6;
-    const rodPoly = function (a0, a1, col) {
-      const n = 10, left = [], right = [];
-      for (let i = 0; i <= n; i++) {
-        const tt = U.lerp(a0, a1, i / n);
-        const p = qb(bx, by, mx, my, tip.x, tip.y, tt), q = qb(bx, by, mx, my, tip.x, tip.y, Math.min(1, tt + 0.01));
-        let nx = -(q.y - p.y), ny = q.x - p.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-        const hw = U.lerp(w0, w1, tt) / 2;
-        left.push([p.x + nx * hw, p.y + ny * hw]); right.push([p.x - nx * hw, p.y - ny * hw]);
-      }
-      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(left[0][0], left[0][1]);
-      for (let i = 1; i <= n; i++) ctx.lineTo(left[i][0], left[i][1]);
-      for (let i = n; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
-      ctx.closePath(); ctx.fill();
-    };
-    const body = U.mix(rodCol, "#000000", L.dark * 0.5);
-    if (v.mode === "feeder") {
-      rodPoly(0, 0.8, body);
-      rodPoly(0.8, 1, U.mix(night ? "#7aff6a" : "#ff6a12", "#000000", L.dark * 0.3));
-      if (!night) { rodPoly(0.86, 0.9, "#ffffff"); rodPoly(0.94, 0.97, "#ffffff"); }
-    } else rodPoly(0, 1, body);
-    // Graphite blank highlights: tapered carbon reflections and metallic rings.
-    ctx.save();
-    const carbon=ctx.createLinearGradient(bx,by,tip.x,tip.y);
-    carbon.addColorStop(0,"rgba(255,255,255,.45)");
-    carbon.addColorStop(.22,"rgba(180,215,220,.21)");
-    carbon.addColorStop(.65,"rgba(240,248,252,.13)");
-    carbon.addColorStop(1,"rgba(255,255,255,.26)");
-    ctx.strokeStyle=carbon;ctx.lineWidth=1.15;ctx.lineCap="round";
-    ctx.beginPath();ctx.moveTo(bx-2,by-2);ctx.quadraticCurveTo(mx-1,my-3,tip.x,tip.y);ctx.stroke();
-    ctx.restore();
-    // кольца одним контуром
-    ctx.strokeStyle = U.mix("#c8ccd0", "#303848", L.dark); ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    for (let i = 1; i < 6; i++) { const p = qb(bx, by, mx, my, tip.x, tip.y, 0.3 + i * 0.12), r2 = 2.5 - i * 0.25; ctx.moveTo(p.x + r2, p.y - 3); ctx.arc(p.x, p.y - 3, r2, 0, Math.PI * 2); }
-    ctx.stroke();
-    // колокольчик донки
-    if (v.mode === "feeder") {
-      const p = qb(bx, by, mx, my, tip.x, tip.y, 0.9);
-      ctx.fillStyle = "#d8b04a"; ctx.beginPath(); ctx.arc(p.x, p.y + 6 + Math.sin(t * 30) * (rod.ring || 0) * 3, 4, 0, Math.PI); ctx.fill();
-    }
-    // катушка
-    {
-      const p = qb(bx, by, mx, my, tip.x, tip.y, v.mode === "ice" ? 0.12 : 0.1);
-      const rr = v.mode === "ice" ? 13 : 20;
-      ctx.save(); ctx.translate(p.x - 2, p.y + rr * 0.9);
-      const gg = ctx.createLinearGradient(-rr, -rr, rr, rr); gg.addColorStop(0, U.mix("#c8ccd4", "#202838", L.dark * 0.7)); gg.addColorStop(1, U.mix("#5a606a", "#05080e", L.dark * 0.7));
-      ctx.fillStyle = gg; ctx.beginPath(); ctx.ellipse(0, 0, rr * 0.75, rr, 0.3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = U.mix("#e04a28", "#301010", L.dark * 0.6); ctx.beginPath(); ctx.ellipse(0, 0, rr * 0.35, rr * 0.5, 0.3, 0, Math.PI * 2); ctx.fill();
-      const ang = (rod.reelAngle || 0);
-      ctx.strokeStyle = U.mix("#d8dce0", "#303848", L.dark * 0.7); ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(ang) * rr * 1.1, Math.sin(ang) * rr * 0.6); ctx.stroke();
-      ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(Math.cos(ang) * rr * 1.1, Math.sin(ang) * rr * 0.6, 4, 0, Math.PI * 2); ctx.fill();
-      ctx.restore();
-    }
+    // Entire rod + handle + integrated reel: one SVG per mode, no assembled joints.
+    if(FZ.RodArt)FZ.RodArt.draw(ctx,v.ice?"ice":v.mode,G.base,tip,rod.reelAngle||0);
   };
   function qb(x0, y0, x1, y1, x2, y2, t) { const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t; return { x: a * x0 + b * x1 + c * x2, y: a * y0 + b * y1 + c * y2 }; }
 

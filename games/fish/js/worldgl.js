@@ -8,7 +8,7 @@
   let renderer,scene,camera,W=390,H=844,quality='hi',enabled=false,canvas,legacy;
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
-  const meshes=[],guides=[],rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
+  const rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
   const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},winter:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
   const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
   const fragment=`precision highp float;
@@ -117,59 +117,34 @@
   function sphere(group,x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.SphereGeometry(1,18,12),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;}
   function torus(group,r,t,mat,x,y,z){const m=new T.Mesh(new T.TorusGeometry(r,t,6,36),mat);m.position.set(x,y,z);group.add(m);return m;}
   function connect(mesh,a,b){mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());mesh.scale.y=a.distanceTo(b);}
-  let gripSprite,reelSprite,reelCrank,reelRotor,ferrule;
-  let root,handle,reelHandle,hemisphere,keyLight,rimLight,tackleMetrics=null;
+  let reelCrank,rodSprites={},root,hemisphere,keyLight,rimLight,tackleMetrics=null;
   function buildTackle(){
     root=new T.Group();scene.add(root);
-    const carbon=material('#263233',.28,.58),chrome=material('#c5c4b5',.24,.85),gold=material('#b9934e',.28,.75),rubber=material('#192223',.92),cork=material('#b49569',.94);
-    // Original cork grain and carbon weave, generated at native texture resolution.
-    const cc=document.createElement('canvas');cc.width=256;cc.height=512;const cg=cc.getContext('2d'),rng=U.rng('cork');cg.fillStyle='#bda277';cg.fillRect(0,0,256,512);
-    for(let i=0;i<4000;i++){cg.fillStyle=i%3?'rgba(71,53,32,.17)':'rgba(242,220,174,.25)';cg.fillRect(rng()*256,rng()*512,1+rng()*12,.5+rng()*2);}
-    cork.map=new T.CanvasTexture(cc);cork.map.colorSpace=T.SRGBColorSpace;
+    const chrome=material('#c5c4b5',.24,.85);
+    // A single textured flexible plane per mode replaces 28 blank segments,
+    // disconnected grip / reel sprites, separate 3D hand and ferrule.
     const loader=new T.TextureLoader();
-    function surface(mat,name,repeat){loader.load('assets/textures/'+name+'_albedo.webp',tx=>{tx.colorSpace=T.SRGBColorSpace;tx.wrapS=tx.wrapT=T.RepeatWrapping;tx.repeat.set(repeat||1,repeat||1);if(mat.map)mat.map.dispose();mat.map=tx;mat.needsUpdate=true;});}
-    surface(cork,'cork',2);surface(carbon,'carbon',3);surface(rubber,'glove_leather',1);surface(chrome,'reel_metal',1);
-
-    for(let i=0;i<28;i++){const f=i/28,m=new T.Mesh(new T.CylinderGeometry(1.0-f*.85,1.0-f*.85,1,10),carbon);root.add(m);meshes.push(m);}
-    for(let i=0;i<7;i++){const g=torus(root,3.5-i*.38,.55,chrome,0,0,0);guides.push(g);}
-    handle=new T.Group();root.add(handle);
-    cylinder(handle,6,7,89,cork,0,0,0);cylinder(handle,7.2,7.2,7,rubber,0,-43,0);cylinder(handle,6.5,6.5,22,carbon,0,58,0);
-    for(const y of [43,46,69])cylinder(handle,7,7,2,chrome,0,y,0);
-    const reel=new T.Group();handle.add(reel);reel.position.set(-10,27,6);reel.rotation.y=-.65;reel.rotation.x=.18;
-    sphere(reel,0,0,0,15,20,12,carbon);cylinder(reel,15,16,20,chrome,-2,21,0,Math.PI/2);
-    cylinder(reel,12,12,19,gold,-2,21,2,Math.PI/2);
-    for(let i=0;i<12;i++)torus(reel,12,.33,material('#546653',.65,.2),-2,21,-7+i*1.45);
-    torus(reel,16,1.1,chrome,-2,21,13);torus(reel,15,1.3,gold,-2,21,-11);
-    const bail=torus(reel,23,1.0,chrome,-2,21,1);bail.rotation.y=.55;
-    reelHandle=new T.Group();reel.add(reelHandle);reelHandle.position.set(-15,-2,6);cylinder(reelHandle,1.7,1.7,28,chrome,-12,-6,6,0,-.9);sphere(reelHandle,-23,-16,6,9,5,5,rubber);
-    // Gloved hand: palm, articulated fingers and a fabric cuff, all lit geometry.
-    const glove=material('#4e5145',.95),skin=material('#b68f73',.85),sleeve=material('#343d33',.92);
-    const fabric=document.createElement('canvas');fabric.width=fabric.height=256;const fg=fabric.getContext('2d');fg.fillStyle='#77806c';fg.fillRect(0,0,256,256);
-    for(let i=0;i<256;i+=3){fg.fillStyle=i%2?'#696f5e':'#858b76';fg.fillRect(i,0,1,256);fg.fillRect(0,i,256,1);}glove.map=new T.CanvasTexture(fabric);glove.bumpMap=glove.map;glove.bumpScale=.11;
-    sleeve.map=glove.map;surface(glove,'glove_fabric',2);surface(sleeve,'glove_fabric',2);
-    sphere(handle,9,-24,6,13,24,9,glove);cylinder(handle,20,23,49,sleeve,12,-67,0,0,-.13);
-    for(let i=0;i<4;i++){sphere(handle,-2,-6-i*11,12,11,5.5,8,glove);sphere(handle,-7,-5-i*11,13,5.2,5.1,6,skin);}
-    sphere(handle,15,1,11,7,17,7,glove);
-    const artLoader=new T.TextureLoader();
-    function photo(name,done){artLoader.load('assets/equipment/'+name+'.png',tx=>{tx.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:tx,transparent:true,alphaTest:.08,depthTest:false}));m.renderOrder=5;scene.add(m);done(m,tx.image.width/tx.image.height);});}
-    photo('grip',(m,a)=>{gripSprite=m;m.userData.aspect=a;});photo('reel',(m,a)=>{reelSprite=m;m.userData.aspect=a;});
-    // Ferrule bridges the grip sprite and the blank to avoid a floating joint.
-    ferrule=new T.Mesh(new T.CylinderGeometry(2.9,3.7,1,14),carbon);
-    root.add(ferrule);
-    // 2D moving handle and rotor on the existing reel illustration.
-    const silver=new T.MeshBasicMaterial({color:'#b9c4c3',side:T.DoubleSide,depthTest:false});
-    const charcoal=new T.MeshBasicMaterial({color:'#303a3d',side:T.DoubleSide,depthTest:false});
-    const brass=new T.MeshBasicMaterial({color:'#c9a457',side:T.DoubleSide,depthTest:false});
-    reelCrank=new T.Group();scene.add(reelCrank);
-    const hub=new T.Mesh(new T.CircleGeometry(2.6,24),brass);reelCrank.add(hub);
-    const arm=new T.Mesh(new T.PlaneGeometry(2.6,13),silver);arm.position.y=-6.5;reelCrank.add(arm);
-    const knob=new T.Mesh(new T.CircleGeometry(4.1,24),charcoal);knob.position.y=-13;reelCrank.add(knob);
-    const cap=new T.Mesh(new T.CircleGeometry(1.5,20),silver);cap.position.y=-13;reelCrank.add(cap);
-    reelCrank.children.forEach(m=>m.renderOrder=8);reelCrank.visible=false;
-    reelRotor=new T.Group();scene.add(reelRotor);
-    const rotorHoop=new T.Mesh(new T.RingGeometry(8.8,9.6,40),silver);reelRotor.add(rotorHoop);
-    const flash=new T.Mesh(new T.PlaneGeometry(2,7),brass);flash.position.y=9;reelRotor.add(flash);
-    reelRotor.children.forEach(m=>m.renderOrder=7);reelRotor.visible=false;
+    for(const mode of FZ.RodArt.modes){
+      const geometry=new T.PlaneGeometry(1,1,32,2);
+      const ys=Array.from(geometry.attributes.position.array).filter((_,i)=>i%3===1);
+      const mat=new T.MeshBasicMaterial({color:0xffffff,transparent:true,alphaTest:.035,
+        side:T.DoubleSide,depthTest:false,depthWrite:false});
+      const sprite=new T.Mesh(geometry,mat);sprite.renderOrder=20;sprite.visible=false;
+      sprite.userData={ys,ready:false};scene.add(sprite);rodSprites[mode]=sprite;
+      loader.load("assets/equipment/complete/"+mode+".svg",tx=>{
+        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=false;tx.minFilter=T.LinearFilter;
+        mat.map=tx;mat.needsUpdate=true;sprite.userData.ready=true;
+      },undefined,()=>{sprite.userData.ready=false;});
+    }
+    // Only the mechanical indicator rotates. The reel body is part of the same texture.
+    const silver=new T.MeshBasicMaterial({color:'#c1c9c4',side:T.DoubleSide,depthTest:false,depthWrite:false});
+    const dark=new T.MeshBasicMaterial({color:'#252e30',side:T.DoubleSide,depthTest:false,depthWrite:false});
+    reelCrank=new T.Group();scene.add(reelCrank);reelCrank.visible=false;
+    const arm=new T.Mesh(new T.PlaneGeometry(13,2.6),silver);
+    arm.position.set(5.5,2.5,0);reelCrank.add(arm);
+    const knob=new T.Mesh(new T.CircleGeometry(3.8,20),dark);
+    knob.position.set(11,5,0);reelCrank.add(knob);
+    reelCrank.children.forEach(m=>m.renderOrder=22);
     float=new T.Group();scene.add(float);
     const white=material('#eee9d6',.25),red=material('#ee4f25',.24),black=material('#252c23',.4),lime=material('#e3d95c',.32);
     sphere(float,0,0,0,.63,1.15,.63,white);sphere(float,0,.62,0,.60,.62,.60,red);
@@ -221,62 +196,47 @@
       uniforms.photo.value=texture;uniforms.photoSize.value.set(im.width,im.height);uniforms.waterline.value=FZ.Assets.waterline(v.loc.id,v.season);uniforms.hasPhoto.value=1;if(oldTexture)oldTexture.dispose();
     }
   }
-  function rodPoint(a,b,bend,u){
-    // Bend across the blank, not along the screen axes. Short ice rods flex less.
-    const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(1,Math.hypot(dx,dy));
-    const flex=Math.min(54,len*.15)*bend*u*u;
-    return new T.Vector3(a.x+dx*u-dy/len*flex,a.y+dy*u+dx/len*flex,a.z+(b.z-a.z)*u);
-  }
   function tackle(v,dt){
-    // Game physics already supplies spring-damped bend; avoid a second lagging spring.
-    const t=v.t, f=v.fish, bend=U.clamp(v.rod.bend||0,0,1.5), tilt=v.rod.tilt||0, isIce=!!v.ice;
+    const t=v.t,f=v.fish,bend=U.clamp(v.rod.bend||0,0,1.5),tilt=v.rod.tilt||0,isIce=!!v.ice;
     const menu=document.getElementById("ovMenu").classList.contains("on");
-    const showingLine=!menu&&v.tackle.state!=='none';
-    root.visible=!menu;line.visible=showingLine;
-    // Keep the reel line while a fish is hooked, but hide the stationary float.
-    float.visible=showingLine&&!f&&!isIce&&v.mode==='float';
-    const idleSway=Math.sin(t*.71)*2.2;
-    // Winter ice-fishing equipment is short, not a summer-length rod.
-    const base=V(W*(isIce?.74:.70),H*(isIce?.82:.79)+idleSway,40);
-    const tip=V(W*(isIce?.54:.34)+(tilt*W*(isIce?.055:.12)),H*(isIce?.59:.29)+idleSway,30);
-    if(v.tackle.state==='fly'){tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;}
-    const rodAxis=tip.clone().sub(base).normalize();
-    const rodBase=base.clone().addScaledVector(rodAxis,isIce?10:21);
-    if(ferrule){const jointStart=base.clone().addScaledVector(rodAxis,isIce?4:8);
-      const jointEnd=base.clone().addScaledVector(rodAxis,isIce?16:28);
-      connect(ferrule,jointStart,jointEnd);ferrule.scale.x=ferrule.scale.z=isIce?.68:1;
-    }
-    const pts=[];for(let i=0;i<=28;i++)pts.push(rodPoint(rodBase,tip,bend,i/28));
-    for(let i=0;i<28;i++){connect(meshes[i],pts[i],pts[i+1]);const taper=(1-i/28)*2.6+.6;meshes[i].scale.x=meshes[i].scale.z=taper;}
-    for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(rodBase,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
-    handle.position.copy(base);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),tip.clone().sub(base).normalize());handle.scale.setScalar(Math.min(1.4,W/390));
-    reelHandle.rotation.z=v.rod.reelAngle||0;
-    if(reelCrank)reelCrank.visible=false;
-    if(reelRotor)reelRotor.visible=false;
-    if(gripSprite&&reelSprite){
-      handle.visible=false;const scale=Math.min(1.4,W/390)*(isIce?.72:1),gw=190*scale,gh=gw/gripSprite.userData.aspect;
-      const axis=tip.clone().sub(base).normalize();
-      const photoAxis=new T.Vector3(-.63,.95,0).normalize();
-      const angle=Math.atan2(axis.y,axis.x)-Math.atan2(photoAxis.y,photoAxis.x);
-      const anchor=new T.Vector3(-gw/2,gh/2,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
-      gripSprite.visible=!menu;reelSprite.visible=!menu&&!isIce;
-      gripSprite.scale.set(gw,gh,1);gripSprite.rotation.z=angle;gripSprite.position.copy(base).sub(anchor);gripSprite.position.z=80;
-      const socket=new T.Vector3(12*scale,-22*scale,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
-      reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);
-      const reelAngle=Math.atan2(axis.y,axis.x)-Math.PI;
-      const reelFoot=new T.Vector3(0,32*scale/reelSprite.userData.aspect,0).applyAxisAngle(new T.Vector3(0,0,1),reelAngle);
-      reelSprite.rotation.z=reelAngle;reelSprite.position.copy(base).add(socket).sub(reelFoot);reelSprite.position.z=90;
-      const a=v.rod.reelAngle||0,zAxis=new T.Vector3(0,0,1);
-      if(reelCrank&&reelRotor){
-        reelCrank.visible=!menu&&!isIce;
-        // Hide the full spinning reel on the ice; use the existing compact drum.
-        reelRotor.visible=!menu&&isIce;
-        reelCrank.scale.setScalar(scale);reelRotor.scale.setScalar(scale);
-        reelCrank.position.copy(reelSprite.position).add(new T.Vector3(11*scale,-6*scale,0).applyAxisAngle(zAxis,reelAngle));
-        reelCrank.position.z=104;reelCrank.rotation.z=reelAngle+a;
-        reelRotor.position.copy(base).add(new T.Vector3(-12*scale,-10*scale,0).applyAxisAngle(zAxis,angle));
-        reelRotor.position.z=103;reelRotor.rotation.z=angle+a;
+    const showingLine=!menu&&v.tackle.state!=="none";
+    root.visible=false;line.visible=showingLine;
+    float.visible=showingLine&&!f&&!isIce&&v.mode==="float";
+    const idleSway=Math.sin(t*.71)*2.2,mode=isIce?"ice":v.mode;
+    const anchors={
+      float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
+      spin:[.74,.82,.40,.36],ice:[.74,.82,.54,.59]
+    };
+    const a=anchors[mode]||anchors.float;
+    const base=V(W*a[0],H*a[1]+idleSway,40);
+    const tip=V(W*(a[2]+tilt*(isIce?.055:.12)),H*a[3]+idleSway-(v.rod.lift||0)*H*.05,30);
+    if(v.tackle.state==="fly")tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;
+    const c=FZ.RodArt.info(mode),len=base.distanceTo(tip);
+    const angle=Math.atan2(base.y-tip.y,base.x-tip.x),zAxis=new T.Vector3(0,0,1);
+    const factor=len/(c.baseX-c.tipX),width=1440*factor,height=300*factor;
+    const flexPx=Math.min(isIce?9:34,len*(isIce?.045:.085))*bend;
+    let active=null,top=tip.clone();
+    for(const k of Object.keys(rodSprites)){
+      const m=rodSprites[k];m.visible=false;
+      if(k!==mode||!m.userData.ready)continue;
+      active=m;m.visible=!menu;
+      const baseOffset=new T.Vector3((c.baseX-720)*factor,(150-c.axisY)*factor,0).applyAxisAngle(zAxis,angle);
+      m.position.copy(base).sub(baseOffset);m.position.z=80;
+      m.rotation.z=angle;m.scale.set(width,height,1);
+      const attr=m.geometry.attributes.position;
+      for(let i=0;i<attr.count;i++){
+        const x=attr.getX(i);
+        const along=U.clamp((c.baseX-(x+.5)*1440)/(c.baseX-c.tipX),0,1);
+        attr.setY(i,m.userData.ys[i]-flexPx*along*along/height);
       }
+      attr.needsUpdate=true;
+    }
+    top.add(new T.Vector3(0,-flexPx,0).applyAxisAngle(zAxis,angle));
+    reelCrank.visible=!!active&&!menu;
+    if(reelCrank.visible){
+      const reelOffset=new T.Vector3((c.reelX-c.baseX)*factor,(c.axisY-c.reelY)*factor,0).applyAxisAngle(zAxis,angle);
+      reelCrank.position.copy(base).add(reelOffset);reelCrank.position.z=108;
+      reelCrank.scale.setScalar(factor);reelCrank.rotation.z=angle+(v.rod.reelAngle||0);
     }
     const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
     let p=R.proj(lineX,Math.max(3.6,lineZ));
@@ -286,13 +246,14 @@
     float.position.copy(pos);float.rotation.z=-(v.tackle.tilt||0)*.65+Math.sin(t*1.8)*.045;
     const floatScale=U.clamp(p.s*.15,2.4,8);float.scale.setScalar(floatScale);if(v.mode!=='float'&&!isIce)float.scale.setScalar(floatScale*.25);
     const linePos=line.geometry.attributes.position;
-    const top=pts[28], target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
+    const target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
     const sag=isIce?H*.004:(f?H*(.004+.038*(1-U.clamp(f.tension||0,0,1))):H*.075);
     for(let i=0;i<65;i++){const u=i/64,point=top.clone().lerp(target,u);point.y-=Math.sin(u*Math.PI)*sag;linePos.setXYZ(i,point.x,point.y,point.z);}
     linePos.needsUpdate=true;
-    tackleMetrics={winter:isIce,rodLength:base.distanceTo(tip),blankLength:rodBase.distanceTo(tip),
-      jointOverlap:isIce?6:7,tipScreenY:H/2-tip.y,holeScreenY:R.holeGeom().y,
-      reelVisible:!!(reelCrank&&reelCrank.visible),iceDrumVisible:!!(reelRotor&&reelRotor.visible),
+    tackleMetrics={winter:isIce,rodLength:len,blankLength:len*(isIce?.65:.78),
+      assetMode:mode,assetReady:!!(active&&active.userData.ready),
+      tipScreenY:H/2-top.y,holeScreenY:R.holeGeom().y,
+      reelVisible:reelCrank.visible&&!isIce,iceDrumVisible:reelCrank.visible&&isIce,
       reelRate:v.rod.reelRate||0};
     net.visible=!!v.landing&&!menu;if(net.visible){net.position.copy(V(W*.43,H*(.85-v.landing.k*.20),50));net.rotation.z=-.2;net.scale.setScalar(1+v.landing.k*.4);}
     if(f&&!isIce&&(f.surface>.15||f.jump||v.landing)){
