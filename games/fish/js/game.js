@@ -599,6 +599,12 @@
       jumping: !!(f.jump && f.jump.k < 1), jumpProgress: f.jump ? f.jump.k : 0
     }, dt);
     if (lineMotion.slipping) FZ.Sound.drag(U.clamp(lineMotion.excess / lineT, 0, 1));
+    // A revived fish needs a brief recovery after the broken-line/ad handoff;
+    // stale high tension must not snap the line before the player can react.
+    if (f.reviveGrace > 0) {
+      f.reviveGrace = Math.max(0, f.reviveGrace - dt);
+      f.T = Math.min(f.T, lineT * 0.75);
+    }
     if (f.T > lineT) return lose("snap");
     const intake = lineMotion.intake;
     // The fish moves along the line when the drag pays out; a taut line
@@ -684,7 +690,12 @@
   // Второй шанс после рекламы: рыба снова на крючке
   G.revive = function () {
     if (!rig.lost || !rig.lost.canRevive) return false;
-    const f = rig.lost.f; f.revived = true; f.T = f.Fmax * 0.3; f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
+    const f = rig.lost.f;
+    f.revived = true;
+    f.T = Math.min(f.Fmax * 0.2, G.gear(sess.mode).line.test * st.drag * 0.55);
+    f.muscle = 0; f.surge = 0; f.vz = 0; f.vx *= 0.3;
+    f.reviveGrace = 1.2;
+    f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
     f.S = Math.min(f.S, 0.6); if (!sess.ice) f.X *= 0.6; f.Z = Math.min(f.Z, 40);
     rig.fish = f; rig.state = "fight"; rig.lost = null;
     emit("revived");
