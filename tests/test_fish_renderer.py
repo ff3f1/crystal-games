@@ -38,9 +38,40 @@ with sync_playwright() as p:
   page.evaluate('__game.UI.showMenu()')
   assert page.locator('#mGo').bounding_box()['y']>0
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  assert page.locator('#mSet').bounding_box()['y']+page.locator('#mSet').bounding_box()['height']<=size[1],size
   page.screenshot(path=str(out/f'menu_{size[0]}.png'))
  page.set_viewport_size({'width':390,'height':844})
- page.evaluate("__game.UI.closeMenu(); __game.UI.showSettings()")
+ page.evaluate("__game.UI.closeMenu()")
+ # Winter ice hole must agree with the legacy canvas coordinates, including after drilling.
+ page.evaluate("__game.G.startSession('pond','winter')")
+ page.wait_for_timeout(400)
+ winter=page.evaluate("""()=>{
+   const h=FZ.Scene.holeGeom(),i=FZ.Scene.graphicsInfo();
+   return {open:i.hole.open,delta:Math.max(
+     Math.abs(i.hole.x-h.x/innerWidth),Math.abs(i.hole.y-h.y/innerHeight),
+     Math.abs(i.hole.rx-h.rx/innerWidth),Math.abs(i.hole.ry-h.ry/innerHeight))};
+ }""")
+ assert winter['delta']<.001,winter
+ assert winter['open']==0,winter
+ ready=page.evaluate("""()=>{
+   const G=__game.G,r=G.rig();r.state='wait';
+   G.sess().hole={id:13,depth:1.5,lure:.8};
+   FZ.Scene.render(G.view(2),.016);
+   return FZ.Scene.graphicsInfo().hole.open;
+ }""")
+ assert ready==1,ready
+ # Animated 2D reel crank angle follows the reel rotation from gameplay.
+ turned=page.evaluate("""()=>{
+   const G=__game.G,r=G.rig(),S=FZ.Scene;
+   r.rod.reelAngle=0;S.render(G.view(2),.016);
+   const start=S.graphicsInfo().reelCrankAngle;
+   r.rod.reelAngle=1.8;S.render(G.view(2.05),.016);
+   const end=S.graphicsInfo().reelCrankAngle;
+   return Math.abs(end-start);
+ }""")
+ assert turned>1.5,turned
+ page.screenshot(path=str(out/'winter-hole.png'))
+ page.evaluate("__game.G.startSession('pond','summer');__game.UI.showSettings()")
  page.locator('#ambienceVolume').fill('23');page.locator('#ambienceVolume').dispatch_event('input')
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
  page.evaluate('__game.G.save(true)');page.reload();page.wait_for_function('window.__game')
