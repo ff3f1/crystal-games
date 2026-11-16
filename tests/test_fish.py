@@ -56,6 +56,14 @@ with sync_playwright() as p:
     pg.click("#cKeep"); pg.wait_for_timeout(300)
     check("деньги за улов", pg.evaluate("__game.G.state().money") > money0)
     check("рыба в атласе", pg.evaluate("Object.keys(__game.G.state().caught).length") == 1)
+    check("улов записан в личный журнал", pg.evaluate("__game.G.state().journal.length===1 && __game.G.state().journal[0].kept===true"))
+    pg.evaluate("__game.UI.showJournal('recent')")
+    check("журнал показывает историю улова", pg.locator(".sheet").get_by_text("Журнал рыбака").count() > 0 and pg.locator(".sheet").get_by_text("В садок").count() > 0)
+    pg.evaluate("__game.UI.showJournal('records')")
+    check("журнал показывает личные рекорды", pg.locator(".sheet").get_by_text("Рекорды").count() > 0)
+    pg.evaluate("__game.UI.showJournal('stats')")
+    check("журнал показывает статистику", pg.locator(".sheet").get_by_text("Общий вес").count() > 0)
+    pg.evaluate("__game.UI.closeSheet()")
 
     # Магазин: покупка фидера, наживки
     pg.evaluate("__game.G.state().money=5000; __game.G.state().lvl=3; __game.UI.showShop('rod')"); pg.wait_for_timeout(300)
@@ -98,9 +106,9 @@ with sync_playwright() as p:
     ok = pg.evaluate("""()=>{const s=FZ.SP.pike;const c=FZ.Share.card({s,w:5.2,len:88,loc:'oka',date:'2026-10-23',trophy:false,record:true,newSpecies:false,pct:90});return c.width===1080&&c.toDataURL().length>50000}""")
     check("карточка улова 1080×1920", ok)
     # Старый формат v1 автоматически получает новые поля экспедиции и достижений
-    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;localStorage.setItem('fz_save',JSON.stringify(old));}""")
+    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;delete old.journal;localStorage.setItem('fz_save',JSON.stringify(old));}""")
     pg.reload(); pg.wait_for_timeout(1500)
-    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10"))
+    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10 && Array.isArray(__game.G.state().journal)"))
     check("сохранение", pg.evaluate("__game.G.state().rods.indexOf('d1')>=0"))
     b.close()
 
