@@ -51,6 +51,7 @@ const REWARDS=[
 {id:"deep_jig",name:"Морской глубоководный джиг",kind:"bait",item:"deep_jig",tokens:1,desc:"Приманка для донных великанов"}
 ];
 function board(){const s=G.state();if(!s.huntBoard||typeof s.huntBoard!=="object")s.huntBoard={completed:[],active:null,tokens:0};if(!Array.isArray(s.huntBoard.completed))s.huntBoard.completed=[];s.huntBoard.tokens=Math.max(0,Number(s.huntBoard.tokens)||0);return s.huntBoard;}
+const coreLoad=G.load;G.load=function(){const value=coreLoad.apply(this,arguments);board();return value;};
 function rank(n){return n>=10?"Легенда Тихого океана":n>=7?"Морской мастер":n>=4?"Опытный трофейщик":n>=1?"Охотник за трофеями":"Стажёр";}
 G.huntDefinitions=HUNTS;G.huntRewards=REWARDS;
 G.huntBoard=function(){const b=board();return{completed:b.completed.slice(),active:b.active,tokens:b.tokens,rank:rank(b.completed.length),next:HUNTS.find(x=>b.completed.indexOf(x.id)<0)||null};};
