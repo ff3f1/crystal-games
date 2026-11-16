@@ -140,5 +140,24 @@
     return { slipping, slipSpeed, intake, excess, tension: f.T };
   };
 
+
+  // Retrieve state is expressed in seconds/metres, independent of render FPS.
+  P.lure = function(r,opts,dt) {
+    const zone=opts.zone||"mid",jig=zone==="bottom",top=zone==="top";
+    r.twitch=Math.max(0,(r.twitch||0)-dt*2.4);
+    r.spinPause=r.reeling?0:(r.spinPause||0)+dt;
+    const speed=r.reeling?Math.max(0,opts.speed)*.8:0;
+    r.lureSpeed=(r.lureSpeed||0)+(speed-(r.lureSpeed||0))*(1-Math.exp(-10*dt));
+    const maxDepth=Math.max(.5,opts.depth||3);
+    if(r.lureDepth==null)r.lureDepth=top?.15:jig?maxDepth*.7:maxDepth*.4;
+    const sink=top?.015:jig?.65:.22;
+    const lift=r.reeling?(jig?.9:.20):0;
+    r.lureDepth=clamp(r.lureDepth+(sink-lift-r.twitch*1.7)*dt,.08,maxDepth);
+    r.retrieveStyle=r.twitch>.18?(jig?"Ступенька":"Рывок"):
+      r.reeling?"Равномерная":jig?"Падение":"Пауза";
+    const usefulPause=r.spinPause>.25&&r.spinPause<2.2;
+    r.lureAttraction=1+(usefulPause?.25:0)+(r.twitch>.2?(jig||top?.35:.12):0);
+    return r.lureSpeed;
+  };
   FZ.FightPhysics = P;
 })(window.FZ);

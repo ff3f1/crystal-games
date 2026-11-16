@@ -155,9 +155,9 @@
     switch (r.state) {
       case "idle": label = "Заброс"; break;
       case "fly": case "settle": label = "…"; calm = true; break;
-      case "wait": label = mode === "spin" ? "Крутить" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
-      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Клюёт…"; calm = true; } break;
-      case "fight": label = "Тянуть"; break;
+      case "wait": label = mode === "spin" ? "Подмотка" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
+      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Подмотка" : "Клюёт…"; calm = true; } break;
+      case "fight": label = "Подмотка"; break;
       case "landing": case "result": label = "…"; calm = true; break;
       case "nohole": label = "Бурить"; break;
       case "drill": label = "Бурю…"; calm = true; break;
@@ -198,7 +198,7 @@
     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
     else if (r.state === "wait") {
       const since = s.t - (r.castAt || 0);
-      if (mode === "spin") h = since < 5 ? "Удерживайте «Подмотка»<small>Другим пальцем ведите удилище по воде. Отпустите кнопку — пауза</small>" : "";
+      if (mode === "spin") h = since < 5 ? "Удерживайте «Подмотка»<small>Другим пальцем ведите удилище по воде. Отпустите кнопку — пауза</small>" : (r.retrieveStyle || "Пауза") + "<small>Приманка: " + (r.lureDepth || 0).toFixed(1).replace(".", ",") + " м · короткий жест — рывок</small>";
       else if (!G.gear(mode).bait || !G.baitLeft(G.gear(mode).bait.id)) h = "Нет наживки<small>Купите в «Снастях» или получите за рекламу на кнопке наживки</small>";
       else if (mode === "ice") h = since < 9 ? "Короткие подёргивания мормышкой<small>Сделайте паузу после серии движений — рыба берёт на остановке</small>" : "";
       else if (since < 5) h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" : (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Ждём поклёвку");

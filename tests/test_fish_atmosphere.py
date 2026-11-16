@@ -23,6 +23,7 @@ with sync_playwright() as p:
  assert winter and winter['open']==0,winter
  pg.evaluate("__game.G.startSession('pond','summer')")
  result=pg.evaluate('''()=>{const G=__game.G,s=G.sess();const before=s.wx.sky;s.weatherAge=149.9;G.update(.2,1);return {before,after:s.wx.sky,front:s.weatherFront};}''');assert result['front']==1 and result['before']!=result['after'],result
+ pg.evaluate("__game.G.sess().hour=12")
  skip=pg.evaluate("()=>{__game.G.skipTo('night');const s=__game.G.sess();return {period:s.period,front:s.weatherFront};}")
  assert skip['period']=='night' and skip['front']>1,skip
  assert not errors,errors

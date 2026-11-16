@@ -322,7 +322,7 @@
     rig.flyFrom = { X: 0, Z: 4.5 }; rig.flyWind = wind;
     rig.flyDur = (0.38 + 0.12 * Math.sqrt(a.Z)) * (sess.mode === "feeder" ? 1.10 : sess.mode === "spin" ? 0.94 : 1);
     rig.rod.jerk = 0.42;
-    rig.bite = null; rig.still = 0; rig.spinPause = 0;
+    rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.lureDepth=null;rig.lureSpeed=0;rig.twitch=0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
     if (sess.mode === "feeder" && (st.inv.gb || 0) > 0) { st.inv.gb--; feedSpot(rig.X, rig.Z, 0.22); }
@@ -378,7 +378,10 @@
   function zoneNow() {
     const g = G.gear(sess.mode);
     if (sess.mode === "feeder") return "bottom";
-    if (sess.mode === "spin") return g.bait && g.bait.lure ? g.bait.lure : "mid";
+    if (sess.mode === "spin") {
+      if(rig.lureDepth!=null){const k=rig.lureDepth/Math.max(.5,G.depthAt(rig.X,rig.Z));return k>.72?"bottom":k>.24?"mid":"top";}
+      return g.bait && g.bait.lure ? g.bait.lure : "mid";
+    }
     if (sess.mode === "ice") { const k = rig.lure || 0.8; return k > 0.75 ? "bottom" : k > 0.3 ? "mid" : "top"; }
     return g.depth || "bottom";
   }
@@ -417,7 +420,7 @@
         m *= sess.hole ? sess.hole.fish : 1;
         m *= FZ.FightPhysics.iceAttraction(s, rig.jig, rig.jigPause);
       }
-      if (sess.mode === "spin") { m *= rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1; }
+      if (sess.mode === "spin") { m *= (rig.lureAttraction || 1) * (rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1); }
       if (sess.mode === "float" && sess.wx.wind >= 8) m *= 0.8;
       m *= RARF[s.rar];
       // Mild activity pressure prevents long empty spells, but never forces
@@ -639,7 +642,8 @@
     // restrains outward travel until it slips. Ice fights use vertical depth.
     if (sess.ice) f.D += (f.vz * (lineMotion.slipping ? 0.45 : 0.12) + lineMotion.slipSpeed * 0.5) * dt;
     else f.Z += (f.vz > 0 ? f.vz * (st.tut < 3 ? 0.06 : (lineMotion.slipping ? 1 : 0.18)) : f.vz) * dt + lineMotion.slipSpeed * dt;
-    rig.rod.reelRate=U.damp(rig.rod.reelRate||0,intake/Math.max(.1,rod.reel),12,dt);
+    rig.rod.reelRate=rig.reeling ? intake/Math.max(.1,rod.reel) : 0;
+    rig.rod.slipAngle=(rig.rod.slipAngle||0)+lineMotion.slipSpeed*dt*9;
     if(intake>0) {
       if(sess.ice) f.D-=intake*.55*dt; else f.Z-=intake*dt;
       FZ.Sound.reel(rod.reel);
@@ -738,7 +742,7 @@
   function startLanding() {
     const f = rig.fish;
     if (sess.ice && f.w > (st.extras.auger ? 8 : 5) && !st.extras.gaff && U.rand() < 0.6) return lose("hole");
-    rig.state = "landing"; rig.landing = { k: 0 };
+    rig.state = "landing"; rig.landing = { k: 0, duration: sess.ice || f.w < .35 ? .8 : 2.1 };
     FZ.Sound.splash(0.7);
     if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.8); else FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y - 10, 10);
   }
@@ -876,7 +880,8 @@
     const r = rig;
     r.rod.jerk = U.damp(r.rod.jerk, 0, 9, dt);
     r.rod.ring = U.damp(r.rod.ring, 0, 3, dt);
-    r.rod.tilt = U.damp(r.rod.tilt, r.state === "fight" ? r.tilt : 0, 8, dt);
+    r.rod.tilt = U.damp(r.rod.tilt, r.state === "fight" || sess.mode === "spin" ? r.tilt : 0, 8, dt);
+    r.rod.lift=U.damp(r.rod.lift||0,r.liftTarget||0,9,dt);
     r.jig = Math.max(0, (r.jig || 0) - dt * 0.85);
     r.jigCooldown = Math.max(0, (r.jigCooldown || 0) - dt);
     r.jigPause = Math.min(10, (r.jigPause || 0) + dt);
@@ -921,24 +926,24 @@
     } else if (r.state === "fight") {
       fightTick(dt, t);
     } else if (r.state === "landing") {
-      r.landing.k += dt / 1.2;
+      r.landing.k += dt / (r.landing.duration || 1.2);
       if (r.landing.k >= 1) finishCatch();
     }
     if (r.state !== "fight") { r.rod.tension = U.damp(r.rod.tension, 0, 6, dt); }
     biteAnim(dt, t);
     if(r.state!=='fight' && (r.state!=='wait' || sess.mode!=='spin' || !r.reeling))
-      r.rod.reelRate=U.damp(r.rod.reelRate||0,0,12,dt);
+      r.rod.reelRate=0;
     r.rod.reelAngle+=dt*14*(r.rod.reelRate||0);
   };
   // Спиннинг: проводка
   function spinTick(dt) {
-    const r = rig;
-    if (r.reeling) {
-      const g = G.gear(sess.mode);
-      r.Z -= g.rod.reel * 0.8 * dt; r.spinPause = 0; r.rod.reelRate=U.damp(r.rod.reelRate||0,.8,12,dt); FZ.Sound.reel(g.rod.reel);
-      r.X *= Math.pow(0.85, dt);
-      if (r.Z < 4.2) { r.state = "idle"; emit("msg", { text: "Проводка закончена — бросайте снова" }); }
-    } else r.spinPause += dt;
+    const r=rig,g=G.gear(sess.mode);
+    const speed=FZ.FightPhysics.lure(r,{zone:g.bait&&g.bait.lure,speed:g.rod.reel,depth:G.depthAt(r.X,r.Z)},dt);
+    r.Z-=speed*dt;
+    r.X+=((r.tilt||0)*speed*.18-r.X*.12)*dt;
+    r.rod.reelRate=r.reeling?speed/Math.max(.1,g.rod.reel):0;
+    if(r.reeling&&speed>.05)FZ.Sound.reel(speed);
+    if(r.Z<4.2){r.state="idle";emit("msg",{text:"Проводка закончена — бросайте снова"});}
   }
 
   // Данные для отрисовки

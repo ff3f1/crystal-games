@@ -123,6 +123,61 @@ with sync_playwright() as p:
  page.evaluate('__game.G.save(true)');page.reload();page.wait_for_function('window.__game')
  assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
 
+
+ # Native Chromium touch events exercise browser pointer capture and two fingers.
+ for width,height in [(360,800),(390,844),(412,915)]:
+  page.set_viewport_size({'width':width,'height':height})
+  page.evaluate("""()=>{
+    const G=__game.G;G.startSession('pond','summer');G.state().tut=4;
+    G.state().load.spin={rod:'s2',line:'l4',hook:'h3',bait:'jig'};
+    G.state().lures.jig=1;G.sess().mode='spin';
+    const r=G.rig();r.state='wait';r.Z=24;r.idleT=-100;
+    G.biteTable=()=>[];
+    __game.UI.frame(.016,1);
+  }""")
+  cdp=page.context.new_cdp_session(page)
+  box=page.locator('#bAct').bounding_box()
+  reel={'id':11,'x':box['x']+box['width']/2,'y':box['y']+box['height']/2}
+  rod={'id':22,'x':width*.25,'y':height*.55}
+  def touch(kind,points): cdp.send('Input.dispatchTouchEvent',{'type':kind,'touchPoints':points})
+  touch('touchStart',[reel]);page.wait_for_timeout(100)
+  assert page.evaluate('__game.G.rig().reeling')
+  angle=page.evaluate('__game.G.rig().rod.reelAngle')
+  touch('touchStart',[reel,rod])
+  rod['x']+=40;touch('touchMove',[reel,rod]);page.wait_for_timeout(120)
+  assert page.evaluate('__game.G.rig().tilt>0 && __game.G.rig().reeling')
+  assert page.evaluate('__game.G.rig().rod.reelAngle')>angle
+  touch('touchEnd',[reel]);assert page.evaluate('__game.G.rig().reeling')
+  touch('touchEnd',[]);page.wait_for_timeout(100)
+  assert not page.evaluate('__game.G.rig().reeling')
+  angle=page.evaluate('__game.G.rig().rod.reelAngle');page.wait_for_timeout(100)
+  assert abs(page.evaluate('__game.G.rig().rod.reelAngle')-angle)<.001
+  touch('touchStart',[reel]);touch('touchCancel',[])
+  assert not page.evaluate('__game.G.rig().reeling')
+  touch('touchStart',[reel]);page.evaluate('__game.UI.showMenu()');page.wait_for_timeout(80)
+  assert not page.evaluate('__game.G.rig().reeling')
+  touch('touchEnd',[]);page.evaluate('__game.UI.closeMenu()')
+  page.screenshot(path=str(out/f'multitouch-{width}.png'))
+  cdp.detach()
+ # Render actual net/fish trajectory at sampled phases and save framebuffer.
+ import base64
+ page.set_viewport_size({'width':390,'height':844})
+ page.evaluate("FZ.Fish3D.ready(FZ.SP.pike)")
+ previous=None
+ for k in [0,.25,.5,.75,1]:
+  sample=page.evaluate("""k=>{
+    const G=__game.G,r=G.rig(),S=FZ.Scene;
+    r.fish={s:FZ.SP.pike,w:3,lenM:.8,X:0,Z:4.5,surface:1,hooked:true};
+    r.state='landing';r.landing={k,duration:1000};
+    S.render(G.view(8+k),.016);
+    return {pose:S.graphicsInfo().landing,png:S.snapshot().toDataURL()};
+  }""",k)
+  assert sample['pose']['visible']
+  (out/f'net-{k}.png').write_bytes(base64.b64decode(sample['png'].split(',')[1]))
+  if previous: assert sample['pose']['fishY']<=previous['fishY']
+  previous=sample['pose']
+ page.evaluate("__game.G.startSession('pond','summer')")
+
  # A delayed reward popup must not interrupt the cast after pressing Fish.
  page.click('#mGo')
  page.wait_for_timeout(500)

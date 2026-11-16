@@ -43,12 +43,15 @@
     const p=pointers.get(e.pointerId); if(!p)return;
     if(blocked() || p.rig !== G.rig()) { releaseInput(); return; }
     e.preventDefault();
+    const moveDistance=Math.hypot(e.clientX-p.x,e.clientY-p.y);
     p.x=e.clientX; p.y=e.clientY;
     p.moved=Math.max(p.moved,Math.hypot(p.x-p.sx,p.y-p.sy));
     if(p.role === "cast" && aim) setAim(p.x,p.y);
     if(p.role === "rod") {
       const r=G.rig();
       r.tilt=U.clamp(p.startTilt+(p.x-p.sx)/(Sc.size().W*.35),-1,1);
+      r.liftTarget=U.clamp((p.sy-p.y)/(Sc.size().W*.3),-.6,1);
+      if(G.sess().mode==="spin" && r.state==="wait" && moveDistance>8)r.twitch=Math.min(1,(r.twitch||0)+moveDistance/70);
     }
   });
   function endPointer(e,cancelled) {
@@ -95,7 +98,7 @@
     const ids=Array.from(pointers.keys()); pointers.clear(); actions.clear();
     rodId=null;castId=null;aim=null;inputRig=null;
     ids.forEach(id=>release(cv,id));
-    const r=G.rig();if(r){r.reeling=false;r.tilt=0;}
+    const r=G.rig();if(r){r.reeling=false;r.tilt=0;r.liftTarget=0;}
     const b=document.getElementById("bAct");if(b)b.classList.remove("held");
   }
   Input.reset=releaseInput;

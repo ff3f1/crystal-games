@@ -1038,7 +1038,7 @@
 
     // поплавок / рыба / приманка
     if (!v.ice && target && !target.air) {
-      if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target);
+      if (v.fish && v.fish.hooked && !v.landing) R.drawFightFish(v, L, t, target);
       else if (v.mode === "float") R.drawFloat(target, tk, L, t, night);
       else if (v.mode === "spin" && tk.reeling) { ctx.strokeStyle = U.rgba("#ffffff", 0.35); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(target.x - target.s * 0.4, target.y + 2); ctx.lineTo(target.x, target.y); ctx.lineTo(target.x + target.s * 0.4, target.y + 2); ctx.stroke(); }
       else { ctx.fillStyle = U.rgba("#ffffff", 0.3); ctx.beginPath(); ctx.ellipse(target.x, target.y, 3, 1, 0, 0, Math.PI * 2); ctx.fill(); }
@@ -1133,22 +1133,26 @@
     if (night) { ctx.fillStyle = "rgba(160,255,140,0.6)"; }
   };
 
-  R.drawLanding = function (v, L, t) {
-    const ld = v.landing; const k = ld.k;
-    const cx = W * 0.5, cy = U.lerp(H * 0.72, H * 0.52, U.easeOut(k));
-    const f = v.fish;
-    const lenPx = Math.min(W * 0.8, Math.max(80, (f ? f.lenM : 0.3) * 330));
-    if (!v.ice) {
-      // подсачек
-      ctx.strokeStyle = U.mix("#3a3a3a", "#101418", L.dark); ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(W * 1.05, H * 1.05); ctx.lineTo(cx + lenPx * 0.45, cy + 22); ctx.stroke();
-      ctx.strokeStyle = U.mix("#2a2a2a", "#05080c", L.dark); ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.ellipse(cx, cy + 20, lenPx * 0.55, lenPx * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = "rgba(40,40,40,0.5)"; ctx.lineWidth = 1;
-      for (let i = -5; i <= 5; i++) { ctx.beginPath(); ctx.moveTo(cx + i * lenPx * 0.1, cy + 20 - lenPx * 0.15 * Math.sqrt(1 - (i / 5.5) * (i / 5.5))); ctx.quadraticCurveTo(cx + i * lenPx * 0.06, cy + 70, cx, cy + 80); ctx.stroke(); }
+  R.drawLanding = function(v,L,t) {
+    const f=v.fish;if(!f)return;
+    const p=FZ.RodArt.landingPose(v,W,H,R.proj),ice=!!v.ice;
+    if(ice){const h=R.holeGeom();p.fishX=h.x;p.fishY=h.y-p.lift*H*.2;}
+    if(!ice&&f.w>=.35){
+      const radius=p.radius;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.12);
+      const chrome=ctx.createLinearGradient(-radius,-20,radius,40);
+      chrome.addColorStop(0,"#35494e");chrome.addColorStop(.45,"#cbdedb");chrome.addColorStop(1,"#546d70");
+      ctx.lineCap="round";ctx.strokeStyle=chrome;ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(radius,0);ctx.lineTo(radius*3.5,radius*2.2);ctx.stroke();
+      ctx.strokeStyle="#17292e";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(radius*2.8,radius*1.6);ctx.lineTo(radius*3.5,radius*2.2);ctx.stroke();
+      const bowl=(q,d)=>({x:Math.cos(q)*radius*(1-d*.78),y:Math.sin(q)*radius*.42*(1-d*.78)+Math.sin(d*Math.PI*.5)*radius*.65*p.sag});
+      ctx.strokeStyle="rgba(99,132,120,.8)";ctx.lineWidth=1;
+      for(let j=0;j<24;j++){ctx.beginPath();for(let i=0;i<=10;i++){const z=bowl(j/24*Math.PI*2+i*.009,i/10);i?ctx.lineTo(z.x,z.y):ctx.moveTo(z.x,z.y);}ctx.stroke();}
+      for(let i=1;i<=10;i++){ctx.beginPath();for(let j=0;j<=48;j++){const z=bowl(j/48*Math.PI*2,i/10);j?ctx.lineTo(z.x,z.y):ctx.moveTo(z.x,z.y);}ctx.stroke();}
+      ctx.strokeStyle=chrome;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(0,0,radius,radius*.42,0,0,Math.PI*2);ctx.stroke();ctx.restore();
     }
-    if (f) FZ.Art.drawFish(ctx, f.s, cx, cy, lenPx, { phase: t * 12, amp: 0.35 * (1 - k * 0.5), dir: 1, roll: Math.sin(t * 5) * 0.08 });
-    if (Math.random() < 0.5) R.parts.push({ x: cx + (Math.random() - 0.5) * lenPx, y: cy, vx: (Math.random() - 0.5) * 60, vy: -Math.random() * 80, life: 0.6, age: 0, r: 1.5 + Math.random() * 2, col: "rgba(230,242,250,0.9)", g: 500, floor: H });
+    FZ.Art.drawFish(ctx,f.s,p.fishX,p.fishY,p.length,{phase:t*9,amp:.15*(1-p.lift),dir:1,roll:Math.sin(t*5)*.04});
+    if(p.lift>0&&!ice){ctx.fillStyle="rgba(212,237,245,.7)";for(let i=0;i<16;i++){const fall=(t*1.6+i*.137)%1;ctx.fillRect(p.fishX+Math.sin(i*2.4)*p.radius*.65,p.fishY+p.radius*.3+fall*fall*60,1.4,3);}}
   };
 
   // ---------- Погода ----------

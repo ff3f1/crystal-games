@@ -127,7 +127,7 @@
   function sphere(group,x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.SphereGeometry(1,18,12),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;}
   function torus(group,r,t,mat,x,y,z){const m=new T.Mesh(new T.TorusGeometry(r,t,6,36),mat);m.position.set(x,y,z);group.add(m);return m;}
   function connect(mesh,a,b){mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());mesh.scale.y=a.distanceTo(b);}
-  let reelCrank,rodSprites={},root,hemisphere,keyLight,rimLight,tackleMetrics=null;
+  let reelCanvas,reelTexture,reelPlane,netBag,netDrops,landingMetrics=null,reelCrank,rodSprites={},root,hemisphere,keyLight,rimLight,tackleMetrics=null;
   function buildTackle(){
     root=new T.Group();scene.add(root);
     const chrome=material('#c5c4b5',.24,.85);
@@ -146,23 +146,43 @@
         mat.map=tx;mat.needsUpdate=true;sprite.userData.ready=true;
       },undefined,()=>{sprite.userData.ready=false;});
     }
-    // Only the mechanical indicator rotates. The reel body is part of the same texture.
-    const silver=new T.MeshBasicMaterial({color:'#c1c9c4',side:T.DoubleSide,depthTest:false,depthWrite:false});
-    const dark=new T.MeshBasicMaterial({color:'#252e30',side:T.DoubleSide,depthTest:false,depthWrite:false});
+    reelCanvas=document.createElement("canvas");reelCanvas.width=210;reelCanvas.height=170;
+    reelTexture=new T.CanvasTexture(reelCanvas);reelTexture.colorSpace=T.SRGBColorSpace;
+    reelTexture.generateMipmaps=false;reelTexture.minFilter=T.LinearFilter;
     reelCrank=new T.Group();scene.add(reelCrank);reelCrank.visible=false;
-    const arm=new T.Mesh(new T.PlaneGeometry(13,2.6),silver);
-    arm.position.set(5.5,2.5,0);reelCrank.add(arm);
-    const knob=new T.Mesh(new T.CircleGeometry(3.8,20),dark);
-    knob.position.set(11,5,0);reelCrank.add(knob);
-    reelCrank.children.forEach(m=>m.renderOrder=22);
+    reelPlane=new T.Mesh(new T.PlaneGeometry(210,170),new T.MeshBasicMaterial({
+      map:reelTexture,transparent:true,depthTest:false,depthWrite:false,side:T.DoubleSide}));
+    reelPlane.renderOrder=22;reelCrank.add(reelPlane);
     float=new T.Group();scene.add(float);
     const white=material('#eee9d6',.25),red=material('#ee4f25',.24),black=material('#252c23',.4),lime=material('#e3d95c',.32);
     sphere(float,0,0,0,.63,1.15,.63,white);sphere(float,0,.62,0,.60,.62,.60,red);
     cylinder(float,.07,.10,4.7,black,0,2.5,0);cylinder(float,.10,.10,1.35,red,0,4.1,0);cylinder(float,.11,.11,.25,lime,0,3.25,0);cylinder(float,.055,.055,2.8,black,0,-2,0);
     const lg=new T.BufferGeometry();lg.setAttribute('position',new T.BufferAttribute(new Float32Array(65*3),3));line=new T.Line(lg,new T.LineBasicMaterial({color:'#d8e0bd',transparent:true,opacity:.65}));scene.add(line);
     aimMesh=new T.Mesh(new T.RingGeometry(14,15,48),new T.MeshBasicMaterial({color:'#e4c286',side:T.DoubleSide,transparent:true,opacity:.8}));aimMesh.scale.y=.35;scene.add(aimMesh);aimMesh.visible=false;
-    net=new T.Group();scene.add(net);const hoop=torus(net,53,2,chrome,0,0,0);hoop.scale.y=.65;
-    for(let i=-4;i<=4;i++){const gg=new T.BufferGeometry().setFromPoints([new T.Vector3(-45,i*7,-2),new T.Vector3(45,i*7,-2)]);net.add(new T.Line(gg,new T.LineBasicMaterial({color:'#555f4c',transparent:true,opacity:.55})));}net.visible=false;
+    net=new T.Group();scene.add(net);
+    const rimPoints=[];
+    for(let i=0;i<=64;i++){const q=i/64*Math.PI*2;rimPoints.push(new T.Vector3(53*Math.cos(q),35*Math.sin(q),0));}
+    const rim=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(rimPoints),80,2.1,8,false),chrome);net.add(rim);
+    const handle=cylinder(net,2.7,3.4,1,material("#263940",.48),0,0,0);
+    connect(handle,new T.Vector3(51,0,0),new T.Vector3(190,-125,12));
+    const grip=cylinder(net,4.2,4.2,1,material("#132024",.9),0,0,0);
+    connect(grip,new T.Vector3(155,-94,9),new T.Vector3(193,-128,12));
+    sphere(net,52,0,0,7,5,4,chrome);
+    netBag=new T.Group();net.add(netBag);
+    const meshPoints=[];
+    const bowl=(q,d)=>new T.Vector3(53*Math.cos(q)*(1-d*.78),35*Math.sin(q)*(1-d*.78)-d*4,-42*Math.sin(d*Math.PI*.5));
+    for(let j=0;j<24;j++)for(let i=0;i<10;i++){
+      const q=j/24*Math.PI*2,d=i/10;
+      meshPoints.push(bowl(q,d),bowl(q+.09,d+.1));
+    }
+    for(let i=1;i<=10;i++)for(let j=0;j<48;j++)
+      meshPoints.push(bowl(j/48*Math.PI*2,i/10),bowl((j+1)/48*Math.PI*2,i/10));
+    netBag.add(new T.LineSegments(new T.BufferGeometry().setFromPoints(meshPoints),
+      new T.LineBasicMaterial({color:"#718c80",transparent:true,opacity:.78})));
+    const drops=new Float32Array(28*3);
+    netDrops=new T.Points(new T.BufferGeometry(),new T.PointsMaterial({color:"#deeff5",size:2,transparent:true,opacity:.8}));
+    netDrops.geometry.setAttribute("position",new T.BufferAttribute(drops,3));scene.add(netDrops);netDrops.visible=false;
+    net.visible=false;
     const wp=new Float32Array(150*3),wr=U.rng('weather');for(let i=0;i<150;i++){wp[i*3]=(wr()-.5)*W;wp[i*3+1]=(wr()-.5)*H;wp[i*3+2]=30;}
     const wg=new T.BufferGeometry();wg.setAttribute('position',new T.BufferAttribute(wp,3));weather=new T.Points(wg,new T.PointsMaterial({color:'#dce9e7',size:1.7,transparent:true,opacity:.4}));scene.add(weather);weather.visible=false;
     const streaks=new T.BufferGeometry();streaks.setAttribute('position',new T.BufferAttribute(new Float32Array(150*6),3));
@@ -246,7 +266,11 @@
     if(reelCrank.visible){
       const reelOffset=new T.Vector3((c.reelX-c.baseX)*factor,(c.axisY-c.reelY)*factor,0).applyAxisAngle(zAxis,angle);
       reelCrank.position.copy(base).add(reelOffset);reelCrank.position.z=108;
-      reelCrank.scale.setScalar(factor);reelCrank.rotation.z=angle+(v.rod.reelAngle||0);
+      reelCrank.scale.setScalar(factor);reelCrank.rotation.z=angle;
+      const reelAlong=U.clamp((c.baseX-c.reelX)/(c.baseX-c.tipX),0,1);
+      reelCrank.position.add(new T.Vector3(0,-flexPx*reelAlong*reelAlong,0).applyAxisAngle(zAxis,angle));
+      const rc=reelCanvas.getContext("2d");rc.clearRect(0,0,210,170);rc.save();rc.translate(105,85);
+      FZ.RodArt.mechanism(rc,mode,v.rod.reelAngle||0,v.rod.slipAngle||0);rc.restore();reelTexture.needsUpdate=true;
     }
     const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
     let p=R.proj(lineX,Math.max(3.6,lineZ));
@@ -265,11 +289,29 @@
       tipScreenY:H/2-top.y,holeScreenY:R.holeGeom().y,
       reelVisible:reelCrank.visible&&!isIce,iceDrumVisible:reelCrank.visible&&isIce,
       reelRate:v.rod.reelRate||0};
-    net.visible=!!v.landing&&!menu;if(net.visible){net.position.copy(V(W*.43,H*(.85-v.landing.k*.20),50));net.rotation.z=-.2;net.scale.setScalar(1+v.landing.k*.4);}
+    const landing=v.landing&&f&&!isIce?FZ.RodArt.landingPose(v,W,H,R.proj):null;
+    net.visible=!!landing&&f.w>=.35&&!menu;netDrops.visible=net.visible&&landing.lift>0;
+    landingMetrics=landing?{...landing,visible:net.visible}:null;
+    if(net.visible){
+      net.position.copy(V(landing.x,landing.y,80));net.rotation.set(-.9,0,-.12);
+      net.scale.setScalar(landing.radius/53);netBag.scale.z=landing.sag;
+      const dp=netDrops.geometry.attributes.position;
+      for(let i=0;i<dp.count;i++){
+        const fall=(v.t*1.6+i*.137)%1,spread=Math.sin(i*2.4)*landing.radius*.7;
+        const p=V(landing.x+spread,landing.y+landing.radius*.35+fall*fall*70,95);
+        dp.setXYZ(i,p.x,p.y,p.z);
+      }dp.needsUpdate=true;
+      if(v.landing.k>.3&&v.landing.k<.58&&t-lastFloatRing>.14){lastFloatRing=t;addRipple(landing.fishX/W,landing.fishY/H,t,.65);}
+    }
     if(f&&!isIce&&(f.surface>.15||f.jump||v.landing)){
       if(fishId!==f.s.id){if(fishModel){scene.remove(fishModel);FZ.Fish3D.dispose(fishModel);}fishModel=FZ.Fish3D.create(f.s);if(fishModel){scene.add(fishModel);fishId=f.s.id;}}
       if(!fishModel)return;fishModel.visible=true;const fp=R.proj(f.X,Math.max(3.6,f.Z));const jump=f.jump?Math.sin(Math.PI*U.clamp(f.jump.k,0,1))*Math.min(120,fp.s*2):0;
       fishModel.position.copy(V(fp.x,fp.y-jump,20));fishModel.scale.setScalar(Math.min(85,Math.max(7,fp.s*(f.lenM||.4)/3.5)));fishModel.rotation.set(.4,f.vx>0?Math.PI:0,f.jump?Math.sin(f.jump.k*6)*.35:0);FZ.Fish3D.animate(fishModel,t*7,.08);
+      if(landing){
+        fishModel.position.copy(V(landing.fishX,landing.fishY,86));
+        fishModel.scale.setScalar(landing.length/4);
+        fishModel.rotation.set(.4,0,Math.sin(t*5)*.035*(1-landing.lift));
+      }
     }else if(fishModel)fishModel.visible=false;
     // Float disturbance is physically anchored to the projected contact point.
     if(!menu&&v.tackle.state==='water'&&t-lastFloatRing>.65){lastFloatRing=t;addRipple(p.x/W,p.y/H,t,(v.tackle.sink||0)>.3?.8:.3);}
@@ -305,5 +347,5 @@
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;c.getContext('2d').drawImage(canvas,0,0);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
     hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value,drilling:uniforms.drillProgress.value}:null,
-    reelCrankAngle:enabled&&reelCrank?reelCrank.rotation.z:null,tackle:tackleMetrics});
+    reelCrankAngle:enabled&&reelCrank?(FZ.Game.rig().rod.reelAngle||0):null,landing:landingMetrics,tackle:tackleMetrics});
 })(window.FZ);

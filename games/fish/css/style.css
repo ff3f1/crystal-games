@@ -413,3 +413,6 @@ h3 { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px;
 
 /* Independent gestures stay inside the fishing controls. */
 #cv, #bAct, #iceTrack { touch-action: none; user-select: none; -webkit-user-select: none; }
+
+/* The right thumb holds the reel while the left thumb steers on water. */
+.tray #bAct { order: 5; margin-left: auto; }

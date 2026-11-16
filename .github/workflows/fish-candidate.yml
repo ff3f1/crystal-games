@@ -24,6 +24,20 @@ jobs:
         run: |
           node tests/test_fish_physics.js
           node tests/test_fish_input.js
+          node tests/test_fish_mechanics.js
+      - name: Browser regression gate
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          mkdir -p test-output
+          python tests/test_fish.py test-output
+          python tests/test_fish_renderer.py test-output
+          python tests/test_fish_atmosphere.py test-output
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fishing-rc-gameplay-screenshots
+          path: test-output/
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
