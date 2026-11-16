@@ -166,7 +166,7 @@
   }
   function rodPoint(a,b,bend,u){return a.clone().lerp(b,u).add(new T.Vector3(-bend*40*u*u, -bend*100*u*u*u,0));}
   function tackle(v){
-    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const target=v.rod.bend||0;R._flex.v+=(target-R._flex.x)*.12;R._flex.v*=.75;R._flex.x+=R._flex.v;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
+    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const flexTarget=v.rod.bend||0;R._flex.v+=(flexTarget-R._flex.x)*.12;R._flex.v*=.75;R._flex.x+=R._flex.v;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
     const menu=document.getElementById("ovMenu").classList.contains("on");
     root.visible=!menu;float.visible=!menu&&v.tackle.state!=='none';line.visible=float.visible;
     const idleSway=Math.sin(t*.71)*2.2;
