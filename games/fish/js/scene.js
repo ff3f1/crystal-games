@@ -359,7 +359,7 @@
     const img = FZ.Assets.bg(loc.id, season);
     if (img) {
       const wl = FZ.Assets.waterline(loc.id, season);
-      const sc = Math.max(W / img.width, (shoreY + 8) / (img.height * wl));
+      const sc = Math.min(Math.max(W / img.width, (shoreY + 8) / (img.height * wl)), (W / img.width) * (season === "winter" ? 1 : 1.28));
       g.drawImage(img, (W - img.width * sc) / 2, shoreY - img.height * wl * sc, img.width * sc, img.height * sc);
       // небо картинки плавно уступает игровому небу (свет, звёзды, луна)
       g.globalCompositeOperation = "destination-out";
@@ -389,7 +389,7 @@
     if (maskKey === key) return maskC;
     const a = mk(W, shoreY, "mask"), g = a[1];
     const wl = FZ.Assets.waterline(loc.id, season);
-    const sc = Math.max(W / img.width, (shoreY + 8) / (img.height * wl));
+    const sc = Math.min(Math.max(W / img.width, (shoreY + 8) / (img.height * wl)), (W / img.width) * (season === "winter" ? 1 : 1.28));
     g.drawImage(img, (W - img.width * sc) / 2, shoreY - img.height * wl * sc, img.width * sc, img.height * sc);
     g.globalCompositeOperation = "destination-out";
     const fade = g.createLinearGradient(0, 0, 0, shoreY * 0.62);
@@ -410,26 +410,33 @@
     const span = H - shoreY;
     const a = mk(W + 16, span, "refl"), g = a[1];
     g.translate(8, 0);
-    // Unrecognised landscape themes still get water instead of crashing a frame.
     const WC = WCOL[v.loc.style] || WCOL.lake;
     let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
     if (v.season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
     if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
-    // непрозрачная основа (слой копируется на экран как есть — прозрачных мест быть не должно)
-    const wg = g.createLinearGradient(0, 0, 0, span); wg.addColorStop(0, far); wg.addColorStop(1, near);
+    // Opaque water at every pixel, even when rippled strips shift horizontally.
+    const wg = g.createLinearGradient(0, 0, 0, span);
+    wg.addColorStop(0, far); wg.addColorStop(1, near);
     g.fillStyle = wg; g.fillRect(-8, 0, W + 16, span);
-    // отражение берега: перевёрнутый верхний слой
-    g.save(); g.globalAlpha = over ? 0.6 : 0.8;
-    g.setTransform(dpr, 0, 0, -dpr / 1.02, 8 * dpr, shoreY * dpr / 1.02);
-    g.drawImage(topC, 0, 0, topC.width, topC.height, -8, 0, W + 16, shoreY);
-    g.restore();
-    // цвет воды густеет к зрителю и прячет место, где отражение заканчивается
-    const e = U.clamp(shoreY * 1.02 / span, 0.2, 1);
-    const dg = g.createLinearGradient(0, 0, 0, span);
-    dg.addColorStop(0, U.rgba(far, 0.05)); dg.addColorStop(e * 0.55, U.rgba(U.mix(far, near, 0.4), 0.3));
-    dg.addColorStop(e * 0.97, U.rgba(U.mix(far, near, 0.75), 0.82)); dg.addColorStop(1, U.rgba(near, 0.9));
-    g.fillStyle = dg; g.fillRect(-8, 0, W + 16, span);
-    g.fillStyle = U.rgba(L.bot, 0.25); g.fillRect(-8, 0, W + 16, 1.5);
+    // Reflections live on a separate transparent layer. Fade them continuously
+    // with distance instead of painting a dark opaque cutoff through the water.
+    const overlay = mk(W + 16, span, "reflOverlay"), rg = overlay[1];
+    rg.save();
+    rg.globalAlpha = over ? 0.32 : 0.48;
+    rg.setTransform(dpr, 0, 0, -dpr / 1.02, 8 * dpr, shoreY * dpr / 1.02);
+    rg.drawImage(topC, 0, 0, topC.width, topC.height, -8, 0, W + 16, shoreY);
+    rg.restore();
+    const fade = rg.createLinearGradient(0, 0, 0, span);
+    const edge = U.clamp(shoreY * 0.88 / span, 0.05, 0.95);
+    fade.addColorStop(0, "rgba(0,0,0,0.88)");
+    fade.addColorStop(edge * 0.52, "rgba(0,0,0,0.30)");
+    fade.addColorStop(edge, "rgba(0,0,0,0)");
+    fade.addColorStop(1, "rgba(0,0,0,0)");
+    rg.globalCompositeOperation = "destination-in";
+    rg.fillStyle = fade;
+    rg.fillRect(0, 0, W + 16, span);
+    rg.globalCompositeOperation = "source-over";
+    g.drawImage(overlay[0], -8, 0, W + 16, span);
     reflC = a[0];
   }
 
@@ -670,6 +677,8 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const prevSmooth = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
     const ox = Math.round((R._sx || 0) * dpr), top0 = Math.round((shoreY + (R._sy || 0)) * dpr), rh = reflC.height;
+    // Draw the entire opaque base first: displaced strips must never expose a black seam.
+    ctx.drawImage(reflC, 0, 0, reflC.width, reflC.height, ox, top0, reflC.width, reflC.height);
     let d = 0;
     while (d < rh) {
       const k = d / rh;
@@ -1160,11 +1169,12 @@
   R.drawWeather = function (v, L, t, dt, wx) {
     const rain = wx.sky === "rain" || wx.sky === "storm", snow = wx.sky === "snow" || (v.ice && wx.sky === "overcast");
     if (!rain && !snow) { drops.length = 0; return; }
-    const n = rain ? (wx.sky === "storm" ? 140 : 80) : 70;
+    const n = rain ? (wx.sky === "storm" ? 140 : 80) : 48;
+    if (drops.length > n) drops.length = n;
     while (drops.length < n) drops.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() });
     const wind = (wx.wind / 10) * (wx.dir.indexOf("З") >= 0 ? 1 : -1);
     ctx.strokeStyle = U.rgba(U.mix("#dfe8f2", "#7080a0", L.dark), 0.45); ctx.lineWidth = 1;
-    ctx.fillStyle = U.rgba("#ffffff", 0.85 - L.dark * 0.3);
+    ctx.fillStyle = U.rgba("#edf3f8", 0.46 - L.dark * 0.16);
     if (rain) ctx.beginPath();
     for (const d of drops) {
       if (rain) {
@@ -1176,7 +1186,7 @@
         }
       } else {
         d.y += (40 + d.s * 50) * dt; d.x += (Math.sin(t + d.s * 9) * 20 + wind * 60) * dt;
-        ctx.globalAlpha = 0.5 + d.s * 0.5; ctx.fillRect(d.x, d.y, 1.5 + d.s * 2, 1.5 + d.s * 2);
+        ctx.globalAlpha = 0.34 + d.s * 0.34; ctx.fillRect(d.x, d.y, 0.75 + d.s * 1.4, 0.75 + d.s * 1.4);
         if (d.y > H) { d.y = -5; d.x = Math.random() * W; }
       }
     }
