@@ -205,7 +205,7 @@
     const idleSway=Math.sin(t*.71)*2.2,mode=isIce?"ice":v.mode;
     const anchors={
       float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
-      spin:[.74,.82,.40,.36],ice:[.74,.82,.54,.59]
+      spin:[.74,.82,.40,.36],ice:[.74,.79,.58,.61]
     };
     const a=anchors[mode]||anchors.float;
     const base=V(W*a[0],H*a[1]+idleSway,40);

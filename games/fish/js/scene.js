@@ -969,7 +969,7 @@
     const m=v.ice?"ice":v.mode,rod=v.rod||{};
     const anchors={
       float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
-      spin:[.74,.82,.40,.36],ice:[.74,.82,.54,.59]
+      spin:[.74,.82,.40,.36],ice:[.74,.79,.58,.61]
     };
     const a=anchors[m]||anchors.float;
     const base={x:W*a[0],y:H*a[1]},tip={x:W*(a[2]+(rod.tilt||0)*(m==="ice"?.055:.12)),y:H*a[3]+(rod.lift||0)*H*.05};

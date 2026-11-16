@@ -37,6 +37,39 @@
     return true;
   };
 
+  // Species and fishing methods share one readable strike timeline while
+  // differing in rhythm, strength and signal direction. No save-format fields.
+  P.bitePattern = function (species, mode, weight) {
+    const s = species || {};
+    const bite = s.bite || "twitch";
+    const style = mode === "spin" ? "spin" : mode === "ice" ?
+      (bite === "lay" || bite === "twitch" ? "lift" : "dip") : bite;
+    const touchRanges = {
+      twitch: [1, 2], dunk: [0, 1], lay: [1, 3], slide: [1, 2],
+      drag: [0, 1], spin: [0, 1], lift: [1, 2], dip: [0, 2]
+    };
+    const takeTimes = {
+      twitch: 1.15, dunk: 1.15, lay: 1.75, slide: 1.55,
+      drag: 1.55, spin: 1.25, lift: 1.55, dip: 1.35
+    };
+    const cadence = bite === "twitch" ? 0.75 : bite === "lay" ? 1.25 :
+      bite === "drag" ? 0.85 : 1;
+    const size = Math.max(0, Number(weight) || 0);
+    const power = clamp(0.31 + 0.23 * Math.log1p(size), 0.31, 1.05);
+    return {
+      style, touches: touchRanges[style] || [1, 2],
+      take: takeTimes[style] || 1.2,
+      cadence, power: mode === "spin" ? Math.max(0.65, power) : power
+    };
+  };
+  // Fish respond to little lifts and short pauses, not to endless tapping.
+  P.iceAttraction = function (species, jig, pause) {
+    const active = clamp(jig || 0, 0, 1), rest = clamp(pause || 0, 0, 10);
+    const lureFish = species && (species.kind === "pred" || species.id === "omul" || species.id === "smelt");
+    const pauseBonus = rest >= 0.4 && rest <= 2.4 ? 0.24 : 0;
+    return lureFish ? 0.62 + active * 1.12 + pauseBonus : 0.85 + active * 0.28 + pauseBonus * 0.5;
+  };
+
   // Constant horizontal flight speed; the renderer supplies the ballistic arc.
   // Wind changes the landing point separately, then adds a mild midair curve.
   P.castPath = function (from, to, progress, wind) {

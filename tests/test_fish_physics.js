@@ -80,4 +80,18 @@ for (const k of [-1, 0, 0.2, 0.5, 0.8, 1, 2]) {
   assert(Number.isFinite(p.X) && Number.isFinite(p.Z), "cast coordinates must remain finite");
   assert(p.Z >= launch.Z && p.Z <= landing.Z, "cast progress must stay bounded");
 }
-console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery, cast flight and 30/60/120Hz invariance");
+const biteSmall = P.bitePattern({ id: "roach", bite: "twitch", kind: "peace" }, "float", 0.1);
+const biteLarge = P.bitePattern({ id: "carp", bite: "drag", kind: "peace" }, "float", 10);
+assert(biteSmall.touches[0] >= 1 && biteSmall.style === "twitch", "roach should nibble");
+assert(biteLarge.power > biteSmall.power, "big fish must produce stronger visible bite feedback");
+assert(biteLarge.take >= 1.3, "heavy bite must give a readable reaction window");
+assert(P.bitePattern({ bite: "lay" }, "ice", 1).style === "lift", "winter lift bite");
+assert(P.bitePattern({ bite: "drag" }, "ice", 1).style === "dip", "winter downward bite");
+assert(P.bitePattern({ bite: "dunk" }, "spin", 1).style === "spin", "spinning attack regardless of float style");
+assert(P.iceAttraction({ kind: "pred" }, 1, 0) > P.iceAttraction({ kind: "pred" }, 0, 5), "predator responds to jigging");
+assert(P.iceAttraction({ kind: "pred" }, 0.3, 1) > P.iceAttraction({ kind: "pred" }, 0.3, 5), "brief pause matters on ice");
+for (const species of [{kind:"pred",id:"pike"},{kind:"peace",id:"roach"}]) for (const jig of [-1,0,0.5,1,2]) {
+  const v = P.iceAttraction(species, jig, 1);
+  assert(Number.isFinite(v) && v >= 0.5 && v <= 2, "winter attraction remains positive and bounded");
+}
+console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery, cast flight, species bites, winter pauses and 30/60/120Hz invariance");

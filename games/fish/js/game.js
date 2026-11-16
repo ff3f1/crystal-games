@@ -269,7 +269,7 @@
 
   function resetRig() {
     rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { bend: 0, tension: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, reelRate: 0, ring: 0 },
-      bite: null, fish: null, reeling: false, tilt: 0, still: 0, idleT: 0, landing: null, msgT: 0 };
+      bite: null, fish: null, reeling: false, tilt: 0, still: 0, idleT: 0, jig: 0, jigPause: 3, jigCooldown: 0, landing: null, msgT: 0 };
     if (sess && sess.ice && sess.hole) { rig.state = "wait"; rig.lure = sess.hole.lure; }
   }
 
@@ -318,7 +318,7 @@
     const maxLat = FZ.Scene.maxLat(rig.Z);
     rig.X = U.clamp(a.X + U.rand.range(-sc, sc) + wind * Math.min(1.3, a.Z * 0.025), -maxLat, maxLat);
     sess.lastAim = { X: a.X, Z: a.Z };
-    rig.state = "fly"; rig.flyT = 0;
+    rig.state = "fly"; rig.flyT = 0; rig.castAt = sess.t;
     rig.flyFrom = { X: 0, Z: 4.5 }; rig.flyWind = wind;
     rig.flyDur = (0.38 + 0.12 * Math.sqrt(a.Z)) * (sess.mode === "feeder" ? 1.10 : sess.mode === "spin" ? 0.94 : 1);
     rig.rod.jerk = 0.42;
@@ -362,13 +362,15 @@
     const r = U.rng(id);
     const d = sess.loc.depth;
     sess.hole = { id, depth: +(U.lerp(d[0] + 0.5, d[1] * 0.8, r()) ).toFixed(1), fish: U.clamp(r.range(0.2, 1.7), 0.15, 1.7), lure: 0.85 };
-    rig.state = "wait"; rig.lure = 0.85; rig.still = 0;
+    rig.state = "wait"; rig.lure = 0.85; rig.still = 0; rig.castAt = sess.t; rig.jig = 0; rig.jigPause = 3;
     FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y, 26);
     emit("hole", { depth: sess.hole.depth });
   }
   G.jig = function () {
-    if (!sess.ice || rig.state !== "wait") return;
-    rig.jig = Math.min(1, (rig.jig || 0) + 0.22); rig.rod.nod = -0.35; rig.still = 0;
+    if (!sess.ice || rig.state !== "wait" || (rig.jigCooldown || 0) > 0) return;
+    rig.jig = Math.min(1, (rig.jig || 0) * 0.55 + 0.48);
+    rig.jigCooldown = 0.12; rig.jigPause = 0;
+    rig.rod.nod = -0.48; rig.still = 0;
   };
   G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; } };
 
@@ -413,13 +415,15 @@
       });
       if (sess.ice) {
         m *= sess.hole ? sess.hole.fish : 1;
-        if (bait && FZ.BAIT[bait].lure || s.kind === "pred" || id === "omul" || id === "smelt") m *= 0.55 + (rig.jig || 0) * 1.0;
-        else m *= 0.85 + (rig.jig || 0) * 0.35;
+        m *= FZ.FightPhysics.iceAttraction(s, rig.jig, rig.jigPause);
       }
       if (sess.mode === "spin") { m *= rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1; }
       if (sess.mode === "float" && sess.wx.wind >= 8) m *= 0.8;
       m *= RARF[s.rar];
-      if (m > 0) list.push([s, 0.1 * loc.fish[id] / sumW * m]);
+      // Mild activity pressure prevents long empty spells, but never forces
+      // bites on a timer or makes incompatible bait attract fish.
+      const activity = 1 + 0.55 * U.clamp((rig.idleT - 18) / 30, 0, 1);
+      if (m > 0) list.push([s, 0.1 * loc.fish[id] / sumW * m * activity]);
     });
     return list;
   };
@@ -435,13 +439,16 @@
     return U.clamp(w, s.min, s.max);
   }
   function startBite(s, w, empty) {
-    const style = sess.mode === "spin" ? "spin" : s.bite;
-    const TOUCH = { twitch: [1, 3], dunk: [0, 1], lay: [1, 2], slide: [1, 2], drag: [0, 1], spin: [0, 1] }[style];
-    const TAKE = { twitch: 0.8, dunk: 0.85, lay: 1.45, slide: 1.35, drag: 1.6, spin: 0.95 }[style];
+    const pattern = FZ.FightPhysics.bitePattern(s, sess.mode, w);
     const g = G.gear(sess.mode);
-    let take = TAKE * (g.rod ? g.rod.sens : 1) * (sess.period === "night" ? 0.92 : 1);
+    let take = pattern.take * (g.rod ? g.rod.sens : 1) * (sess.period === "night" ? 0.97 : 1);
     if (st.tut < 3) take *= 2.2;
-    rig.bite = { s, w, style, phase: "touch", t: 0, touches: empty ? U.rand.int(2, 3) : U.rand.int(TOUCH[0], TOUCH[1]), nextTouch: U.rand.range(0.1, 0.6), take, empty: !!empty, early: false };
+    rig.bite = {
+      s, w, style: pattern.style, power: pattern.power, cadence: pattern.cadence,
+      phase: "touch", t: 0,
+      touches: empty ? U.rand.int(2, 3) : U.rand.int(pattern.touches[0], pattern.touches[1]),
+      nextTouch: U.rand.range(0.12, 0.48), take, empty: !!empty, early: false
+    };
     rig.state = "bite";
   }
   function biteTick(dt) {
@@ -451,7 +458,7 @@
       b.nextTouch -= dt;
       if (b.nextTouch <= 0) {
         if (b.touches > 0) {
-          b.touches--; b.nextTouch = U.rand.range(0.7, 1.9);
+          b.touches--; b.nextTouch = U.rand.range(0.65, 1.35) * b.cadence;
           b.touchAnim = 0.35;
           touchFx(b);
         } else if (b.empty) { // мелочь поклевала и ушла
@@ -463,7 +470,8 @@
       }
       if (b.touchAnim > 0) b.touchAnim -= dt;
     } else if (b.phase === "take") {
-      if (sess.mode === "spin" && rig.reeling && U.rand() < dt * 1.1) { hook(b.s, b.w); emit("msg", { text: "Самозасечка!" }); return; }
+      // A clear sustained retrieve can set the hook; avoid opaque RNG misses.
+      if (sess.mode === "spin" && rig.reeling && b.t > 0.24) { hook(b.s, b.w); emit("msg", { text: "Самозасечка на проводке!" }); return; }
       if (b.t > b.take) {
         // не успели
         const eaten = U.rand() < 0.5;
@@ -474,17 +482,18 @@
     }
   }
   function touchFx(b) {
-    if (sess.mode === "feeder") { rig.rod.jerk = 0.25; rig.rod.ring = 1; FZ.Sound.bell(); }
-    else if (sess.mode === "spin") { rig.rod.jerk = 0.35; FZ.Platform.vibrate(15); FZ.Sound.bite(); }
-    else if (sess.mode === "ice") { rig.rod.nod = 0.35; FZ.Sound.bite(); }
-    else { FZ.Scene.ring(rig.X, rig.Z, 0.2, 0.9); FZ.Sound.bite(); }
+    const power = b.power || 0.4;
+    if (sess.mode === "feeder") { rig.rod.jerk = 0.10 + power * 0.22; rig.rod.ring = 0.4 + power; FZ.Sound.bite(); }
+    else if (sess.mode === "spin") { rig.rod.jerk = 0.25 + power * 0.3; FZ.Platform.vibrate(12); FZ.Sound.bite(); }
+    else if (sess.mode === "ice") { rig.rod.nod = b.style === "lift" ? -power * 0.45 : power * 0.55; FZ.Sound.bite(); }
+    else { FZ.Scene.ring(rig.X, rig.Z, 0.12 + power * 0.25, 0.85); FZ.Sound.bite(); }
   }
   function takeFx(b) {
     FZ.Platform.vibrate(30);
-    if (sess.mode === "feeder") { rig.rod.ring = 1.5; FZ.Sound.bell(); setTimeout(FZ.Sound.bell, 140); }
-    else if (sess.mode === "spin") { rig.rod.jerk = 1; FZ.Sound.strike(); FZ.Scene.shake(4); }
-    else if (sess.mode === "ice") { FZ.Sound.bite(); }
-    else { FZ.Scene.ring(rig.X, rig.Z, 0.35, 1.2); FZ.Sound.bite(); }
+    if (sess.mode === "feeder") { rig.rod.ring = 1.2 + b.power; rig.rod.jerk = 0.5 + b.power * 0.4; FZ.Sound.bell(); }
+    else if (sess.mode === "spin") { rig.rod.jerk = 0.65 + b.power * 0.6; FZ.Sound.strike(); FZ.Scene.shake(4); }
+    else if (sess.mode === "ice") { rig.rod.nod = b.style === "lift" ? -1 : 1; FZ.Sound.bite(); }
+    else { FZ.Scene.ring(rig.X, rig.Z, 0.28 + b.power * 0.25, 1.2); FZ.Sound.bite(); }
   }
   // Анимация поплавка/кивка/вершинки во время поклёвки
   function biteAnim(dt, t) {
@@ -492,11 +501,13 @@
     let sink = 0, tilt = 0, dx = 0, nod = 0, tipBend = sess.mode === "feeder" ? 0.28 : 0;
     if (b) {
       const ta = b.touchAnim > 0 ? Math.sin((0.35 - b.touchAnim) / 0.35 * Math.PI) : 0;
+      const strength = b.power || 0.4;
       if (b.phase === "touch") {
-        if (b.style === "lay") sink = -0.3 * ta; else sink = 0.25 * ta;
-        dx = (b.style === "slide" ? 2 : 0) * ta;
-        nod = (b.style === "lay" ? -0.3 : 0.35) * ta;
-        tipBend += 0.18 * ta;
+        if (b.style === "lay" || b.style === "lift") sink = -0.38 * strength * ta;
+        else sink = 0.45 * strength * ta;
+        dx = (b.style === "slide" ? 4 * strength : 0) * ta;
+        nod = (b.style === "lay" || b.style === "lift" ? -0.65 : 0.9) * strength * ta;
+        tipBend += 0.32 * strength * ta;
       } else {
         const k = U.clamp(b.t / Math.min(0.35, b.take * 0.3), 0, 1);
         switch (b.style) {
@@ -504,11 +515,15 @@
           case "lay": sink = -0.65 * k; tilt = U.clamp((b.t - b.take * 0.25) / (b.take * 0.3), 0, 1); dx = tilt * 8; break;
           case "slide": sink = 0.45 * k; dx = U.lerp(0, 22, U.clamp(b.t / b.take, 0, 1)); break;
           case "drag": sink = U.lerp(0, 1.1, k); dx = U.lerp(0, 16, U.clamp(b.t / b.take, 0, 1)); break;
+          case "lift": sink = -0.72 * k; break;
+          case "dip": sink = 0.92 * k; break;
+          case "spin": sink = 0.35 * k; break;
         }
-        nod = b.style === "lay" ? -0.9 * k : 1 * k;
+        nod = (b.style === "lay" || b.style === "lift" ? -1.15 : 1.1) * k;
         tipBend = b.style === "lay" && sess.mode === "feeder" ? U.lerp(0.28, -0.05, k) : U.lerp(tipBend, 1, k);
       }
     }
+    if (!b && sess.ice) nod = -0.36 * (rig.jig || 0);
     fa.sink = U.damp(fa.sink, sink, 14, dt); fa.tilt = U.damp(fa.tilt, tilt, 10, dt); fa.dx = U.damp(fa.dx, dx, 8, dt);
     rod.nod = U.damp(rod.nod, nod, 16, dt);
     if (rig.state !== "fight") rod.bend = U.damp(rod.bend, tipBend, 12, dt);
@@ -862,7 +877,9 @@
     r.rod.jerk = U.damp(r.rod.jerk, 0, 9, dt);
     r.rod.ring = U.damp(r.rod.ring, 0, 3, dt);
     r.rod.tilt = U.damp(r.rod.tilt, r.state === "fight" ? r.tilt : 0, 8, dt);
-    r.jig = Math.max(0, (r.jig || 0) - dt * 0.12);
+    r.jig = Math.max(0, (r.jig || 0) - dt * 0.85);
+    r.jigCooldown = Math.max(0, (r.jigCooldown || 0) - dt);
+    r.jigPause = Math.min(10, (r.jigPause || 0) + dt);
     if (r.state === "fly") {
       r.flyT += dt / r.flyDur;
       if (r.flyT >= 1) {

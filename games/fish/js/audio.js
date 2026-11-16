@@ -129,10 +129,10 @@
   };
 
   S.click = () => tone("triangle", 900, 700, 0.05, 0.06);
-  S.cast = () => { noise(0.45, "bandpass", 800, 3000, 0.13, 1.2); tone("sine", 600, 1400, 0.3, 0.025); };
+  S.cast = () => { noise(0.34, "bandpass", 700, 2200, 0.065, 1); tone("sine", 520, 1050, 0.26, 0.018); };
   S.plop = (big) => { tone("sine", big ? 320 : 700, big ? 90 : 180, 0.18, 0.18); noise(0.25, "lowpass", 1800, 350, big ? 0.22 : 0.12); };
   S.splash = (k) => { noise(0.5 + k * 0.4, "lowpass", 2400, 260, 0.16 + k * 0.16); tone("sine", 260, 70, 0.3, 0.1 * k); };
-  S.bite = () => tone("sine", 1200, 900, 0.06, 0.055);
+  S.bite = () => tone("sine", 900, 630, 0.085, 0.029);
   S.bell = () => { [1320, 1980, 2640].forEach((f, i) => tone("sine", f, f * 0.995, 0.6 - i * 0.15, 0.045 / (i + 1))); };
   S.strike = () => { noise(0.18, "bandpass", 2000, 800, 0.18, 2); tone("square", 300, 120, 0.08, 0.035); };
   S.snap = () => { noise(0.08, "highpass", 3000, 6000, 0.28); tone("square", 1900, 300, 0.12, 0.08); };
@@ -145,9 +145,9 @@
   S.thunder = () => { noise(2.8, "lowpass", 260, 48, 0.22, 0.65); noise(1.8, "lowpass", 110, 35, 0.12, 0.7, 0.12); };
 
   let lastClick = 0;
-  S.reel = function (speed) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastClick < 0.07 / Math.max(0.3, speed)) return; lastClick = now; noise(0.025, "bandpass", 780, 440, 0.035, .45); };
+  S.reel = function (speed) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastClick < Math.max(0.082, 0.19 / Math.max(0.5, speed))) return; lastClick = now; tone("triangle", 420, 275, 0.026, 0.015); noise(0.014, "lowpass", 880, 470, 0.014, .8); };
   let lastDrag = 0;
-  S.drag = function (k) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastDrag < 0.045) return; lastDrag = now; noise(0.065, "bandpass", 700 + k * 450, 500, 0.045 + k * 0.025, .4); };
+  S.drag = function (k) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastDrag < 0.11) return; lastDrag = now; tone("triangle", 580 + k * 100, 355, 0.037, 0.019); noise(0.029, "lowpass", 980, 450, 0.019 + k * 0.008, .9); };
 
   S.playMusic = function (key) {
     const url = FZ.Assets.audio(key) || FZ.Assets.audio("music_" + key);
