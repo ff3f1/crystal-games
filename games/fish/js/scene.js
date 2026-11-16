@@ -462,7 +462,7 @@
     R.drawAtmosphere(v, L, t, dt, over);
 
     R.drawWorldFx(v, L, dt);
-    if (!v.ice) R.drawReeds(v, L, t, windF, season);
+    if (!v.ice && !FZ.Assets.bg(loc.id, season)) R.drawReeds(v, L, t, windF, season);
     R.drawTackle(v, L, t);
     R.drawWeather(v, L, t, dt, wx);
     R.drawScreenFx(dt);
@@ -686,7 +686,7 @@
       const r = U.rng("dash"); dashes = []; dashes.W = W;
       for (let i = 0; i < 130; i++) dashes.push({ k: Math.pow(r(), 1.25), x: r() * (W + 80), l: r.range(0.5, 1.5), ph: r() * 6.28, light: r() > 0.42, sp: r.range(0.6, 1.4) });
     }
-    const n = lo ? 60 : 130;
+    const n = lo ? 32 : 70;
     const wa = Math.min(1.3, windF);
     const lightC = U.mix(U.mix(L.bot, "#ffffff", 0.35), "#7080a0", L.dark), darkC = U.mix("#0a1a24", "#000000", L.dark);
     for (let pass = 0; pass < 2; pass++) {
@@ -696,7 +696,7 @@
         const k = q.k, yy = shoreY + 2 + k * (span - 2);
         const w = (5 + k * 60) * q.l;
         let x = (q.x + t * (4 + 22 * k) * windF * q.sp) % (W + 80) - 40;
-        const a = (0.07 + 0.2 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
+        const a = (0.045 + 0.095 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
         if (a <= 0.01) continue;
         ctx.globalAlpha = a; ctx.fillRect(x, yy, w, 0.6 + k * 1.6);
       }
@@ -720,7 +720,7 @@
       }
       ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
     }
-    if (v.loc.style === "pond" || v.loc.style === "delta" || v.loc.style === "platnik") R.drawPads(v, L, t, season);
+    if (!FZ.Assets.bg(v.loc.id, season) && (v.loc.style === "pond" || v.loc.style === "delta" || v.loc.style === "platnik")) R.drawPads(v, L, t, season);
     if (season === "autumn") R.drawLeaves(v, L, t);
   };
 
