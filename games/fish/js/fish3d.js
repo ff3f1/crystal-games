@@ -79,7 +79,7 @@
     M.animate(active,o.phase||0,(o.amp||0)*.45);active.rotation.set(0,Math.sin((o.phase||0)*.14)*.045,o.roll||0);active.scale.x=o.dir===-1?-1:1;
     renderer.render(scene,camera);ctx.save();ctx.globalAlpha*=o.alpha==null?1:o.alpha;if(o.silhouette)ctx.filter='brightness(0)';ctx.drawImage(renderer.domElement,x-len/2,y-h/2,len,h);ctx.restore();return true;
   };
-  M.thumbnail=(s,w,sil)=>'assets/fish-thumb/'+s.id+(sil?'_sil':'')+'.webp';
+  M.thumbnail=(s,w,sil)=>!sil&&w>=300?'assets/fish-hd/'+s.id+'.webp':'assets/fish-thumb/'+s.id+(sil?'_sil':'')+'.webp';
   M.info=()=>({error:M.error,activeSpecies:activeId,contexts:renderer?1:0});
   FZ.Fish3D=M;
 })(window.FZ);
