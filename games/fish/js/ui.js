@@ -685,12 +685,28 @@
       '<div class="row"><div class="pic">' + ic("cam") + '</div><div class="body"><div class="t">Режим съёмки</div><div class="d">Кнопка с камерой на берегу прячет интерфейс — удобно снимать ролики и Shorts с экрана.</div></div></div>' +
       (FZ.CONFIG.youtube ? '<button class="btn" id="sYt" style="width:100%;margin-top:10px">' + ic("yt") + " Наш канал на YouTube</button>" : "") +
       '<button class="btn ghost" id="sRate" style="width:100%;margin-top:10px">' + ic("star") + " Оценить игру</button>" +
+      '<button class="btn ghost" id="sCredits" style="width:100%;margin-top:10px">Фотографии, авторы и лицензии</button>' +
       '<div class="d" style="color:var(--muted);font-size:12px;margin-top:16px;text-align:center">Crystal Games. Статистика: поймано ' + st.stats.total + " рыб, " + st.stats.kg.toFixed(1).replace(".", ",") + " кг, отпущено " + st.stats.released + "</div></div>";
     const sh = UI.sheet(html, () => { if (UI.menuOpen) UI.showMenu(); });
     sh.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { const k = b.dataset.k; S[k] = !S[k]; b.classList.toggle("on", S[k]); if (k === "sound") FZ.Sound.setOn(S[k]); if (k === "music") { FZ.Sound.setMusic(S[k]); if (S[k]) UI.ambience(); } G.save(true); FZ.Sound.click(); }));
     sh.querySelectorAll("#qSeg button").forEach((b) => (b.onclick = () => { S.quality = b.dataset.q; if (S.quality === "auto") S.autoQ = "hi"; FZ.applyQuality(); G.save(true); UI.closeSheet(); UI.showSettings(); }));
     const yt = sh.querySelector("#sYt"); if (yt) yt.onclick = () => FZ.Platform.openUrl(FZ.CONFIG.youtube);
     sh.querySelector("#sRate").onclick = () => { st.rateAsked = 2; G.save(true); FZ.Platform.rate(); };
+    sh.querySelector("#sCredits").onclick = () => UI.showPhotoCredits();
+  };
+
+  UI.showPhotoCredits = function() {
+    fetch("assets/PHOTO_CREDITS.md").then(function(resp) {
+      if(!resp.ok)throw Error("credits not found");
+      return resp.text();
+    }).then(function(raw) {
+      const safe=raw.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+        .replace(/https:\/\/[^\s;<>]+/g,function(url) {
+          return '<a href="'+url+'" target="_blank" rel="noopener noreferrer">'+url+'</a>';
+        });
+      UI.sheet('<h2>Авторы фотографий</h2><div class="sub">Лицензии и исходные работы · 1.2</div>'+
+        '<div class="scroll"><div class="photo-credits" style="white-space:pre-wrap;font-size:12px;line-height:1.6;overflow-wrap:anywhere;color:#b5ced2">'+safe+'</div></div>');
+    }).catch(function() { UI.toast("Не удалось открыть сведения о лицензиях","bad"); });
   };
 
   // ---------- Улов ----------

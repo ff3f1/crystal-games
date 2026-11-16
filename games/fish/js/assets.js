@@ -37,8 +37,43 @@
     });
   }
 
+  const pending=Object.create(null), bgRecent=[];
+  function bgTouch(key) {
+    if(key.indexOf("bg/")!==0)return;
+    const index=bgRecent.indexOf(key);if(index>=0)bgRecent.splice(index,1);
+    bgRecent.push(key);
+    while(bgRecent.length>10) {
+      const old=bgRecent.shift();
+      // Keep the active backdrop plus a few previous scenes for quick travel.
+      if(old!==key)delete A.img[old];
+    }
+  }
+  // Photo loading is lazy and LRU-bounded. Scene invalidation updates cached
+  // reflections as soon as the correct regional image finishes decoding.
+  A.ensure=function(key) {
+    if(A.img[key]){bgTouch(key);return Promise.resolve(A.img[key]);}
+    if(!M.images[key])return Promise.resolve(null);
+    if(pending[key])return pending[key];
+    pending[key]=new Promise(function(resolve) {
+      const im=new Image();
+      im.onload=function(){
+        A.img[key]=im;bgTouch(key);A.version++;
+        delete pending[key];resolve(im);
+      };
+      im.onerror=function(){delete pending[key];resolve(null);};
+      im.src="assets/"+M.images[key];
+    });
+    return pending[key];
+  };
+
   A.load = function (onProgress) {
-    const keys = Object.keys(M.images || {});
+    // Decode the active scene and all small tackle/fish sprites at boot.
+    // Do not decode all 80 photographic backdrops at once on low-RAM phones.
+    const st=FZ.Game&&FZ.Game.state&&FZ.Game.state();
+    const current=(st&&st.loc)||"pond";
+    const keys=Object.keys(M.images||{}).filter(function(k){
+      return k.indexOf("bg/")!==0 || k.indexOf("bg/"+current+"_")===0;
+    });
     if (!keys.length) { A.ok = true; return Promise.resolve(); }
     let done = 0;
     return Promise.all(keys.map(function (k) {
@@ -65,7 +100,13 @@
   A.setStyle = function () { A.style = "paint"; A.version++; };
   const on = () => true;
   A.get = (k) => A.img[k] || null;
-  A.bg = (loc, season) => (on() && A.img["bg/" + loc + "_" + season]) || null;
+  A.bg=function(loc,season) {
+    const key="bg/"+loc+"_"+season;
+    const im=A.img[key];
+    if(im){bgTouch(key);return im;}
+    if(on())A.ensure(key);
+    return null;
+  };
   A.fish = (id) => (on() && (A.img["fish/" + id] || (FZ.SP[id] && A.img["fish/" + FZ.SP[id].assetAlias]))) || null;
   A.item = (id) => (on() && A.img["items/" + id]) || null;
   A.audio = (k) => (M.audio && M.audio[k] ? "assets/" + M.audio[k] : null);

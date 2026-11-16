@@ -72,7 +72,7 @@
 
   // ---------- Цикл ----------
   function frame(now) {
-    let dt = Math.min(0.05, (now - last) / 1000 || 0.016); last = now;
+    let dt = Math.min(0.09, (now - last) / 1000 || 0.016); last = now;
     const r = G.rig();
     if (r && r.fish && r.fish.jump) dt *= 0.55; // замедление на «свечке»
     t += dt;
