@@ -1,0 +1,506 @@
+{
+  "source": "/workspace/work/missing/\u0418\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435 ChatGPT 16 \u043d\u043e\u044f\u0431. 2026 \u0433., 21_07_20-2.png",
+  "sha256": "6d8fab884156d02f5c9e992cb5dd531358579d9b9a48061639db54521f9af76a",
+  "items": [
+    {
+      "id": "float_round",
+      "cell": [
+        0,
+        0,
+        251,
+        251
+      ],
+      "bbox": [
+        95,
+        22,
+        196,
+        251
+      ],
+      "size": [
+        117,
+        245
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "float_waggler",
+      "cell": [
+        251,
+        0,
+        502,
+        251
+      ],
+      "bbox": [
+        129,
+        22,
+        154,
+        251
+      ],
+      "size": [
+        41,
+        245
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "float_pear",
+      "cell": [
+        502,
+        0,
+        752,
+        251
+      ],
+      "bbox": [
+        79,
+        21,
+        172,
+        251
+      ],
+      "size": [
+        109,
+        246
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "float_bubble",
+      "cell": [
+        752,
+        0,
+        1003,
+        251
+      ],
+      "bbox": [
+        38,
+        48,
+        199,
+        246
+      ],
+      "size": [
+        177,
+        214
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "bell",
+      "cell": [
+        1003,
+        0,
+        1254,
+        251
+      ],
+      "bbox": [
+        49,
+        33,
+        185,
+        251
+      ],
+      "size": [
+        152,
+        234
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "hook",
+      "cell": [
+        0,
+        251,
+        251,
+        502
+      ],
+      "bbox": [
+        66,
+        0,
+        188,
+        246
+      ],
+      "size": [
+        138,
+        262
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "treble",
+      "cell": [
+        251,
+        251,
+        502,
+        502
+      ],
+      "bbox": [
+        47,
+        0,
+        219,
+        243
+      ],
+      "size": [
+        188,
+        259
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "line",
+      "cell": [
+        502,
+        251,
+        752,
+        502
+      ],
+      "bbox": [
+        30,
+        0,
+        221,
+        232
+      ],
+      "size": [
+        207,
+        248
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "braid",
+      "cell": [
+        752,
+        251,
+        1003,
+        502
+      ],
+      "bbox": [
+        24,
+        49,
+        222,
+        232
+      ],
+      "size": [
+        214,
+        199
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "splitshot",
+      "cell": [
+        1003,
+        251,
+        1254,
+        502
+      ],
+      "bbox": [
+        29,
+        40,
+        204,
+        246
+      ],
+      "size": [
+        191,
+        222
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "worm",
+      "cell": [
+        0,
+        502,
+        251,
+        752
+      ],
+      "bbox": [
+        18,
+        62,
+        251,
+        203
+      ],
+      "size": [
+        249,
+        157
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "maggot",
+      "cell": [
+        251,
+        502,
+        502,
+        752
+      ],
+      "bbox": [
+        0,
+        52,
+        233,
+        217
+      ],
+      "size": [
+        249,
+        181
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "bloodworm",
+      "cell": [
+        502,
+        502,
+        752,
+        752
+      ],
+      "bbox": [
+        16,
+        42,
+        228,
+        225
+      ],
+      "size": [
+        228,
+        199
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "corn",
+      "cell": [
+        752,
+        502,
+        1003,
+        752
+      ],
+      "bbox": [
+        7,
+        51,
+        230,
+        221
+      ],
+      "size": [
+        239,
+        186
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "dough",
+      "cell": [
+        1003,
+        502,
+        1254,
+        752
+      ],
+      "bbox": [
+        21,
+        48,
+        204,
+        222
+      ],
+      "size": [
+        199,
+        190
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "grasshopper",
+      "cell": [
+        0,
+        752,
+        251,
+        1003
+      ],
+      "bbox": [
+        16,
+        35,
+        251,
+        251
+      ],
+      "size": [
+        251,
+        232
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "amphipod",
+      "cell": [
+        251,
+        752,
+        502,
+        1003
+      ],
+      "bbox": [
+        0,
+        42,
+        224,
+        209
+      ],
+      "size": [
+        240,
+        183
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "livebait",
+      "cell": [
+        502,
+        752,
+        752,
+        1003
+      ],
+      "bbox": [
+        0,
+        55,
+        250,
+        167
+      ],
+      "size": [
+        266,
+        128
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "gb",
+      "cell": [
+        752,
+        752,
+        1003,
+        1003
+      ],
+      "bbox": [
+        0,
+        23,
+        224,
+        220
+      ],
+      "size": [
+        240,
+        213
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "feeder",
+      "cell": [
+        1003,
+        752,
+        1254,
+        1003
+      ],
+      "bbox": [
+        16,
+        13,
+        216,
+        224
+      ],
+      "size": [
+        216,
+        227
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "spinner",
+      "cell": [
+        0,
+        1003,
+        251,
+        1254
+      ],
+      "bbox": [
+        35,
+        0,
+        193,
+        212
+      ],
+      "size": [
+        174,
+        228
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "spoon",
+      "cell": [
+        251,
+        1003,
+        502,
+        1254
+      ],
+      "bbox": [
+        24,
+        2,
+        251,
+        210
+      ],
+      "size": [
+        243,
+        224
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "wobbler",
+      "cell": [
+        502,
+        1003,
+        752,
+        1254
+      ],
+      "bbox": [
+        0,
+        35,
+        246,
+        199
+      ],
+      "size": [
+        262,
+        180
+      ],
+      "touches_cell_boundary": true
+    },
+    {
+      "id": "jig",
+      "cell": [
+        752,
+        1003,
+        1003,
+        1254
+      ],
+      "bbox": [
+        17,
+        28,
+        242,
+        182
+      ],
+      "size": [
+        241,
+        170
+      ],
+      "touches_cell_boundary": false
+    },
+    {
+      "id": "mormy",
+      "cell": [
+        1003,
+        1003,
+        1254,
+        1254
+      ],
+      "bbox": [
+        31,
+        18,
+        180,
+        199
+      ],
+      "size": [
+        165,
+        197
+      ],
+      "touches_cell_boundary": false
+    }
+  ]
+}

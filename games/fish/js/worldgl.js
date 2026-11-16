@@ -81,6 +81,7 @@
   function sphere(group,x,y,z,sx,sy,sz,mat){const m=new T.Mesh(new T.SphereGeometry(1,18,12),mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;}
   function torus(group,r,t,mat,x,y,z){const m=new T.Mesh(new T.TorusGeometry(r,t,6,36),mat);m.position.set(x,y,z);group.add(m);return m;}
   function connect(mesh,a,b){mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());mesh.scale.y=a.distanceTo(b);}
+  let gripSprite,reelSprite;
   let root,handle,reelHandle,hemisphere,keyLight,rimLight;
   function buildTackle(){
     root=new T.Group();scene.add(root);
@@ -113,6 +114,9 @@
     sphere(handle,9,-24,6,13,24,9,glove);cylinder(handle,20,23,49,sleeve,12,-67,0,0,-.13);
     for(let i=0;i<4;i++){sphere(handle,-2,-6-i*11,12,11,5.5,8,glove);sphere(handle,-7,-5-i*11,13,5.2,5.1,6,skin);}
     sphere(handle,15,1,11,7,17,7,glove);
+    const artLoader=new T.TextureLoader();
+    function photo(name,done){artLoader.load('assets/equipment/'+name+'.png',tx=>{tx.colorSpace=T.SRGBColorSpace;const m=new T.Mesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:tx,transparent:true,alphaTest:.08,depthTest:false}));m.renderOrder=5;scene.add(m);done(m,tx.image.width/tx.image.height);});}
+    photo('grip',(m,a)=>{gripSprite=m;m.userData.aspect=a;});photo('reel',(m,a)=>{reelSprite=m;m.userData.aspect=a;});
     float=new T.Group();scene.add(float);
     const white=material('#eee9d6',.25),red=material('#ee4f25',.24),black=material('#252c23',.4),lime=material('#e3d95c',.32);
     sphere(float,0,0,0,.63,1.15,.63,white);sphere(float,0,.62,0,.60,.62,.60,red);
@@ -162,7 +166,7 @@
   }
   function rodPoint(a,b,bend,u){return a.clone().lerp(b,u).add(new T.Vector3(-bend*40*u*u, -bend*100*u*u*u,0));}
   function tackle(v){
-    const t=v.t, f=v.fish, bend=v.rod.bend||0, tilt=v.rod.tilt||0, isIce=!!v.ice;
+    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const target=v.rod.bend||0;R._flex.v+=(target-R._flex.x)*.12;R._flex.v*=.75;R._flex.x+=R._flex.v;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
     const menu=document.getElementById("ovMenu").classList.contains("on");
     root.visible=!menu;float.visible=!menu&&v.tackle.state!=='none';line.visible=float.visible;
     const idleSway=Math.sin(t*.71)*2.2;
@@ -173,6 +177,10 @@
     for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(base,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
     handle.position.copy(base);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),tip.clone().sub(base).normalize());handle.scale.setScalar(Math.min(1.4,W/390));
     reelHandle.rotation.z=v.rod.reelAngle||0;
+    if(gripSprite&&reelSprite){handle.visible=false;const scale=Math.min(1.4,W/390);const sway=Math.sin(t*.71)*2;
+      gripSprite.visible=reelSprite.visible=!menu;gripSprite.scale.set(150*scale,150*scale/gripSprite.userData.aspect,1);gripSprite.position.copy(V(W*.87,H*.88+sway,80));
+      reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);reelSprite.position.copy(V(W*.77,H*.84+sway,90));reelSprite.rotation.z=Math.sin(v.rod.reelAngle||0)*.025;
+    }
     let p=R.proj(v.tackle.X||0,Math.max(3.6,v.tackle.Z||20));
     if(isIce)p={x:W*.50,y:H*.68,s:20};
     const pos=V(p.x+(v.tackle.dx||0),p.y+(v.tackle.sink||0)*9,8);

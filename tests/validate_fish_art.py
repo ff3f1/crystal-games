@@ -44,7 +44,7 @@ for key, file in scenes.items():
     # Legacy scene duplicates remain a tracked art limitation.
     scene_hashes.add(digest)
 bases={k:v for k,v in manifest['images'].items() if k.startswith('base/')}
-assert len(bases)==19,len(bases)
+assert len(bases)==20,len(bases)
 seen=set()
 for key,file in bases.items():
     with Image.open(A/file) as im:
