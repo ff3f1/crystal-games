@@ -72,12 +72,15 @@
 
   // ---------- Цикл ----------
   function frame(now) {
-    let dt = Math.min(0.09, (now - last) / 1000 || 0.016); last = now;
+    // Use a fixed simulation step and catch up to wall-clock time when a
+    // mid-range Android phone takes longer to paint photographic reflections.
+    // Never bind reel speed or fish fatigue to the rendering frame rate.
+    let dt = Math.min(0.32, (now - last) / 1000 || 0.016); last = now;
     const r = G.rig();
-    if (r && r.fish && r.fish.jump) dt *= 0.55; // замедление на «свечке»
-    t += dt;
+    if (r && r.fish && r.fish.jump) dt *= 0.55; // slow-motion jumps
     const paused = UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on");
-    if (!paused) G.update(dt, t);
+    const steps = Math.max(1, Math.ceil(dt / 0.045)), tick = dt / steps;
+    for (let i=0;i<steps;i++) { t += tick; if (!paused) G.update(tick, t); }
     G.events().forEach(function (event) {
       UI.onEvent(event);
       // Просим оценку только после реального игрового опыта: пятая завершённая поимка.
