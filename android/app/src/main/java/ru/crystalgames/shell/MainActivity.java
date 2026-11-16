@@ -42,6 +42,9 @@ import com.yandex.mobile.ads.rewarded.RewardedAdEventListener;
 import com.yandex.mobile.ads.rewarded.RewardedAdLoadListener;
 import com.yandex.mobile.ads.rewarded.RewardedAdLoader;
 
+import ru.rustore.sdk.review.RuStoreReviewManager;
+import ru.rustore.sdk.review.RuStoreReviewManagerFactory;
+
 import java.io.File;
 import java.io.FileOutputStream;
 
@@ -61,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private InterstitialAd interAd;
     private RewardedAd rewardAd;
     private long lastBack = 0;
+    private RuStoreReviewManager reviewManager;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -97,6 +101,7 @@ public class MainActivity extends AppCompatActivity {
         });
         web.addJavascriptInterface(new AdsBridge(), "AndroidAds");
         web.addJavascriptInterface(new ShareBridge(), "AndroidShare");
+        try { reviewManager = RuStoreReviewManagerFactory.INSTANCE.create(this); } catch (Exception ignored) { reviewManager = null; }
         web.loadUrl(START_URL);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -211,6 +216,18 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         @JavascriptInterface public void openUrl(String url) { ui.post(() -> openExternal(url)); }
+        @JavascriptInterface public void requestReview(int id) {
+            ui.post(() -> {
+                if (reviewManager == null) { reviewResult(id, false); return; }
+                try {
+                    reviewManager.requestReviewFlow()
+                        .addOnSuccessListener(info -> reviewManager.launchReviewFlow(info)
+                            .addOnSuccessListener(unused -> reviewResult(id, true))
+                            .addOnFailureListener(error -> reviewResult(id, false)))
+                        .addOnFailureListener(error -> reviewResult(id, false));
+                } catch (Exception e) { reviewResult(id, false); }
+            });
+        }
         @JavascriptInterface public void rate() {
             ui.post(() -> {
                 try {
@@ -230,6 +247,10 @@ public class MainActivity extends AppCompatActivity {
                 else v.vibrate(ms);
             } catch (Exception ignored) { }
         }
+    }
+
+    private void reviewResult(int id, boolean ok) {
+        ui.post(() -> { if (web != null) web.evaluateJavascript("window.__reviewResult&&window.__reviewResult(" + id + "," + ok + ")", null); });
     }
 
     private void hideSystemBars() {
