@@ -199,6 +199,7 @@
     else if (r.state === "fight" && r.fish) {
       const f = r.fish;
       if (f.tension > st.drag * 0.98 || f.tension > 0.86) h = "Отпустите! Леска на пределе";
+      else if (f.telegraph) h = "Сейчас будет рывок! Отпустите подмотку";
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
       else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";

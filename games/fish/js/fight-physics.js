@@ -6,10 +6,42 @@
   const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
   const follow = (v, target, accel, dt) => v + clamp(target - v, -accel * dt, accel * dt);
 
+  // A few readable personalities tune the shared physical model. Existing
+  // species fight stats still determine base strength and encounter odds.
+  const CHARACTERS = Object.freeze({
+    roach:    { run: 0.72, forward: 1.12, lateral: 0.85, duration: 0.70, fatigue: 1.32, surge: 0.70 },
+    perch:    { run: 1.06, forward: 1.13, lateral: 1.50, duration: 0.78, fatigue: 1.08, surge: 1.03 },
+    bream:    { run: 0.80, forward: 0.76, lateral: 0.57, duration: 1.16, fatigue: 0.82, surge: 0.88 },
+    carp:     { run: 1.08, forward: 1.12, lateral: 0.95, duration: 1.28, fatigue: 0.87, surge: 1.18, shore: 1.34, recover: 0.23 },
+    wildcarp: { run: 1.10, forward: 1.17, lateral: 1.00, duration: 1.32, fatigue: 0.85, surge: 1.20, shore: 1.35, recover: 0.23 },
+    pike:     { run: 1.04, forward: 1.16, lateral: 1.55, duration: 0.77, fatigue: 1.10, surge: 1.22, shore: 1.16 },
+    catfish:  { run: 0.90, forward: 0.65, lateral: 0.43, duration: 1.32, fatigue: 0.62, surge: 1.04 }
+  });
+  const DEFAULT_CHARACTER = Object.freeze({
+    run: 1, forward: 1, lateral: 1, duration: 1, fatigue: 1, surge: 1, shore: 1, recover: 0
+  });
+  P.character = function (species) { return CHARACTERS[species && species.id] || DEFAULT_CHARACTER; };
+  P.runChance = function (species, fish, distance, ice) {
+    const c = P.character(species);
+    const base = species && species.fight ? species.fight.runs : 0.4;
+    const nearBank = !ice && distance < 12;
+    return clamp(base * (0.3 + 0.7 * clamp(fish.S, 0, 1)) * c.run * (nearBank ? (c.shore || 1) : 1), 0.04, 0.78);
+  };
+  // Once per fight, an exhausted carp can gather strength near the bank.
+  // The game schedules a visible warning before its next run.
+  P.secondWind = function (species, fish, distance, ice) {
+    const recovery = P.character(species).recover || 0;
+    if (ice || recovery <= 0 || fish.secondWind || fish.t < 5 || distance >= 12 || fish.S < 0.12 || fish.S >= 0.31) return false;
+    fish.secondWind = true;
+    fish.S = clamp(fish.S + recovery, 0, 0.54);
+    return true;
+  };
+
   // Fish accelerates towards a behavioural target instead of switching
   // velocity instantaneously when a run, turn or rest begins.
   P.swim = function (f, opts, dt) {
     const mass = Math.max(0.55, Math.pow(Math.max(0.05, f.w), 0.38));
+    const character = opts.character || DEFAULT_CHARACTER;
     const effort = clamp(opts.effort || 0, 0, 1.6);
     const phase = opts.phase;
     const dir = f.turn || 1;
@@ -30,6 +62,8 @@
       lateral = dir * 0.18 * effort;
       forward = 0.04 * effort;
     }
+    forward *= character.forward;
+    lateral *= character.lateral;
     const maxAccel = 2.8 / Math.sqrt(mass);
     f.vz = follow(f.vz || 0, forward * (opts.ice ? 0.65 : 1), maxAccel, dt);
     f.vx = opts.ice ? 0 : follow(f.vx || 0, lateral, maxAccel * (opposing ? 1.35 : 1), dt);

@@ -45,4 +45,28 @@ for (const hz of [30, 120]) {
   close(variant.distance, steady.distance, 0.15, "FPS-independent distance " + hz);
   close(variant.f.T, steady.f.T, 0.02, "FPS-independent line tension " + hz);
 }
-console.log("OK: inertia, steering, drag, reel, ice, and 30/60/120Hz invariance");
+const SP = (id, runs = 0.6) => ({ id, fight: { runs } });
+const pike = P.character(SP("pike")), perch = P.character(SP("perch"));
+const catfish = P.character(SP("catfish")), bream = P.character(SP("bream"));
+assert(perch.lateral > bream.lateral, "perch should change direction more aggressively than bream");
+assert(catfish.forward < pike.forward, "catfish should move more heavily than pike");
+assert(P.runChance(SP("carp"), { S: 0.8 }, 7, false) > P.runChance(SP("carp"), { S: 0.8 }, 25, false), "carp should resist near the bank");
+assert(P.runChance(SP("perch"), { S: 0.8 }, 20, false) > P.runChance(SP("roach"), { S: 0.8 }, 20, false), "roach should have fewer runs than perch");
+assert(P.runChance(SP("pike", 100), { S: 1 }, 3, false) <= 0.78, "run probabilities must be bounded");
+function personalityRun(profile, hz) {
+  const f = fish(1); f.turn = 1;
+  for (let i = 0; i < hz * 4; i++) P.swim(f, { phase: "run", effort: 1, ice: false, character: profile }, 1 / hz);
+  return f;
+}
+assert(Math.abs(personalityRun(perch, 60).vx) > Math.abs(personalityRun(bream, 60).vx), "perch run needs more sideways movement");
+const carp = SP("carp"), tiredCarp = { S: 0.2, t: 8 };
+assert(!P.secondWind(carp, tiredCarp, 25, false), "second wind must not trigger in open water");
+assert(P.secondWind(carp, tiredCarp, 8, false), "carp gets a readable second wind near shore");
+assert(tiredCarp.S > 0.2 && tiredCarp.S <= 0.54, "recovery must be bounded");
+assert(!P.secondWind(carp, tiredCarp, 8, false), "carp must not recover twice");
+assert(!P.secondWind(SP("roach"), { S: 0.2, t: 8 }, 8, false), "small fish must not gain carp recovery");
+assert(!P.secondWind(carp, { S: 0.2, t: 8 }, 8, true), "ice hole has no shoreline sprint");
+for (const hz of [30, 120]) {
+  close(personalityRun(pike, hz).vx, personalityRun(pike, 60).vx, 0.06, "species turn invariant " + hz);
+}
+console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery and 30/60/120Hz invariance");

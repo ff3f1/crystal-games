@@ -556,9 +556,15 @@
     // Lightweight fish are carried more strongly by the flow.
     const flow=sess.ice?0:(sess.loc.current||0);
     const currentLoad=Math.max(0,flow-.25)*(.045+.035/Math.max(.5,Math.sqrt(f.w)));
+    // Species have distinct rhythms without duplicating the fighting system.
+    const character = FZ.FightPhysics.character(s);
+    if (FZ.FightPhysics.secondWind(s, f, f.Z, sess.ice)) {
+      f.phase = "rest"; f.phaseT = 0.85; f.nextDecision = 0; f.effort = 0.12;
+      emit("msg", { text: "Карп собирается с силами — ждите новый рывок!" });
+    }
     // смена поведения
     f.phaseT -= dt;
-    const runChance = s.fight.runs * (.3 + .7 * f.S);
+    const runChance = FZ.FightPhysics.runChance(s, f, f.Z, sess.ice);
     // A readable tell before a burst gives the player time to release the reel.
     if (f.phaseT <= .45 && f.nextDecision == null) f.nextDecision = U.rand();
     f.telegraph = f.phaseT > 0 && f.phaseT < .45 && f.nextDecision < runChance && f.S > .25;
@@ -566,12 +572,12 @@
       if (f.jump && f.jump.k >= 1) { f.jump = null; if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5)); FZ.Sound.splash(0.8); }
       const r = f.nextDecision == null ? U.rand() : f.nextDecision;
       f.nextDecision = null; f.telegraph = false;
-      const runP = s.fight.runs * (0.3 + 0.7 * f.S);
+      const runP = FZ.FightPhysics.runChance(s, f, f.Z, sess.ice);
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
       else if (r < runP) {
-        f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
+        f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w)) * character.duration;
         f.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
-        if (rig.reeling) f.surge = Math.max(f.surge || 0, 0.26); // smoothed run load
+        if (rig.reeling) f.surge = Math.max(f.surge || 0, 0.26 * character.surge); // smoothed run load
         if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
@@ -592,7 +598,7 @@
     const fishPull = f.Fmax * f.muscle;
     f.surge = U.damp(f.surge || 0, 0, 3.5, dt);
     // Both axes have acceleration and water damping. Steering resists runs.
-    FZ.FightPhysics.swim(f, { phase: f.phase, effort: f.muscle, ice: sess.ice, tilt: rig.tilt }, dt);
+    FZ.FightPhysics.swim(f, { phase: f.phase, effort: f.muscle, ice: sess.ice, tilt: rig.tilt, character }, dt);
     const lineMotion = FZ.FightPhysics.line(f, {
       rod, lineTest: lineT, drag: st.drag, fishPull, phase: f.phase,
       currentLoad, surge: f.surge, reeling: rig.reeling, tutorial: st.tut < 3,
@@ -646,7 +652,7 @@
       f.phase === 'run' ? G.depthAt(f.X, Math.max(4,f.Z)) * .70 : f.phase === 'tired' ? .08 : .55, 1.4, dt);
     // выносливость
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
-    const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * rodF * (st.tut < 3 ? 2 : 1);
+    const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * rodF * character.fatigue * (st.tut < 3 ? 2 : 1);
     f.S = Math.max(0, f.S - drain * control * dt);
     // провис лески — сход
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
@@ -669,7 +675,12 @@
     rig.rod.bendVel *= Math.exp(-13 * dt);
     rig.rod.bend = U.clamp(rig.rod.bend + rig.rod.bendVel * dt, 0, 1.5);
     rig.rod.tension = U.clamp(f.T / lineT, 0, 1);
-    if (f.T > lineT * 0.82) FZ.Platform.vibrate(12);
+    // Throttle haptics: 60 vibrations per second feels like electrical noise.
+    f.warnCooldown = Math.max(0, (f.warnCooldown || 0) - dt);
+    if (f.T > lineT * 0.82 && f.warnCooldown === 0) {
+      FZ.Platform.vibrate(12);
+      f.warnCooldown = 0.42;
+    }
     f.tension = f.T / lineT; f.dragMark = st.drag;
   }
 
