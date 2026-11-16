@@ -1078,6 +1078,23 @@
     ctx.save(); ctx.globalAlpha = 0.25 * (1 - Math.abs(sink));
     ctx.fillStyle = "#ff6a3a"; ctx.fillRect(x - w / 2, y + 1, w, hgt * 0.35 * (1 - sink));
     ctx.restore();
+    // Use a material-shaded raster bobber instead of the old flat primitive.
+    const floatArt = FZ.Assets && FZ.Assets.item("float");
+    if (floatArt) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x - hgt * 2, y - hgt * 3, hgt * 4, hgt * 3 + 0.5); ctx.clip();
+      ctx.translate(x, y + hgt * Math.max(0, sink));
+      ctx.rotate(-tilt * 1.35 + Math.sin(t * 1.8) * 0.012);
+      const height = hgt * (1.1 + Math.max(0, -sink) * 0.24);
+      const width = height * floatArt.width / floatArt.height;
+      ctx.drawImage(floatArt, -width / 2, -height * 0.81, width, height);
+      if (night) R.glow(0, -height * 0.75, hgt * 0.8);
+      ctx.restore();
+      ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.35);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x, y + 1, w * 2.2, w * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+      return;
+    }
     ctx.save();
     ctx.beginPath(); ctx.rect(x - hgt * 2, y - hgt * 3, hgt * 4, hgt * 3 + 0.5); ctx.clip(); // выше воды
     ctx.translate(x, y + hgt * Math.max(0, sink));
@@ -1086,9 +1103,19 @@
     // тело поплавка (видно, если поднят)
     if (up > 0) { ctx.fillStyle = "#f4f0e8"; ctx.beginPath(); ctx.ellipse(0, -hgt * 0.05, w * 1.6, hgt * 0.5 * up + 1, 0, 0, Math.PI * 2); ctx.fill(); }
     const top = -hgt * (1 + up * 0.5);
-    ctx.fillStyle = "#f6f6f2"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, hgt * 0.55 + up * hgt * 0.5);
+    // Shaded lacquer, not a flat white rectangle.
+    const lacquer = ctx.createLinearGradient(-w, 0, w, 0);
+    lacquer.addColorStop(0, "#555e62"); lacquer.addColorStop(0.18, "#d5d6d0");
+    lacquer.addColorStop(0.42, "#ffffff"); lacquer.addColorStop(0.62, "#e3e1d9");
+    lacquer.addColorStop(1, "#667078");
+    ctx.fillStyle = lacquer; ctx.fillRect(-w / 2, top + hgt * 0.45, w, hgt * 0.55 + up * hgt * 0.5);
     if (night) { R.glow(0, top + hgt * 0.22, hgt * 0.9); ctx.fillStyle = "#9aff7a"; }
-    else ctx.fillStyle = "#ff3d12";
+    else {
+      const enamel = ctx.createLinearGradient(-w, 0, w, 0);
+      enamel.addColorStop(0, "#7b1b12"); enamel.addColorStop(0.32, "#ff572d");
+      enamel.addColorStop(0.55, "#ff9b60"); enamel.addColorStop(1, "#a92715");
+      ctx.fillStyle = enamel;
+    }
     ctx.beginPath(); ctx.roundRect(-w / 2, top, w, hgt * 0.47, w / 2); ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, Math.max(1, hgt * 0.05));
     ctx.restore();

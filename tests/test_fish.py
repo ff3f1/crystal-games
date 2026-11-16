@@ -30,6 +30,7 @@ with sync_playwright() as p:
     pg.goto(URL); pg.wait_for_timeout(1500)
     pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(1500)
     check("меню открыто", pg.is_visible("#mGo"))
+    pg.screenshot(path=f"{OUT}/f_menu.png")
     pg.click("#mGo"); pg.wait_for_timeout(400)
 
     # Заброс касанием воды
@@ -99,6 +100,14 @@ with sync_playwright() as p:
     check("возвращение из экспедиции", not pg.evaluate("__game.G.state().expedition.active") and pg.evaluate("__game.G.state().expeditionsCompleted") == 1)
     check("достижение первой поимки открыто", pg.evaluate("!!__game.G.state().achievements.first_catch"))
 
+    # Visual regression: every previously vector fish is now a bitmap atlas sprite.
+    check("реалистичная графика без SVG", pg.evaluate("Object.values(FZ.Assets.manifest.images).every(v=>!v.endsWith('.svg'))"))
+    check("атлас 16 видов загружен", pg.evaluate("['perch','catfish','palia','brooktrout','sterlet','nelma','muksun','chir','nase','rybets','chekhon','chinook','coho','sockeye','halibut','terpug'].every(id=>!!FZ.Assets.fish(id))"))
+    check("поплавок растровый", pg.evaluate("!!FZ.Assets.item('float') && FZ.Assets.item('float').height>100"))
+    pg.evaluate("__game.G.state().settings.gfx='art'; FZ.Assets.setStyle('art')")
+    check("рисованный режим отключён", pg.evaluate("FZ.Assets.style==='paint'"))
+    pg.evaluate("__game.G.save(true)")
+
     # Мегаобновление 1.1: Камчатка, морские виды, приливы и трофейная кампания
     check("Камчатская бухта загружена", pg.evaluate("!!FZ.LOC.kamchatka && FZ.LOC.kamchatka.lvl===32 && FZ.LOC.kamchatka.style==='coast'"))
     check("пять новых морских видов загружены", pg.evaluate("!!FZ.SP.chinook && !!FZ.SP.coho && !!FZ.SP.sockeye && !!FZ.SP.halibut && !!FZ.SP.terpug"))
@@ -106,6 +115,8 @@ with sync_playwright() as p:
     check("морское снаряжение зарегистрировано", pg.evaluate("!!FZ.ROD.s4 && !!FZ.ROD.d4 && !!FZ.LINE.l8 && !!FZ.BAIT.salmon_spinner && !!FZ.BAIT.deep_jig"))
     pg.evaluate("__game.G.startSession('kamchatka'); __game.G.sess().hour=3")
     check("прилив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Полная вода'"))
+    pg.evaluate("__game.G.sess().hour=11"); pg.wait_for_timeout(1000)
+    pg.screenshot(path=f"{OUT}/f_kamchatka.png")
     pg.evaluate("__game.G.sess().hour=9")
     check("отлив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Малая вода'"))
     pg.evaluate("__game.G.startSession('pond'); __game.G.state().lvl=40; __game.G.state().loc='pond'")

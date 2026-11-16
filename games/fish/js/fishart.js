@@ -55,7 +55,7 @@
     o = o || {};
     if (!o.direct) {
       // готовый спрайт: сгенерированный или нарисованный кодом один раз (рисовать рыбу каждый кадр дорого)
-      const sprite = !o.silhouette && FZ.Assets && FZ.Assets.fish(s.id);
+      const sprite = FZ.Assets && FZ.Assets.fish(s.id);
       if (sprite) return A.drawSprite(ctx, sprite, x, y, len, o, s);
       const need = len * 2, size = need <= 300 ? 320 : need <= 640 ? 640 : 1280;
       return A.drawSprite(ctx, A.procSprite(s, !!o.silhouette, size), x, y, len / PROC_K, o, s);
@@ -349,6 +349,7 @@
     if (o.dir === -1) ctx.scale(-1, 1);
     if (o.roll) ctx.rotate(o.roll);
     ctx.globalAlpha *= (o.alpha == null ? 1 : o.alpha);
+    if (o.silhouette) ctx.filter = "brightness(0) saturate(0)";
     const amp = o.amp || 0;
     if (!amp) ctx.drawImage(img, -w / 2, -h / 2, w, h);
     else {

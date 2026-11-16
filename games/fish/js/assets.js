@@ -5,6 +5,19 @@
   const A = { img: {}, ok: false };
   const M = window.FZ_ASSETS || { images: {}, audio: {}, tuning: {} };
   A.manifest = M;
+  const ATLAS_IDS = ["perch","catfish","palia","brooktrout","sterlet","nelma","muksun","chir","nase","rybets","chekhon","chinook","coho","sockeye","halibut","terpug"];
+  // Cut a single compact photographic atlas into individual transparent sprites.
+  // One decoded bitmap is shared by all fish; no extra network requests.
+  function expandFishAtlas() {
+    const img = A.img["fish/realism_atlas"];
+    if (!img) return;
+    const sw = Math.floor(img.width / 4), sh = Math.floor(img.height / 4);
+    ATLAS_IDS.forEach(function(id, i) {
+      const c = document.createElement("canvas"); c.width = sw; c.height = sh;
+      c.getContext("2d").drawImage(img, (i % 4) * sw, Math.floor(i / 4) * sh, sw, sh, 0, 0, sw, sh);
+      A.img["fish/" + id] = c;
+    });
+  }
   A.tuning = M.tuning || {};
 
   A.load = function (onProgress) {
@@ -26,14 +39,14 @@
         im.onerror = function () { done++; onProgress && onProgress(done / keys.length); res(); };
         im.src = "assets/" + M.images[k];
       });
-    })).then(function () { A.ok = true; });
+    })).then(function () { expandFishAtlas(); A.ok = true; });
   };
 
   // Две версии графики: «paint» — сгенерированные картинки, «art» — нарисованная кодом
   A.style = "paint"; A.version = 0;
   A.has = () => Object.keys(A.img).some((k) => k.indexOf("bg/") === 0 || k.indexOf("fish/") === 0);
-  A.setStyle = function (st) { A.style = st === "art" ? "art" : "paint"; A.version++; };
-  const on = () => A.style !== "art";
+  A.setStyle = function () { A.style = "paint"; A.version++; };
+  const on = () => true;
   A.get = (k) => A.img[k] || null;
   A.bg = (loc, season) => (on() && A.img["bg/" + loc + "_" + season]) || null;
   A.fish = (id) => (on() && A.img["fish/" + id]) || null;
