@@ -4,6 +4,7 @@ Requires: playwright, Pillow, ffmpeg, ffprobe. Output includes validation eviden
 """
 import base64
 import functools
+from fractions import Fraction
 import http.server
 import json
 import pathlib
@@ -41,8 +42,6 @@ with sync_playwright() as p:
     context = browser.new_context(
         viewport={"width": 540, "height": 960},
         device_scale_factor=1,
-        record_video_dir=str(OUT),
-        record_video_size={"width": 540, "height": 960},
     )
     # Capture the actual game compressor output, before browser speakers, not
     # a manufactured audio bed. No copyrighted background music is recorded.
@@ -60,7 +59,6 @@ with sync_playwright() as p:
     })();""")
     page_created = time.monotonic()
     page = context.new_page()
-    video = page.video
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.goto(url, wait_until="domcontentloaded")
     page.wait_for_function("window.__game && document.querySelector('#mGo')", timeout=60000)
@@ -87,12 +85,22 @@ with sync_playwright() as p:
       recorder.ondataavailable=e=>{if(e.data.size)window.__promoAudioChunks.push(e.data);};
       recorder.start(1000);
       window.__promoAudioRecorder=recorder;
+      // Capture the actual canvas instead of Playwright's throttled screencast.
+      const cv=document.getElementById("cv");
+      const source=cv.captureStream(30);
+      const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
+        ?"video/webm;codecs=vp8":"video/webm";
+      const videoRecorder=new MediaRecorder(source,{mimeType:mime,videoBitsPerSecond:4500000});
+      window.__promoVideoChunks=[];
+      videoRecorder.ondataavailable=e=>{if(e.data.size)window.__promoVideoChunks.push(e.data);};
+      videoRecorder.start(1000);
+      window.__promoVideoRecorder=videoRecorder;
       window.__promoFrameTimes=[];
       const sample=t=>{window.__promoFrameTimes.push(t);requestAnimationFrame(sample);};
       requestAnimationFrame(sample);
     }""")
     started = time.monotonic()
-    trim = started - page_created
+    trim = 0  # Canvas capture starts together with the audio recorder.
 
     def until(sec):
         remaining = sec - (time.monotonic() - started)
@@ -146,8 +154,12 @@ with sync_playwright() as p:
     until(19.8)
     page.evaluate("""() => {
       const r=__game.G.rig(),f=r.fish;
-      if(r.state!=='fight' || !f) throw new Error('Fight ended before landing sequence');
-      f.S=.03;f.Z=3.55;f.vz=-.2;f.vx=0;f.phase='tired';f.phaseT=2;
+      // A quick catch may already be landing by this timestamp.
+      if(r.state==='fight' && f){
+        f.S=.03;f.Z=3.55;f.vz=-.2;f.vx=0;f.phase='tired';f.phaseT=2;
+      }else if(!['landing','result'].includes(r.state)){
+        throw new Error('Unexpected fight phase '+r.state);
+      }
     }""")
     page.wait_for_function("['landing','result'].includes(__game.G.rig().state)", timeout=4000)
     page.evaluate("FZ.Input.actionUp('promo-fight')")
@@ -179,11 +191,28 @@ with sync_playwright() as p:
       });
     }""")
     (OUT / "fish-game-audio.webm").write_bytes(base64.b64decode(audio_b64))
+    video_b64=page.evaluate("""async () => {
+      const recorder=window.__promoVideoRecorder;
+      return new Promise((resolve,reject)=>{
+        recorder.onerror=e=>reject(Error(String(e.error||e)));
+        recorder.onstop=async ()=>{
+          const blob=new Blob(window.__promoVideoChunks,{type:'video/webm'});
+          const data=new Uint8Array(await blob.arrayBuffer());
+          if(data.length<2048)return reject(Error('Empty captured canvas video'));
+          let binary='';
+          for(let i=0;i<data.length;i+=32768)
+            binary+=String.fromCharCode(...data.slice(i,i+32768));
+          resolve(btoa(binary));
+        };
+        recorder.stop();
+      });
+    }""")
+    (OUT / "fish-gameplay-original.webm").write_bytes(base64.b64decode(video_b64))
     if errors:
         raise RuntimeError("Game JavaScript errors: " + " | ".join(errors[:8]))
     context.close()
     browser.close()
-    shutil.move(video.path(), OUT / "fish-gameplay-original.webm")
+
 
 srv.shutdown()
 
@@ -214,7 +243,7 @@ clip = OUT / "fishing-promo-1080x1920.mp4"
 cmd("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
     "-ss", "%.3f" % trim, "-i", str(OUT / "fish-gameplay-original.webm"),
     "-i", str(OUT / "fish-game-audio.webm"), "-t", "31",
-    "-vf", vf, "-r", "30", "-c:v", "libx264", "-crf", "21",
+    "-vf", vf, "-fps_mode", "vfr", "-c:v", "libx264", "-crf", "21",
     "-preset", "veryfast", "-pix_fmt", "yuv420p",
     # Lift quiet captured game sounds, limiting true peaks to -3 dBTP.
     # This only changes the promo export, not the game's audio engine.
@@ -226,6 +255,10 @@ source_probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(OUT / "fish-gameplay-original.webm")))
 source_video = next(st for st in source_probe["streams"] if st["codec_type"] == "video")
+source_fps = float(Fraction(source_video["avg_frame_rate"]))
+# Reject low-FPS captures rather than presenting duplicated 10 FPS as 30 FPS.
+assert fps["measuredFps"] >= 24, ("Browser render FPS below release target", fps)
+assert source_fps >= 24, ("Video capture FPS below release target", source_fps)
 probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(clip)))
@@ -252,6 +285,8 @@ report = {
     "video_codec":v["codec_name"],"audio_codec":a["codec_name"],
     "duration_seconds":duration,"encoded_fps":v["avg_frame_rate"],
     "actual_browser_fps":fps,
+    "captured_source_fps":source_fps,
+    "fps_mode":"Variable frame rate, original capture timestamps; no synthetic duplication",
     "playwright_webm_capture_fps":source_video["avg_frame_rate"],
     "playwright_webm_capture_duration":float(source_probe["format"]["duration"]),
     "source_video_codec":source_video["codec_name"],
