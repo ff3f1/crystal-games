@@ -679,7 +679,7 @@
     const st = G.state(), S = st.settings;
     const sw = (k, n) => '<div class="opt"><span>' + n + '</span><button class="sw ' + (S[k] ? "on" : "") + '" data-k="' + k + '" aria-label="' + n + '"></button></div>';
     let html = "<h2>Настройки</h2><div class=\"sub\">" + FZ.CONFIG.title + "</div><div class=\"scroll\">" + sw("sound", "Звуки природы и эффекты") + sw("music", "Музыка") + sw("vibro", "Вибрация") +
-      (FZ.Assets.has() ? '<div class="opt"><span>Графика</span></div><div class="seg" id="gSeg"><button data-g="paint" class="' + (S.gfx !== "art" ? "on" : "") + '">Реалистичная</button><button data-g="art" class="' + (S.gfx === "art" ? "on" : "") + '">Рисованная</button></div>' : "") +
+      '<div class="opt"><span>Графика</span><b>Реалистичная</b></div>' +
       '<div class="opt"><span>Плавность и чёткость</span></div><div class="seg" id="qSeg">' + [["auto", "Авто"], ["hi", "Чётко"], ["mid", "Средне"], ["lo", "Плавно"]].map((q) => '<button data-q="' + q[0] + '" class="' + (S.quality === q[0] ? "on" : "") + '">' + q[1] + "</button>").join("") + "</div>" +
       '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» само снижает чёткость, если телефон не успевает показывать 60 кадров.</div>' +
       '<div class="row"><div class="pic">' + ic("cam") + '</div><div class="body"><div class="t">Режим съёмки</div><div class="d">Кнопка с камерой на берегу прячет интерфейс — удобно снимать ролики и Shorts с экрана.</div></div></div>' +
@@ -689,7 +689,6 @@
     const sh = UI.sheet(html, () => { if (UI.menuOpen) UI.showMenu(); });
     sh.querySelectorAll("[data-k]").forEach((b) => (b.onclick = () => { const k = b.dataset.k; S[k] = !S[k]; b.classList.toggle("on", S[k]); if (k === "sound") FZ.Sound.setOn(S[k]); if (k === "music") { FZ.Sound.setMusic(S[k]); if (S[k]) UI.ambience(); } G.save(true); FZ.Sound.click(); }));
     sh.querySelectorAll("#qSeg button").forEach((b) => (b.onclick = () => { S.quality = b.dataset.q; if (S.quality === "auto") S.autoQ = "hi"; FZ.applyQuality(); G.save(true); UI.closeSheet(); UI.showSettings(); }));
-    sh.querySelectorAll("#gSeg button").forEach((b) => (b.onclick = () => { S.gfx = b.dataset.g; FZ.Assets.setStyle(S.gfx); G.save(true); UI.refreshTools(); UI.closeSheet(); UI.showSettings(); UI.toast(S.gfx === "art" ? "Графика: рисованная" : "Графика: реалистичная"); }));
     const yt = sh.querySelector("#sYt"); if (yt) yt.onclick = () => FZ.Platform.openUrl(FZ.CONFIG.youtube);
     sh.querySelector("#sRate").onclick = () => { st.rateAsked = 2; G.save(true); FZ.Platform.rate(); };
   };

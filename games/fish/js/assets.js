@@ -32,8 +32,8 @@
   // Две версии графики: «paint» — сгенерированные картинки, «art» — нарисованная кодом
   A.style = "paint"; A.version = 0;
   A.has = () => Object.keys(A.img).some((k) => k.indexOf("bg/") === 0 || k.indexOf("fish/") === 0);
-  A.setStyle = function (st) { A.style = st === "art" ? "art" : "paint"; A.version++; };
-  const on = () => A.style !== "art";
+  A.setStyle = function () { A.style = "paint"; A.version++; };
+  const on = () => true;
   A.get = (k) => A.img[k] || null;
   A.bg = (loc, season) => (on() && A.img["bg/" + loc + "_" + season]) || null;
   A.fish = (id) => (on() && A.img["fish/" + id]) || null;

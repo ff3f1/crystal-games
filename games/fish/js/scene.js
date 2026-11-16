@@ -1086,9 +1086,19 @@
     // тело поплавка (видно, если поднят)
     if (up > 0) { ctx.fillStyle = "#f4f0e8"; ctx.beginPath(); ctx.ellipse(0, -hgt * 0.05, w * 1.6, hgt * 0.5 * up + 1, 0, 0, Math.PI * 2); ctx.fill(); }
     const top = -hgt * (1 + up * 0.5);
-    ctx.fillStyle = "#f6f6f2"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, hgt * 0.55 + up * hgt * 0.5);
+    // Shaded lacquer, not a flat white rectangle.
+    const lacquer = ctx.createLinearGradient(-w, 0, w, 0);
+    lacquer.addColorStop(0, "#555e62"); lacquer.addColorStop(0.18, "#d5d6d0");
+    lacquer.addColorStop(0.42, "#ffffff"); lacquer.addColorStop(0.62, "#e3e1d9");
+    lacquer.addColorStop(1, "#667078");
+    ctx.fillStyle = lacquer; ctx.fillRect(-w / 2, top + hgt * 0.45, w, hgt * 0.55 + up * hgt * 0.5);
     if (night) { R.glow(0, top + hgt * 0.22, hgt * 0.9); ctx.fillStyle = "#9aff7a"; }
-    else ctx.fillStyle = "#ff3d12";
+    else {
+      const enamel = ctx.createLinearGradient(-w, 0, w, 0);
+      enamel.addColorStop(0, "#7b1b12"); enamel.addColorStop(0.32, "#ff572d");
+      enamel.addColorStop(0.55, "#ff9b60"); enamel.addColorStop(1, "#a92715");
+      ctx.fillStyle = enamel;
+    }
     ctx.beginPath(); ctx.roundRect(-w / 2, top, w, hgt * 0.47, w / 2); ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, Math.max(1, hgt * 0.05));
     ctx.restore();

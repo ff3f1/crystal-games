@@ -35,6 +35,7 @@
   G.load = function () {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) { st = Object.assign(fresh(), s); st.settings = Object.assign(fresh().settings, s.settings || {}); } } catch (e) { st = null; }
     if (!st) st = fresh();
+    st.settings.gfx = "paint"; // migrate old saves away from illustrated graphics
     st.expedition = Object.assign(fresh().expedition, st.expedition || {});
     st.achievements = st.achievements || {};
     st.expeditionsCompleted = st.expeditionsCompleted || 0;
@@ -559,13 +560,20 @@
     if (f.jump) f.jump.k += dt / f.jump.dur;
     let eff = f.effort * (0.35 + 0.65 * f.S);
     if (f.phase === "shake") eff *= 1 + 0.45 * Math.sin(t * 28);
-    const fishPull = f.Fmax * Math.max(0, eff);
+    // Fish muscles accelerate and relax with inertia, scaled by fish mass.
+    const mass = Math.max(0.4, Math.pow(f.w, 0.38));
+    const burst = f.phase === "run" ? 0.15 * Math.sin(f.t * (8 + 2 / mass)) : 0;
+    const targetEffort = Math.max(0, eff * (1 + burst));
+    f.muscle = U.damp(f.muscle == null ? targetEffort : f.muscle, targetEffort, 3.2 / mass + 2, dt);
+    const fishPull = f.Fmax * f.muscle;
     const reeling = rig.reeling;
     let Tt = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") Tt = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") Tt = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
-    const damping = 5 + rod.sens * 3;
-    f.T = U.damp(f.T, Tt, damping, dt);
+    // Rod spring and elastic line filter sharp impulses.
+    const damping = 3.2 + rod.sens * 2;
+    const spring = U.clamp(rod.power / Math.max(0.1, f.Fmax), 0.35, 2.2);
+    f.T = U.damp(f.T, Tt, damping * spring, dt);
     if (f.jump && f.jump.k < 1) f.T *= 1 + 0.3 * Math.sin(f.jump.k * Math.PI);
     // фрикцион
     const slipping = f.T > dragLim;
@@ -583,7 +591,9 @@
     if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
     // поперёк
     if (!sess.ice) {
-      f.X += f.vx * dt; f.vx *= Math.pow(0.6, dt);
+      // Hydrodynamic drag increases with lateral velocity.
+      const waterDrag = 0.12 + 0.085 * Math.abs(f.vx) / Math.max(0.5, Math.pow(f.w, 0.2));
+      f.X += f.vx * dt; f.vx *= Math.exp(-waterDrag * dt);
       if (f.phase === "run" && Math.abs(f.vx) < 0.4) f.vx += (U.rand() - 0.5) * 2 * dt;
       const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
       if (Math.abs(f.X) > lat) { f.snagT += dt; f.X = Math.sign(f.X) * lat; if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true }); }
@@ -612,7 +622,11 @@
       if (f.Z > 100) return lose("spool");
     }
     // для отрисовки
-    rig.rod.bend = U.damp(rig.rod.bend, U.clamp(f.T / (rod.power * 1.1), 0, 1.4), 10, dt);
+    // Spring-damped rod tip has visible inertia and recovery.
+    const bendTarget = U.clamp(f.T / (rod.power * 1.1), 0, 1.4);
+    rig.rod.bendVel = (rig.rod.bendVel || 0) + (bendTarget - rig.rod.bend) * 95 * dt;
+    rig.rod.bendVel *= Math.exp(-13 * dt);
+    rig.rod.bend = U.clamp(rig.rod.bend + rig.rod.bendVel * dt, 0, 1.5);
     rig.rod.tension = U.clamp(f.T / lineT, 0, 1);
     if (f.T > lineT * 0.82) FZ.Platform.vibrate(12);
     f.tension = f.T / lineT; f.dragMark = st.drag;
