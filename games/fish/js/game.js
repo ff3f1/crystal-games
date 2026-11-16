@@ -592,7 +592,7 @@
     }
     if (f.T > lineT) return lose("snap");
     // подмотка
-    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1));
+    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1)) * (st.tut < 3 ? 1.35 : 1);
     if (reeling && !slipping) { if (sess.ice) f.D -= reelSp * 0.55 * dt; else f.Z -= reelSp * dt; FZ.Sound.reel(rod.reel); rig.rod.reelAngle += dt * 14; }
     if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
     // поперёк
@@ -604,6 +604,16 @@
       const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
       if (Math.abs(f.X) > lat) { f.snagT += dt; f.X = Math.sign(f.X) * lat; if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true }); }
       else f.snagT = Math.max(0, f.snagT - dt * 2);
+      // Beginner protection: the tutorial fish should teach steering, not end
+      // in a random snag while the player is learning the reel control.
+      // After the first resolved catch normal reed/snag physics is unchanged.
+      if (st.tut < 3 && f.snagT > 0.7) {
+        const edgeSign = Math.sign(f.X) || 1;
+        f.X = edgeSign * lat * 0.68;
+        f.vx = -edgeSign * Math.max(0.5, Math.min(1.1, Math.abs(f.vx) * 0.55));
+        f.snagT = 0;
+        emit("msg", { text: "Рыба у травы! Ведите удилище от берега" });
+      }
       if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
     }
     const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;

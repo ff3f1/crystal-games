@@ -47,14 +47,39 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200)
     check("подсечка → вываживание", pg.evaluate("__game.G.rig().state") == "fight")
     pg.mouse.move(250, 650); pg.mouse.down()
-    for _ in range(240):
-        if pg.evaluate("__game.G.rig().state") != "fight": break
-        pg.wait_for_timeout(110)
-    pg.mouse.up(); pg.wait_for_timeout(1800)
+    # Steering matters in the 1.2 simulation: steer against fish velocity.
+    # Don't silently continue as if a lost fish had produced a catch card.
+    for frame in range(330):
+        if pg.evaluate("__game.G.rig().state") != "fight":
+            break
+        if frame % 5 == 0:
+            vx = pg.evaluate("(__game.G.rig().fish || {}).vx || 0")
+            pg.mouse.move(140 if vx > 0 else 285, 650)
+        pg.wait_for_timeout(100)
+    pg.mouse.up()
+    pg.wait_for_timeout(1600)
     pg.screenshot(path=f"{OUT}/f_catch.png")
-    check("карточка улова", pg.is_visible("#cKeep"))
+    card_visible = pg.is_visible("#cKeep")
+    check("карточка улова", card_visible)
+    if not card_visible:
+        diagnostic = pg.evaluate("""() => {
+            const r = __game.G.rig(), f = r.fish;
+            return {
+                rigState: r.state,
+                reason: r.lost && r.lost.why,
+                fish: f && { id:f.s.id, w:f.w, Z:f.Z, X:f.X,
+                    stamina:f.S, tension:f.tension, phase:f.phase,
+                    snagTime:f.snagT, lineSlack:f.slackT },
+                result: r.result && { fish:r.result.s.id, releaseOnly:r.result.mustRelease },
+                catchOverlay: document.getElementById("ovCatch").className,
+                lostOverlay: document.getElementById("ovLost").className
+            };
+        }""")
+        print("CATCH DIAGNOSTIC:", diagnostic, flush=True)
+        pg.screenshot(path=f"{OUT}/f_catch_failed.png")
+        raise AssertionError(f"Expected catch card after tutorial fight; state={diagnostic}")
     money0 = pg.evaluate("__game.G.state().money")
-    pg.click("#cKeep"); pg.wait_for_timeout(300)
+    pg.click("#cKeep", timeout=2000); pg.wait_for_timeout(300)
     check("деньги за улов", pg.evaluate("__game.G.state().money") > money0)
     check("рыба в атласе", pg.evaluate("Object.keys(__game.G.state().caught).length") == 1)
     check("улов записан в личный журнал", pg.evaluate("__game.G.state().journal.length===1 && __game.G.state().journal[0].kept===true"))
