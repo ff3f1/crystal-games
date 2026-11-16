@@ -244,7 +244,7 @@
     const c=FZ.RodArt.info(mode),len=base.distanceTo(tip);
     const angle=Math.atan2(base.y-tip.y,base.x-tip.x),zAxis=new T.Vector3(0,0,1);
     const factor=len/(c.baseX-c.tipX),width=1440*factor,height=300*factor;
-    const flexPx=Math.min(isIce?9:34,len*(isIce?.045:.085))*bend;
+    const flexPx=Math.min(isIce?9:34,len*(isIce?.045:.085))*bend+(isIce?(v.rod.nod||0)*10:0);
     let active=null,top=tip.clone();
     for(const k of Object.keys(rodSprites)){
       const m=rodSprites[k];m.visible=false;
@@ -275,6 +275,7 @@
     const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
     let p=R.proj(lineX,Math.max(3.6,lineZ));
     if(isIce){const h=R.holeGeom();p={x:h.x,y:h.y+h.ry*.2,s:20};}
+    else if(v.landing&&f){const lp=FZ.RodArt.landingPose(v,W,H,R.proj);p={x:lp.fishX,y:lp.fishY,s:p.s};}
     const pos=V(p.x+(v.tackle.dx||0),p.y+(v.tackle.sink||0)*9,8);
     if(v.tackle.state==='fly')pos.y+=Math.sin(U.clamp(v.tackle.flyT,0,1)*Math.PI)*H*.22;
     float.position.copy(pos);float.rotation.z=-(v.tackle.tilt||0)*.65+Math.sin(t*1.8)*.045;

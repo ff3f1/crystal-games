@@ -125,6 +125,7 @@ with sync_playwright() as p:
 
 
  # Native Chromium touch events exercise browser pointer capture and two fingers.
+ page.click('#mGo');page.wait_for_timeout(500)
  for width,height in [(360,800),(390,844),(412,915)]:
   page.set_viewport_size({'width':width,'height':height})
   page.evaluate("""()=>{
