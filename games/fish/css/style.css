@@ -356,3 +356,47 @@ h3 { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px;
 .huntGearTitle{font-size:12px;font-weight:900;line-height:1.3}.huntGear .huntDesc{font-size:10px;color:#9eb8bf;min-height:28px}
 .huntGearFoot{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:10px;font-size:10px;color:#f0d08a}.huntFootnote{margin:14px 0 4px;line-height:1.5}
 @media(max-width:360px){.huntShop{grid-template-columns:1fr}}
+
+
+/* Overhaul: photographic menu, quieter editorial hierarchy and small-phone fit. */
+#ovMenu { overflow-y:auto; overscroll-behavior:contain; }
+#ovMenu .shade {
+  position:fixed; pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,17,22,.50),rgba(4,17,22,.08) 26%,rgba(5,20,26,.24) 46%,rgba(4,18,23,.95));
+}
+#ovMenu .logo { top:calc(7% + var(--safe-t)); }
+#ovMenu .logo .w1 { font-weight:800; letter-spacing:-.045em; }
+#ovMenu .logo .w2 { filter:drop-shadow(0 7px 9px rgba(0,0,0,.32)); }
+#ovMenu .menu-caption { margin-top:12px;font-size:12px;letter-spacing:.08em;color:rgba(237,244,242,.85); }
+#ovMenu .menu-bottom { gap:10px;bottom:calc(14px + var(--safe-b)); }
+#ovMenu .today, #ovMenu .tile {
+  background:linear-gradient(145deg,rgba(18,55,60,.88),rgba(7,27,33,.88));
+  border:1px solid rgba(210,240,238,.14);
+  box-shadow:0 8px 24px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.09);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+#ovMenu .tile { min-width:0;border-radius:15px;transition:background .18s ease,transform .18s ease; }
+#ovMenu .tile:active { transform:scale(.97);background:rgba(37,80,82,.94); }
+#ovMenu .go {
+  background:linear-gradient(145deg,#f1d48c,#ba8d44);color:#1c2826;
+  text-shadow:none;border:1px solid #f6e0ae;
+  box-shadow:0 12px 30px rgba(0,0,0,.27),inset 0 1px rgba(255,255,255,.50);
+}
+#ovMenu .go:active { transform:translateY(2px); }
+#ovMenu .go small { color:#33433b;font-weight:700; }
+@media (max-height:720px) {
+  #ovMenu .logo { top:calc(6px + var(--safe-t)); }
+  #ovMenu .logo .w1 { font-size:33px; }
+  #ovMenu .logo .w2 { font-size:46px; }
+  #ovMenu .logo .menu-caption { display:none; }
+  #ovMenu .menu-bottom { gap:6px;bottom:calc(6px + var(--safe-b));left:10px;right:10px; }
+  #ovMenu .today { padding:7px 10px; }
+  #ovMenu .today .d { font-size:11px; }
+  #ovMenu .go { height:49px;border-radius:15px;font-size:18px; }
+  #ovMenu .grid { gap:5px; }
+  #ovMenu .tile { height:51px;font-size:11px;gap:2px;border-radius:11px; }
+  #ovMenu .tile svg.i { font-size:18px; }
+}
+@media (max-width:350px) {
+  #ovMenu .tile { font-size:11px;line-height:1.15;padding:0 2px; }
+}
