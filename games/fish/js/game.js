@@ -537,10 +537,10 @@
     rig.bite = null;
     rig.fish = {
       s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
-      vx: 0, vz: 0, S: 1, effort: 0.9, phase: "run", phaseT: U.rand.range(0.8, 1.6), T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
+      vx: 0, vz: 0, turn: 1, S: 1, effort: 0.9, phase: "run", phaseT: U.rand.range(0.8, 1.6), T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
     };
-    rig.fish.vx = sess.ice ? 0 : U.rand.range(-1, 1) * 1.2;
+    rig.fish.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
     FZ.Scene.shake(5); FZ.Platform.vibrate(40);
     if (!sess.ice) FZ.Scene.splash(rig.X, rig.Z, 0.25 + Math.min(1, w / 5) * 0.5);
     emit("hooked", { big: Fmax > G.gear(sess.mode).line.test * 0.75 || w >= s.trophy });
@@ -570,7 +570,7 @@
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
       else if (r < runP) {
         f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
-        f.vx = U.rand.range(0.6, 2.2) * (U.rand() < 0.5 ? -1 : 1) * (sess.ice ? 0 : 1);
+        f.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
         if (rig.reeling) f.surge = Math.max(f.surge || 0, 0.26); // smoothed run load
         if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
@@ -591,43 +591,31 @@
     f.muscle = U.damp(f.muscle == null ? targetEffort : f.muscle, targetEffort, 3.2 / mass + 2, dt);
     const fishPull = f.Fmax * f.muscle;
     f.surge = U.damp(f.surge || 0, 0, 3.5, dt);
-    const reeling = rig.reeling;
-    let Tt = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
-    Tt += currentLoad*f.Fmax*(.3+.7*Math.abs(f.vx)/2) + (f.surge||0)*f.Fmax;
-    if (f.phase === "toward") Tt = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
-    if (f.phase === "tired") Tt = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
-    // Rod spring and elastic line filter sharp impulses.
-    const damping = 3.2 + rod.sens * 2;
-    const spring = U.clamp(rod.power / Math.max(0.1, f.Fmax), 0.35, 2.2);
-    f.T = U.damp(f.T, Tt, damping * spring, dt);
-    if (f.jump && f.jump.k < 1) f.T *= 1 + 0.3 * Math.sin(f.jump.k * Math.PI);
-    // фрикцион
-    const slipping = f.T > dragLim;
-    if (slipping) {
-      const slip = f.T - dragLim;
-      const sp = Math.min(4, slip / f.Fmax * 4 + 0.5);
-      if (sess.ice) f.D = Math.min(sess.hole.depth, f.D + sp * dt * 0.5); else f.Z += sp * dt;
-      f.T = dragLim + slip * 0.2;
-      FZ.Sound.drag(U.clamp(slip / lineT, 0, 1));
-    }
+    // Both axes have acceleration and water damping. Steering resists runs.
+    FZ.FightPhysics.swim(f, { phase: f.phase, effort: f.muscle, ice: sess.ice, tilt: rig.tilt }, dt);
+    const lineMotion = FZ.FightPhysics.line(f, {
+      rod, lineTest: lineT, drag: st.drag, fishPull, phase: f.phase,
+      currentLoad, surge: f.surge, reeling: rig.reeling, tutorial: st.tut < 3,
+      jumping: !!(f.jump && f.jump.k < 1), jumpProgress: f.jump ? f.jump.k : 0
+    }, dt);
+    if (lineMotion.slipping) FZ.Sound.drag(U.clamp(lineMotion.excess / lineT, 0, 1));
     if (f.T > lineT) return lose("snap");
-    // подмотка
-    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1)) * (st.tut < 3 ? 1.35 : 1);
-    // A slipping drag does not turn the handle or retrieve line. The reel
-    // animation follows the actual intake speed and eases to a stop.
-    const intake = reeling && !slipping ? Math.max(0,reelSp) : 0;
+    const intake = lineMotion.intake;
+    // The fish moves along the line when the drag pays out; a taut line
+    // restrains outward travel until it slips. Ice fights use vertical depth.
+    if (sess.ice) f.D += (f.vz * (lineMotion.slipping ? 0.45 : 0.12) + lineMotion.slipSpeed * 0.5) * dt;
+    else f.Z += (f.vz > 0 ? f.vz * (st.tut < 3 ? 0.06 : (lineMotion.slipping ? 1 : 0.18)) : f.vz) * dt + lineMotion.slipSpeed * dt;
     rig.rod.reelRate=U.damp(rig.rod.reelRate||0,intake/Math.max(.1,rod.reel),12,dt);
     if(intake>0) {
       if(sess.ice) f.D-=intake*.55*dt; else f.Z-=intake*dt;
       FZ.Sound.reel(rod.reel);
     }
-    if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
     // поперёк
     if (!sess.ice) {
       // Hydrodynamic drag increases with lateral velocity.
       const waterDrag = 0.12 + 0.085 * Math.abs(f.vx) / Math.max(0.5, Math.pow(f.w, 0.2));
-      f.X += (f.vx+flow*.13*Math.sin(t*.34+f.X*.2))*dt; f.vx *= Math.exp(-waterDrag * dt);
-      if (f.phase === "run" && Math.abs(f.vx) < 0.4) f.vx += (U.rand() - 0.5) * 2 * dt;
+      f.X += (f.vx + flow * .13 * Math.sin(t * .34 + f.X * .2)) * dt;
+      f.vx *= Math.exp(-waterDrag * dt * 0.35);
       const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
       if (Math.abs(f.X) > lat) { f.snagT += dt; f.X = Math.sign(f.X) * lat; if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true }); }
       else f.snagT = Math.max(0, f.snagT - dt * 2);
@@ -644,7 +632,6 @@
       if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
     }
     const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;
-    if (against) f.vx *= Math.pow(0.25, dt);
     f.against = against;
     const pressure = U.clamp(f.T / lineT, 0, 1);
     f.controlQuality = U.clamp(1 - Math.abs(pressure - .46) / .46, 0, 1);

@@ -3,7 +3,8 @@
   "use strict";
   const U = FZ.U, G = FZ.Game, UI = FZ.UI, Sc = FZ.Scene;
   const cv = document.getElementById("cv");
-  let t = 0, last = 0, aim = null, ambT = 0, running = false, worldLast = -Infinity;
+  let t = 0, last = 0, aim = null, ambT = 0, running = false, worldLast = -Infinity, physicsDebt = 0;
+  const FIXED_DT = 1 / 60, MAX_PHYSICS_STEPS = 12;
   const P = { down: false, x: 0, y: 0, sx: 0, sy: 0, st: 0, id: null, moved: 0 };
 
   // ---------- Ввод ----------
@@ -81,12 +82,23 @@
     // Use a fixed simulation step and catch up to wall-clock time when a
     // mid-range Android phone takes longer to paint photographic reflections.
     // Never bind reel speed or fish fatigue to the rendering frame rate.
-    let dt = Math.min(0.32, (now - last) / 1000 || 0.016); last = now;
+    const dt = Math.max(0, Math.min(0.25, (now - last) / 1000 || FIXED_DT)); last = now;
     const r = G.rig();
-    if (r && r.fish && r.fish.jump) dt *= 0.55; // slow-motion jumps
     const paused = document.hidden || (Sc.graphicsInfo && Sc.graphicsInfo().contextLost) || (UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on"));
-    const steps = Math.max(1, Math.ceil(dt / 0.045)), tick = dt / steps;
-    for (let i=0;i<steps;i++) { t += tick; if (!paused) G.update(tick, t); }
+    if (paused) physicsDebt = 0;
+    else {
+      // Fixed 60Hz simulation: no FPS-based reel speed, fatigue or random bite bias.
+      // Keep a bounded backlog on slow Android phones instead of a death spiral.
+      const scale = r && r.fish && r.fish.jump ? 0.55 : 1;
+      physicsDebt = Math.min(physicsDebt + dt * scale, FIXED_DT * MAX_PHYSICS_STEPS);
+      let steps = 0;
+      while (physicsDebt + 1e-9 >= FIXED_DT && steps < MAX_PHYSICS_STEPS) {
+        physicsDebt -= FIXED_DT;
+        t += FIXED_DT;
+        G.update(FIXED_DT, t);
+        steps++;
+      }
+    }
     G.events().forEach(function (event) {
       UI.onEvent(event);
       // Просим оценку только после реального игрового опыта: пятая завершённая поимка.
