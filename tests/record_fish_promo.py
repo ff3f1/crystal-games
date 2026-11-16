@@ -18,6 +18,8 @@ from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "promo-output").resolve()
 OUT.mkdir(parents=True, exist_ok=True)
+FRAMES = OUT / "raw-frames"
+FRAMES.mkdir(exist_ok=True)
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):
@@ -84,38 +86,45 @@ with sync_playwright() as p:
       recorder.ondataavailable=e=>{if(e.data.size)window.__promoAudioChunks.push(e.data);};
       recorder.start(1000);
       window.__promoAudioRecorder=recorder;
-      // Capture the actual canvas instead of Playwright's throttled screencast.
+      // Capture each genuinely rendered Canvas frame as an independent JPEG.
+      // Headless Chromium's live VP8 MediaRecorder discards roughly half of
+      // the frames even when the game produces ~30 FPS.
       const cv=document.getElementById("cv");
-      // Chrome's headless WebGL surface may not directly notify captureStream
-      // after swaps. A visible 2D staging canvas emits genuine fresh frames.
       const stage=document.createElement("canvas");
       stage.width=cv.width;stage.height=cv.height;
       const staging=stage.getContext("2d",{alpha:false});
-      const sampleVideo=()=>{
-        staging.drawImage(cv,0,0,stage.width,stage.height);
-        requestAnimationFrame(sampleVideo);
-      };
-      sampleVideo();
-      window.__promoStagingCanvas=stage;
-      const source=stage.captureStream(30);
-      const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-        ?"video/webm;codecs=vp8":"video/webm";
-      const videoRecorder=new MediaRecorder(source,{mimeType:mime,videoBitsPerSecond:4500000});
-      window.__promoVideoChunks=[];
-      videoRecorder.ondataavailable=e=>{if(e.data.size)window.__promoVideoChunks.push(e.data);};
-      videoRecorder.start(1000);
-      window.__promoVideoRecorder=videoRecorder;
+      window.__promoJpegs=[];
       window.__promoFrameTimes=[];
-      const sample=t=>{window.__promoFrameTimes.push(t);requestAnimationFrame(sample);};
+      window.__promoStopCapture=false;
+      let lastFrame=-1000;
+      const sample=t=>{
+        if(window.__promoStopCapture)return;
+        window.__promoFrameTimes.push(t);
+        if(t-lastFrame>=31) {
+          staging.drawImage(cv,0,0,stage.width,stage.height);
+          window.__promoJpegs.push({t,
+            data:stage.toDataURL('image/jpeg',.84).split(',')[1]});
+          lastFrame=t;
+        }
+        requestAnimationFrame(sample);
+      };
       requestAnimationFrame(sample);
     }""")
     started = time.monotonic()
-    trim = 0  # Canvas capture starts together with the audio recorder.
+    trim = 0  # Frames and original game audio start together.
+    frame_times = []
+    def drain_frames():
+        batch=page.evaluate("window.__promoJpegs.splice(0)")
+        for frame in batch:
+            file_path=FRAMES / ("%05d.jpg" % len(frame_times))
+            file_path.write_bytes(base64.b64decode(frame['data']))
+            frame_times.append(float(frame['t']))
 
     def until(sec):
         remaining = sec - (time.monotonic() - started)
         if remaining > 0:
             page.wait_for_timeout(round(remaining * 1000))
+        drain_frames()
 
     until(3.3)
     assert page.evaluate("__game.G.cast(0,27)"), "Cast did not start"
@@ -175,7 +184,9 @@ with sync_playwright() as p:
     page.evaluate("FZ.Input.actionUp('promo-fight')")
     until(25.8)
     page.wait_for_function("__game.G.rig().state==='result' && document.querySelector('#ovCatch.on')", timeout=5000)
-    until(31.3)
+    until(32.2)
+    page.evaluate("window.__promoStopCapture=true")
+    drain_frames()
     fps=page.evaluate("""() => {
       const stamps=window.__promoFrameTimes;
       const intervals=stamps.slice(1).map((t,i)=>t-stamps[i]);
@@ -201,23 +212,7 @@ with sync_playwright() as p:
       });
     }""")
     (OUT / "fish-game-audio.webm").write_bytes(base64.b64decode(audio_b64))
-    video_b64=page.evaluate("""async () => {
-      const recorder=window.__promoVideoRecorder;
-      return new Promise((resolve,reject)=>{
-        recorder.onerror=e=>reject(Error(String(e.error||e)));
-        recorder.onstop=async ()=>{
-          const blob=new Blob(window.__promoVideoChunks,{type:'video/webm'});
-          const data=new Uint8Array(await blob.arrayBuffer());
-          if(data.length<2048)return reject(Error('Empty captured canvas video'));
-          let binary='';
-          for(let i=0;i<data.length;i+=32768)
-            binary+=String.fromCharCode(...data.slice(i,i+32768));
-          resolve(btoa(binary));
-        };
-        recorder.stop();
-      });
-    }""")
-    (OUT / "fish-gameplay-original.webm").write_bytes(base64.b64decode(video_b64))
+    assert len(frame_times)>700, ("Not enough unique live game frames",len(frame_times))
     if errors:
         raise RuntimeError("Game JavaScript errors: " + " | ".join(errors[:8]))
     context.close()
@@ -250,18 +245,30 @@ vf = ("scale=1080:1920:flags=lanczos,"
       ":force_style='Fontname=DejaVu Sans,Fontsize=10,Outline=1,Shadow=0,"
       "Alignment=2,MarginV=90,PrimaryColour=&H00FFFFFF&'")
 clip = OUT / "fishing-promo-1080x1920.mp4"
+source_duration=(frame_times[-1]-frame_times[0])/1000 if len(frame_times)>1 else 0
+source_fps=(len(frame_times)-1)/source_duration if source_duration>0 else 0
+assert source_fps>=24,("Source capture frame rate too low",source_fps)
 cmd("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-    "-ss", "%.3f" % trim, "-i", str(OUT / "fish-gameplay-original.webm"),
+    "-framerate", "%.4f" % source_fps, "-i", str(FRAMES / "%05d.jpg"),
     "-i", str(OUT / "fish-game-audio.webm"), "-t", "31",
-    "-vf", vf, "-fps_mode", "vfr", "-c:v", "libx264", "-crf", "21",
+    "-vf", vf, "-fps_mode", "passthrough", "-c:v", "libx264", "-crf", "21",
     "-preset", "veryfast", "-pix_fmt", "yuv420p",
     # Lift quiet captured game sounds, limiting true peaks to -3 dBTP.
     # This only changes the promo export, not the game's audio engine.
     "-af", "loudnorm=I=-22:LRA=9:TP=-3",
     "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
     "-movflags", "+faststart", str(clip))
-# Distinguish source WebM FPS, real browser animation FPS, and MP4 FPS.
-source_probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
+# Video consists of distinct JPEGs copied from real rendering frames.
+# Derive the input timebase from observed source cadence, never insert
+# duplicates or synthesize intermediate motion.
+source_duration=(frame_times[-1]-frame_times[0])/1000 if len(frame_times)>1 else 0
+source_fps=(len(frame_times)-1)/source_duration if source_duration>0 else 0
+print("PROMO FRAME DIAGNOSTICS:",json.dumps({"browser":fps,
+    "source_frames":len(frame_times),"source_duration":source_duration,
+    "source_fps":source_fps}),flush=True)
+assert fps["measuredFps"]>=24,("Browser render rate insufficient",fps)
+assert source_fps>=24,("Distinct captured frames insufficient",source_fps)
+probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(OUT / "fish-gameplay-original.webm")))
 source_video = next(st for st in source_probe["streams"] if st["codec_type"] == "video")
@@ -304,14 +311,17 @@ report = {
     "duration_seconds":duration,"encoded_fps":v["avg_frame_rate"],
     "actual_browser_fps":fps,
     "captured_source_fps":source_fps,
-    "fps_mode":"Variable frame rate, original capture timestamps; no synthetic duplication",
-    "playwright_webm_capture_fps":source_fps,
-    "playwright_webm_capture_duration":source_duration,
-    "source_video_codec":source_video["codec_name"],
+    "fps_mode":"Source frame cadence, unique JPEG frames, no duplication or interpolation",
+    "jpeg_source_frame_count":len(frame_times),
+    "jpeg_source_duration":source_duration,
+    "source_video_codec":"JPEG captures of production WebGL canvas",
     "frame_motion_mean_differences":movement,
     "audio_processing":"EBU R128 normalisation to -22 LUFS, ceiling -3 dBTP",
     "scene":"Production WebGL gameplay, staged actions using actual game mechanics",
     "music":"disabled; original WebAudio ambience and effects only"
 }
 (OUT / "promo-validation.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+# Keep the final verified film and sampled frames, not hundreds of intermediate files.
+for jpg in FRAMES.glob("*.jpg"): jpg.unlink()
+FRAMES.rmdir()
 print("PROMO VERIFIED", json.dumps(report,ensure_ascii=False))
