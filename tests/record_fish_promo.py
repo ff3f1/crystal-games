@@ -204,18 +204,28 @@ captions = """1
 Твоя рыбалка начинается здесь!
 """
 (OUT / "captions.srt").write_text(captions, encoding="utf-8")
+# libass's subtitle sizes/margins are scaled to 1080x1920.
+# Keep the Russian captions in the lower third, clear of the gameplay.
 vf = ("scale=1080:1920:flags=lanczos,"
       "subtitles=" + str(OUT / "captions.srt") +
-      ":force_style='Fontname=DejaVu Sans,Fontsize=30,Outline=2,Shadow=0,"
-      "Alignment=2,MarginV=150,PrimaryColour=&H00FFFFFF&'")
+      ":force_style='Fontname=DejaVu Sans,Fontsize=10,Outline=1,Shadow=0,"
+      "Alignment=2,MarginV=90,PrimaryColour=&H00FFFFFF&'")
 clip = OUT / "fishing-promo-1080x1920.mp4"
 cmd("ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
     "-ss", "%.3f" % trim, "-i", str(OUT / "fish-gameplay-original.webm"),
     "-i", str(OUT / "fish-game-audio.webm"), "-t", "31",
     "-vf", vf, "-r", "30", "-c:v", "libx264", "-crf", "21",
     "-preset", "veryfast", "-pix_fmt", "yuv420p",
+    # Lift quiet captured game sounds, limiting true peaks to -3 dBTP.
+    # This only changes the promo export, not the game's audio engine.
+    "-af", "loudnorm=I=-22:LRA=9:TP=-3",
     "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
     "-movflags", "+faststart", str(clip))
+# Distinguish source WebM FPS, real browser animation FPS, and MP4 FPS.
+source_probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
+    "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
+    "-of", "json", str(OUT / "fish-gameplay-original.webm")))
+source_video = next(st for st in source_probe["streams"] if st["codec_type"] == "video")
 probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(clip)))
@@ -241,7 +251,12 @@ report = {
     "video": str(clip.name), "resolution": [v["width"],v["height"]],
     "video_codec":v["codec_name"],"audio_codec":a["codec_name"],
     "duration_seconds":duration,"encoded_fps":v["avg_frame_rate"],
-    "actual_browser_fps":fps,"frame_motion_mean_differences":movement,
+    "actual_browser_fps":fps,
+    "playwright_webm_capture_fps":source_video["avg_frame_rate"],
+    "playwright_webm_capture_duration":float(source_probe["format"]["duration"]),
+    "source_video_codec":source_video["codec_name"],
+    "frame_motion_mean_differences":movement,
+    "audio_processing":"EBU R128 normalisation to -22 LUFS, ceiling -3 dBTP",
     "scene":"Production WebGL gameplay, staged actions using actual game mechanics",
     "music":"disabled; original WebAudio ambience and effects only"
 }
