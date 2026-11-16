@@ -410,3 +410,6 @@ h3 { font-size: 13px; color: var(--muted); font-weight: 700; margin: 14px 0 2px;
 #ovMenu .today .d{overflow-wrap:anywhere;}
 @media(max-width:380px){#ovMenu .tile{padding:5px 3px;}#ovMenu .today .t{font-size:12px;}#ovMenu .today .d{font-size:11px;}}
 @media(prefers-reduced-motion:reduce){#ovMenu .go,#ovMenu .tile{transition:none!important;}}
+
+/* Independent gestures stay inside the fishing controls. */
+#cv, #bAct, #iceTrack { touch-action: none; user-select: none; -webkit-user-select: none; }

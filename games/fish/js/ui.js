@@ -101,13 +101,20 @@
     // глубина в лунке
     const tr = $("iceTrack");
     const setFromY = (y) => { const r = tr.getBoundingClientRect(); G.setLure(U.clamp((y - r.top) / r.height, 0.05, 1)); };
-    tr.onpointerdown = (e) => { e.stopPropagation(); tr.setPointerCapture(e.pointerId); setFromY(e.clientY); tr.onpointermove = (ev) => setFromY(ev.clientY); };
-    tr.onpointerup = () => { tr.onpointermove = null; };
+    let depthPointer = null;
+    tr.onpointerdown = (e) => {
+      e.stopPropagation(); if(depthPointer!==null)return;
+      depthPointer=e.pointerId; tr.setPointerCapture(e.pointerId); setFromY(e.clientY);
+    };
+    tr.onpointermove = (e) => { if(e.pointerId===depthPointer)setFromY(e.clientY); };
+    tr.onpointerup = tr.onpointercancel = tr.onlostpointercapture = (e) => {
+      if(e.pointerId===depthPointer)depthPointer=null;
+    };
     $("hIce").onpointerdown = (e) => e.stopPropagation();
     // действие
     const act = $("bAct");
-    act.onpointerdown = (e) => { e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(); };
-    act.onpointerup = act.onpointercancel = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(); };
+    act.onpointerdown = (e) => { e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(e.pointerId); };
+    act.onpointerup = act.onpointercancel = act.onlostpointercapture = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(e.pointerId); if (FZ.Input.snapshot().actions) act.classList.add("held"); };
     ["tRod", "tBait", "tGb", "tMore", "bMenu", "hTime", "bFilm", "hDrag"].forEach((id) => { $(id).addEventListener("pointerdown", (e) => e.stopPropagation()); });
     UI.refreshTools();
   };
@@ -191,7 +198,7 @@
     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
     else if (r.state === "wait") {
       const since = s.t - (r.castAt || 0);
-      if (mode === "spin") h = since < 5 ? "Держите палец — проводка<small>Отпустите — приманка остановится. Хищник бьёт на проводке</small>" : "";
+      if (mode === "spin") h = since < 5 ? "Удерживайте «Подмотка»<small>Другим пальцем ведите удилище по воде. Отпустите кнопку — пауза</small>" : "";
       else if (!G.gear(mode).bait || !G.baitLeft(G.gear(mode).bait.id)) h = "Нет наживки<small>Купите в «Снастях» или получите за рекламу на кнопке наживки</small>";
       else if (mode === "ice") h = since < 9 ? "Короткие подёргивания мормышкой<small>Сделайте паузу после серии движений — рыба берёт на остановке</small>" : "";
       else if (since < 5) h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" : (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Ждём поклёвку");
@@ -206,7 +213,7 @@
       if (f.tension > st.drag * 0.98 || f.tension > 0.86) h = "Отпустите! Леска на пределе";
       else if (f.telegraph) h = "Сейчас будет рывок! Отпустите подмотку";
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
-      else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
+      else if (st.tut < 3) h = "Удерживайте кнопку — подматывайте<small>Другим пальцем направляйте удилище. При рывке отпустите кнопку</small>";
       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";
       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
     }

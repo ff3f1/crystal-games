@@ -21,7 +21,9 @@ jobs:
           python tests/validate_fish_art.py
           python tests/test_rod_art.py
       - name: Validate fishing physics
-        run: node tests/test_fish_physics.js
+        run: |
+          node tests/test_fish_physics.js
+          node tests/test_fish_input.js
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
