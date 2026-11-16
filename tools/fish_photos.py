@@ -49,6 +49,26 @@ WATERS = {
     "blacksea": ("Crimea Black Sea rocky coast","Crimea Black Sea winter coastline"),
     "barents": ("Barents sea coast Murmansk Teriberka","Arctic Norway coast snowy fjord"),
 }
+
+# Curated Wikimedia Commons files, verified as landscape photographs.
+# The Commons API still verifies each chosen file's commercial-use license.
+PINNED = {
+    ("ladoga","winter"): "File:Lake Ladoga.jpg",
+    ("northstream","winter"): "File:Winter Song of the Northern Taiga 01.jpg",
+    ("mountainlake","winter"): "File:Peyto Lake in winter.jpg",
+    ("don","summer"): "File:Don (Voronezh Oblast).jpg",
+    ("polar","summer"): "File:Лето на Ямале.JPG",
+    ("polar","winter"): "File:Зима на Ямале.jpg",
+    ("kamchatka","summer"): "File:Kamchatka Kamchatka Landscape (17539395548).jpg",
+    ("kamchatka","winter"): "File:Kamchatka. Volcanoes.jpg",
+    ("kola","summer"): "File:Пороги на Умбе.jpg",
+    ("kola","winter"): "File:Пороги на Умбе.jpg",
+    ("blacksea","winter"): "File:Majestic red sunset above the Black sea.jpg",
+    ("barents","summer"): "File:Баренцево море в Териберке.jpg",
+    ("barents","winter"): "File:Teriberka, Kola Peninsula, Russia (21522572999).jpg",
+    ("seliger","winter"): "File:Лёд на озере Селигер.jpg",
+}
+
 DEFAULT_SEARCH = (
     "lake forest mountains water reflection landscape",
     "river green forest landscape",
@@ -116,8 +136,39 @@ def score(page, query, season):
         "width": w, "height": h
     }
 
+def by_title(title):
+    params={"action":"query","format":"json","titles":title,"prop":"imageinfo",
+            "iiprop":"url|size|mime|extmetadata","iiurlwidth":"1100"}
+    try:
+        data=client.get(API,params=params,timeout=35)
+        data.raise_for_status()
+        return list(data.json().get("query",{}).get("pages",{}).values())
+    except Exception as exc:
+        print("pinned source request failed:",title,repr(exc),flush=True)
+        return []
+
+def load_candidate(d):
+    r = client.get(d["url"], timeout=45, headers={"Accept":"image/*"})
+    r.raise_for_status()
+    img = Image.open(io.BytesIO(r.content)).convert("RGB")
+    if img.width < 700 or img.height < 400:
+        raise ValueError("source photo below minimum size")
+    return img
+
 def pick_photo(label, query, generic):
     season="winter" if label.endswith("/winter") else "summer"
+    loc=label.split("/")[0]
+    pinned=PINNED.get((loc,season))
+    if pinned:
+        for page in by_title(pinned):
+            result=score(page, query, season)
+            if not result: continue
+            try:
+                d=result[1]; raw=load_candidate(d)
+                print(label,"CURATED:",d["title"],"|",d["license"],flush=True)
+                return raw,d
+            except Exception as exc:
+                print("pinned download failed",pinned,repr(exc),flush=True)
     # Try the geographically correct place first, broader scenic searches last.
     for q in (query, generic, *DEFAULT_SEARCH):
         pages = api_search(q)
@@ -125,11 +176,7 @@ def pick_photo(label, query, generic):
         cand = sorted((x for x in cand if x), key=lambda x: x[0], reverse=True)
         for val, d in cand[:10]:
             try:
-                r = client.get(d["url"], timeout=45, headers={"Accept":"image/*"})
-                r.raise_for_status()
-                raw = Image.open(io.BytesIO(r.content)).convert("RGB")
-                if raw.width < 700 or raw.height < 400:
-                    continue
+                raw=load_candidate(d)
                 print(label, "source:", d["title"], "|", d["license"], "|", raw.size, flush=True)
                 return raw, d
             except Exception as exc:
