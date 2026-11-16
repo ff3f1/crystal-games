@@ -93,7 +93,16 @@
 
   // ---------- Снасти ----------
   G.season = function () { return st.seasonPick || U.seasonOf(); };
-  G.modeFor = function (season) { return season === "winter" ? "ice" : (st.load[st.active] && st.load[st.active].rod ? st.active : "float"); };
+  // Open sea coasts do not become continuous ice sheets in winter.
+  const OPEN_WINTER_SEAS = new Set(["blacksea", "kamchatka", "barents"]);
+  G.isFrozen = function (loc, season) {
+    const id = typeof loc === "string" ? loc : loc && loc.id;
+    return season === "winter" && !OPEN_WINTER_SEAS.has(id);
+  };
+  G.modeFor = function (season, loc) {
+    const water = loc || FZ.LOC[st.loc];
+    return G.isFrozen(water, season) ? "ice" : (st.load[st.active] && st.load[st.active].rod ? st.active : "float");
+  };
   G.loadout = function (mode) { return st.load[mode || G.mode()]; };
   G.mode = () => (sess ? sess.mode : G.modeFor(G.season()));
   G.gear = function (mode) {
@@ -168,7 +177,7 @@
     if(FZ.Assets && FZ.Assets.ensure)FZ.Assets.ensure("bg/"+loc.id+"_"+season);
     const now = new Date();
     sess = {
-      loc, season, ice: season === "winter", firstIce: Wd.firstIceActive(season), mode: G.modeFor(season),
+      loc, season, ice: G.isFrozen(loc, season), firstIce: Wd.firstIceActive(season) && G.isFrozen(loc, season), mode: G.modeFor(season, loc),
       hour: now.getHours() + now.getMinutes() / 60,
       wx: Wd.weather(loc.id, season), spots: [], fedSpot: null, gbUntil: 0, t: 0, catches: 0,
       hole: null, nextSpot: 3, lastAim: null
