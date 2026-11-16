@@ -18,11 +18,15 @@
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
     float wave(vec2 p){float w=sin(p.x*1.7+p.y*.8+clock*1.1)*.44;w+=sin(p.x*3.2-p.y*1.3-clock*1.4)*.20;w+=sin(p.y*7.+clock*1.6+p.x*.4)*.10;return w;}
     vec3 samplePhoto(vec2 uv){
-      float sc=max(resolution.x/photoSize.x,resolution.y*shore/(photoSize.y*waterline));
+      // A portrait viewport must not zoom a panoramic winter photo until a distant animal fills the screen.
+      float fit=resolution.x/photoSize.x;
+      float sc=min(max(fit,resolution.y*shore/(photoSize.y*waterline)),fit*(winter>.5?1.0:1.28));
       vec2 xy=vec2((uv.x-.5)*resolution.x/sc+photoSize.x*.5,photoSize.y*waterline-(shore-uv.y)*resolution.y/sc);
       vec3 sceneColor=texture2D(photo,vec2(clamp(xy.x/photoSize.x,.002,.998),1.-clamp(xy.y/photoSize.y,.002,.998))).rgb;
       vec3 upperSky=mix(vec3(.31,.52,.73),vec3(.68,.77,.83),clamp(uv.y/shore,0.,1.));
-      return sceneColor;
+      // Pixels above the source panorama fade into sky instead of repeating its top row as a band.
+      float visible=smoothstep(-.025,.04,xy.y/photoSize.y);
+      return mix(upperSky,sceneColor,visible);
     }
     void main(){
       vec2 uv=vec2(vUv.x,1.-vUv.y);float depth=clamp((uv.y-shore)/(1.-shore),0.,1.);
@@ -53,7 +57,7 @@
         float chop=sin(p.x*1.9+clock*.65)*.007+sin(p.y*2.4-clock*.4)*.004;
         vec2 refl=vec2(uv.x+normal.x*(.027+depth*.08)+chop,shore-min(depth*shore*.48,shore*.48)+normal.y*(.032+depth*.02));
         vec3 reflection=hasPhoto>.5?samplePhoto(refl):sky;
-        float mirror=(.08+.24*exp(-depth*3.6))*(1.-clamp(length(normal)*.35,0.,.23));
+        float mirror=(.08+.15*exp(-depth*4.5))*(1.-clamp(length(normal)*.35,0.,.23));
         vec3 water=mix(colorFar,colorNear,pow(depth,.65));
         c=mix(water,reflection,mirror);
         float spec=pow(max(0.,1.-length(normal-vec2(.045,-.015))*5.),48.);
@@ -61,7 +65,8 @@
         c+=vec3(.92,.84,.63)*spec*lightPath*(1.-dark)*(.07+warm*.3)*(1.-cloudCover);
         float fine=noise(p*4.+clock*.15);c+=vec3(.16,.20,.19)*(fine-.5)*(.025+depth*.12)*strength;
         c+=ringLight;
-        c=mix(c,vec3(.70,.75,.72),exp(-depth*34.)*.18);
+        // Subtle shoreline haze: no bright or dark horizontal stripe.
+        c=mix(c,mix(colorFar,vec3(.70,.75,.72),.22),exp(-depth*34.)*.055);
         if(rain>.01){vec2 cell=floor(uv*vec2(55.,80.));float tt=fract(clock*1.6+hash(cell));float rr=length((fract(uv*vec2(55.,80.))-.5)*vec2(1.,2.8));c+=smoothstep(.025,0.,abs(rr-tt*.5))*(1.-tt)*rain*.07;}
         if(ice>.5){
           // Grain, clear-ice patches, cracks and near-shore snowbanks.
@@ -333,9 +338,9 @@
     uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.ice?0:(v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0);uniforms.ice.value=v.ice?1:0;uniforms.winter.value=v.season==='winter'?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
     const lightLevel=Math.max(.18,1-U.clamp(L.dark/.6,0,1)*.96);hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
     const precipitation=v.ice&&(v.wx.sky==='rain'||v.wx.sky==='storm')?'snow':v.wx.sky;
-    weather.visible=['rain','storm','snow'].includes(precipitation);weatherStreaks.visible=weather.visible&&precipitation!=='snow';weather.material.size=precipitation==='snow'?3:1.4;
+    weather.visible=['rain','storm','snow'].includes(precipitation);weatherStreaks.visible=weather.visible&&precipitation!=='snow';weather.material.size=precipitation==='snow'?1.65:1.4;
     if(weather.visible){const p=weather.geometry.attributes.position;const speed=precipitation==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
-      if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=precipitation==='snow'?.45:0;
+      if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=precipitation==='snow'?.22:0;
     }
     tackle(v,dt);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
