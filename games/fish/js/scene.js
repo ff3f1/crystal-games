@@ -181,7 +181,23 @@
     const sy = shoreY;
     const haze = season === "winter" ? "#c8d4e2" : "#a8bccb";
     // дальние горы/холмы
-    if (st === "baikal") {
+    if (st === "coast") {
+      ridge(g, r, sy * 0.66, sy * 0.44, 1, U.mix(P.hill, "#687b87", 0.55), sy);
+      ridge(g, r, sy * 0.88, sy * 0.30, 1.35, U.mix(P.spruce, "#344b58", 0.5), sy);
+      const vx = W * 0.67, vy = sy * 0.28, vr = sy * 0.30;
+      g.fillStyle = season === "winter" ? "#657a86" : "#465d69";
+      g.beginPath(); g.moveTo(vx-vr*1.05,sy*.67); g.lineTo(vx-vr*.15,vy); g.lineTo(vx+vr*.13,vy+vr*.04); g.lineTo(vx+vr*1.15,sy*.67); g.closePath(); g.fill();
+      g.fillStyle = "rgba(235,243,246,.9)";
+      g.beginPath(); g.moveTo(vx-vr*.15,vy+vr*.02); g.lineTo(vx-vr*.02,vy+vr*.19); g.lineTo(vx+vr*.15,vy+vr*.08); g.lineTo(vx+vr*.13,vy+vr*.04); g.closePath(); g.fill();
+      g.fillStyle = U.mix("#273b46", P.spruce, season === "winter" ? .2 : .45);
+      g.beginPath(); g.moveTo(-8,base+3); g.lineTo(W*.08,base-sy*.11); g.lineTo(W*.18,base-sy*.06); g.lineTo(W*.27,base+3); g.fill();
+      g.beginPath(); g.moveTo(W*.73,base+3); g.lineTo(W*.82,base-sy*.10); g.lineTo(W*.91,base-sy*.055); g.lineTo(W+8,base+3); g.fill();
+      for(let i=0;i<5;i++){const x=W*(.15+i*.17),h=sy*(.025+r()*.035);g.fillStyle="#4b6068";g.beginPath();g.moveTo(x-h,base+2);g.lineTo(x,base-h);g.lineTo(x+h*1.1,base+2);g.fill();}
+      treeline(g,r,P,W*.04,W*.28,base-2,sy*.035,sy*.075,["pine","spruce"],.8);
+      treeline(g,r,P,W*.82,W*1.02,base-2,sy*.04,sy*.08,["pine","spruce"],.9);
+      g.fillStyle = season === "winter" ? "#d9e2e6" : "#c6b18b";
+      g.beginPath();g.moveTo(0,base+2);g.quadraticCurveTo(W*.22,base-sy*.018,W*.42,base+1);g.quadraticCurveTo(W*.72,base-sy*.025,W,base+1);g.lineTo(W,sy);g.lineTo(0,sy);g.fill();
+    } else if (st === "baikal") {
       ridge(g, r, sy * 0.62, sy * 0.42, 1, U.mix(P.hill, "#8a9ab8", 0.4), sy);
       g.fillStyle = "rgba(245,248,255,0.85)";
       for (let x = 0; x < W; x += 3) { const y = sy * 0.62 - sy * 0.42 * (0.55 + 0.25 * Math.sin(x / W * 3.1 + 2) + 0.15 * Math.sin(x / W * 7.3 + 5)); if (y < sy * 0.36) g.fillRect(x, y, 3, sy * 0.36 - y + 2); }

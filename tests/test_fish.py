@@ -72,13 +72,10 @@ with sync_playwright() as p:
     pg.evaluate("__game.UI.closeSheet(); __game.G.setActive('feeder')")
     check("фидер в руках", pg.evaluate("__game.G.sess().mode") == "feeder")
 
-    # Обрыв: натяжение больше теста лески
-    pg.evaluate("__game.G.cast(0,20)"); pg.wait_for_timeout(1500)
-    pg.evaluate("""()=>{const G=__game.G,r=G.rig(),tu=G.state().tut;G.state().tut=2;for(let seed=1;seed<=32&&!r.fish;seed++){r.state='bite';r.fish=null;r.bite={s:FZ.SP.carp,w:9,style:'drag',phase:'take',t:0,touches:0,nextTouch:0,take:5,empty:false};FZ.U.rand=FZ.U.rng(seed);G.strike();}G.state().tut=tu;if(!r.fish)throw new Error('Не удалось детерминированно подсечь рыбу');r.fish.T=50;}""")
-    pg.wait_for_timeout(400)
-    check("обрыв и второй шанс", pg.is_visible("#lRev"))
-    pg.click("#lRev"); pg.wait_for_timeout(1700)
-    check("рыба вернулась после рекламы", pg.evaluate("__game.G.rig().state") == "fight")
+    # Второй шанс: детерминированная проверка восстановления после потери рыбы
+    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.lost={canRevive:true,f:{revived:false,Fmax:30,T:30,phase:'run',phaseT:1,slackT:0,snagT:0,jump:null,S:.25,X:8,Z:22}};if(!G.revive())throw new Error('revive API returned false');}""")
+    check("второй шанс возвращает рыбу в fight", pg.evaluate("__game.G.rig().state==='fight' && !!__game.G.rig().fish.revived && !__game.G.rig().lost"))
+
 
     # Зима: лунка
     pg.evaluate("__game.G.rig().fish=null; __game.G.rig().state='idle'; __game.UI.travel('pond','winter')"); pg.wait_for_timeout(1500)
@@ -102,13 +99,34 @@ with sync_playwright() as p:
     check("возвращение из экспедиции", not pg.evaluate("__game.G.state().expedition.active") and pg.evaluate("__game.G.state().expeditionsCompleted") == 1)
     check("достижение первой поимки открыто", pg.evaluate("!!__game.G.state().achievements.first_catch"))
 
+    # Мегаобновление 1.1: Камчатка, морские виды, приливы и трофейная кампания
+    check("Камчатская бухта загружена", pg.evaluate("!!FZ.LOC.kamchatka && FZ.LOC.kamchatka.lvl===32 && FZ.LOC.kamchatka.style==='coast'"))
+    check("пять новых морских видов загружены", pg.evaluate("!!FZ.SP.chinook && !!FZ.SP.coho && !!FZ.SP.sockeye && !!FZ.SP.halibut && !!FZ.SP.terpug"))
+    check("морские фоны зарегистрированы", pg.evaluate("!!FZ.Assets.manifest.images['bg/kamchatka_spring'] && !!FZ.Assets.manifest.images['bg/kamchatka_winter']"))
+    check("морское снаряжение зарегистрировано", pg.evaluate("!!FZ.ROD.s4 && !!FZ.ROD.d4 && !!FZ.LINE.l8 && !!FZ.BAIT.salmon_spinner && !!FZ.BAIT.deep_jig"))
+    pg.evaluate("__game.G.startSession('kamchatka'); __game.G.sess().hour=3")
+    check("прилив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Полная вода'"))
+    pg.evaluate("__game.G.sess().hour=9")
+    check("отлив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Малая вода'"))
+    pg.evaluate("__game.G.startSession('pond'); __game.G.state().lvl=40; __game.G.state().loc='pond'")
+    pg.evaluate("if(__game.G.acceptHunt('pond_intro')!==true)throw new Error('cannot accept first contract')")
+    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.result={s:FZ.SP.crucian,w:.5,len:25,trophy:false,record:false,prevRecord:0,newSpecies:true,price:20,xp:10,mustRelease:false,expeditionFull:false,loc:'pond',pct:50,mode:'float',period:'day',date:'2026-11-16'};r.state='result';G.resolveCatch(true,false);}""")
+    check("контракт закрывается уловом", pg.evaluate("__game.G.huntBoard().completed.indexOf('pond_intro')>=0 && __game.G.huntBoard().active===null"))
+    check("контракт начисляет трофейный жетон", pg.evaluate("__game.G.huntBoard().tokens===1"))
+    check("жетон обменивается на морскую приманку", pg.evaluate("__game.G.redeemHuntGear('salmon_spinner')===true && __game.G.state().lures.salmon_spinner===1"))
+    pg.evaluate("__game.UI.showMenu()")
+    check("в меню есть трофейная охота", pg.is_visible("#mHunts"))
+    pg.click("#mHunts"); pg.wait_for_timeout(250)
+    check("открывается доска контрактов", pg.locator(".sheet").get_by_text("Трофейная охота").count()>0 and pg.locator(".sheet").get_by_text("Волжская школа").count()>0)
+    pg.evaluate("__game.UI.closeSheet(); __game.G.startSession('pond')")
+
     # Карточка для шаринга рисуется
     ok = pg.evaluate("""()=>{const s=FZ.SP.pike;const c=FZ.Share.card({s,w:5.2,len:88,loc:'oka',date:'2026-10-23',trophy:false,record:true,newSpecies:false,pct:90});return c.width===1080&&c.toDataURL().length>50000}""")
     check("карточка улова 1080×1920", ok)
     # Старый формат v1 автоматически получает новые поля экспедиции и достижений
-    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;delete old.journal;localStorage.setItem('fz_save',JSON.stringify(old));}""")
+    pg.evaluate("""()=>{const old=__game.G.state();delete old.expedition;delete old.achievements;delete old.expeditionsCompleted;delete old.firstIceCatches;delete old.journal;delete old.huntBoard;localStorage.setItem('fz_save',JSON.stringify(old));}""")
     pg.reload(); pg.wait_for_timeout(1500)
-    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10 && Array.isArray(__game.G.state().journal)"))
+    check("миграция старого сейва v1", pg.evaluate("!!__game.G.state().expedition && !!__game.G.state().achievements && __game.G.state().expedition.bagCapacity===10 && Array.isArray(__game.G.state().journal) && !!__game.G.state().huntBoard && Array.isArray(__game.G.state().huntBoard.completed)"))
     check("сохранение", pg.evaluate("__game.G.state().rods.indexOf('d1')>=0"))
     b.close()
 

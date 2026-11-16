@@ -333,7 +333,7 @@
     draw();
   };
   function locColor(l, season) {
-    const base = { pond: "#3e6a4a", river: "#3e5e6e", platnik: "#4a6a3e", reservoir: "#3a5a7a", lake: "#3a5070", delta: "#5a6a3e", baikal: "#2e5a7a", taiga: "#2e4a3e" }[l.style];
+    const base = { pond: "#3e6a4a", river: "#3e5e6e", platnik: "#4a6a3e", reservoir: "#3a5a7a", lake: "#3a5070", delta: "#5a6a3e", baikal: "#2e5a7a", taiga: "#2e4a3e", coast: "#376b82" }[l.style];
     return season === "winter" ? U.mix(base, "#c8d6e4", 0.45) : season === "autumn" ? U.mix(base, "#a86a2a", 0.3) : base;
   }
   UI.travel = async function (locId, season) {
