@@ -179,6 +179,7 @@
     const P = PAL[season];
     const st = loc.style;
     const sy = shoreY;
+    const base = sy - 4; // available to coastal geometry during lazy photo loading
     const haze = season === "winter" ? "#c8d4e2" : "#a8bccb";
     // дальние горы/холмы
     if (st === "coast") {
@@ -214,7 +215,6 @@
     const hz = g.createLinearGradient(0, sy * 0.4, 0, sy); hz.addColorStop(0, U.rgba(haze, 0)); hz.addColorStop(1, U.rgba(haze, 0.35));
     g.fillStyle = hz; g.fillRect(0, sy * 0.4, W, sy * 0.6);
     // линия леса
-    const base = sy - 4;
     if (st === "pond") {
       treeline(g, r, P, -10, W + 10, base - 2, sy * 0.06, sy * 0.13, ["birch", "birch", "willow", "spruce"], 1);
       church(g, W * 0.72, base - sy * 0.07, sy * 0.06, P);
@@ -310,7 +310,8 @@
     return e;
   };
   const WCOL = { pond: ["#5a7a62", "#1c3a30"], river: ["#5a7a84", "#1d3440"], platnik: ["#5a7a6a", "#1e3a34"], reservoir: ["#64849a", "#1e3448"],
-    lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"] };
+    lake: ["#5a7a90", "#14304a"], delta: ["#6a7e74", "#22383a"], baikal: ["#4a8ab0", "#0c3450"], taiga: ["#4a6a6a", "#152e30"],
+    coast: ["#42718b", "#102e43"] };
 
   function buildBase(v, L, over) {
     const loc = v.loc, season = v.season, wx = v.wx;
@@ -409,7 +410,8 @@
     const span = H - shoreY;
     const a = mk(W + 16, span, "refl"), g = a[1];
     g.translate(8, 0);
-    const WC = WCOL[v.loc.style];
+    // Unrecognised landscape themes still get water instead of crashing a frame.
+    const WC = WCOL[v.loc.style] || WCOL.lake;
     let far = U.mix(WC[0], L.water, 0.45), near = U.mix(WC[1], L.top, 0.18);
     if (v.season === "autumn") { far = U.mix(far, "#4a5060", 0.2); near = U.mix(near, "#18222a", 0.25); }
     if (L.dark > 0) { far = U.mix(far, "#0a1224", L.dark * 0.8); near = U.mix(near, "#050a14", L.dark * 0.85); }
@@ -457,11 +459,12 @@
     else {
       R.drawWater(v, L, t, windF, over);
       R.drawWaterDetail(v, L, t, dt, windF, over);
+      R.drawMicroWaves(v, L, t, windF, over);
     }
     R.drawAtmosphere(v, L, t, dt, over);
 
     R.drawWorldFx(v, L, dt);
-    if (!v.ice) R.drawReeds(v, L, t, windF, season);
+    if (!v.ice && !FZ.Assets.bg(loc.id, season)) R.drawReeds(v, L, t, windF, season);
     R.drawTackle(v, L, t);
     R.drawWeather(v, L, t, dt, wx);
     R.drawScreenFx(dt);
@@ -469,6 +472,37 @@
   };
 
 
+
+  // Close-range capillary waves with perspective, wind-driven drift and
+  // moving reflected glints. Screen-space strokes stay cheap on mobile GPUs.
+  R.drawMicroWaves = function(v, L, t, windF, over) {
+    const n = quality==="lo"?12:quality==="mid"?24:38;
+    const wx=v.wx, strength=Math.min(1.8,.25+wx.wind*.16);
+    ctx.save();ctx.beginPath();ctx.rect(0,shoreY,W,H-shoreY);ctx.clip();
+    ctx.lineCap="round";
+    for(let i=0;i<n;i++){
+      const seed=i*12.9898+.47;
+      const y0=shoreY+(H-shoreY)*(0.08+((i*.6180339)%1)*.9);
+      const scale=Math.pow((y0-shoreY)/(H-shoreY),1.4);
+      const drift=(t*(wx.wind*.31+.45)+seed*11.1)% (W+180);
+      const x=(seed*61.13+drift)%(W+150)-75;
+      const pulse=.55+.45*Math.sin(t*(1.9+i%4*.38)+seed);
+      const len=(9+scale*64)*(0.6+pulse*.5)*strength;
+      const wav=(.8+scale*3.8)*Math.sin(t*1.3+seed);
+      ctx.globalAlpha=(over?.06:.1)*(1-L.dark)*(0.5+scale*.6)*pulse;
+      ctx.lineWidth=.6+scale*.7;
+      ctx.strokeStyle=L.sunUp&&!over?"#fce9be":"#cbe9f4";
+      ctx.beginPath();ctx.moveTo(x-len*.5,y0);
+      ctx.quadraticCurveTo(x,y0+wav,x+len*.5,y0+wav*.4);ctx.stroke();
+      // Soft dark trough below the illuminated crest.
+      if(scale>.35){
+        ctx.globalAlpha*=.6;ctx.strokeStyle="#0c3442";
+        ctx.beginPath();ctx.moveTo(x-len*.4,y0+2+scale*2);
+        ctx.lineTo(x+len*.4,y0+2+scale*2);ctx.stroke();
+      }
+    }
+    ctx.restore();ctx.globalAlpha=1;
+  };
 
   // ---------- Детализация воды: глубина, преломления и пена у берега ----------
   const waterGlints = [];
@@ -654,7 +688,7 @@
       const r = U.rng("dash"); dashes = []; dashes.W = W;
       for (let i = 0; i < 130; i++) dashes.push({ k: Math.pow(r(), 1.25), x: r() * (W + 80), l: r.range(0.5, 1.5), ph: r() * 6.28, light: r() > 0.42, sp: r.range(0.6, 1.4) });
     }
-    const n = lo ? 60 : 130;
+    const n = lo ? 32 : 70;
     const wa = Math.min(1.3, windF);
     const lightC = U.mix(U.mix(L.bot, "#ffffff", 0.35), "#7080a0", L.dark), darkC = U.mix("#0a1a24", "#000000", L.dark);
     for (let pass = 0; pass < 2; pass++) {
@@ -664,7 +698,7 @@
         const k = q.k, yy = shoreY + 2 + k * (span - 2);
         const w = (5 + k * 60) * q.l;
         let x = (q.x + t * (4 + 22 * k) * windF * q.sp) % (W + 80) - 40;
-        const a = (0.07 + 0.2 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
+        const a = (0.045 + 0.095 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
         if (a <= 0.01) continue;
         ctx.globalAlpha = a; ctx.fillRect(x, yy, w, 0.6 + k * 1.6);
       }
@@ -688,7 +722,7 @@
       }
       ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
     }
-    if (v.loc.style === "pond" || v.loc.style === "delta" || v.loc.style === "platnik") R.drawPads(v, L, t, season);
+    if (!FZ.Assets.bg(v.loc.id, season) && (v.loc.style === "pond" || v.loc.style === "delta" || v.loc.style === "platnik")) R.drawPads(v, L, t, season);
     if (season === "autumn") R.drawLeaves(v, L, t);
   };
 
@@ -1040,6 +1074,16 @@
       rodPoly(0.8, 1, U.mix(night ? "#7aff6a" : "#ff6a12", "#000000", L.dark * 0.3));
       if (!night) { rodPoly(0.86, 0.9, "#ffffff"); rodPoly(0.94, 0.97, "#ffffff"); }
     } else rodPoly(0, 1, body);
+    // Graphite blank highlights: tapered carbon reflections and metallic rings.
+    ctx.save();
+    const carbon=ctx.createLinearGradient(bx,by,tip.x,tip.y);
+    carbon.addColorStop(0,"rgba(255,255,255,.45)");
+    carbon.addColorStop(.22,"rgba(180,215,220,.21)");
+    carbon.addColorStop(.65,"rgba(240,248,252,.13)");
+    carbon.addColorStop(1,"rgba(255,255,255,.26)");
+    ctx.strokeStyle=carbon;ctx.lineWidth=1.15;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(bx-2,by-2);ctx.quadraticCurveTo(mx-1,my-3,tip.x,tip.y);ctx.stroke();
+    ctx.restore();
     // кольца одним контуром
     ctx.strokeStyle = U.mix("#c8ccd0", "#303848", L.dark); ctx.lineWidth = 1.2;
     ctx.beginPath();

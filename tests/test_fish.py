@@ -25,7 +25,7 @@ def check(name, ok):
 with sync_playwright() as p:
     b = p.chromium.launch()
     pg = b.new_page(viewport={"width": 390, "height": 844}, device_scale_factor=2)
-    pg.on("pageerror", lambda e: errors.append(str(e)))
+    pg.on("pageerror", lambda e: errors.append(str(e) + "\n" + str(getattr(e, "stack", ""))))
     pg.on("console", lambda m: m.type == "error" and errors.append(m.text))
     pg.goto(URL); pg.wait_for_timeout(1500)
     pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(1500)
@@ -47,14 +47,39 @@ with sync_playwright() as p:
     pg.wait_for_timeout(200)
     check("подсечка → вываживание", pg.evaluate("__game.G.rig().state") == "fight")
     pg.mouse.move(250, 650); pg.mouse.down()
-    for _ in range(100):
-        if pg.evaluate("__game.G.rig().state") != "fight": break
-        pg.wait_for_timeout(150)
-    pg.mouse.up(); pg.wait_for_timeout(1800)
+    # Steering matters in the 1.2 simulation: steer against fish velocity.
+    # Don't silently continue as if a lost fish had produced a catch card.
+    for frame in range(330):
+        if pg.evaluate("__game.G.rig().state") != "fight":
+            break
+        if frame % 5 == 0:
+            vx = pg.evaluate("(__game.G.rig().fish || {}).vx || 0")
+            pg.mouse.move(140 if vx > 0 else 285, 650)
+        pg.wait_for_timeout(100)
+    pg.mouse.up()
+    pg.wait_for_timeout(1600)
     pg.screenshot(path=f"{OUT}/f_catch.png")
-    check("карточка улова", pg.is_visible("#cKeep"))
+    card_visible = pg.is_visible("#cKeep")
+    check("карточка улова", card_visible)
+    if not card_visible:
+        diagnostic = pg.evaluate("""() => {
+            const r = __game.G.rig(), f = r.fish;
+            return {
+                rigState: r.state,
+                reason: r.lost && r.lost.why,
+                fish: f && { id:f.s.id, w:f.w, Z:f.Z, X:f.X,
+                    stamina:f.S, tension:f.tension, phase:f.phase,
+                    snagTime:f.snagT, lineSlack:f.slackT },
+                result: r.result && { fish:r.result.s.id, releaseOnly:r.result.mustRelease },
+                catchOverlay: document.getElementById("ovCatch").className,
+                lostOverlay: document.getElementById("ovLost").className
+            };
+        }""")
+        print("CATCH DIAGNOSTIC:", diagnostic, flush=True)
+        pg.screenshot(path=f"{OUT}/f_catch_failed.png")
+        raise AssertionError(f"Expected catch card after tutorial fight; state={diagnostic}")
     money0 = pg.evaluate("__game.G.state().money")
-    pg.click("#cKeep"); pg.wait_for_timeout(300)
+    pg.click("#cKeep", timeout=2000); pg.wait_for_timeout(300)
     check("деньги за улов", pg.evaluate("__game.G.state().money") > money0)
     check("рыба в атласе", pg.evaluate("Object.keys(__game.G.state().caught).length") == 1)
     check("улов записан в личный журнал", pg.evaluate("__game.G.state().journal.length===1 && __game.G.state().journal[0].kept===true"))
@@ -108,6 +133,29 @@ with sync_playwright() as p:
     check("рисованный режим отключён", pg.evaluate("FZ.Assets.style==='paint'"))
     pg.evaluate("__game.G.save(true)")
 
+    # 1.2: all content must be additive, and all waters and species have raster art.
+    check("новые 62 вида рыб", pg.evaluate("FZ.SPECIES.length>=62 && FZ.REALISM_CONTENT.species===FZ.SPECIES.length"))
+    check("20 доступных водоёмов", pg.evaluate("FZ.LOCATIONS.length>=20 && FZ.REALISM_CONTENT.waters===FZ.LOCATIONS.length"))
+    check("семь новых регионов", pg.evaluate("['seliger','onega','katun','kola','amur','blacksea','barents'].every(id=>!!FZ.LOC[id])"))
+    check("все рыбы с растровыми изображениями", pg.evaluate("FZ.SPECIES.every(s=>!!FZ.Assets.fish(s.id))"))
+    check("все сезонные фотографии доступны в манифесте", pg.evaluate("FZ.LOCATIONS.every(l=>FZ.SEASON_ORDER.every(z=>!!FZ.Assets.manifest.images['bg/'+l.id+'_'+z]))"))
+    check("фон загружен только для текущего водоёма", pg.evaluate("Object.keys(FZ.Assets.img).filter(k=>k.startsWith('bg/')).length<=10"))
+    check("без векторных ассетов в манифесте", pg.evaluate("!Object.values(FZ.Assets.manifest.images).some(v=>v.endsWith('.svg'))"))
+    check("анализ клёва работает", pg.evaluate("__game.G.waterReport().active.length>0"))
+    pg.evaluate("__game.UI.showWaterReport()")
+    check("рыболовный гид показывает рыбу", pg.locator(".sheet").get_by_text("Гид по клёву").count()>0)
+    pg.screenshot(path=f"{OUT}/f_waterreport.png")
+    pg.evaluate("__game.UI.closeSheet();__game.G.startSession('seliger','summer')")
+    pg.wait_for_function("!!FZ.Assets.bg('seliger','summer')", timeout=20000)
+    pg.wait_for_timeout(500)
+    pg.screenshot(path=f"{OUT}/f_seliger.png")
+    pg.evaluate("__game.G.startSession('barents','summer')")
+    pg.wait_for_function("!!FZ.Assets.bg('barents','summer')", timeout=20000)
+    pg.wait_for_timeout(500)
+    pg.screenshot(path=f"{OUT}/f_barents.png")
+    pg.evaluate("__game.G.startSession('pond','summer')")
+    pg.wait_for_function("!!FZ.Assets.bg('pond','summer')", timeout=20000)
+
     # Мегаобновление 1.1: Камчатка, морские виды, приливы и трофейная кампания
     check("Камчатская бухта загружена", pg.evaluate("!!FZ.LOC.kamchatka && FZ.LOC.kamchatka.lvl===32 && FZ.LOC.kamchatka.style==='coast'"))
     check("пять новых морских видов загружены", pg.evaluate("!!FZ.SP.chinook && !!FZ.SP.coho && !!FZ.SP.sockeye && !!FZ.SP.halibut && !!FZ.SP.terpug"))
@@ -115,8 +163,9 @@ with sync_playwright() as p:
     check("морское снаряжение зарегистрировано", pg.evaluate("!!FZ.ROD.s4 && !!FZ.ROD.d4 && !!FZ.LINE.l8 && !!FZ.BAIT.salmon_spinner && !!FZ.BAIT.deep_jig"))
     pg.evaluate("__game.G.startSession('kamchatka'); __game.G.sess().hour=3")
     check("прилив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Полная вода'"))
-    pg.evaluate("__game.G.sess().hour=11"); pg.wait_for_timeout(1000)
+    pg.evaluate("__game.G.sess().hour=11"); pg.wait_for_function("!!FZ.Assets.bg('kamchatka','summer')", timeout=20000); pg.wait_for_timeout(800)
     pg.screenshot(path=f"{OUT}/f_kamchatka.png")
+    check("Камчатка: рендер морской воды без ошибок JS", not errors)
     pg.evaluate("__game.G.sess().hour=9")
     check("отлив рассчитывается", pg.evaluate("__game.G.coastalTide().label==='Малая вода'"))
     pg.evaluate("__game.G.startSession('pond'); __game.G.state().lvl=40; __game.G.state().loc='pond'")

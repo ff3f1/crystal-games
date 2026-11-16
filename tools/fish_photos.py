@@ -1,0 +1,258 @@
+#!/usr/bin/env python3
+"""Build photographed, attributed water backdrops for the Fishing 1.2 game.
+
+Sources: Wikimedia Commons MediaWiki API. Reuse is limited to PD/CC0/CC BY/CC BY-SA.
+All selected photos and the derived seasonal variants are attributed in-game.
+This script is safe to re-run; it never overwrites files if fewer than 20
+legally licensed photos were downloaded.
+"""
+from __future__ import annotations
+
+import html
+import io
+import json
+import re
+import sys
+import time
+from pathlib import Path
+
+import requests
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+
+ROOT = Path(__file__).resolve().parents[1]
+BG = ROOT / "games/fish/assets/bg"
+MANIFEST = ROOT / "games/fish/assets/assets.js"
+ATTRIBUTIONS = ROOT / "games/fish/assets/PHOTO_CREDITS.md"
+UA = "CrystalGamesFishingPhotoreal/1.2 (open-source game https://github.com/ff3f1/crystal-games)"
+API = "https://commons.wikimedia.org/w/api.php"
+SEASONS = ("spring", "summer", "autumn", "winter")
+# Include distinct original and newly introduced waters.
+WATERS = {
+    "pond": ("forest pond reflection shore","forest pond winter snow"),
+    "oka": ("Oka river Russia landscape","Russian river snow"),
+    "platnik": ("fishing lake reeds forest","frozen pond forest"),
+    "volga": ("Volga river Russia countryside landscape","Volga river winter"),
+    "ladoga": ("Lake Ladoga shore water","Lake Ladoga winter"),
+    "akhtuba": ("Akhtuba river landscape","Volga delta winter river"),
+    "baikal": ("Lake Baikal landscape shore","Lake Baikal frozen lake"),
+    "taiga": ("Siberian taiga river valley landscape","Siberian taiga winter river"),
+    "northstream": ("Karelia river forest landscape","Karelia forest frozen river"),
+    "mountainlake": ("Altai mountain lake landscape","Altai mountain lake winter"),
+    "don": ("Don River Rostov Russia summer landscape","Don river winter Rostov Russia"),
+    "polar": ("Yamal tundra river panorama","Yamal arctic tundra winter river"),
+    "kamchatka": ("Kamchatka peninsula volcano lake","Kamchatka snowy volcano mountain sea"),
+    "seliger": ("Lake Seliger landscape","Lake Seliger winter frozen"),
+    "onega": ("Lake Onega landscape shore","Lake Onega winter"),
+    "katun": ("Katun river Altai landscape","Katun river winter Altai"),
+    "kola": ("Tuloma river Murmansk Kola peninsula","Kola peninsula snowy river landscape"),
+    "amur": ("Amur river Khabarovsk landscape","Amur river winter snow"),
+    "blacksea": ("Crimea Black Sea rocky coast","Crimea Black Sea winter coastline"),
+    "barents": ("Barents sea coast Murmansk Teriberka","Arctic Norway coast snowy fjord"),
+}
+
+# Curated Wikimedia Commons files, verified as landscape photographs.
+# The Commons API still verifies each chosen file's commercial-use license.
+PINNED = {
+    ("ladoga","winter"): "File:Lake Ladoga.jpg",
+    ("northstream","winter"): "File:Winter Song of the Northern Taiga 01.jpg",
+    ("mountainlake","winter"): "File:Peyto Lake in winter.jpg",
+    ("don","summer"): "File:Don (Voronezh Oblast).jpg",
+    ("polar","summer"): "File:Лето на Ямале.JPG",
+    ("polar","winter"): "File:Зима на Ямале.jpg",
+    ("kamchatka","summer"): "File:Kamchatka Kamchatka Landscape (17539395548).jpg",
+    ("kamchatka","winter"): "File:Kamchatka. Volcanoes.jpg",
+    ("kola","summer"): "File:Пороги на Умбе.jpg",
+    ("kola","winter"): "File:Пороги на Умбе.jpg",
+    ("blacksea","winter"): "File:Majestic red sunset above the Black sea.jpg",
+    ("barents","summer"): "File:Баренцево море в Териберке.jpg",
+    ("barents","winter"): "File:Teriberka, Kola Peninsula, Russia (21522572999).jpg",
+    ("seliger","winter"): "File:Лёд на озере Селигер.jpg",
+}
+
+DEFAULT_SEARCH = (
+    "lake forest mountains water reflection landscape",
+    "river green forest landscape",
+    "sea rocky coast mountain landscape",
+)
+# Commerical reuse permitted; attribution and share-alike terms are written to credits.
+LICENSE_RX = re.compile(r"(CC0|PUBLIC DOMAIN|CC BY(?:-SA)?(?:\s+\d(?:\.\d)?)?)", re.I)
+FORBIDDEN = re.compile(
+    r"(painting|drawing|artwork|illustrat|vector|map of|flag of|coat of arms|postcard|"
+    r"portrait|watercolor|oil on canvas|digital art|satellite|modis|landsat|aerial|"
+    r"NASA|NOAA|NESDIS|ISS-|topographic|terrain map|diagram|drawing|sheet [0-9]|"
+    r"bridge|monument|memorial|statue|grave|corpses|corpse|terror|death|dead body|"
+    r"rescu|elk|deer|capreolus|animal|wildlife|seal|whale|fish|plankton|bloom|"
+    r"dam construction|city skyline|panorama of a city|Sydney|Australia|Fayette)", re.I)
+client = requests.Session()
+client.headers.update({"User-Agent": UA, "Accept": "application/json"})
+
+def api_search(query: str):
+    params = {
+        "action": "query", "format": "json", "generator": "search",
+        "gsrsearch": "filetype:bitmap " + query,
+        "gsrnamespace": "6", "gsrlimit": "30",
+        "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata",
+        "iiurlwidth": "1100",
+    }
+    for attempt in range(3):
+        try:
+            r = client.get(API, params=params, timeout=35)
+            r.raise_for_status()
+            j = r.json()
+            return list(j.get("query", {}).get("pages", {}).values())
+        except Exception as exc:
+            print("Commons query retry:", query, repr(exc), flush=True)
+            time.sleep(2 + 3*attempt)
+    return []
+
+def clean(text):
+    return html.unescape(re.sub("<[^>]+>", "", text or "")).strip()
+
+def score(page, query, season):
+    ii = (page.get("imageinfo") or [{}])[0]
+    title = page.get("title", "")
+    if FORBIDDEN.search(title) or not ii.get("mime", "").startswith("image/"):
+        return None
+    if season=="summer" and re.search(r"(frozen|freezing|frost|ice surface|winter|snow)",title,re.I):
+        return None
+    w, h = ii.get("width", 0), ii.get("height", 0)
+    if w < 750 or h < 430 or not 1.25 <= w / max(1, h) <= 3.8:
+        return None
+    ext = ii.get("extmetadata", {})
+    license = clean((ext.get("LicenseShortName") or {}).get("value", ""))
+    if not LICENSE_RX.fullmatch(license):
+        return None
+    if ii.get("mime") not in ("image/jpeg", "image/png", "image/webp"):
+        return None
+    tokens = [x for x in re.findall(r"[a-zA-Z]{4,}", query.lower()) if x not in ("landscape","photograph","water","shore")]
+    match = sum(1 for token in tokens if token in title.lower()) 
+    # Prefer a shoreline panorama with geographic relevance, not a close-up object.
+    merit = 10 * match + min(w, 4500) / 1000 + min(w/h, 2.4)
+    if "panorama" in title.lower(): merit += 2
+    return merit, {
+        "url": ii.get("thumburl") or ii.get("url"), "page": ii.get("descriptionurl") or "",
+        "title": title, "author": clean((ext.get("Artist") or {}).get("value", "")),
+        "license": license, "source": ii.get("url", ""),
+        "width": w, "height": h
+    }
+
+def by_title(title):
+    params={"action":"query","format":"json","titles":title,"prop":"imageinfo",
+            "iiprop":"url|size|mime|extmetadata","iiurlwidth":"1100"}
+    try:
+        data=client.get(API,params=params,timeout=35)
+        data.raise_for_status()
+        return list(data.json().get("query",{}).get("pages",{}).values())
+    except Exception as exc:
+        print("pinned source request failed:",title,repr(exc),flush=True)
+        return []
+
+def load_candidate(d):
+    r = client.get(d["url"], timeout=45, headers={"Accept":"image/*"})
+    r.raise_for_status()
+    img = Image.open(io.BytesIO(r.content)).convert("RGB")
+    if img.width < 700 or img.height < 400:
+        raise ValueError("source photo below minimum size")
+    return img
+
+def pick_photo(label, query, generic):
+    season="winter" if label.endswith("/winter") else "summer"
+    loc=label.split("/")[0]
+    pinned=PINNED.get((loc,season))
+    if pinned:
+        for page in by_title(pinned):
+            result=score(page, query, season)
+            if not result: continue
+            try:
+                d=result[1]; raw=load_candidate(d)
+                print(label,"CURATED:",d["title"],"|",d["license"],flush=True)
+                return raw,d
+            except Exception as exc:
+                print("pinned download failed",pinned,repr(exc),flush=True)
+    # Try the geographically correct place first, broader scenic searches last.
+    for q in (query, generic, *DEFAULT_SEARCH):
+        pages = api_search(q)
+        cand = [score(x, query, season) for x in pages]
+        cand = sorted((x for x in cand if x), key=lambda x: x[0], reverse=True)
+        for val, d in cand[:10]:
+            try:
+                raw=load_candidate(d)
+                print(label, "source:", d["title"], "|", d["license"], "|", raw.size, flush=True)
+                return raw, d
+            except Exception as exc:
+                print("image unavailable", d["title"], str(exc)[:90], flush=True)
+    raise RuntimeError("No licensed photo available for "+label+" / "+query)
+
+def grade(image, season):
+    image = ImageOps.fit(image, (960, 600), method=Image.Resampling.LANCZOS, centering=(.5, .49))
+    if season == "spring":
+        image=ImageEnhance.Color(image).enhance(.94)
+        image=ImageEnhance.Brightness(image).enhance(1.04)
+    elif season == "summer":
+        image=ImageEnhance.Color(image).enhance(1.07)
+    elif season == "autumn":
+        # Golden-hour grading without flattening photographic details.
+        r,g,b=image.split()
+        image=Image.merge("RGB",(r.point(lambda x:min(255,round(x*1.12))),
+                                  g.point(lambda x:round(x*.92)),
+                                  b.point(lambda x:round(x*.79))))
+        image=ImageEnhance.Contrast(image).enhance(1.06)
+    elif season == "winter":
+        image=ImageEnhance.Color(image).enhance(.59)
+        image=Image.blend(image,Image.new("RGB",image.size,(174,207,231)),.15)
+        image=ImageEnhance.Contrast(image).enhance(1.09)
+    image=ImageEnhance.Sharpness(image).enhance(1.14)
+    return image
+
+def main():
+    BG.mkdir(parents=True,exist_ok=True)
+    images = {}
+    credits = {}
+    # Download everything before committing manifest. Fail closed on license issues.
+    for name, (warm_query, winter_query) in WATERS.items():
+        warm, credit = pick_photo(name + "/summer", warm_query, name + " lake or river")
+        cold, cold_credit = pick_photo(name + "/winter", winter_query, name + " winter")
+        credits[name] = {"summer":credit, "winter":cold_credit}
+        for season in SEASONS:
+            src=cold if season=="winter" else warm
+            out=io.BytesIO()
+            grade(src, season).save(out, "WEBP", quality=76, method=5)
+            images["bg/"+name+"_"+season] = out.getvalue()
+    text=MANIFEST.read_text(encoding="utf-8")
+    for key in images:
+        # Add or replace path without affecting other game assets/audio.
+        path=key+".webp"
+        pat=r'("'+re.escape(key)+r'"\s*:\s*")[^"]*(")'
+        if re.search(pat,text):
+            text=re.sub(pat,lambda m:m.group(1)+path+m.group(2),text,count=1)
+        else:
+            text=text.replace('"images": {','"images": {\n  "'+key+'": "'+path+'",',1)
+    for key in images:
+        # All selected scenes are cropped to a stable horizon around 53%.
+        pat=r'("'+re.escape(key)+r'"\s*:\s*)[\d.]+'
+        idx=text.index('"waterline"')
+        before, wl=text[:idx],text[idx:]
+        if re.search(pat,wl):
+            wl=re.sub(pat,lambda m:m.group(1)+"0.53",wl,count=1)
+        else:
+            wl=wl.replace('"waterline": {','"waterline": {\n   "'+key+'": 0.53,',1)
+        text=before+wl
+    MANIFEST.write_text(text,encoding="utf-8")
+    for key,raw in images.items():
+        target=BG/(key[3:]+".webp")
+        target.write_bytes(raw)
+        print("photo",target.relative_to(ROOT),len(raw),flush=True)
+    lines=["# Photographic backgrounds — Fishing 1.2","","All original works below are Wikimedia Commons photographs used under their indicated",
+           "license. Crops and color-graded seasonal variants retain the source license.",
+           "Commercial use is permitted by these licenses; CC BY-SA derivatives remain under",
+           "their respective ShareAlike terms. Attribution must ship with the game.",
+           ""]
+    for name,v in credits.items():
+        for season,p in v.items():
+            lines.append("* **"+name+" / "+season+"**: "+p["title"]+" — "+(p["author"] or "uncredited")+
+                         "; license "+p["license"]+"; "+p["page"])
+    ATTRIBUTIONS.write_text("\n".join(lines)+"\n",encoding="utf-8")
+    print("DONE: generated",len(images),"photo-backed seasonal locations",flush=True)
+
+if __name__=="__main__":
+    main()

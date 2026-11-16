@@ -32,7 +32,7 @@
     A.water = loopNoise("lowpass", 520, 0.6);
     A.water.lfo = lfo(0.13, 0.12, A.water.g.gain);
     A.wind = loopNoise("lowpass", 650, 0.35);
-    A.rain = loopNoise("lowpass", 1650, 0.45);
+    A.rain = loopNoise("lowpass", 1050, 0.3);
     S.updateAmbience(ambParams);
   };
 
@@ -81,9 +81,9 @@
     A.water.f.frequency.setTargetAtTime(river ? 760 : 430, t, 1.2);
     A.wind.g.gain.setTargetAtTime(0.008 + wind * (ice ? 0.0018 : 0.0012), t, 1.5);
     A.wind.f.frequency.setTargetAtTime(380 + wind * 28, t, 1.5);
-    const rainLevel = p.sky === "rain" ? 0.075 : p.sky === "storm" ? 0.105 : 0;
+    const rainLevel = p.sky === "rain" ? 0.045 : p.sky === "storm" ? 0.068 : 0;
     A.rain.g.gain.setTargetAtTime(ice ? 0 : rainLevel, t, 1.8);
-    A.rain.f.frequency.setTargetAtTime(p.sky === "storm" ? 1250 : 1650, t, 2);
+    A.rain.f.frequency.setTargetAtTime(p.sky === "storm" ? 790 : 1050, t, 2);
     const crickets = !ice && p.period === "night" && (p.season === "summer" || p.season === "autumn");
     if (crickets && !cricket) {
       const o = ac.createOscillator(); o.frequency.value = 4300;

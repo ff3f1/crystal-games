@@ -165,6 +165,7 @@
     const loc = FZ.LOC[trip && trip.active ? trip.locId : (locId || st.loc)];
     st.loc = loc.id;
     const season = G.season();
+    if(FZ.Assets && FZ.Assets.ensure)FZ.Assets.ensure("bg/"+loc.id+"_"+season);
     const now = new Date();
     sess = {
       loc, season, ice: season === "winter", firstIce: Wd.firstIceActive(season), mode: G.modeFor(season),
@@ -537,6 +538,10 @@
     const rod = g.rod, line = g.line;
     const lineT = line.test, dragLim = st.drag * lineT;
     f.t += dt;
+    // Location current influences the fish and rod loading.
+    // Lightweight fish are carried more strongly by the flow.
+    const flow=sess.ice?0:(sess.loc.current||0);
+    const currentLoad=Math.max(0,flow-.25)*(.045+.035/Math.max(.5,Math.sqrt(f.w)));
     // смена поведения
     f.phaseT -= dt;
     if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
@@ -568,6 +573,7 @@
     const fishPull = f.Fmax * f.muscle;
     const reeling = rig.reeling;
     let Tt = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
+    Tt += currentLoad*f.Fmax*(.3+.7*Math.abs(f.vx)/2);
     if (f.phase === "toward") Tt = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") Tt = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
     // Rod spring and elastic line filter sharp impulses.
@@ -586,18 +592,28 @@
     }
     if (f.T > lineT) return lose("snap");
     // подмотка
-    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1));
+    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1)) * (st.tut < 3 ? 1.35 : 1);
     if (reeling && !slipping) { if (sess.ice) f.D -= reelSp * 0.55 * dt; else f.Z -= reelSp * dt; FZ.Sound.reel(rod.reel); rig.rod.reelAngle += dt * 14; }
     if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
     // поперёк
     if (!sess.ice) {
       // Hydrodynamic drag increases with lateral velocity.
       const waterDrag = 0.12 + 0.085 * Math.abs(f.vx) / Math.max(0.5, Math.pow(f.w, 0.2));
-      f.X += f.vx * dt; f.vx *= Math.exp(-waterDrag * dt);
+      f.X += (f.vx+flow*.13*Math.sin(t*.34+f.X*.2))*dt; f.vx *= Math.exp(-waterDrag * dt);
       if (f.phase === "run" && Math.abs(f.vx) < 0.4) f.vx += (U.rand() - 0.5) * 2 * dt;
       const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
       if (Math.abs(f.X) > lat) { f.snagT += dt; f.X = Math.sign(f.X) * lat; if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true }); }
       else f.snagT = Math.max(0, f.snagT - dt * 2);
+      // Beginner protection: the tutorial fish should teach steering, not end
+      // in a random snag while the player is learning the reel control.
+      // After the first resolved catch normal reed/snag physics is unchanged.
+      if (st.tut < 3 && f.snagT > 0.7) {
+        const edgeSign = Math.sign(f.X) || 1;
+        f.X = edgeSign * lat * 0.68;
+        f.vx = -edgeSign * Math.max(0.5, Math.min(1.1, Math.abs(f.vx) * 0.55));
+        f.snagT = 0;
+        emit("msg", { text: "Рыба у травы! Ведите удилище от берега" });
+      }
       if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
     }
     const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;

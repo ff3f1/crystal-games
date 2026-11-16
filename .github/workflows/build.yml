@@ -82,7 +82,7 @@ jobs:
           -PappId=${{ matrix.appId }}
           "-PappName=${{ matrix.name }}"
           -PversionCode=${{ github.run_number }}
-          -PversionName=1.0.${{ github.run_number }}
+          -PversionName=${{ matrix.key == 'FISH' && '1.2' || '1.0' }}.${{ github.run_number }}
           -PadInter=${{ matrix.adInter }}
           -PadReward=${{ matrix.adReward }}
 
