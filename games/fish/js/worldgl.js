@@ -170,16 +170,25 @@
     const menu=document.getElementById("ovMenu").classList.contains("on");
     root.visible=!menu;float.visible=!menu&&v.tackle.state!=='none';line.visible=float.visible;
     const idleSway=Math.sin(t*.71)*2.2;
-    const base=V(W*.88,H*.86+idleSway,40),tip=V(W*(isIce?.68:.34)+(tilt*W*.12),H*(isIce?.59:.29)+idleSway,30);
+    const base=V(W*.70,H*.79+idleSway,40),tip=V(W*(isIce?.68:.34)+(tilt*W*.12),H*(isIce?.59:.29)+idleSway,30);
     if(v.tackle.state==='fly'){tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;}
-    const pts=[];for(let i=0;i<=28;i++)pts.push(rodPoint(base,tip,bend,i/28));
+    const rodBase=base.clone().addScaledVector(tip.clone().sub(base).normalize(),-10);
+    const pts=[];for(let i=0;i<=28;i++)pts.push(rodPoint(rodBase,tip,bend,i/28));
     for(let i=0;i<28;i++){connect(meshes[i],pts[i],pts[i+1]);const taper=(1-i/28)*2.6+.6;meshes[i].scale.x=meshes[i].scale.z=taper;}
     for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(base,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
     handle.position.copy(base);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),tip.clone().sub(base).normalize());handle.scale.setScalar(Math.min(1.4,W/390));
     reelHandle.rotation.z=v.rod.reelAngle||0;
-    if(gripSprite&&reelSprite){handle.visible=false;const scale=Math.min(1.4,W/390);const sway=Math.sin(t*.71)*2;
-      gripSprite.visible=reelSprite.visible=!menu;gripSprite.scale.set(150*scale,150*scale/gripSprite.userData.aspect,1);gripSprite.position.copy(V(W*.87,H*.88+sway,80));
-      reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);reelSprite.position.copy(V(W*.77,H*.84+sway,90));reelSprite.rotation.z=Math.sin(v.rod.reelAngle||0)*.025;
+    if(gripSprite&&reelSprite){
+      handle.visible=false;const scale=Math.min(1.4,W/390),gw=190*scale,gh=gw/gripSprite.userData.aspect;
+      const axis=tip.clone().sub(base).normalize();
+      const photoAxis=new T.Vector3(-.63,.95,0).normalize();
+      const angle=Math.atan2(axis.y,axis.x)-Math.atan2(photoAxis.y,photoAxis.x);
+      const anchor=new T.Vector3(-gw/2,gh/2,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
+      gripSprite.visible=reelSprite.visible=!menu;
+      gripSprite.scale.set(gw,gh,1);gripSprite.rotation.z=angle;gripSprite.position.copy(base).sub(anchor);gripSprite.position.z=80;
+      const socket=new T.Vector3(12*scale,-22*scale,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
+      reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);
+      reelSprite.rotation.z=angle;reelSprite.position.copy(base).add(socket).add(new T.Vector3(-10*scale,-32*scale,0));reelSprite.position.z=90;
     }
     let p=R.proj(v.tackle.X||0,Math.max(3.6,v.tackle.Z||20));
     if(isIce)p={x:W*.50,y:H*.68,s:20};
