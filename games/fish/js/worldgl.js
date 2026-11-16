@@ -9,10 +9,10 @@
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const meshes=[],guides=[],rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
-  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
+  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},winter:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
   const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
   const fragment=`precision highp float;
-    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,holeOn,cloudCover,drillProgress;
+    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,winter,holeOn,cloudCover,drillProgress;
     uniform vec2 resolution,photoSize,hole,holeRadius,sun;uniform vec3 colorNear,colorFar;uniform vec4 ripples[12];varying vec2 vUv;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
@@ -29,7 +29,7 @@
       vec3 sky=mix(vec3(.40,.61,.73),vec3(.84,.86,.78),uv.y/shore);
       vec3 landscape=hasPhoto>.5?samplePhoto(uv):sky;
       vec3 c=landscape;
-      if(ice>.5 && uv.y<=shore){
+      if(winter>.5 && uv.y<=shore){
         float bank=smoothstep(shore*.47,shore,uv.y);
         float lum=dot(c,vec3(.2126,.7152,.0722));
         c=mix(c,vec3(lum*.94,lum,lum*1.08),.20+bank*.16);
@@ -65,14 +65,20 @@
         if(rain>.01){vec2 cell=floor(uv*vec2(55.,80.));float tt=fract(clock*1.6+hash(cell));float rr=length((fract(uv*vec2(55.,80.))-.5)*vec2(1.,2.8));c+=smoothstep(.025,0.,abs(rr-tt*.5))*(1.-tt)*rain*.07;}
         if(ice>.5){
           // Grain, clear-ice patches, cracks and near-shore snowbanks.
-          float grain=noise(uv*vec2(175.,295.))*.065+noise(uv*vec2(33.,52.))*.06;
-          float cracks=pow(1.-abs(sin((uv.x+noise(uv*7.)*.16)*55.+uv.y*10.)),42.);
-          float bluePatch=smoothstep(.54,.77,noise(uv*vec2(15.,24.)))*.19;
-          c=mix(vec3(.50,.65,.73),vec3(.78,.85,.89),clamp(depth*.61+grain+.15,0.,1.));
-          c=mix(c,vec3(.37,.56,.66),bluePatch*1.65*(1.-depth*.4));
-          c-=cracks*.075;
-          float bank=1.-smoothstep(.0,.065,depth+sin(uv.x*32.)*.002);
-          c=mix(c,vec3(.90,.94,.96),bank*.65);
+          float coarse=noise(uv*vec2(17.,29.));
+          float grain=noise(uv*vec2(175.,295.))*.07+noise(uv*vec2(33.,52.))*.065;
+          float frost=noise(uv*vec2(65.,92.));
+          float cracks=pow(1.-abs(sin((uv.x+noise(uv*7.)*.16)*55.+uv.y*10.)),54.);
+          float bluePatch=smoothstep(.54,.77,coarse)*.21;
+          c=mix(vec3(.44,.60,.68),vec3(.77,.84,.87),clamp(depth*.54+grain+.14,0.,1.));
+          c=mix(c,vec3(.34,.53,.63),bluePatch*1.55*(1.-depth*.35));
+          // Wind-polished blue ice alternates with powdery snow, not flat plastic.
+          float snowDrift=smoothstep(.51,.77,coarse+frost*.18)*(.12+depth*.21);
+          c=mix(c,vec3(.88,.91,.93),snowDrift);
+          c+=vec3(.8,.85,.88)*(frost-.5)*.05;
+          c-=cracks*(.055+.045*coarse);
+          float bank=1.-smoothstep(.005,.075,depth+sin(uv.x*32.)*.002);
+          c=mix(c,vec3(.89,.92,.94),bank*.66);
           if(drillProgress>.0 && holeOn<.5){
             // Shaved ice and cracks spread as the drill progresses.
             float dr=length((uv-hole)/holeRadius);
@@ -112,7 +118,7 @@
   function torus(group,r,t,mat,x,y,z){const m=new T.Mesh(new T.TorusGeometry(r,t,6,36),mat);m.position.set(x,y,z);group.add(m);return m;}
   function connect(mesh,a,b){mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());mesh.scale.y=a.distanceTo(b);}
   let gripSprite,reelSprite,reelCrank,reelRotor,ferrule;
-  let root,handle,reelHandle,hemisphere,keyLight,rimLight;
+  let root,handle,reelHandle,hemisphere,keyLight,rimLight,tackleMetrics=null;
   function buildTackle(){
     root=new T.Group();scene.add(root);
     const carbon=material('#263233',.28,.58),chrome=material('#c5c4b5',.24,.85),gold=material('#b9934e',.28,.75),rubber=material('#192223',.92),cork=material('#b49569',.94);
@@ -215,7 +221,12 @@
       uniforms.photo.value=texture;uniforms.photoSize.value.set(im.width,im.height);uniforms.waterline.value=FZ.Assets.waterline(v.loc.id,v.season);uniforms.hasPhoto.value=1;if(oldTexture)oldTexture.dispose();
     }
   }
-  function rodPoint(a,b,bend,u){return a.clone().lerp(b,u).add(new T.Vector3(-bend*40*u*u, -bend*100*u*u*u,0));}
+  function rodPoint(a,b,bend,u){
+    // Bend across the blank, not along the screen axes. Short ice rods flex less.
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(1,Math.hypot(dx,dy));
+    const flex=Math.min(54,len*.15)*bend*u*u;
+    return new T.Vector3(a.x+dx*u-dy/len*flex,a.y+dy*u+dx/len*flex,a.z+(b.z-a.z)*u);
+  }
   function tackle(v,dt){
     // Game physics already supplies spring-damped bend; avoid a second lagging spring.
     const t=v.t, f=v.fish, bend=U.clamp(v.rod.bend||0,0,1.5), tilt=v.rod.tilt||0, isIce=!!v.ice;
@@ -226,8 +237,8 @@
     float.visible=showingLine&&!f&&!isIce&&v.mode==='float';
     const idleSway=Math.sin(t*.71)*2.2;
     // Winter ice-fishing equipment is short, not a summer-length rod.
-    const base=V(W*(isIce?.74:.70),H*(isIce?.90:.79)+idleSway,40);
-    const tip=V(W*(isIce?.54:.34)+(tilt*W*(isIce?.055:.12)),H*(isIce?.72:.29)+idleSway,30);
+    const base=V(W*(isIce?.74:.70),H*(isIce?.82:.79)+idleSway,40);
+    const tip=V(W*(isIce?.54:.34)+(tilt*W*(isIce?.055:.12)),H*(isIce?.59:.29)+idleSway,30);
     if(v.tackle.state==='fly'){tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;}
     const rodAxis=tip.clone().sub(base).normalize();
     const rodBase=base.clone().addScaledVector(rodAxis,isIce?10:21);
@@ -237,7 +248,7 @@
     }
     const pts=[];for(let i=0;i<=28;i++)pts.push(rodPoint(rodBase,tip,bend,i/28));
     for(let i=0;i<28;i++){connect(meshes[i],pts[i],pts[i+1]);const taper=(1-i/28)*2.6+.6;meshes[i].scale.x=meshes[i].scale.z=taper;}
-    for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(base,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
+    for(let i=0;i<guides.length;i++){const u=.14+i*.14,p=rodPoint(rodBase,tip,bend,u);guides[i].position.copy(p);guides[i].position.x-=3;}
     handle.position.copy(base);handle.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),tip.clone().sub(base).normalize());handle.scale.setScalar(Math.min(1.4,W/390));
     reelHandle.rotation.z=v.rod.reelAngle||0;
     if(reelCrank)reelCrank.visible=false;
@@ -248,7 +259,7 @@
       const photoAxis=new T.Vector3(-.63,.95,0).normalize();
       const angle=Math.atan2(axis.y,axis.x)-Math.atan2(photoAxis.y,photoAxis.x);
       const anchor=new T.Vector3(-gw/2,gh/2,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
-      gripSprite.visible=reelSprite.visible=!menu;
+      gripSprite.visible=!menu;reelSprite.visible=!menu&&!isIce;
       gripSprite.scale.set(gw,gh,1);gripSprite.rotation.z=angle;gripSprite.position.copy(base).sub(anchor);gripSprite.position.z=80;
       const socket=new T.Vector3(12*scale,-22*scale,0).applyAxisAngle(new T.Vector3(0,0,1),angle);
       reelSprite.scale.set(64*scale,64*scale/reelSprite.userData.aspect,1);
@@ -257,14 +268,14 @@
       reelSprite.rotation.z=reelAngle;reelSprite.position.copy(base).add(socket).sub(reelFoot);reelSprite.position.z=90;
       const a=v.rod.reelAngle||0,zAxis=new T.Vector3(0,0,1);
       if(reelCrank&&reelRotor){
-        reelCrank.visible=!menu;
-        // The baked reel already contains a spool; avoid a duplicate rotor silhouette.
-        reelRotor.visible=false;
+        reelCrank.visible=!menu&&!isIce;
+        // Hide the full spinning reel on the ice; use the existing compact drum.
+        reelRotor.visible=!menu&&isIce;
         reelCrank.scale.setScalar(scale);reelRotor.scale.setScalar(scale);
         reelCrank.position.copy(reelSprite.position).add(new T.Vector3(11*scale,-6*scale,0).applyAxisAngle(zAxis,reelAngle));
         reelCrank.position.z=104;reelCrank.rotation.z=reelAngle+a;
-        reelRotor.position.copy(reelSprite.position).add(new T.Vector3(-11*scale,6*scale,0).applyAxisAngle(zAxis,reelAngle));
-        reelRotor.position.z=103;reelRotor.rotation.z=reelAngle+a*2;
+        reelRotor.position.copy(base).add(new T.Vector3(-12*scale,-10*scale,0).applyAxisAngle(zAxis,angle));
+        reelRotor.position.z=103;reelRotor.rotation.z=angle+a;
       }
     }
     const lineX=f&&f.hooked?f.X:(v.tackle.X||0),lineZ=f&&f.hooked?f.Z:(v.tackle.Z||20);
@@ -276,9 +287,13 @@
     const floatScale=U.clamp(p.s*.15,2.4,8);float.scale.setScalar(floatScale);if(v.mode!=='float'&&!isIce)float.scale.setScalar(floatScale*.25);
     const linePos=line.geometry.attributes.position;
     const top=pts[28], target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
-    const sag=isIce?H*.004:(f?Math.max(1,1-(f.tension||0))*H*.028:H*.075);
+    const sag=isIce?H*.004:(f?H*(.004+.038*(1-U.clamp(f.tension||0,0,1))):H*.075);
     for(let i=0;i<65;i++){const u=i/64,point=top.clone().lerp(target,u);point.y-=Math.sin(u*Math.PI)*sag;linePos.setXYZ(i,point.x,point.y,point.z);}
     linePos.needsUpdate=true;
+    tackleMetrics={winter:isIce,rodLength:base.distanceTo(tip),blankLength:rodBase.distanceTo(tip),
+      jointOverlap:isIce?6:7,tipScreenY:H/2-tip.y,holeScreenY:R.holeGeom().y,
+      reelVisible:!!(reelCrank&&reelCrank.visible),iceDrumVisible:!!(reelRotor&&reelRotor.visible),
+      reelRate:v.rod.reelRate||0};
     net.visible=!!v.landing&&!menu;if(net.visible){net.position.copy(V(W*.43,H*(.85-v.landing.k*.20),50));net.rotation.z=-.2;net.scale.setScalar(1+v.landing.k*.4);}
     if(f&&!isIce&&(f.surface>.15||f.jump||v.landing)){
       if(fishId!==f.s.id){if(fishModel){scene.remove(fishModel);FZ.Fish3D.dispose(fishModel);}fishModel=FZ.Fish3D.create(f.s);if(fishModel){scene.add(fishModel);fishId=f.s.id;}}
@@ -301,11 +316,12 @@
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
     uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
-    uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0;uniforms.ice.value=v.ice?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
+    uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.ice?0:(v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0);uniforms.ice.value=v.ice?1:0;uniforms.winter.value=v.season==='winter'?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
     const lightLevel=1-U.clamp(L.dark/.6,0,1)*.96;hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
-    weather.visible=['rain','storm','snow'].includes(v.wx.sky);weatherStreaks.visible=weather.visible&&v.wx.sky!=='snow';weather.material.size=v.wx.sky==='snow'?3:1.4;
-    if(weather.visible){const p=weather.geometry.attributes.position;const speed=v.wx.sky==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
-      if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=v.wx.sky==='snow'?.45:0;
+    const precipitation=v.ice&&(v.wx.sky==='rain'||v.wx.sky==='storm')?'snow':v.wx.sky;
+    weather.visible=['rain','storm','snow'].includes(precipitation);weatherStreaks.visible=weather.visible&&precipitation!=='snow';weather.material.size=precipitation==='snow'?3:1.4;
+    if(weather.visible){const p=weather.geometry.attributes.position;const speed=precipitation==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
+      if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=precipitation==='snow'?.45:0;
     }
     tackle(v,dt);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
@@ -318,5 +334,5 @@
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;c.getContext('2d').drawImage(canvas,0,0);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
     hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value,drilling:uniforms.drillProgress.value}:null,
-    reelCrankAngle:enabled&&reelCrank?reelCrank.rotation.z:null});
+    reelCrankAngle:enabled&&reelCrank?reelCrank.rotation.z:null,tackle:tackleMetrics});
 })(window.FZ);
