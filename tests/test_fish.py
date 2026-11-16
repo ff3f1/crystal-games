@@ -101,7 +101,7 @@ with sync_playwright() as p:
     check("фидер в руках", pg.evaluate("__game.G.sess().mode") == "feeder")
 
     # Второй шанс: детерминированная проверка восстановления после потери рыбы
-    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.lost={canRevive:true,f:{revived:false,Fmax:30,T:30,phase:'run',phaseT:1,slackT:0,snagT:0,jump:null,S:.25,X:8,Z:22}};if(!G.revive())throw new Error('revive API returned false');}""")
+    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.lost={canRevive:true,f:{s:FZ.SP.perch,w:.5,lenM:.25,lenCm:25,vx:.2,vz:0,t:0,effort:.4,surface:0,jumped:0,revived:false,Fmax:30,T:30,phase:'run',phaseT:1,slackT:0,snagT:0,jump:null,S:.25,X:8,Z:22}};if(!G.revive())throw new Error('revive API returned false');}""")
     check("второй шанс возвращает рыбу в fight", pg.evaluate("__game.G.rig().state==='fight' && !!__game.G.rig().fish.revived && !__game.G.rig().lost"))
 
 
