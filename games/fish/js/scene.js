@@ -1078,6 +1078,23 @@
     ctx.save(); ctx.globalAlpha = 0.25 * (1 - Math.abs(sink));
     ctx.fillStyle = "#ff6a3a"; ctx.fillRect(x - w / 2, y + 1, w, hgt * 0.35 * (1 - sink));
     ctx.restore();
+    // Use a material-shaded raster bobber instead of the old flat primitive.
+    const floatArt = FZ.Assets && FZ.Assets.item("float");
+    if (floatArt) {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x - hgt * 2, y - hgt * 3, hgt * 4, hgt * 3 + 0.5); ctx.clip();
+      ctx.translate(x, y + hgt * Math.max(0, sink));
+      ctx.rotate(-tilt * 1.35 + Math.sin(t * 1.8) * 0.012);
+      const height = hgt * (1.1 + Math.max(0, -sink) * 0.24);
+      const width = height * floatArt.width / floatArt.height;
+      ctx.drawImage(floatArt, -width / 2, -height * 0.81, width, height);
+      if (night) R.glow(0, -height * 0.75, hgt * 0.8);
+      ctx.restore();
+      ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.35);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.ellipse(x, y + 1, w * 2.2, w * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+      return;
+    }
     ctx.save();
     ctx.beginPath(); ctx.rect(x - hgt * 2, y - hgt * 3, hgt * 4, hgt * 3 + 0.5); ctx.clip(); // выше воды
     ctx.translate(x, y + hgt * Math.max(0, sink));
