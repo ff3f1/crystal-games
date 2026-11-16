@@ -1,6 +1,15 @@
 /* Создано tools/fish_process.py — не правьте вручную */
 window.FZ_ASSETS = {
  "images": {
+  "bg/kamchatka_spring": "bg/kamchatka_spring.svg",
+  "bg/kamchatka_summer": "bg/kamchatka_summer.svg",
+  "bg/kamchatka_autumn": "bg/kamchatka_autumn.svg",
+  "bg/kamchatka_winter": "bg/kamchatka_winter.svg",
+  "fish/chinook": "fish/chinook.svg",
+  "fish/coho": "fish/coho.svg",
+  "fish/sockeye": "fish/sockeye.svg",
+  "fish/halibut": "fish/halibut.svg",
+  "fish/terpug": "fish/terpug.svg",
   "bg/pond_summer": "bg/pond_summer.webp",
   "fish/pike": "fish/pike.webp",
   "items/worm": "items/worm.webp",
