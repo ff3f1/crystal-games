@@ -165,8 +165,8 @@
     }
   }
   function rodPoint(a,b,bend,u){return a.clone().lerp(b,u).add(new T.Vector3(-bend*40*u*u, -bend*100*u*u*u,0));}
-  function tackle(v){
-    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const flexTarget=v.rod.bend||0;R._flex.v+=(flexTarget-R._flex.x)*.12;R._flex.v*=.75;R._flex.x+=R._flex.v;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
+  function tackle(v,dt){
+    const t=v.t, f=v.fish;R._flex=R._flex||{x:0,v:0};const flexTarget=v.rod.bend||0;const flexDt=Math.min(.05,dt);R._flex.v+=(flexTarget-R._flex.x)*90*flexDt;R._flex.v*=Math.exp(-12*flexDt);R._flex.x+=R._flex.v*flexDt;const bend=R._flex.x, tilt=v.rod.tilt||0, isIce=!!v.ice;
     const menu=document.getElementById("ovMenu").classList.contains("on");
     root.visible=!menu;float.visible=!menu&&v.tackle.state!=='none';line.visible=float.visible;
     const idleSway=Math.sin(t*.71)*2.2;
@@ -220,7 +220,7 @@
     if(weather.visible){const p=weather.geometry.attributes.position;const speed=v.wx.sky==='snow'?30:370;for(let i=0;i<p.count;i++){let y=p.getY(i)-dt*speed;if(y<-H/2)y=H/2;p.setY(i,y);}p.needsUpdate=true;
       if(weatherStreaks.visible){const q=weatherStreaks.geometry.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);q.setXYZ(i*2,x,y,30);q.setXYZ(i*2+1,x-v.wx.wind*.8,y+14,30);}q.needsUpdate=true;}weather.material.opacity=v.wx.sky==='snow'?.45:0;
     }
-    tackle(v);aimMesh.visible=false;
+    tackle(v,dt);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
     renderer.render(scene,camera);R.metrics={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio()};
   };
