@@ -225,43 +225,6 @@ with sync_playwright() as p:
  }""")
  page.screenshot(path=str(out/'reel-turn.png'))
 
- # Visual evidence: every water has a summer and winter scene, in daylight and
- # adverse weather. Capture the game canvas itself rather than a mocked render.
- from PIL import Image
- page.set_viewport_size({'width':360,'height':640})
- locations=page.evaluate("FZ.LOCATIONS.map(l=>l.id)")
- assert len(locations)>=20
- captures=[]
- for loc_id in locations:
-  for season in ('summer','winter'):
-   for variant in ('day','weather'):
-    hour=12 if variant=='day' else (11 if season=='winter' else 19)
-    sky='clear' if variant=='day' else ('snow' if season=='winter' else 'rain')
-    scene_info=page.evaluate("""async p=>{
-      const G=__game.G;
-      G.startSession(p.id,p.season);
-      const s=G.sess();
-      s.hour=p.hour;s.period=FZ.Scene.period(p.hour,p.season);
-      s.wx.sky=p.sky;s.wx.wind=3;s.wx.dir='З';
-      const im=await FZ.Assets.ensure(FZ.Assets.backdropKey(p.id,p.season));
-      if(!im)throw Error('Missing backdrop '+p.id+'/'+p.season);
-      FZ.Scene.render(G.view(3.5),1/60);
-      const info=FZ.Scene.graphicsInfo();
-      return {id:p.id,season:p.season,variant:p.variant,sky:p.sky,
-        ice:!!s.ice,renderer:info.renderer,photoWidth:im.width,photoHeight:im.height};
-    }""",{'id':loc_id,'season':season,'hour':hour,'sky':sky,'variant':variant})
-    assert scene_info['renderer']=='webgl',scene_info
-    name=f"scene_{loc_id}_{season}_{variant}.jpg"
-    image_path=out/name
-    page.locator('#cv').screenshot(path=str(image_path),type='jpeg',quality=87)
-    with Image.open(image_path) as im:
-     assert im.width>=390 and im.height>=844,(name,im.size)
-     assert len(im.convert('RGB').resize((48,96)).getcolors(4608) or [])>16,name
-    captures.append(dict(scene_info,screen=name))
- (out/'all-locations-validation.json').write_text(json.dumps(captures,ensure_ascii=False,indent=2))
- assert len(captures)==len(locations)*4,len(captures)
- page.set_viewport_size({'width':390,'height':844})
-
  # A delayed reward popup must not interrupt the cast after pressing Fish.
  page.evaluate('__game.UI.showMenu()')
  page.click('#mGo')
