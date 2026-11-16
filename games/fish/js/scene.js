@@ -439,6 +439,7 @@
 
     if (v.ice) R.drawIceField(v, L, t);
     else R.drawWater(v, L, t, windF, over);
+    R.drawAtmosphere(v, L, t, dt, over);
 
     R.drawWorldFx(v, L, dt);
     if (!v.ice) R.drawReeds(v, L, t, windF, season);
@@ -446,6 +447,90 @@
     R.drawWeather(v, L, t, dt, wx);
     R.drawScreenFx(dt);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+  };
+
+
+  // ---------- Кинематографические эффекты: атмосферная перспектива и живые блики ----------
+  const ambientMotes = [];
+  function seedAmbient() {
+    ambientMotes.length = 0;
+    const r = U.rng("ambient-motes");
+    for (let i = 0; i < 34; i++) ambientMotes.push({
+      x: r() * W, y: r() * H, phase: r() * Math.PI * 2,
+      speed: r.range(5, 17), size: r.range(0.7, 2.2), drift: r.range(-5, 5)
+    });
+  }
+  R.drawAtmosphere = function (v, L, t, dt, over) {
+    const span = H - shoreY;
+    ctx.save();
+    // Мягкая дымка на линии горизонта добавляет глубину между берегом и водой.
+    const haze = ctx.createLinearGradient(0, shoreY - 34, 0, shoreY + Math.min(150, span * 0.28));
+    haze.addColorStop(0, "rgba(220,235,245,0)");
+    haze.addColorStop(0.35, U.rgba(U.mix(L.bot, L.tint, 0.32), over ? 0.055 : 0.105));
+    haze.addColorStop(1, "rgba(220,235,245,0)");
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, shoreY - 34, W, Math.min(190, span * 0.34) + 34);
+
+    // Низкое солнце пробивает облака мягкими лучами, не перекрывая пейзаж.
+    if (L.sunUp && !over && L.dark < 0.2 && !v.ice) {
+      ctx.globalCompositeOperation = "screen";
+      const strength = (0.035 + L.sunLow * 0.055) * (0.65 + 0.35 * Math.sin(t * 0.18));
+      for (let i = -2; i <= 2; i++) {
+        const x = L.sunX + i * W * 0.13;
+        const spread = W * (0.035 + Math.abs(i) * 0.012);
+        const beam = ctx.createLinearGradient(x, 0, x + spread, shoreY + 40);
+        beam.addColorStop(0, "rgba(255,245,215,0)");
+        beam.addColorStop(0.72, "rgba(255,238,205," + strength + ")");
+        beam.addColorStop(1, "rgba(255,245,225,0)");
+        ctx.fillStyle = beam;
+        ctx.beginPath(); ctx.moveTo(x - 3, 0); ctx.lineTo(x + 4, 0);
+        ctx.lineTo(x + spread, shoreY + 42); ctx.lineTo(x + spread * 0.35, shoreY + 42); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    // Микроблики на волнах движутся независимо от крупных отражений.
+    if (!v.ice && !over && L.dark < 0.45) {
+      ctx.globalCompositeOperation = "screen";
+      const count = quality === "lo" ? 18 : quality === "mid" ? 30 : 46;
+      for (let i = 0; i < count; i++) {
+        const k = (i + 0.5) / count;
+        const y = shoreY + 12 + k * span * 0.82;
+        const phase = t * (0.8 + k * 1.5) + i * 2.399;
+        const x = ((i * 73.17 + Math.sin(phase) * (12 + k * 28) + t * (3 + k * 7)) % (W + 30) + W + 30) % (W + 30) - 15;
+        const pulse = Math.max(0, Math.sin(phase * 1.7));
+        const width = (2 + k * 17) * (0.35 + pulse * 0.9);
+        ctx.globalAlpha = (0.035 + pulse * 0.09) * (1 - L.dark);
+        ctx.fillStyle = L.sunLow > 0.2 ? "#ffe7bd" : "#e5f7ff";
+        ctx.beginPath(); ctx.ellipse(x, y, width, 0.55 + k * 1.2, Math.sin(phase) * 0.04, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    // Светлячки и пыльца в контровом свете — только в спокойную погоду.
+    if (!ambientMotes.length) seedAmbient();
+    if (!over && !v.ice && L.dark < 0.38) {
+      ctx.globalCompositeOperation = "screen";
+      for (const m of ambientMotes) {
+        m.y -= m.speed * dt;
+        m.x += (Math.sin(t * 0.45 + m.phase) * 4 + m.drift) * dt;
+        if (m.y < shoreY * 0.12) { m.y = H * 0.78 + (m.phase % 1) * H * 0.12; m.x = (m.x + W * 0.37) % W; }
+        const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 1.6 + m.phase));
+        ctx.globalAlpha = pulse * (0.08 + L.warm * 0.12) * (1 - L.dark);
+        ctx.fillStyle = "#fff1cf";
+        ctx.beginPath(); ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    // Лёгкая оптическая виньетка удерживает взгляд в центре игровой сцены.
+    const vignette = ctx.createRadialGradient(W * 0.5, H * 0.48, Math.min(W, H) * 0.28, W * 0.5, H * 0.5, Math.max(W, H) * 0.78);
+    vignette.addColorStop(0, "rgba(0,0,0,0)");
+    vignette.addColorStop(1, "rgba(2,10,16," + (0.12 + L.dark * 0.08) + ")");
+    ctx.fillStyle = vignette; ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   };
 
   // ---------- Вода ----------
