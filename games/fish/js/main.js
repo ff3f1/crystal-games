@@ -3,7 +3,7 @@
   "use strict";
   const U = FZ.U, G = FZ.Game, UI = FZ.UI, Sc = FZ.Scene;
   const cv = document.getElementById("cv");
-  let t = 0, last = 0, aim = null, ambT = 0, running = false;
+  let t = 0, last = 0, aim = null, ambT = 0, running = false, worldLast = -Infinity;
   const P = { down: false, x: 0, y: 0, sx: 0, sy: 0, st: 0, id: null, moved: 0 };
 
   // ---------- Ввод ----------
@@ -101,7 +101,9 @@
     if (s) {
       if (r) r.idleHint = r.state === "idle" ? (r.idleHint || 0) + dt : 0;
       const v = G.view(t);
-      Sc.render(v, dt);
+      // Full-screen sheets/catch only need an occasional background refresh.
+      const interval = UI.anyOpen() ? (document.getElementById('ovMenu').classList.contains('on') ? 1000/15 : 500) : 0;
+      if(now-worldLast>=interval){Sc.render(v,dt);worldLast=now;}
       if (aim && r && r.state === "idle") Sc.drawAim(v, aim);
       UI.frame(dt, t);
       ambT -= dt; if (ambT <= 0) { ambT = 3; UI.ambience(); }

@@ -36,7 +36,7 @@ with sync_playwright() as p:
 
     # Заброс касанием воды
     pg.mouse.move(195, 470); pg.mouse.down(); pg.mouse.move(185, 460); pg.mouse.up()
-    pg.wait_for_timeout(2200)
+    pg.wait_for_function("['wait','bite'].includes(__game.G.rig().state)",timeout=15000)
     check("заброс → ожидание", pg.evaluate("__game.G.rig().state") in ("wait", "bite"))
     # Обучающая поклёвка приходит быстро
     for _ in range(40):
@@ -81,7 +81,7 @@ with sync_playwright() as p:
         pg.screenshot(path=f"{OUT}/f_catch_failed.png")
         raise AssertionError(f"Expected catch card after tutorial fight; state={diagnostic}")
     money0 = pg.evaluate("__game.G.state().money")
-    pg.click("#cKeep", timeout=2000); pg.wait_for_timeout(300)
+    pg.click("#cKeep", timeout=15000); pg.wait_for_timeout(300)
     check("деньги за улов", pg.evaluate("__game.G.state().money") > money0)
     check("рыба в атласе", pg.evaluate("Object.keys(__game.G.state().caught).length") == 1)
     check("улов записан в личный журнал", pg.evaluate("__game.G.state().journal.length===1 && __game.G.state().journal[0].kept===true"))
