@@ -26,7 +26,7 @@
         ice: { rod: "i1", line: "l1", hook: "h1", bait: "worm" }
       },
       active: "float", drag: 0.7,
-      records: {}, caught: {}, stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
+      records: {}, caught: {}, journal: [], stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
       daily: { day: "", quests: [], giftDay: "", streak: 0, tour: null, tourDay: "", tourClaim: [] },
       settings: { sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
       tut: 0, rateAsked: 0, firstDay: U.dayKey(), lastDay: ""
@@ -700,6 +700,14 @@
     else { xp = Math.round(xp * (r.mustRelease ? 2 : 1.5) * (doubled ? 2 : 1)); st.karma++; st.stats.released++; }
     st.caught[s.id] = (st.caught[s.id] || 0) + 1;
     if (r.record) st.records[s.id] = { w: r.w, len: r.len, loc: r.loc, date: r.date };
+    // Личный журнал: последние 60 завершённых поимок, включая отпускание.
+    st.journal = Array.isArray(st.journal) ? st.journal : [];
+    st.journal.unshift({
+      sid: s.id, w: r.w, len: r.len, loc: r.loc, mode: r.mode, period: r.period,
+      date: r.date, kept: !!keep, trophy: !!r.trophy, record: !!r.record,
+      sky: sess.wx.sky, temp: sess.wx.temp
+    });
+    if (st.journal.length > 60) st.journal.length = 60;
     st.stats.total++; st.stats.kg += r.w;
     if (r.trophy) st.stats.trophies++;
     if (sess.firstIce) st.firstIceCatches++;
