@@ -55,9 +55,10 @@
         // Wind ripples distort reflected shore and sky continuously in two axes.
         // Distorted low-strength shore reflection: no mirror-copy water.
         float chop=sin(p.x*1.9+clock*.65)*.007+sin(p.y*2.4-clock*.4)*.004;
-        vec2 refl=vec2(uv.x+normal.x*(.027+depth*.08)+chop,shore-min(depth*shore*.48,shore*.48)+normal.y*(.032+depth*.02));
+        vec2 refl=vec2(uv.x+normal.x*(.006+depth*.013)+chop*.35,shore-min(depth*shore*.45,shore*.45)+normal.y*(.005+depth*.009));
         vec3 reflection=hasPhoto>.5?samplePhoto(refl):sky;
-        float mirror=(.08+.15*exp(-depth*4.5))*(1.-clamp(length(normal)*.35,0.,.23));
+        // Reflected vegetation stays by the shore; no long, dark mirror streaks near the angler.
+        float mirror=(.015+.14*exp(-depth*7.5))*(1.-clamp(length(normal)*.35,0.,.23));
         vec3 water=mix(colorFar,colorNear,pow(depth,.65));
         c=mix(water,reflection,mirror);
         float spec=pow(max(0.,1.-length(normal-vec2(.045,-.015))*5.),48.);
