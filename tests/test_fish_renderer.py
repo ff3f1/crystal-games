@@ -70,6 +70,15 @@ with sync_playwright() as p:
    return Math.abs(end-start);
  }""")
  assert turned>1.5,turned
+ # Winter seas stay open, inland lakes keep the ice-fishing mechanic.
+ coasts=page.evaluate("""()=>{
+   return ['blacksea','kamchatka','barents'].map(id=>{
+     const s=__game.G.startSession(id,'winter');
+     return {id,ice:s.ice,mode:s.mode};
+   });
+ }""")
+ assert all(not x['ice'] and x['mode']!='ice' for x in coasts),coasts
+ page.evaluate("__game.G.startSession('pond','winter')")
  page.screenshot(path=str(out/'winter-hole.png'))
  page.evaluate("__game.G.startSession('pond','summer');__game.UI.showSettings()")
  page.locator('#ambienceVolume').fill('23');page.locator('#ambienceVolume').dispatch_event('input')
