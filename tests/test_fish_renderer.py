@@ -180,6 +180,7 @@ with sync_playwright() as p:
  page.evaluate("__game.G.startSession('pond','summer')")
 
  # A delayed reward popup must not interrupt the cast after pressing Fish.
+ page.evaluate('__game.UI.showMenu()')
  page.click('#mGo')
  page.wait_for_timeout(500)
  assert not page.evaluate("__game.UI.anyOpen()")
