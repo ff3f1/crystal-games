@@ -91,8 +91,9 @@
   [["northstream","oka"],["mountainlake","baikal"]].forEach(function(pair){
     const images=FZ.Assets.manifest.images,wl=FZ.Assets.tuning.waterline;
     FZ.SEASON_ORDER.forEach(function(season){
-      images["bg/"+pair[0]+"_"+season]="bg/"+pair[1]+"_"+season+".webp";
-      wl["bg/"+pair[0]+"_"+season]=wl["bg/"+pair[1]+"_"+season]||.5;
+      const key="bg/"+pair[0]+"_"+season;
+      if(!images[key])images[key]="bg/"+pair[1]+"_"+season+".webp";
+      if(wl[key]==null)wl[key]=wl["bg/"+pair[1]+"_"+season]||.5;
     });
   });
   waters.forEach(function(l) {
@@ -103,8 +104,9 @@
     // until each location receives its own original photographic background.
     const images=FZ.Assets.manifest.images,wl=FZ.Assets.tuning.waterline;
     FZ.SEASON_ORDER.forEach(function(season){
-      images["bg/"+l.id+"_"+season]="bg/"+l.photo+"_"+season+".webp";
-      wl["bg/"+l.id+"_"+season]=wl["bg/"+l.photo+"_"+season]||.5;
+      const key="bg/"+l.id+"_"+season;
+      if(!images[key])images[key]="bg/"+l.photo+"_"+season+".webp";
+      if(wl[key]==null)wl[key]=wl["bg/"+l.photo+"_"+season]||.5;
     });
   });
 
