@@ -105,7 +105,11 @@
       float night=clamp(dark/.60,0.,1.);
       // Moonlit visibility: the previous near-black multiplier hid line,
       // ice and fish on mobile screens even with maximum brightness.
-      c*=mix(vec3(1.),vec3(.12,.17,.23),night);
+      // The sky remains darker than moonlit water: the photographic
+      // backdrop is daylight, so brightening the entire scene washes out night.
+      float waterMoon=smoothstep(shore*.80,shore*1.15,uv.y);
+      vec3 moonTint=mix(vec3(.070,.095,.14),vec3(.12,.17,.23),waterMoon);
+      c*=mix(vec3(1.),moonTint,night);
       c=mix(c,vec3(dot(c,vec3(.2126,.7152,.0722)))*.63,cloudCover*.55);
       if(uv.y<shore*.66){
         float star=step(.9992,hash(floor(uv*resolution*.55)))*night*(1.-cloudCover);

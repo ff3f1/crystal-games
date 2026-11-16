@@ -28,3 +28,13 @@ with sync_playwright() as p:
  assert not errors,errors
  print('PASS shader compilation; 3 lighting/weather states; Katun; automatic weather front',result);b.close()
 means={n:sum(ImageStat.Stat(Image.open(out/(n+'.png')).convert('RGB').crop((0,200,780,1200))).mean)/3 for n in ['day','night']};assert means['night']<means['day']*.5,means;print('Day/night luminance',means)
+# Nighttime sky must not resemble daylight; the lake must remain legible.
+def luminance(img, region):
+ return sum(ImageStat.Stat(Image.open(out/(img+'.png')).convert('RGB').crop(region)).mean)/3
+sky=(0,200,780,550)
+water=(0,700,780,1200)
+sky_ratio=luminance('night',sky)/max(1,luminance('day',sky))
+night_water=luminance('night',water)
+assert sky_ratio<.39,('washed-out night sky',sky_ratio)
+assert 12<night_water<luminance('day',water)*.40,('unreadable/bright night lake',night_water)
+print('Moonlight visibility: sky ratio',round(sky_ratio,3),'water luminance',round(night_water,1))
