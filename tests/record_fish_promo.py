@@ -87,7 +87,18 @@ with sync_playwright() as p:
       window.__promoAudioRecorder=recorder;
       // Capture the actual canvas instead of Playwright's throttled screencast.
       const cv=document.getElementById("cv");
-      const source=cv.captureStream(30);
+      // Chrome's headless WebGL surface may not directly notify captureStream
+      // after swaps. A visible 2D staging canvas emits genuine fresh frames.
+      const stage=document.createElement("canvas");
+      stage.width=cv.width;stage.height=cv.height;
+      const staging=stage.getContext("2d",{alpha:false});
+      const sampleVideo=()=>{
+        staging.drawImage(cv,0,0,stage.width,stage.height);
+        requestAnimationFrame(sampleVideo);
+      };
+      sampleVideo();
+      window.__promoStagingCanvas=stage;
+      const source=stage.captureStream(30);
       const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
         ?"video/webm;codecs=vp8":"video/webm";
       const videoRecorder=new MediaRecorder(source,{mimeType:mime,videoBitsPerSecond:4500000});
@@ -255,7 +266,9 @@ source_probe = json.loads(cmd("ffprobe", "-v", "error", "-show_entries",
     "format=duration:stream=codec_type,codec_name,width,height,avg_frame_rate",
     "-of", "json", str(OUT / "fish-gameplay-original.webm")))
 source_video = next(st for st in source_probe["streams"] if st["codec_type"] == "video")
-source_fps = float(Fraction(source_video["avg_frame_rate"]))
+rate=source_video.get("avg_frame_rate","0/0")
+source_fps = float(Fraction(rate)) if rate not in ("0/0","0/1","N/A") else 0
+print("PROMO FRAME DIAGNOSTICS:", json.dumps({"browser":fps,"source":source_video,"source_fps":source_fps}),flush=True)
 # Reject low-FPS captures rather than presenting duplicated 10 FPS as 30 FPS.
 assert fps["measuredFps"] >= 24, ("Browser render FPS below release target", fps)
 assert source_fps >= 24, ("Video capture FPS below release target", source_fps)
@@ -288,7 +301,7 @@ report = {
     "captured_source_fps":source_fps,
     "fps_mode":"Variable frame rate, original capture timestamps; no synthetic duplication",
     "playwright_webm_capture_fps":source_video["avg_frame_rate"],
-    "playwright_webm_capture_duration":float(source_probe["format"]["duration"]),
+    "playwright_webm_capture_duration":float(source_probe.get("format",{}).get("duration") or fps["seconds"]),
     "source_video_codec":source_video["codec_name"],
     "frame_motion_mean_differences":movement,
     "audio_processing":"EBU R128 normalisation to -22 LUFS, ceiling -3 dBTP",
