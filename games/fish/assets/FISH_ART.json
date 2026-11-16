@@ -1,0 +1,1056 @@
+{
+  "bleak": {
+    "kind": "original game artwork",
+    "source_id": "exec-f4310471-40fa-48c4-a391-6483972bc11f",
+    "source_sha256": "75f7086018474ce0510c8b80bf58722d7f4c265926e7d9b01d2236b39ae6aebd",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      20,
+      0,
+      2130,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "6b1e423deb2449fca4a9e9620c6c05c61082124dab41ff06d98773843ddc73f8"
+  },
+  "bream": {
+    "kind": "original game artwork",
+    "source_id": "exec-5c449b01-1b4c-4c20-89ab-926111f23477",
+    "source_sha256": "1608fbd4edb05fb34625d4814cb0278a1196312e632b8ecac8ca5701bf8edff3",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      1774,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "4b3aadf557e9f6fcd5a73b38b23c83126cf5de8f240cbf693e45a0da5a5b37b2"
+  },
+  "burbot": {
+    "kind": "original game artwork",
+    "source_id": "exec-1a31e01b-3d8c-49c2-b4c4-722ae2bcf019",
+    "source_sha256": "879371573c854a03461f565f6570a45c02480f97947860c052d06c7d1aa12999",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      17,
+      8,
+      2171,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "967968a53e635631a0da27e4be97ce15faf12a70efec3b0cb916b35261c08549"
+  },
+  "carp": {
+    "kind": "original game artwork",
+    "source_id": "exec-5ff2b1fd-0136-477a-821c-2de6a3841c9a",
+    "source_sha256": "de2b0b1866c50dbc5df0e4967f708f261fd39ee2171ea591ece85deb86e03dd1",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      14,
+      0,
+      1760,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "0c7fe04940ec57adc4b681168c9898ee2047f6e12286f510b422f2111b781c3b"
+  },
+  "catfish": {
+    "kind": "original game artwork",
+    "source_id": "exec-ea03335f-4938-442c-9752-96b79733388f",
+    "source_sha256": "405c528bf6fc117d3dceb7cd340a2f810f5398bdc0ac2ced6646d3e5db50adf1",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2156,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "4975e4955f307b74ae209cdca1f30e081960837649cd8ce0d3e81121955f7313"
+  },
+  "crucian": {
+    "kind": "original game artwork",
+    "source_id": "exec-a021dc38-c848-4be4-a887-31695df2ede4",
+    "source_sha256": "5f721103faa0c83b8dfe300f5286abaf988dc1cb5247077cea2f8b2923c43251",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      9,
+      1742,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "f9f8de707f88a4c5caad0b531690c87734ba9aa0d578e3d6a8cfd046d9c45bb8"
+  },
+  "dace": {
+    "kind": "original game artwork",
+    "source_id": "exec-0c58cc31-30df-4153-9d3b-68de7c4058f9",
+    "source_sha256": "aaf71cd6a0a37508d9ab23f5a4a865ea269606f57c34421661e52659bfd11d74",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      8,
+      2143,
+      711
+    ],
+    "upscaled": false,
+    "output_sha256": "b22c5d44b55d2cbb10f2a348a342eb24d0a7101dc441f3d461ec8b3fc3f322d6"
+  },
+  "gcrucian": {
+    "kind": "original game artwork",
+    "source_id": "exec-ec09818d-2e83-48f7-8614-c1f05a08afcf",
+    "source_sha256": "c0266198c0304078e708aed501adb47d0ae2a62c7b6209c63838b44c354e00b8",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      1750,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "0c1e289eab56f63bb3f844dfa5674cfc91e3a4ed7593a5c3df635ef97462551d"
+  },
+  "grasscarp": {
+    "kind": "original game artwork",
+    "source_id": "exec-d84f34bf-d7f6-4f9a-a6b0-a83637bd6b82",
+    "source_sha256": "75677ded59243109f150661bb43fb4db15f200a1b2fccf2dfd727ead55332236",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2156,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "65361e9679d8f247715ae72d7d748908fdf98efeaf09fb69cf31700ecaebaa13"
+  },
+  "ide": {
+    "kind": "original game artwork",
+    "source_id": "exec-121658eb-9ce0-4d0c-8e9b-7e865a865422",
+    "source_sha256": "2b5b4896dbe5b719410eab24276b1cdd9b799fa4e42d5a0bb2a7f46659f327b0",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2140,
+      709
+    ],
+    "upscaled": false,
+    "output_sha256": "8a791e3fc14693f6d098335a7f5ccee2ca84a755b8feff2d5c3443a3766c6873"
+  },
+  "omul": {
+    "kind": "original game artwork",
+    "source_id": "exec-eeb2c0e7-e9f5-4507-a207-937f94f8c8f6",
+    "source_sha256": "1f95c85654958d5e7a686b1bcf9853d11e303e355f05701c64ed208b595e89a2",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      27,
+      7,
+      2160,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "1b92136ec41268fd9023fcebfe7d478e4e331408e6011008de106117c68937a4"
+  },
+  "perch": {
+    "kind": "original game artwork",
+    "source_id": "exec-5887e438-43fd-463e-b6d1-220125f00539",
+    "source_sha256": "7477608e4ac252cf5ba05b4ba7b0a25d059cb7bbc08a5d906e937874fbc4bfb1",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2172,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "0d675c1acd4ef0b2b7f44fcbbdd6d2dadbf68f11f342dcb7e7849e4df72533cb"
+  },
+  "roach": {
+    "kind": "original game artwork",
+    "source_id": "exec-9321c8ad-4031-4643-a30e-5af34c8bb630",
+    "source_sha256": "249f662fd57c4497656bc77ff0a87e0bd45a0387dba0075470a11e27ef413c94",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      1770,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "d8fc2382cf914d058e013ce45daff3d59c5638566f3023328a749a896834935a"
+  },
+  "rotan": {
+    "kind": "original game artwork",
+    "source_id": "exec-8ac44d76-8375-49aa-914a-d41bdb80aff9",
+    "source_sha256": "48eba8de584c2178f93d0f9571420257eb2149b947efea7601228fbdabbc63f7",
+    "native_size": [
+      1920,
+      819
+    ],
+    "alpha_bbox": [
+      0,
+      3,
+      1920,
+      819
+    ],
+    "upscaled": false,
+    "output_sha256": "37b7a533b1fcce354fb08e59f9db214c1a8609d14678a25249446d2b61224432"
+  },
+  "rudd": {
+    "kind": "original game artwork",
+    "source_id": "exec-3cfe4091-b7d6-49f0-8535-4ddfe1ac6434",
+    "source_sha256": "36bf55342f5b2d723e333ec180ac101383a981837ee2084cbe2b72a3d845642d",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      9,
+      1759,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "d3e25e4b78c8be87cbb07c32abf842f4710cb90f1dcf369447214f4d8e07f885"
+  },
+  "ruffe": {
+    "kind": "original game artwork",
+    "source_id": "exec-67160bfe-3c89-4637-9346-f37c2be14f7b",
+    "source_sha256": "c21ddb85f1d12b4a53093f121905eee5ce02e44b13e7bde3aa66057e60eee9d7",
+    "native_size": [
+      1920,
+      819
+    ],
+    "alpha_bbox": [
+      0,
+      14,
+      1906,
+      819
+    ],
+    "upscaled": false,
+    "output_sha256": "a5696e92f7b6e366c2dede9cde2b9052f8c25aec9895c44872cb8aa85c813ced"
+  },
+  "sbream": {
+    "kind": "original game artwork",
+    "source_id": "exec-dee24cea-be22-4f16-a20f-712571d29b31",
+    "source_sha256": "b6eacfea372613697199addc343ed67cb1af011ea813d1bfb23a90127b91f579",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      27,
+      1,
+      1757,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "85ec3059cd3c4a63c9073b7fcf19048aab5d59c19d434045c236c88da94c157c"
+  },
+  "smelt": {
+    "kind": "original game artwork",
+    "source_id": "exec-e41d9629-d09e-4071-ad75-23836bfb719c",
+    "source_sha256": "fd7ab67e588962643a422496c4200c870b463c41c39c17af7651ea7bd186827c",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      7,
+      2152,
+      708
+    ],
+    "upscaled": false,
+    "output_sha256": "8ed51a8b1c10d1307a0b6453d7f467b3a7221eccabd872fa1928d89b68ab9cb3"
+  },
+  "tench": {
+    "kind": "original game artwork",
+    "source_id": "exec-670aa23d-7543-42fc-aabf-5a39561d9dd9",
+    "source_sha256": "9db197122eec8776f7458c729af962ab35a4ea8ddd349220b96d8e86053b8cf7",
+    "native_size": [
+      1961,
+      802
+    ],
+    "alpha_bbox": [
+      0,
+      9,
+      1947,
+      802
+    ],
+    "upscaled": false,
+    "output_sha256": "22da3af8d00cc8617d4bc5e1b852b867ed0d8317c21cbe19b5ec29a064602a46"
+  },
+  "vobla": {
+    "kind": "original game artwork",
+    "source_id": "exec-e325c7ec-b76f-491a-8368-1bb815c21911",
+    "source_sha256": "7cbc757aac1d30da4eee52b53496765b3e216e049b090629c0ec9d361bfbc67e",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2142,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "127cb2930927106cd53ac4a956100d442bd017a050a78786719082950add362f"
+  },
+  "wildcarp": {
+    "kind": "original game artwork",
+    "source_id": "exec-146589d8-fbe2-4986-be06-ddb401ab9ae6",
+    "source_sha256": "4178c8a6fb2d986ba16d4e1900c103363aadb6e811089c1f188d4fefa3b7513e",
+    "native_size": [
+      1838,
+      856
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      1838,
+      856
+    ],
+    "upscaled": false,
+    "output_sha256": "06204d369d524fc11d23af43622681320cef7445d136a304d2f416800a4744ca"
+  },
+  "zander": {
+    "kind": "original game artwork",
+    "source_id": "exec-b1414b92-10b1-4c57-96b7-c6e7a4b17475",
+    "source_sha256": "9550b7614a2893e8465fbabba1516a8aba520e4365f3b136f4a69e48808dee58",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2171,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "cf01c51eae7646ed62eefe101f2af6ee4094904719072d02ad92ce9f8e9bd06d"
+  },
+  "flounder": {
+    "kind": "user-supplied game artwork",
+    "source_id": "flounder",
+    "source_sha256": "4d61bf46997dfffd34a5f5b746408149549a2211967842cef0502e04f7930eed",
+    "native_size": [
+      2106,
+      876
+    ],
+    "alpha_bbox": [
+      137,
+      57,
+      1969,
+      819
+    ],
+    "upscaled": false,
+    "output_sha256": "0b8dabcb96ab86ca003bfd688b72b560027991a704d61a4c861dc2534b5bfc9e"
+  },
+  "grayling": {
+    "kind": "user-supplied game artwork",
+    "source_id": "grayling",
+    "source_sha256": "407b5fa20e6a703e801b727eed0f30264aae039d201bafdde509942dcd91fe22",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2158,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "6b66022f728843ea315ead9de34ad92a26cdb6cd166a190c047e6e7476e0ccda"
+  },
+  "eel": {
+    "kind": "user-supplied game artwork",
+    "source_id": "eel",
+    "source_sha256": "d0ab32136bbeb71f4f5643c5e018a1fbcea98ed70860f4f41608b5bf188cde43",
+    "native_size": [
+      2491,
+      785
+    ],
+    "alpha_bbox": [
+      164,
+      51,
+      2327,
+      734
+    ],
+    "upscaled": false,
+    "output_sha256": "de0e0ff2f3e71d69ab102edbce9585a03039e7b27219b9db90721e2d55855c2a"
+  },
+  "marinka": {
+    "kind": "user-supplied game artwork",
+    "source_id": "marinka",
+    "source_sha256": "e96a7a6922b427efa7f1867ab0306dab98a503ced1c3d4d9d0667f4fb5fa92af",
+    "native_size": [
+      2454,
+      818
+    ],
+    "alpha_bbox": [
+      171,
+      58,
+      2299,
+      760
+    ],
+    "upscaled": false,
+    "output_sha256": "54a4f8d21dd5ee89061e9975fa45bc81cf6a143d809ccfd4faf3e4a3ddd7d690"
+  },
+  "halibut": {
+    "kind": "user-supplied game artwork",
+    "source_id": "halibut",
+    "source_sha256": "04ec8cc581eec5ef18daedd663530bbfb6b862b51b3be1e2c34a647eda6e1ac6",
+    "native_size": [
+      2204,
+      877
+    ],
+    "alpha_bbox": [
+      144,
+      57,
+      2060,
+      820
+    ],
+    "upscaled": false,
+    "output_sha256": "57d7fc9b37667365e848c1a05c815ca735ec5372745eab52bece48669491d644"
+  },
+  "gudgeon": {
+    "kind": "user-supplied game artwork",
+    "source_id": "gudgeon",
+    "source_sha256": "91cb61b3eba0627e58e0b8f8c7431e0ac73327636b2f14ae802bf09275ab7ec3",
+    "native_size": [
+      2452,
+      834
+    ],
+    "alpha_bbox": [
+      161,
+      55,
+      2291,
+      779
+    ],
+    "upscaled": false,
+    "output_sha256": "61e54b373a21942b0a676e1c54fe8cbeab356adb63fa0cdaea48ac286430d046"
+  },
+  "lenok": {
+    "kind": "user-supplied game artwork",
+    "source_id": "lenok",
+    "source_sha256": "799a77f45324102b80a3f16ba676f6ea73ebba24d8071c450747a5374a2d5292",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      1744,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "820858382dc8ca6b145eacd30727c8963658af1c75200ec907a282d354abef1a"
+  },
+  "chir": {
+    "kind": "user-supplied game artwork",
+    "source_id": "chir",
+    "source_sha256": "1927d9ba9ea88c1d218df7f8df817bfe4aacbcc637e86af9f05d9bade0516ed7",
+    "native_size": [
+      2199,
+      887
+    ],
+    "alpha_bbox": [
+      143,
+      58,
+      2056,
+      829
+    ],
+    "upscaled": false,
+    "output_sha256": "978c70e7d6b222d456283712c28610428f6c36552f15a6fe940267c84cafde18"
+  },
+  "blackseagoby": {
+    "kind": "user-supplied game artwork",
+    "source_id": "blackseagoby",
+    "source_sha256": "d193017b45a7446609bf6fe2425e8e7073ddd497d3a3619dec75655eaa109e56",
+    "native_size": [
+      2454,
+      818
+    ],
+    "alpha_bbox": [
+      158,
+      60,
+      2308,
+      756
+    ],
+    "upscaled": false,
+    "output_sha256": "e6d6bc4cf5b96271b1c643b96ae33e78434721bed041d8a8df9e421723e6e507"
+  },
+  "amurpike": {
+    "kind": "user-supplied game artwork",
+    "source_id": "amurpike",
+    "source_sha256": "373b177fda702833bf496aa4ccf031294cb11f43234d5f270f2df6d90c54b1b4",
+    "native_size": [
+      2454,
+      818
+    ],
+    "alpha_bbox": [
+      157,
+      65,
+      2299,
+      752
+    ],
+    "upscaled": false,
+    "output_sha256": "fdf6a9dee40b7c7ae1662613c17a23fefd9973f27b72316bbc5f42f54edc5f33"
+  },
+  "chinook": {
+    "kind": "user-supplied game artwork",
+    "source_id": "chinook",
+    "source_sha256": "5ee3d456c92a0a9641dcf4adfa5b7c5a1f2e9c78c9ae56f3a21411bb789d908d",
+    "native_size": [
+      2178,
+      788
+    ],
+    "alpha_bbox": [
+      142,
+      51,
+      2036,
+      737
+    ],
+    "upscaled": false,
+    "output_sha256": "ea0065968d23777b4a30d039b4fd7a14210f108e97b1d61f7aaccac3ab863c14"
+  },
+  "brooktrout": {
+    "kind": "user-supplied game artwork",
+    "source_id": "brooktrout",
+    "source_sha256": "1b80bf83623f7c0f12537a35e731f7b2b82c57ac193cd3d02eee561b5e9fca46",
+    "native_size": [
+      1774,
+      887
+    ],
+    "alpha_bbox": [
+      0,
+      19,
+      1758,
+      887
+    ],
+    "upscaled": false,
+    "output_sha256": "d27ac6f807b8d73d168de5caded696e38cce9050e0889f8fde0c671f8c418af6"
+  },
+  "chumsalmon": {
+    "kind": "user-supplied game artwork",
+    "source_id": "chumsalmon",
+    "source_sha256": "bb17838bcb389d43d836d47f7d84da5d7ca2d4f9695889f744710994c3d3504d",
+    "native_size": [
+      2172,
+      777
+    ],
+    "alpha_bbox": [
+      142,
+      51,
+      2030,
+      726
+    ],
+    "upscaled": false,
+    "output_sha256": "808cd3ec63c663c1a236eb0a9de3a2ce03b99f9732b3ee111cfe33b8b7133688"
+  },
+  "chub": {
+    "kind": "user-supplied game artwork",
+    "source_id": "chub",
+    "source_sha256": "c2ae5e10eef5a72fceeaeb0835448c36882467c0342fe17f81400dc0c24b974d",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      7,
+      2139,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "6b5b2f429b07885e0ccfe0bc53d7bc5db0a138ebb28686c3a62bce1793d1d32a"
+  },
+  "asp": {
+    "kind": "user-supplied game artwork",
+    "source_id": "asp",
+    "source_sha256": "cc55fe0b5e8f7bec3f7b13895cba16f19967f36dbccdaf7af7ae9f3eca2b9481",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      19,
+      7,
+      2158,
+      708
+    ],
+    "upscaled": false,
+    "output_sha256": "dccce716756bbfe5ad85e16fc749b9d52cc1bb08563fb441d2ac428f7d59bb64"
+  },
+  "chekhon": {
+    "kind": "user-supplied game artwork",
+    "source_id": "chekhon",
+    "source_sha256": "23778f2742b7660da7aa6f68917a8ee6f39efd7d87807b5eb24e9a9a2bd1af59",
+    "native_size": [
+      2206,
+      739
+    ],
+    "alpha_bbox": [
+      144,
+      48,
+      2062,
+      691
+    ],
+    "upscaled": false,
+    "output_sha256": "ef1316c632925bdb2c9ca005ca50f31cd48efe705fd7c1f271dfdc5a651c9375"
+  },
+  "cod": {
+    "kind": "user-supplied game artwork",
+    "source_id": "cod",
+    "source_sha256": "c39d6c4bd1e7b159bd3cfe78439018ceea425f4a6377459fba7d9797c93abbfe",
+    "native_size": [
+      2203,
+      837
+    ],
+    "alpha_bbox": [
+      144,
+      55,
+      2059,
+      782
+    ],
+    "upscaled": false,
+    "output_sha256": "b743b2293ce99d828086a5ae6150d307e27ee087f369779eadc3c20fbdc29c21"
+  },
+  "coho": {
+    "kind": "user-supplied game artwork",
+    "source_id": "coho",
+    "source_sha256": "16a392816e972e6ca2cf842332b434fbca60004817787530d3c23113f3892bac",
+    "native_size": [
+      2229,
+      843
+    ],
+    "alpha_bbox": [
+      145,
+      55,
+      2084,
+      788
+    ],
+    "upscaled": false,
+    "output_sha256": "695acb869fe8117cb9a2d45018ebf39b7c68476aa866d593ce48b91c16ead46e"
+  },
+  "minnow": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "minnow",
+    "source_sha256": "244c06649fe5855915a3f902d54488b7aae8d9120fc641bb20894549a1e04cb3",
+    "native_size": [
+      2092,
+      746
+    ],
+    "alpha_bbox": [
+      136,
+      49,
+      1956,
+      697
+    ],
+    "upscaled": false,
+    "output_sha256": "0420a4ecc4df11ffed094f805ae7e0aab8a7a6f1a8cbfa27866daa726382d8c4"
+  },
+  "muksun": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "muksun",
+    "source_sha256": "eff6c1f407adbd0e198e91bacead5e6391a107185f2cbe736f114a7938e98206",
+    "native_size": [
+      2206,
+      819
+    ],
+    "alpha_bbox": [
+      144,
+      53,
+      2062,
+      766
+    ],
+    "upscaled": false,
+    "output_sha256": "33504a069abe2d032b85c517ccb25b0eccdbdd661daa7b6f84c1d4d8a4e6973b"
+  },
+  "nase": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "nase",
+    "source_sha256": "493090241159939924bc183757d58288c9ab09ccd34d9d824b5ba8c2a9bb4e90",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      22,
+      0,
+      2158,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "4ed90f6157df5c45392b7aad0a71c875c41a0700a04c142c29bb65fd2d5b8eb2"
+  },
+  "navaga": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "navaga",
+    "source_sha256": "acb2d9559dc9a6775e3ad82a8cddb179303b2a28309142d9db2fc38754ef2eb2",
+    "native_size": [
+      2127,
+      699
+    ],
+    "alpha_bbox": [
+      139,
+      46,
+      1988,
+      653
+    ],
+    "upscaled": false,
+    "output_sha256": "cb3ef6ff89c292ca087e112a6c5cbc44d3986d3dca41898a79d4afb349f3137a"
+  },
+  "nelma": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "nelma",
+    "source_sha256": "a0384f7a5882166b74bdd21ddaf20cb9094b4951f8444ef3d750481f4b4b836e",
+    "native_size": [
+      2213,
+      792
+    ],
+    "alpha_bbox": [
+      144,
+      52,
+      2069,
+      740
+    ],
+    "upscaled": false,
+    "output_sha256": "b3691934247430b4daa74e76fb2786b8ab84db582c81b8e58d4b1e5c029eae86"
+  },
+  "osman": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "osman",
+    "source_sha256": "a061eb80638a57472c9acf01848af36320e45ea57018bb5d54b3d1c8e08c386f",
+    "native_size": [
+      2454,
+      818
+    ],
+    "alpha_bbox": [
+      149,
+      52,
+      2298,
+      750
+    ],
+    "upscaled": false,
+    "output_sha256": "c73c9fdf0a3a0ecaf9b0b51999eabe379c2545c99d50f7a8517f279c46370367"
+  },
+  "palia": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "palia",
+    "source_sha256": "6a6ba2cbfc5288735da90c9d4d994777ec025351aae4365d1bb22a597dedc533",
+    "native_size": [
+      1923,
+      818
+    ],
+    "alpha_bbox": [
+      0,
+      9,
+      1907,
+      818
+    ],
+    "upscaled": false,
+    "output_sha256": "a13ecfa9a62e7e6ef28c64e0f07fbd108dc94c0a5ae1100e0acfffd19f6be64a"
+  },
+  "peled": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "peled",
+    "source_sha256": "16b905c03b95e7092158003c8cfcd119dcf256d41285e732d5aa9916e7791f77",
+    "native_size": [
+      2245,
+      895
+    ],
+    "alpha_bbox": [
+      146,
+      58,
+      2099,
+      837
+    ],
+    "upscaled": false,
+    "output_sha256": "de0fe84c4766ae2bb480079f544aebea23687f12eb55be981234cd57c7f1ce0f"
+  },
+  "pike": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "pike",
+    "source_sha256": "49aebcc5c2e08d8bd36bba35642f904f8cd1910041a843056401aff5fa5a0ba8",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      39,
+      7,
+      2144,
+      706
+    ],
+    "upscaled": false,
+    "output_sha256": "3909731a4e728365d96050af1e42063c487e80be49ac3cc12bfc6f0868d062c1"
+  },
+  "pinksalmon": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "pinksalmon",
+    "source_sha256": "45382eab4209b4ed03e3bf765793eee01179b16fbe021460784ca034b12dcdda",
+    "native_size": [
+      2190,
+      828
+    ],
+    "alpha_bbox": [
+      143,
+      54,
+      2047,
+      774
+    ],
+    "upscaled": false,
+    "output_sha256": "16b5cbbb4d8369032aa9d64a1aca96a72baae30236bc954fb932d4d01a5eb304"
+  },
+  "redmullet": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "redmullet",
+    "source_sha256": "133ad6226eef9bcf884d28cefc1a0b7b017bd4f86750e1166e82e52349432c51",
+    "native_size": [
+      2454,
+      818
+    ],
+    "alpha_bbox": [
+      147,
+      53,
+      2306,
+      763
+    ],
+    "upscaled": false,
+    "output_sha256": "4402e3b4086b4e371b3861a85a94367a50ff9f60bb3da16f728d5ae507468d09"
+  },
+  "rybets": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "rybets",
+    "source_sha256": "b54581e2c41f4fb09c068cd3ed1025f9c76208ee87557510ecec107407ed7258",
+    "native_size": [
+      2210,
+      870
+    ],
+    "alpha_bbox": [
+      144,
+      57,
+      2066,
+      813
+    ],
+    "upscaled": false,
+    "output_sha256": "e03bbfb9a3e54cc7b016a33d6ea8acccff4870755b91efa9d71ac68ea97a33c5"
+  },
+  "sculpin": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "sculpin",
+    "source_sha256": "1b5998655427699686a5615152f11a1e0418772d1c3efdecbdd81d7e8438ba1f",
+    "native_size": [
+      2166,
+      766
+    ],
+    "alpha_bbox": [
+      141,
+      50,
+      2025,
+      716
+    ],
+    "upscaled": false,
+    "output_sha256": "5bb5092df0fac1ee25e0bfbf828706e66e0e7329939d6cadb3a73e73aa477f2c"
+  },
+  "silvercarp": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "silvercarp",
+    "source_sha256": "343c5fbe143f716fee4227622f91e82d2afe8ad771d60a9193b86fa3821bbdbc",
+    "native_size": [
+      2196,
+      860
+    ],
+    "alpha_bbox": [
+      143,
+      56,
+      2053,
+      804
+    ],
+    "upscaled": false,
+    "output_sha256": "e5802ad5293883cb5adae39c853e86a7240746e05b3d3093d2fe21439d27cbc7"
+  },
+  "sockeye": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "sockeye",
+    "source_sha256": "c4fb3c6355554b9cdd0742aed34fa2d087b1dae7d464c58e3fab32682d3dcc72",
+    "native_size": [
+      2189,
+      769
+    ],
+    "alpha_bbox": [
+      143,
+      50,
+      2046,
+      719
+    ],
+    "upscaled": false,
+    "output_sha256": "8d2419e00d160cdf4a2621b026a9c935f9c59a2c9950087488213ae81e870dd1"
+  },
+  "sterlet": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "sterlet",
+    "source_sha256": "1ed8f0d094d13a2d33803d49b8e0efac4582eb09b1dedca26f623287c46969d6",
+    "native_size": [
+      2472,
+      864
+    ],
+    "alpha_bbox": [
+      178,
+      89,
+      2312,
+      770
+    ],
+    "upscaled": false,
+    "output_sha256": "9371b9e884b062e1c0e4fb2256a7580cf67fc4c7626dbba5d92d6d207ced5899"
+  },
+  "sturgeon": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "sturgeon",
+    "source_sha256": "c627895b55ef71d2e9554491df3aaf2a49f00fb9e8be17d78471cbace895ccab",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      3,
+      2166,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "8d79d9f991eb20deb3d10f0198434d4a613e3332a94c42257cf1085d93bdd8df"
+  },
+  "taimen": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "taimen",
+    "source_sha256": "1541c89de93fa62b968e1992f20be0960f5aaf39e8eaf001e1d5634e2db5a082",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      28,
+      9,
+      2168,
+      714
+    ],
+    "upscaled": false,
+    "output_sha256": "797d347ca4ad6af6847d91488b1cd2ad6d9b7027b020ac63576f5dfa8383eb42"
+  },
+  "terpug": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "terpug",
+    "source_sha256": "1825615037f41cda169b239a5648c7d7c2f8d777c66bb9347e837eb378c7e472",
+    "native_size": [
+      2213,
+      802
+    ],
+    "alpha_bbox": [
+      144,
+      52,
+      2069,
+      750
+    ],
+    "upscaled": false,
+    "output_sha256": "0c60acd0f70c8db2a843f49eb250b0c21fa65fbef929976daaaf313e280b6e93"
+  },
+  "trout": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "trout",
+    "source_sha256": "1be779d7a2eb077b03a1d21e402eaa53e6b2103a77628725abe78e9f2300e6c2",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      0,
+      2148,
+      724
+    ],
+    "upscaled": false,
+    "output_sha256": "a3b06f60e21266eee9ed4190e3d4c5e012e607e47cd795807abc05a427df81b3"
+  },
+  "vendace": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "vendace",
+    "source_sha256": "c72219eb8247f5408f5cdfbed6af9e2d480c134e023b36d4eed0e2478c2127ae",
+    "native_size": [
+      2156,
+      740
+    ],
+    "alpha_bbox": [
+      141,
+      48,
+      2015,
+      692
+    ],
+    "upscaled": false,
+    "output_sha256": "a65b71dd2e1d85ce2c7c381c44b81f4654b6c058df1788bc1cffb09d3f4dc561"
+  },
+  "whitefish": {
+    "kind": "user-supplied game artwork, not a gameplay screenshot",
+    "source_id": "whitefish",
+    "source_sha256": "51c82e8ce6fc4e4df75e7f64d272bb427cd3a7d899ce39d496dda24f0800ca57",
+    "native_size": [
+      2172,
+      724
+    ],
+    "alpha_bbox": [
+      0,
+      16,
+      2145,
+      708
+    ],
+    "upscaled": false,
+    "output_sha256": "4ef4a1fe823c57137e2dd70a822b0198275731039baddc0df4c8b2dd362a020a"
+  }
+}

@@ -1,0 +1,40 @@
+"""GPU route, all portrait resources, cache bounds and phone/tablet layouts."""
+import functools,http.server,json,pathlib,threading,sys
+from playwright.sync_api import sync_playwright
+root=pathlib.Path(__file__).resolve().parents[1]
+out=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else 'test-output');out.mkdir(exist_ok=True)
+class Quiet(http.server.SimpleHTTPRequestHandler):
+ def log_message(self,*args):pass
+srv=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(Quiet,directory=str(root/'games')))
+threading.Thread(target=srv.serve_forever,daemon=True).start()
+errors=[]
+with sync_playwright() as p:
+ b=p.chromium.launch()
+ page=b.new_page(viewport={'width':390,'height':844},device_scale_factor=2)
+ page.on('pageerror',lambda e:errors.append(str(e)))
+ page.goto(f'http://127.0.0.1:{srv.server_port}/fish/');page.wait_for_function('window.__game')
+ assert page.evaluate("FZ.Scene.graphicsInfo().renderer==='webgl'")
+ results=page.evaluate('''async()=>{const r=[];for(const s of FZ.SPECIES){const im=await FZ.Fish3D.ready(s);r.push({id:s.id,width:im&&im.width,height:im&&im.height});}return r;}''')
+ assert len(results)==62 and all(x['width']>=1600 for x in results),results
+ assert page.evaluate("Object.keys(FZ.Assets.img).filter(x=>x.startsWith('fishhd/')).length<=4")
+ page.click('#mGo');page.evaluate("__game.G.state().tut=4;__game.G.startSession('pond','summer');__game.G.sess().hour=9")
+ page.wait_for_function("FZ.Assets.bg('pond','summer')")
+ page.screenshot(path=str(out/'new_pond.png'))
+ snap=page.evaluate('''()=>{const c=FZ.Scene.snapshot(),g=c.getContext('2d');return Array.from(g.getImageData(c.width/2,c.height/2,1,1).data);}''')
+ assert snap[3]==255 and sum(snap[:3])>20,snap
+ for size in [(360,640),(390,844),(800,1280)]:
+  page.set_viewport_size({'width':size[0],'height':size[1]})
+  page.evaluate('__game.UI.showMenu()')
+  assert page.locator('#mGo').bounding_box()['y']>0
+  assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+  page.screenshot(path=str(out/f'menu_{size[0]}.png'))
+ page.set_viewport_size({'width':390,'height':844})
+ page.evaluate("__game.UI.closeMenu(); __game.UI.showSettings()")
+ page.locator('#ambienceVolume').fill('23');page.locator('#ambienceVolume').dispatch_event('input')
+ assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
+ page.evaluate('__game.G.save(true)');page.reload();page.wait_for_function('window.__game')
+ assert page.evaluate('__game.G.state().settings.ambienceVolume')==.23
+ assert not errors,errors
+ (out/'portrait-validation.json').write_text(json.dumps(results,indent=2))
+ print('PASS WebGL; 62 native portraits; bounded cache; snapshot; 3 viewports; mixer save migration')
+ b.close();srv.shutdown()

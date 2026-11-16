@@ -4,6 +4,7 @@
   const S = { on: true, music: true };
   let ac = null, master, amb, sfx, noiseBuf = null;
   const A = {};
+  let mix = { ambienceVolume:.72, effectsVolume:.72, musicVolume:.32 };
   let music = null, musicKey = "", musicVol = 0.32;
   let nextBird = 0, nextCrack = 0, nextFrog = 0, cricket = null;
   let ambParams = {};
@@ -18,19 +19,25 @@
     limiter.threshold.value = -12; limiter.knee.value = 18; limiter.ratio.value = 8;
     limiter.attack.value = 0.004; limiter.release.value = 0.18;
     master.connect(limiter); limiter.connect(ac.destination);
-    amb = ac.createGain(); amb.gain.value = 0.72; amb.connect(master);
-    sfx = ac.createGain(); sfx.gain.value = 0.72; sfx.connect(master);
-    noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    amb = ac.createGain(); amb.gain.value = mix.ambienceVolume; amb.connect(master);
+    sfx = ac.createGain(); sfx.gain.value = mix.effectsVolume; sfx.connect(master);
+    // Eight seconds of band-limited noise, with an actual periodic crossfade.
+    // The old buffer ended at a different sample than it started, producing clicks.
+    const seam = Math.floor(ac.sampleRate * .20), count = ac.sampleRate * 8;
+    const raw = new Float32Array(count + seam); let pink = 0, brown = 0;
+    for (let i=0;i<raw.length;i++) {
+      pink = pink * .92 + (Math.random()*2-1)*.08;
+      brown = brown * .996 + pink * .004;
+      raw[i] = pink * .72 + brown * .28;
+    }
+    noiseBuf = ac.createBuffer(1, count, ac.sampleRate);
     const d = noiseBuf.getChannelData(0);
-    // Мягкий, непрерывный шум без резких скачков на границе буфера.
-    let last = 0;
-    for (let i = 0; i < d.length; i++) {
-      const raw = Math.random() * 2 - 1;
-      last = last * 0.16 + raw * 0.84;
-      d[i] = last * 0.82;
+    for(let i=0;i<count;i++) {
+      if(i<seam){const a=i/seam;d[i]=raw[count+i]*(1-a)+raw[i]*a;}
+      else d[i]=raw[i];
     }
     A.water = loopNoise("lowpass", 520, 0.6);
-    A.water.lfo = lfo(0.13, 0.12, A.water.g.gain);
+    A.water.lfo = lfo(0.13, 0.012, A.water.g.gain);
     A.wind = loopNoise("lowpass", 650, 0.35);
     A.rain = loopNoise("lowpass", 1050, 0.3);
     S.updateAmbience(ambParams);
@@ -40,7 +47,7 @@
     const src = ac.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
     const fl = ac.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
     const g = ac.createGain(); g.gain.value = 0;
-    src.connect(fl); fl.connect(g); g.connect(amb); src.start();
+    src.connect(fl); fl.connect(g); g.connect(amb); src.start(0,Math.random()*6);
     return { src, f: fl, g };
   }
   function lfo(freq, depth, param) {
@@ -117,7 +124,7 @@
     }
     if (p.mode !== "ice" && (p.style === "pond" || p.style === "delta") && (p.period === "dusk" || p.period === "night") && (p.season === "summer" || p.season === "spring") && now > nextFrog) {
       nextFrog = now + 4 + Math.random() * 7;
-      for (let i = 0; i < 3; i++) tone("sawtooth", 110 + Math.random() * 30, 90, 0.12, 0.022, amb, i * 0.16);
+      for (let i = 0; i < 3; i++) tone("triangle", 110 + Math.random() * 30, 90, 0.12, 0.022, amb, i * 0.16);
     }
   };
 
@@ -132,15 +139,15 @@
   S.coin = () => { tone("triangle", 1568, 1568, 0.09, 0.09); tone("triangle", 2093, 2093, 0.22, 0.09, null, 0.08); };
   S.level = () => [523, 659, 784, 1046].forEach((f, i) => tone("triangle", f, f, 0.25, 0.09, null, i * 0.1));
   S.trophy = () => [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone("triangle", f, f, 0.35, 0.075, null, i * 0.07));
-  S.fail = () => tone("sawtooth", 300, 120, 0.35, 0.05);
+  S.fail = () => tone("triangle", 300, 120, 0.35, 0.05);
   S.drill = (dur) => { for (let i = 0; i < 8; i++) noise(0.22, "bandpass", 500 + Math.random() * 300, 300, 0.11, 3, i * dur / 8); };
   S.flop = () => noise(0.08, "lowpass", 1500, 500, 0.18);
   S.thunder = () => { noise(2.8, "lowpass", 260, 48, 0.22, 0.65); noise(1.8, "lowpass", 110, 35, 0.12, 0.7, 0.12); };
 
   let lastClick = 0;
-  S.reel = function (speed) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastClick < 0.07 / Math.max(0.3, speed)) return; lastClick = now; tone("square", 2400, 1800, 0.012, 0.018); };
+  S.reel = function (speed) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastClick < 0.07 / Math.max(0.3, speed)) return; lastClick = now; noise(0.025, "bandpass", 780, 440, 0.035, .45); };
   let lastDrag = 0;
-  S.drag = function (k) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastDrag < 0.045) return; lastDrag = now; tone("sawtooth", 1500 + k * 900, 1300, 0.04, 0.025 + k * 0.02); };
+  S.drag = function (k) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastDrag < 0.045) return; lastDrag = now; noise(0.065, "bandpass", 700 + k * 450, 500, 0.045 + k * 0.025, .4); };
 
   S.playMusic = function (key) {
     const url = FZ.Assets.audio(key) || FZ.Assets.audio("music_" + key);
@@ -163,6 +170,13 @@
     step();
   }
 
+  S.setMix = function(values) {
+    for (const k of Object.keys(mix)) { const n=Number(values[k]); if(Number.isFinite(n)) mix[k]=Math.max(0,Math.min(1,n)); }
+    musicVol=mix.musicVolume;
+    if(ac){amb.gain.setTargetAtTime(mix.ambienceVolume,ac.currentTime,.08);sfx.gain.setTargetAtTime(mix.effectsVolume,ac.currentTime,.08);}
+    if(music)music.volume=musicVol;
+  };
+  S.mixInfo = function(){return Object.assign({state:ac?ac.state:'locked'},mix);};
   S.setOn = function (v) { S.on = !!v; if (master && ac) master.gain.setTargetAtTime(S.on ? 0.82 : 0, ac.currentTime, 0.04); };
   S.setMusic = function (v) { S.music = !!v; if (!S.music) S.stopMusic(); };
   S.suspend = function () { if (ac && ac.state === "running") ac.suspend().catch(function () {}); if (music) music.pause(); };

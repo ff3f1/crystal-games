@@ -66,7 +66,7 @@
     s.min=x[4]; s.med=x[5]; s.trophy=x[6]; s.max=x[7];
     s.refL=x[8]; s.refW=x[5]; s.rar=x[9];
     s.fight=Object.assign({},kinds[x[10]]);
-    s.assetAlias=x[3]; s.assetTint=x[11]; s.desc=x[12];
+    s.desc=x[12];
     s.methods=Object.assign({},s.methods,extraMethods[s.id]||{});
     s.baits=Object.assign({},s.baits,extraBaits[s.id]||{});
     if(s.id==="eel"){s.time={dawn:.7,day:.4,dusk:1.4,night:1.6};s.bite="drag";}

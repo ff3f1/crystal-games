@@ -275,7 +275,7 @@
     const tourBadge = st.daily.tour ? tour.tiers.filter((t2) => st.daily.tour.w >= t2.w && st.daily.tourClaim.indexOf(t2.id) < 0).length : 0;
     const d = new Date(); const wd = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"][d.getDay()];
     ov.innerHTML = '<div class="shade"></div>' +
-      '<div class="logo"><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div></div>' +
+      '<div class="logo"><div class="eyebrow">CRYSTAL GAMES · РЫБОЛОВНЫЕ ЭКСПЕДИЦИИ</div><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div><div class="menu-caption">Твой берег. Твоя история.</div></div>' +
       '<div class="menu-bottom">' +
         '<button class="today" id="mToday"><div class="wx">' + skyIc(wx.sky, s.period === "night") + '</div><div style="text-align:left"><div class="t">' + wd + ", " + U.dateRu(d) + ". " + FZ.SEASONS[s.season] + "</div>" +
         '<div class="d">' + s.loc.n + ": клёв " + stars(wx.score) + "<br>" + Wd.tip(wx) + "</div></div></button>" +
@@ -293,7 +293,7 @@
         "</div></div>";
     ov.classList.add("on");
     $("hud").classList.add("hide");
-    const close = () => { ov.classList.remove("on"); $("hud").classList.remove("hide"); };
+    const close = () => { ov.classList.remove("on"); $("hud").classList.remove("hide"); UI.menuOpen = false; };
     $("mGo").onclick = () => { FZ.Sound.unlock(); FZ.Sound.click(); close(); UI.ambience(); if (G.giftAvailable() && G.state().tut >= 3) setTimeout(UI.showGift, 400); };
     $("mToday").onclick = () => UI.showForecast();
     $("mMap").onclick = () => UI.showMap();
@@ -684,9 +684,9 @@
     const st = G.state(), S = st.settings;
     const sw = (k, n) => '<div class="opt"><span>' + n + '</span><button class="sw ' + (S[k] ? "on" : "") + '" data-k="' + k + '" aria-label="' + n + '"></button></div>';
     let html = "<h2>Настройки</h2><div class=\"sub\">" + FZ.CONFIG.title + "</div><div class=\"scroll\">" + sw("sound", "Звуки природы и эффекты") + sw("music", "Музыка") + sw("vibro", "Вибрация") +
-      '<div class="opt"><span>Графика</span><b>Реалистичная</b></div>' +
+      '<div class="opt"><span>Графика</span><b>Объёмная</b></div>' +
       '<div class="opt"><span>Плавность и чёткость</span></div><div class="seg" id="qSeg">' + [["auto", "Авто"], ["hi", "Чётко"], ["mid", "Средне"], ["lo", "Плавно"]].map((q) => '<button data-q="' + q[0] + '" class="' + (S.quality === q[0] ? "on" : "") + '">' + q[1] + "</button>").join("") + "</div>" +
-      '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» само снижает чёткость, если телефон не успевает показывать 60 кадров.</div>' +
+      '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» снижает разрешение сцены при просадках плавности.</div>' +
       '<div class="row"><div class="pic">' + ic("cam") + '</div><div class="body"><div class="t">Режим съёмки</div><div class="d">Кнопка с камерой на берегу прячет интерфейс — удобно снимать ролики и Shorts с экрана.</div></div></div>' +
       (FZ.CONFIG.youtube ? '<button class="btn" id="sYt" style="width:100%;margin-top:10px">' + ic("yt") + " Наш канал на YouTube</button>" : "") +
       '<button class="btn ghost" id="sRate" style="width:100%;margin-top:10px">' + ic("star") + " Оценить игру</button>" +
@@ -727,9 +727,9 @@
     else if (r.tour) badges.push(["Турнир дня", "#c8d0d8"]);
     let doubled = false;
     ov.innerHTML = '<div class="dim"></div><div class="catch">' +
-      '<div class="badges">' + badges.map((b, i) => '<span class="bdg" style="background:' + b[1] + ";animation-delay:" + (0.5 + i * 0.12) + 's">' + b[0] + "</span>").join("") + "</div>" +
+      '<div class="catch-heading"><div class="eyebrow">УЛОВ В ТВОЕЙ ИСТОРИИ</div><h1>' + s.n + '</h1><div class="latin">' + s.lat + '</div></div><div class="badges">' + badges.map((b, i) => '<span class="bdg" style="background:' + b[1] + ";animation-delay:" + (0.5 + i * 0.12) + 's">' + b[0] + "</span>").join("") + "</div>" +
       '<canvas id="cFish"></canvas>' +
-      '<div class="wt" id="cWt">0 г</div><div class="nm">' + s.n + '</div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
+      '<div class="catch-measures"><div><span>МАССА</span><div class="wt" id="cWt">0 г</div></div><div><span>ДЛИНА</span><div class="length">' + r.len + '<small> см</small></div></div></div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
       (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : s.release || "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
@@ -743,11 +743,11 @@
       "</div></div>";
     ov.classList.add("on"); $("hud").classList.add("hide");
     // анимация рыбы и веса
-    const cv = $("cFish"); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cv = $("cFish"); const dpr = Math.min(3, window.devicePixelRatio || 1);
     const rect = cv.getBoundingClientRect(); cv.width = rect.width * dpr; cv.height = rect.height * dpr;
     const g = cv.getContext("2d");
     const t0 = performance.now();
-    const len = Math.min(rect.width * 0.95, rect.height * 2.6);
+    const len = Math.min(rect.width * 1.06, rect.height * 2.6);
     const drops = [];
     const particleCount = Math.min(22, Math.max(10, Math.round(rect.width / 18)));
     for (let i = 0; i < particleCount; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 180, vy: -70 - Math.random() * 190, r: 1 + Math.random() * 2.2 });

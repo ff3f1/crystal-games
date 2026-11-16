@@ -28,7 +28,7 @@
       active: "float", drag: 0.7,
       records: {}, caught: {}, journal: [], stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
       daily: { day: "", quests: [], giftDay: "", streak: 0, tour: null, tourDay: "", tourClaim: [] },
-      settings: { sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
+      settings: { sound: true, music: true, vibro: true, ambienceVolume:.72, effectsVolume:.72, musicVolume:.32, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
       tut: 0, rateAsked: 0, firstDay: U.dayKey(), lastDay: ""
     };
   }
@@ -519,6 +519,7 @@
   function hook(s, w) {
     const lenCm = Math.round(Math.pow(w / s.lwA, 1 / 3));
     const Fmax = s.fight.power * (0.6 + 1.2 * Math.pow(w, 0.75));
+    if(FZ.Fish3D)FZ.Fish3D.ready(s);
     rig.state = "fight";
     rig.bite = null;
     rig.fish = {
@@ -544,9 +545,14 @@
     const currentLoad=Math.max(0,flow-.25)*(.045+.035/Math.max(.5,Math.sqrt(f.w)));
     // смена поведения
     f.phaseT -= dt;
+    const runChance = s.fight.runs * (.3 + .7 * f.S);
+    // A readable tell before a burst gives the player time to release the reel.
+    if (f.phaseT <= .45 && f.nextDecision == null) f.nextDecision = U.rand();
+    f.telegraph = f.phaseT > 0 && f.phaseT < .45 && f.nextDecision < runChance && f.S > .25;
     if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
       if (f.jump && f.jump.k >= 1) { f.jump = null; if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5)); FZ.Sound.splash(0.8); }
-      const r = U.rand();
+      const r = f.nextDecision == null ? U.rand() : f.nextDecision;
+      f.nextDecision = null; f.telegraph = false;
       const runP = s.fight.runs * (0.3 + 0.7 * f.S);
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
       else if (r < runP) {
@@ -619,10 +625,15 @@
     const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;
     if (against) f.vx *= Math.pow(0.25, dt);
     f.against = against;
+    const pressure = U.clamp(f.T / lineT, 0, 1);
+    f.controlQuality = U.clamp(1 - Math.abs(pressure - .46) / .46, 0, 1);
+    const control = st.tut < 3 ? 1 : .55 + f.controlQuality * .75;
+    f.swimDepth = U.damp(f.swimDepth == null ? .7 : f.swimDepth,
+      f.phase === 'run' ? G.depthAt(f.X, Math.max(4,f.Z)) * .70 : f.phase === 'tired' ? .08 : .55, 1.4, dt);
     // выносливость
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
     const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * rodF * (st.tut < 3 ? 2 : 1);
-    f.S = Math.max(0, f.S - drain * dt);
+    f.S = Math.max(0, f.S - drain * control * dt);
     // провис лески — сход
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
     if (f.slackT > 1.3 && U.rand() < 0.7 * (1.3 - (g.hook ? g.hook.hold : 1)) * dt * 2) return lose("slack");

@@ -36,12 +36,14 @@ jobs:
       - name: Install Playwright
         run: |
           python -m pip install --upgrade pip
-          python -m pip install playwright
+          python -m pip install playwright Pillow
           python -m playwright install --with-deps chromium
       - name: Run fishing gameplay tests
         run: |
           mkdir -p test-output
+          python tests/validate_fish_art.py
           python tests/test_fish.py test-output
+          python tests/test_fish_renderer.py test-output
       - uses: actions/upload-artifact@v4
         if: always()
         with:

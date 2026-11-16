@@ -1,0 +1,70 @@
+name: Fishing candidate APK and AAB
+on:
+  push:
+    branches: [codex/fishing-overhaul]
+    paths: ["games/fish/**", "tests/**", ".github/workflows/fish-candidate.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate native artwork
+        run: |
+          pip install Pillow
+          python tests/validate_fish_art.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare fishing package only
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r games/fish/. android/app/src/main/assets/
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$density
+            cp store/fish/icons/ic_launcher_$density.png android/app/src/main/res/mipmap-$density/ic_launcher.png
+          done
+          echo "CANDIDATE_CODE=$((67 + ${{ github.run_number }}))" >> "$GITHUB_ENV"
+      - name: Existing release signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          test -n "$KEYSTORE_B64" || { echo 'Release signing key unavailable; refusing a debug-signed update.'; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Build update without publishing
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: >-
+          gradle assembleRelease bundleRelease --no-daemon
+          -PappId=ru.crystalgames.fishing
+          '-PappName=Рыбалка: Клюёт!'
+          -PversionCode=$CANDIDATE_CODE
+          -PversionName=1.3.$CANDIDATE_CODE
+          -PadInter=R-M-20269656-1
+          -PadReward=R-M-20269656-2
+      - name: Verify and package
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/*.apk out/fishing-1.3-$CANDIDATE_CODE.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/fishing-1.3-$CANDIDATE_CODE.aab
+          APK=$(find out -name '*.apk')
+          "$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)" verify --print-certs "$APK" > out/signature.txt
+          sha256sum out/*.apk out/*.aab > out/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fishing-candidate
+          path: out/

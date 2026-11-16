@@ -41,17 +41,19 @@
     const dt = performance.now() - P.st, dy = P.sy - P.y;
     const s = r.state;
     if (aim) { const a = aim; aim = null; if (s === "idle") G.cast(a.X, a.Z); }
-    else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
+    else if (dy > 45 && (s === "bite" || s === "wait")) G.strike();
     else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
     r.reeling = false;
   }
   cv.addEventListener("pointerup", up);
-  cv.addEventListener("pointercancel", up);
+  cv.addEventListener("pointercancel", function(e) {
+    if(e.pointerId!==P.id)return;P.down=false;aim=null;const r=G.rig();if(r)r.reeling=false;
+  });
   function tiltOf(x) { const S = Sc.size(); return U.clamp((x - S.W / 2) / (S.W * 0.38), -1, 1); }
 
   Input.actionDown = function () {
     FZ.Sound.unlock();
-    if (!G.sess()) return;
+    if (!G.sess() || UI.anyOpen()) return;
     const r = G.rig(), s = r.state, mode = G.sess().mode;
     if (s === "idle") { if (G.sess().ice) return; G.cast(); }
     else if (s === "nohole") G.drill();
@@ -65,7 +67,7 @@
   window.addEventListener("keydown", function (e) {
     if (e.repeat) return;
     if (e.code === "Space") { e.preventDefault(); Input.actionDown(); }
-    if (e.code === "ArrowUp") G.strike && G.rig() && G.strike();
+    if (e.code === "ArrowUp" && !UI.anyOpen()) G.strike && G.rig() && G.strike();
   });
   window.addEventListener("keyup", function (e) { if (e.code === "Space") Input.actionUp(); });
   FZ.Input = Input;
@@ -78,7 +80,7 @@
     let dt = Math.min(0.32, (now - last) / 1000 || 0.016); last = now;
     const r = G.rig();
     if (r && r.fish && r.fish.jump) dt *= 0.55; // slow-motion jumps
-    const paused = UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on");
+    const paused = document.hidden || (Sc.graphicsInfo && Sc.graphicsInfo().contextLost) || (UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on"));
     const steps = Math.max(1, Math.ceil(dt / 0.045)), tick = dt / steps;
     for (let i=0;i<steps;i++) { t += tick; if (!paused) G.update(tick, t); }
     G.events().forEach(function (event) {
@@ -122,7 +124,7 @@
       const fps = fq.n / ((now - fq.t0) / 1000);
       fq.t0 = 0;
       const i = QL.indexOf(effQ(st));
-      if (fps < 48 && i < QL.length - 1) { st.settings.autoQ = QL[i + 1]; Sc.setQuality(QL[i + 1]); G.save(true); fq.start = now; }
+      if (fps < 36 && i < QL.length - 1) { st.settings.autoQ = QL[i + 1]; Sc.setQuality(QL[i + 1]); G.save(true); fq.start = now; }
     }
   }
   FZ.applyQuality = function () { const st = G.state(); Sc.setQuality(effQ(st)); fq.start = performance.now(); };
@@ -132,7 +134,7 @@
     const st = G.load();
     Sc.init(cv); Sc.setQuality(effQ(st)); fq.start = performance.now();
     FZ.Assets.setStyle(st.settings.gfx);
-    FZ.Sound.setOn(st.settings.sound); FZ.Sound.music = st.settings.music;
+    FZ.Sound.setMix(st.settings); FZ.Sound.setOn(st.settings.sound); FZ.Sound.music = st.settings.music;
     const bar = document.getElementById("bootBar");
     FZ.Assets.load((k) => { bar.style.width = Math.round(k * 100) + "%"; }).then(function () {
       FZ.Ads.init();
