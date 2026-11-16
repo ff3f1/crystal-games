@@ -994,7 +994,10 @@
     } else if (tk.state === "fly") {
       const k = tk.flyT;
       const p = R.proj(tk.X, tk.Z);
-      const x = U.lerp(G.tip.x, p.x, k), y = U.lerp(G.tip.y, p.y, k) - Math.sin(k * Math.PI) * H * 0.22;
+      // The world-space projectile now travels from the shore to the target.
+      // Blend only the first instant from the physical rod tip.
+      const release = U.clamp(k * 5, 0, 1);
+      const x = U.lerp(G.tip.x, p.x, release), y = U.lerp(G.tip.y, p.y, release) - Math.sin(k * Math.PI) * H * 0.22;
       target = { x, y, air: true };
       ctx.fillStyle = v.mode === "float" ? "#f04a2a" : "#ddd"; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
     } else if (tk.state === "water" || tk.state === "fight") {

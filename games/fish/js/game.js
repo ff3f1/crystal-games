@@ -310,11 +310,18 @@
     const ok = G.canFish(); if (ok !== true) { emit("need", { what: ok }); return false; }
     const a = X == null ? (sess.lastAim || { X: 0, Z: G.maxCast() * 0.65 }) : G.aimClamp(X, Z);
     const g = G.gear(sess.mode);
-    // разброс зависит от дальности
+    // The wind only nudges the landing point; tutorial aim stays predictable.
+    const fromWest = { "З": 1, "ЮЗ": 0.7, "СЗ": 0.7, "В": -1, "ЮВ": -0.7, "СВ": -0.7 };
+    const wind = st.tut < 3 ? 0 : (sess.wx.wind || 0) / 11 * (fromWest[sess.wx.dir] || 0);
     const sc = 0.04 * a.Z;
-    rig.X = a.X + U.rand.range(-sc, sc); rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
+    rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
+    const maxLat = FZ.Scene.maxLat(rig.Z);
+    rig.X = U.clamp(a.X + U.rand.range(-sc, sc) + wind * Math.min(1.3, a.Z * 0.025), -maxLat, maxLat);
     sess.lastAim = { X: a.X, Z: a.Z };
-    rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.45 + a.Z / 70;
+    rig.state = "fly"; rig.flyT = 0;
+    rig.flyFrom = { X: 0, Z: 4.5 }; rig.flyWind = wind;
+    rig.flyDur = (0.38 + 0.12 * Math.sqrt(a.Z)) * (sess.mode === "feeder" ? 1.10 : sess.mode === "spin" ? 0.94 : 1);
+    rig.rod.jerk = 0.42;
     rig.bite = null; rig.still = 0; rig.spinPause = 0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
@@ -923,10 +930,11 @@
     // Follow the hooked fish rather than the original cast point.
     const hookedFish = r.fish && r.fish.hooked ? r.fish : null;
     const tackleState = r.state === "fly" ? "fly" : (r.state === "idle" || r.state === "nohole" || r.state === "drill" || r.state === "result") ? "none" : r.state === "fight" ? "fight" : "water";
+    const flight = tackleState === "fly" ? FZ.FightPhysics.castPath(r.flyFrom || { X: 0, Z: 4.5 }, { X: r.X, Z: r.Z }, r.flyT || 0, r.flyWind) : null;
     const v = {
       loc: sess.loc, season: sess.season, hour: sess.hour, period: sess.period, wx: sess.wx, t, ice: sess.ice ? { holeId: sess.hole ? sess.hole.id : 0 } : null,
       mode: sess.mode, spots: sess.spots, fedSpot: sess.fedSpot,
-      rod: r.rod, tackle: { state: tackleState, X: hookedFish ? hookedFish.X : r.X, Z: hookedFish ? hookedFish.Z : r.Z, flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
+      rod: r.rod, tackle: { state: tackleState, X: hookedFish ? hookedFish.X : (flight ? flight.X : r.X), Z: hookedFish ? hookedFish.Z : (flight ? flight.Z : r.Z), flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };

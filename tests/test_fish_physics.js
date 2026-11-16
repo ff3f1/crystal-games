@@ -69,4 +69,15 @@ assert(!P.secondWind(carp, { S: 0.2, t: 8 }, 8, true), "ice hole has no shorelin
 for (const hz of [30, 120]) {
   close(personalityRun(pike, hz).vx, personalityRun(pike, 60).vx, 0.06, "species turn invariant " + hz);
 }
-console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery and 30/60/120Hz invariance");
+const launch = { X: 0, Z: 4.5 }, landing = { X: 2, Z: 30 };
+assert.deepEqual(P.castPath(launch, landing, 0, 1), launch, "cast begins near the rod");
+assert.deepEqual(P.castPath(launch, landing, 1, 1), landing, "cast reaches the actual landing point");
+const halfCast = P.castPath(launch, landing, 0.5, 1);
+assert(halfCast.Z > launch.Z && halfCast.Z < landing.Z, "tackle must travel throughout the flight");
+assert(halfCast.X > P.castPath(launch, landing, 0.5, 0).X, "wind must bend midair motion");
+for (const k of [-1, 0, 0.2, 0.5, 0.8, 1, 2]) {
+  const p = P.castPath(launch, landing, k, -1);
+  assert(Number.isFinite(p.X) && Number.isFinite(p.Z), "cast coordinates must remain finite");
+  assert(p.Z >= launch.Z && p.Z <= landing.Z, "cast progress must stay bounded");
+}
+console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery, cast flight and 30/60/120Hz invariance");

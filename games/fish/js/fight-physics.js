@@ -37,6 +37,14 @@
     return true;
   };
 
+  // Constant horizontal flight speed; the renderer supplies the ballistic arc.
+  // Wind changes the landing point separately, then adds a mild midair curve.
+  P.castPath = function (from, to, progress, wind) {
+    const k = clamp(progress, 0, 1);
+    const curve = clamp(wind || 0, -1, 1) * 0.7 * k * (1 - k);
+    return { X: from.X + (to.X - from.X) * k + curve, Z: from.Z + (to.Z - from.Z) * k };
+  };
+
   // Fish accelerates towards a behavioural target instead of switching
   // velocity instantaneously when a run, turn or rest begins.
   P.swim = function (f, opts, dt) {
