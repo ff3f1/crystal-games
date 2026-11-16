@@ -188,7 +188,25 @@ with sync_playwright() as p:
   (out/f'net-{k}.png').write_bytes(base64.b64decode(sample['png'].split(',')[1]))
   if previous: assert sample['pose']['fishY']<=previous['fishY']
   previous=sample['pose']
+ # The synthetic landing at k=1 is processed by the real frame loop and
+ # legitimately opens a catch card. Resolve it before testing menu controls.
+ if page.locator('#ovCatch.on').count():
+  page.locator('#cKeep').click(timeout=5000)
  page.evaluate("__game.G.startSession('pond','summer')")
+
+ # Capture real WebGL reel mechanism at two angles (not just angle metrics).
+ page.evaluate("""()=>{
+   const G=__game.G,r=G.rig();
+   G.state().load.spin={rod:'s2',line:'l4',hook:'h3',bait:'jig'};
+   G.state().lures.jig=1;G.sess().mode='spin';r.state='wait';r.Z=24;
+   r.rod.reelAngle=0;FZ.Scene.render(G.view(10),.016);
+ }""")
+ page.screenshot(path=str(out/'reel-start.png'))
+ page.evaluate("""()=>{
+   const G=__game.G,r=G.rig();r.rod.reelAngle=2.2;
+   FZ.Scene.render(G.view(10.1),.016);
+ }""")
+ page.screenshot(path=str(out/'reel-turn.png'))
 
  # A delayed reward popup must not interrupt the cast after pressing Fish.
  page.evaluate('__game.UI.showMenu()')

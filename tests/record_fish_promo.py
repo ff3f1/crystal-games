@@ -74,6 +74,7 @@ with sync_playwright() as p:
       st.active='spin';
       G.startSession('pond','summer');
       G.sess().hour=13;G.sess().wx.sky='clear';
+      G.biteTable=()=>[]; // Freeze random bites until the filmed bite sequence.
       __game.UI.refreshTools();
     }""")
     page.wait_for_function("FZ.Scene.graphicsInfo().renderer==='webgl' && !!FZ.Assets.bg('pond','summer')", timeout=30000)
@@ -107,9 +108,14 @@ with sync_playwright() as p:
     page.mouse.move(180, 545, steps=9)
     page.mouse.up()
     a0=page.evaluate("__game.G.rig().rod.reelAngle")
-    until(9.8)
+    until(7.3)
     a1=page.evaluate("__game.G.rig().rod.reelAngle")
-    assert a1 > a0 + .5, "The reel was not turning in the live renderer"
+    assert a1 > a0 + .5, ("The reel was not turning in the live renderer",
+      a0,a1,page.evaluate("""() => ({state:__game.G.rig().state,
+        mode:__game.G.sess().mode,action:FZ.Input.snapshot(),
+        reeling:__game.G.rig().reeling,rate:__game.G.rig().rod.reelRate,
+        range:__game.G.rig().Z,open:__game.UI.anyOpen()})"""))
+    until(9.8)
     page.evaluate("FZ.Input.actionUp('promo-reel')")
     until(11.2)
     # Advance the ordinary tutorial bite condition; the real game generates
