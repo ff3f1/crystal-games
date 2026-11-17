@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ty-uroven-online
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /api/health
+    disk:
+      name: ty-uroven-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /data/level.db
+      - key: PORT
+        value: 8787
+      - key: WEB_DIR
+        value: /app/client
+      - key: ALLOWED_ORIGINS
+        sync: false
