@@ -1,0 +1,22 @@
+{
+  "game": "1.0.10 original (not 1.5/2.1)",
+  "source_sha": "b77f8443f482b4de083b4b88ada2d2f99f232bc9",
+  "duration_seconds": 30.6,
+  "output_bytes": 5006583,
+  "resolution": "1080x1920",
+  "captured_gameplay": [
+    "menu",
+    "map",
+    "water",
+    "cast",
+    "bite",
+    "take",
+    "fight",
+    "catch",
+    "outro",
+    "end"
+  ],
+  "editing": "real Chrome capture, cuts and tempo adjustments; no simulated catch images",
+  "audio": "original low-volume instrumental bed, no narration",
+  "subtitles": "burned into MP4; also SRT"
+}
