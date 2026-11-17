@@ -6,7 +6,7 @@ mkdir -p device-evidence
 collect() {
     task_status=$?
     trap - EXIT
-    timeout 20s adb pull /sdcard/Android/data/ru.uroven.adventurepreview/files/screenshots device-evidence/ || true
+    timeout 20s adb pull /sdcard/Download/ty-uroven-screens device-evidence/ || true
     timeout 20s adb logcat -d > device-evidence/logcat.txt || true
     exit "$task_status"
 }
