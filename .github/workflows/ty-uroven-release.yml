@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ty-release-${{ github.ref }}
+  group: ty-release-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   domain-and-ui:
@@ -28,6 +28,7 @@ jobs:
           name: ty-uroven-ui-evidence
           path: ty-uroven/test-results
   android:
+    timeout-minutes: 18
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +41,9 @@ jobs:
         with: {gradle-version: '8.9'}
       - name: Build and lint isolated application
         working-directory: ty-uroven
-        run: gradle assembleRelease assembleDebug assembleDebugAndroidTest lintRelease --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleRelease assembleDebug assembleDebugAndroidTest lintRelease --no-daemon --stacktrace 2>&1 | tee build.log
       - name: Name APK and record signing certificate
         run: |
           mkdir -p ty-uroven/artifacts
@@ -78,6 +81,7 @@ jobs:
         with:
           name: ty-uroven-android-evidence
           path: |
+            ty-uroven/build.log
             ty-uroven/device-evidence
             ty-uroven/app/build/reports
             ty-uroven/app/build/outputs/androidTest-results
