@@ -418,11 +418,28 @@
     const wg = g.createLinearGradient(0, 0, 0, span);
     wg.addColorStop(0, far); wg.addColorStop(1, near);
     g.fillStyle = wg; g.fillRect(-8, 0, W + 16, span);
+    // Draw the photographed WATER from below the original waterline.
+    // The old Canvas fallback only drew the solid gradient and flipped trees,
+    // hiding the actual photographic river on every non-frozen location.
+    const img = FZ.Assets.bg(v.loc.id, v.season);
+    const wl = img ? FZ.Assets.waterline(v.loc.id, v.season) : 1;
+    const photographed = !!img && wl < 0.92 && !v.ice;
+    if (photographed) {
+      const fit = W / img.width;
+      const sc = Math.min(Math.max(fit, (shoreY + 8) / (img.height * wl)),
+        fit * (v.season === "winter" ? 1 : 1.28));
+      const srcY = Math.min(img.height - 2, img.height * (wl + 0.003));
+      g.drawImage(img, 0, srcY, img.width, img.height - srcY,
+        (W - img.width * sc) / 2, 0, img.width * sc, span);
+      // A thin, translucent water tint, not a repaint.
+      g.fillStyle = U.rgba(far, 0.08);
+      g.fillRect(-8, 0, W + 16, span);
+    }
     // Reflections live on a separate transparent layer. Fade them continuously
     // with distance instead of painting a dark opaque cutoff through the water.
     const overlay = mk(W + 16, span, "reflOverlay"), rg = overlay[1];
     rg.save();
-    rg.globalAlpha = over ? 0.32 : 0.48;
+    rg.globalAlpha = photographed ? 0.075 : (over ? 0.32 : 0.48);
     rg.setTransform(dpr, 0, 0, -dpr / 1.02, 8 * dpr, shoreY * dpr / 1.02);
     rg.drawImage(topC, 0, 0, topC.width, topC.height, -8, 0, W + 16, shoreY);
     rg.restore();
