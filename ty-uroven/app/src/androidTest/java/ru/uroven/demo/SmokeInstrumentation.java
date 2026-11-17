@@ -21,6 +21,15 @@ public class SmokeInstrumentation extends Instrumentation {
     private String js(String code)throws Exception {CountDownLatch latch=new CountDownLatch(1);AtomicReference<String> result=new AtomicReference<>();runOnMainSync(()->activity.webForTesting().evaluateJavascript(code,v->{result.set(v);latch.countDown();}));if(!latch.await(10,TimeUnit.SECONDS))throw new AssertionError("JavaScript timeout");return result.get();}
     private void waitFor(String expression)throws Exception{long end=System.currentTimeMillis()+20000;while(System.currentTimeMillis()<end){if("true".equals(js("Boolean("+expression+")")))return;Thread.sleep(150);}throw new AssertionError("Timed out: "+expression+"; body="+js("document.body.innerText"));}
     private void click(String selector)throws Exception{String result=js("(()=>{const e=document.querySelector("+org.json.JSONObject.quote(selector)+");if(!e)return false;e.click();return true})()");if(!"true".equals(result))throw new AssertionError("Element absent: "+selector);}
+    private void tap(String selector)throws Exception {
+        org.json.JSONObject r=new org.json.JSONObject(js("(()=>{const r=document.querySelector("+org.json.JSONObject.quote(selector)+").getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,viewport:innerWidth}})()"));
+        int[] location=new int[2];runOnMainSync(()->activity.webForTesting().getLocationOnScreen(location));
+        float scale=activity.webForTesting().getWidth()/(float)r.getDouble("viewport"),x=location[0]+(float)r.getDouble("x")*scale,y=location[1]+(float)r.getDouble("y")*scale;
+        long now=android.os.SystemClock.uptimeMillis();
+        android.view.MotionEvent down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,x,y,0),up=android.view.MotionEvent.obtain(now,now+80,android.view.MotionEvent.ACTION_UP,x,y,0);
+        down.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);up.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);sendPointerSync(down);sendPointerSync(up);down.recycle();up.recycle();
+    }
+    private void awaitPicker()throws Exception {long end=System.currentTimeMillis()+10000;while(System.currentTimeMillis()<end){android.view.accessibility.AccessibilityNodeInfo root=getUiAutomation().getRootInActiveWindow();if(root!=null&&root.getPackageName()!=null&&!root.getPackageName().toString().equals(getTargetContext().getPackageName()))return;Thread.sleep(200);}throw new AssertionError("System file picker did not open");}
     private void screenshot(String name)throws Exception{Thread.sleep(300);runOnMainSync(()->activity.webForTesting().evaluateJavascript("document.getElementById('toast').classList.remove('show')",null));Thread.sleep(100);Bitmap bitmap=getUiAutomation().takeScreenshot();File dir=new File(activity.getExternalFilesDir(null),"screenshots");dir.mkdirs();try(FileOutputStream out=new FileOutputStream(new File(dir,name+".png"))){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}bitmap.recycle();}
     private void go(String page)throws Exception{if(!"true".equals(js("!!document.querySelector('[data-action=go][data-page=\""+page+"\"]')")))click("[data-action=go][data-page=more]");click("[data-action=go][data-page="+page+"]");waitFor("document.querySelector('.content h1')");}
     private void runProduct()throws Exception{
@@ -33,8 +42,8 @@ public class SmokeInstrumentation extends Instrumentation {
         go("money");waitFor("document.querySelector('.balance').innerText.includes('0')");screenshot("05-finances");
         go("hero");screenshot("06-hero");go("more");screenshot("07-more");go("calendar");screenshot("08-calendar");go("health");screenshot("09-health");go("photos");screenshot("10-photos");
         // Real Android file chooser opens and cancellation returns safely.
-        click("[data-action=photoAdd]");Thread.sleep(1500);sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);Thread.sleep(500);waitFor("document.querySelector('.content')");
-        go("analytics");screenshot("11-analytics");go("achievements");screenshot("12-achievements");go("world");screenshot("13-world");go("settings");screenshot("14-settings");
+        tap("[data-action=photoAdd]");awaitPicker();screenshot("10a-system-photo-picker");sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);Thread.sleep(500);waitFor("document.querySelector('.content')");
+        go("analytics");screenshot("11-analytics");go("achievements");screenshot("12-achievements");go("world");screenshot("13-world");go("settings");screenshot("14-settings");js("document.querySelector('[data-action=export]').scrollIntoView({block:'center'})");tap("[data-action=export]");awaitPicker();screenshot("14a-backup-destination");sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);Thread.sleep(500);
         js("(()=>{const e=document.querySelector('[data-setting=theme]');e.value='light';e.dispatchEvent(new Event('change',{bubbles:true}))})()");waitFor("document.body.classList.contains('light')");screenshot("15-light-theme");
         // Force an actual packaged-origin reload and verify durable profile and habit.
         runOnMainSync(()->activity.webForTesting().reload());waitFor("document.querySelector('.content')&&document.body.classList.contains('light')");
