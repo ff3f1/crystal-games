@@ -20,6 +20,30 @@ with sync_playwright() as p:
  page.click('#mGo');page.evaluate("__game.G.state().tut=4;__game.G.startSession('pond','summer');__game.G.sess().hour=9")
  page.wait_for_function("FZ.Assets.bg('pond','summer')")
  page.screenshot(path=str(out/'new_pond.png'))
+ # Regression for an Android report: the whole lower half used to be
+ # painted a featureless gray-green shader instead of the existing river photo.
+ # Measure horizontal photographic detail in a water-only area, away from the rod.
+ page.evaluate("""()=>{
+   const G=__game.G;
+   G.startSession('taiga','summer');
+   G.sess().hour=13;G.sess().period='day';
+   G.sess().wx.sky='clear';G.sess().wx.wind=2;
+ }""")
+ page.wait_for_function("!!FZ.Assets.bg('taiga','summer')")
+ page.wait_for_timeout(300)
+ page.evaluate("FZ.Scene.render(__game.G.view(3),.016)")
+ photo_proof=out/'taiga-photographic-water.png'
+ page.locator('#cv').screenshot(path=str(photo_proof))
+ from PIL import Image,ImageStat
+ with Image.open(photo_proof) as img:
+  w,h=img.size
+  bands=[]
+  for fy in (.50,.57,.65):
+   patch=img.convert('RGB').crop((int(w*.08),int(h*fy),int(w*.37),int(h*fy)+22))
+   bands.append(sum(ImageStat.Stat(patch).stddev)/3)
+  assert max(bands)>12,('Opaque featureless shader still covers photo water',bands)
+ print('Photographic water detail verified in actual GPU capture:',bands)
+ page.evaluate("__game.G.startSession('pond','summer')")
  # Regression: the line must follow the hooked fish rather than the cast point.
  alignment=page.evaluate('''()=>{
    const G=__game.G,r=G.rig(),saved={state:r.state,fish:r.fish,X:r.X,Z:r.Z};
