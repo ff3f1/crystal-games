@@ -44,7 +44,7 @@
       const dx=(x-32)/32,dy=(y-32)/32,r=Math.hypot(dx,dy);
       const grain=Math.sin(x*1.7+y*2.3)*Math.cos(x*3.1-y*2.1);
       const bubbles=Math.pow(Math.max(0,Math.sin(x*.71+y*.35)*Math.cos(y*.85-x*.27)),8);
-      const a=clamp((1-r*r)*(.19+.35*bubbles+.08*grain),0,1);
+      const a=clamp((1-r*r)*(.34+.43*bubbles+.07*grain),0,1);
       return [215,235,240,Math.round(a*190)];
     });
   }
@@ -86,62 +86,82 @@
   }
   // Real mechanical feeding/hunting areas must read clearly above photo water.
   // The center and spatial radius are exactly the same ones used by spotBonus().
+  // All marks are projections of active sess.spots. No random decorative fish.
+  // The dark wake and bright broken crests stay legible on both pale and dark water.
   function activity(g,v,project){
     if(!v||v.ice||!v.spots||!v.spots.length)return;
     ensureTextures();
     g.save();
     for(const sp of v.spots){
       if(!(sp.life>0&&sp.intensity>0))continue;
+      const pred=sp.type==="boil",power=clamp(sp.intensity,0,1);
       const age=Math.max(0,(sp.duration||sp.life)-sp.life);
-      const power=clamp(sp.intensity,0,1),pred=sp.type==="boil";
       const center=project(sp.X,sp.Z);
-      const radius=clamp(center.s*(sp.radius||4.5)*.47,16,106);
-      const pulse=.78+.22*Math.sin(age*(pred?8.4:4.2));
-      // Depth/distance attenuation keeps far signs legible without massive decals.
-      const envelope=power*(.78+.22*pulse);
+      const zoneSize=sp.radius||4.5;
+      // Tie the visible footprint to the real spotBonus radius, not an arbitrary
+      // screen-space decal. The smallest crest remains readable at 360px.
+      const physicalRadius=Math.max(1,Math.abs(project(sp.X+zoneSize,sp.Z).x-center.x));
+      const radius=clamp(physicalRadius*.65,24,108);
+      const lifeFade=clamp(sp.life/2,0,1);
+      const envelope=power*lifeFade;
+      const cycle=pred?1.45:2.15;
+      const rhythm=.78+.22*Math.sin(age*(pred?5.4:3.1));
+      const reach=radius*(pred?1.05:.82);
       g.globalCompositeOperation="source-over";
-      const dent=g.createRadialGradient(center.x,center.y,0,center.x,center.y,radius*1.45);
-      dent.addColorStop(0,"rgba(10,33,37,"+(.16*envelope)+")");
-      dent.addColorStop(.53,"rgba(19,51,55,"+(.11*envelope)+")");
-      dent.addColorStop(1,"rgba(16,54,59,0)");
-      g.fillStyle=dent;
-      g.beginPath();g.ellipse(center.x,center.y,radius*1.45,radius*.64,0,0,TAU);g.fill();
-      g.globalCompositeOperation="screen";
-      // Irregular foam and slivers of refracted surface light.
-      // No fixed bright ring, no bullseye, no trophy beacon.
-      for(let i=0;i<(pred?9:6);i++){
-        const angle=i*2.39996+Math.sin(age*.3+i)*.2;
-        const orbit=(pred?.55:.48)*(sp.radius||4.5);
-        const X=sp.X+Math.cos(angle)*orbit;
-        const Z=sp.Z+Math.sin(angle)*orbit*.40;
+      const shadow=g.createRadialGradient(center.x,center.y,0,center.x,center.y,reach);
+      shadow.addColorStop(0,"rgba(9,35,39,"+(.36*envelope)+")");
+      shadow.addColorStop(.55,"rgba(19,51,56,"+(.21*envelope)+")");
+      shadow.addColorStop(1,"rgba(12,46,49,0)");
+      g.fillStyle=shadow;
+      g.beginPath();g.ellipse(center.x,center.y,reach,reach*.39,0,0,TAU);g.fill();
+      // Irregular short waves repeatedly emanate from actual feeding points.
+      // Keeping bright AND dark edges is essential on sunny water and in rain.
+      for(let i=0;i<(pred?8:7);i++){
+        const seed=i*2.3999632;
+        const phase=((age/cycle+i*.171)%1+1)%1;
+        const bearing=seed+Math.sin(age*.33+i)*.17;
+        const orbit=.17+.55*Math.sqrt((i+.5)/(pred?8:7));
+        const X=sp.X+Math.cos(bearing)*zoneSize*orbit;
+        const Z=sp.Z+Math.sin(bearing)*zoneSize*orbit*.56;
         const p=project(X,Z);
-        const phase=(age/(pred?1.0:1.7)+i/(pred?9:6))%1;
-        const alpha=envelope*(pred?.84:.68)*(1-phase*.64);
-        drawRing(g,p,phase,alpha,(sp.radius||4.5)*(pred?.27:.17),angle);
-        const breath=.65+.35*Math.sin(age*(pred?8.1:4.8)+angle);
-        const rr=clamp(radius*(pred?.22:.12)*breath,3,27);
-        g.globalAlpha=envelope*(pred?.57:.37)*(1-phase*.6);
-        g.drawImage(foamTex,p.x-rr,p.y-rr*.42,rr*2,rr*.84);
+        const size=zoneSize*(pred?.23:.18);
+        const fade=envelope*(pred?.98:.87)*(1-.56*phase)*rhythm;
+        drawRing(g,p,phase,fade,size,seed);
+        const foam=clamp(radius*(pred?.23:.14)*(.85+.24*Math.sin(age*6+seed)),4,32);
+        g.globalAlpha=fade*(pred?.79:.63);
+        g.drawImage(foamTex,p.x-foam,p.y-foam*.39,foam*2,foam*.78);
         if(!pred){
-          const pr=clamp(1.6+p.s*.065,2,5.2);
-          g.globalAlpha=envelope*.65*(1-phase*.6);
-          g.drawImage(dropTex,p.x-pr+Math.sin(age*4+i)*pr*.8,p.y-pr*.5,pr*2,pr*2);
-        }else if(i%3===0) {
-          // Quick bright broken crests mark the predator's directional boil.
-          const len=clamp(radius*(.22+.24*breath),7,38);
-          g.strokeStyle="rgba(224,242,238,"+(.4*envelope)+")";
-          g.lineWidth=clamp(p.s*.042,.8,2.4);
-          g.beginPath();g.moveTo(p.x-len*.45,p.y);
-          g.bezierCurveTo(p.x-len*.1,p.y-len*.28,p.x+len*.24,p.y-len*.10,p.x+len*.62,p.y-len*.24);g.stroke();
+          // Fine bubbles, not large rigid circles.
+          const dot=clamp(2.3+p.s*.034,2,5.5);
+          g.globalAlpha=fade*.94;
+          g.drawImage(dropTex,p.x-dot+Math.sin(age*3.7+i)*dot*.6,p.y-dot*.8,dot*2,dot*2);
+        }else{
+          // A predator makes an intermittent, directional, two-tone wake.
+          const burst=Math.pow(Math.max(0,Math.sin(age*4.8+i*1.7)),3);
+          if(burst>.06){
+            const sweep=clamp(radius*(.19+.20*burst),8,41);
+            const dx=Math.cos(seed+age*.4),dy=Math.sin(seed+age*.4)*.35;
+            g.beginPath();
+            g.moveTo(p.x-dx*sweep*.55,p.y-dy*sweep*.55);
+            g.quadraticCurveTo(p.x+dy*sweep*.35,p.y-dx*sweep*.24,p.x+dx*sweep*.72,p.y+dy*sweep*.72);
+            g.lineCap="round";g.lineWidth=2.8;
+            g.strokeStyle="rgba(17,44,48,"+(.57*fade*burst)+")";g.stroke();
+            g.lineWidth=1.45;g.strokeStyle="rgba(245,250,246,"+(.88*fade*burst)+")";g.stroke();
+          }
         }
       }
-      // A broad, persistent but gently moving patch is visible at normal zoom.
-      // It disappears only when the simulation reports no active spot.
-      g.globalAlpha=envelope*(pred?.48:.3);
-      const spread=radius*(pred?.85:.66),swirl=Math.sin(age*(pred?2.8:1.3))*.15;
-      g.save();g.translate(center.x,center.y);g.rotate(swirl);
-      g.drawImage(foamTex,-spread,-spread*.39,spread*2,spread*.78);
-      g.restore();
+      // Visible in the gaps between crests, but never a painted bullseye.
+      const breathing=.88+.12*Math.sin(age*(pred?6.2:3.5));
+      const wide=radius*(pred?.49:.39)*breathing;
+      g.globalAlpha=envelope*(pred?.78:.64);
+      g.drawImage(foamTex,center.x-wide,center.y-wide*.35,wide*2,wide*.70);
+      if(pred){
+        // A brief surface break, inside the existing simulated hunting spot.
+        const kick=Math.pow(Math.max(0,Math.sin(age*4.8)),5);
+        const h=clamp(radius*.26,6,24);
+        g.globalAlpha=envelope*kick*.92;
+        g.drawImage(dropTex,center.x-h*.45,center.y-h*.65-kick*h*.65,h*.9,h*1.3);
+      }
     }
     g.restore();
   }

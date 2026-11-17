@@ -51,10 +51,10 @@
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
-  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},cloudCover:{value:0},ice:{value:0},winter:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
+  const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},current:{value:0},cloudCover:{value:0},ice:{value:0},winter:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
   const vertex=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
   const fragment=`precision highp float;
-    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,ice,winter,holeOn,cloudCover,drillProgress;
+    uniform sampler2D photo;uniform float hasPhoto,shore,waterline,clock,wind,dark,warm,rain,current,ice,winter,holeOn,cloudCover,drillProgress;
     uniform vec2 resolution,photoSize,hole,holeRadius,sun;uniform vec3 colorNear,colorFar;uniform vec4 ripples[12];varying vec2 vUv;
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1.,0.)),f.x),mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),f.x),f.y);}
@@ -86,7 +86,7 @@
       }
       if(uv.y>shore){
         float perspective=.12+depth*depth*1.8;vec2 p=vec2(uv.x*28./perspective,9./(.11+depth));
-        p.x+=clock*.05*wind;float strength=.25+wind*.16;
+        p.x+=clock*(.05*wind+.11*current);p.y+=clock*.045*current;float strength=.25+wind*.16;
         vec2 normal=vec2(wave(p+vec2(.02,0.))-wave(p-vec2(.02,0.)),wave(p+vec2(0.,.02))-wave(p-vec2(0.,.02)))*strength;
         float ringLight=0.;
         for(int i=0;i<12;i++){
@@ -213,7 +213,7 @@
       const sprite=new T.Mesh(geometry,mat);sprite.renderOrder=20;sprite.visible=false;
       sprite.userData={ys,ready:false};scene.add(sprite);rodSprites[mode]=sprite;
       loader.load(FZ.RodArt.hd(mode)?"assets/equipment/complete-hd/"+mode+".webp":"assets/equipment/complete/"+mode+".svg",tx=>{
-        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=false;tx.minFilter=T.LinearFilter;tx.magFilter=T.LinearFilter;tx.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
+        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=true;tx.minFilter=T.LinearMipmapLinearFilter;tx.magFilter=T.LinearFilter;tx.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
         mat.map=tx;mat.needsUpdate=true;sprite.userData.ready=true;
       },undefined,()=>{sprite.userData.ready=false;});
     }
@@ -393,16 +393,16 @@
   let lastFloatRing=-100;
   function addRipple(x,y,time,power){rippleData[ringCursor++%12].set(x,y,time,U.clamp(power,.15,2));}
   const oldRing=R.ring;
-  R.ring=function(X,Z,r,life){if(!enabled)return oldRing.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));addRipple(p.x/W,p.y/H,uniforms.clock.value,Math.max(.4,r||1));};
+  R.ring=function(X,Z,r,life){if(!enabled)return oldRing.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));addRipple(p.x/W,p.y/H,uniforms.clock.value,Math.max(.4,r||1));if(FZ.WaterFX)FZ.WaterFX.ring(X,Z,r,life);};
   const oldSplash=R.splash;
-  R.splash=function(X,Z,k){if(!enabled)return oldSplash.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));for(let i=0;i<3;i++)addRipple(p.x/W+(i-1)*.007,p.y/H,uniforms.clock.value+i*.09,(k||1)*(1-i*.2));R.shakeA=Math.max(R.shakeA,(k||1)*2);};
+  R.splash=function(X,Z,k){if(!enabled)return oldSplash.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));for(let i=0;i<3;i++)addRipple(p.x/W+(i-1)*.007,p.y/H,uniforms.clock.value+i*.09,(k||1)*(1-i*.2));if(FZ.WaterFX)FZ.WaterFX.splash(X,Z,k);R.shakeA=Math.max(R.shakeA,(k||1)*2);};
   R.render=function(v,dt){
     if(!enabled)return previous.render.call(R,v,dt);if(contextLost){if(detailCanvas)detailCanvas.style.visibility='hidden';return;}
     R.fx.length=0;R.parts.length=0;R.jumps.length=0;R.rings.length=0;
     if(R.size().shoreY/H!==uniforms.shore.value)R.resize();if(v.loc.zfar!==R._glFar){R.setFar(v.loc.zfar);R._glFar=v.loc.zfar;}
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
     const c=colors[v.loc.style]||colors.lake;uniforms.colorNear.value.set(c[0]);uniforms.colorFar.value.set(c[1]);
-    uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
+    uniforms.clock.value=v.t;uniforms.wind.value=v.wx.wind||0;uniforms.current.value=v.loc.current||0;uniforms.dark.value=L.dark;uniforms.warm.value=L.warm;uniforms.sun.value.set(L.sunX/W,L.sunY/H);
     uniforms.cloudCover.value=U.damp(uniforms.cloudCover.value,({clear:0,cloudy:.3,overcast:.8,rain:.85,storm:1,snow:.8}[v.wx.sky]||0),1.2,dt);uniforms.rain.value=v.ice?0:(v.wx.sky==='storm'?1:v.wx.sky==='rain'?.65:0);uniforms.ice.value=v.ice?1:0;uniforms.winter.value=v.season==='winter'?1:0;uniforms.holeOn.value=v.ice&&!v.ice.noHole&&v.ice.drill==null?1:0;uniforms.drillProgress.value=v.ice&&v.ice.drill!=null?U.clamp(v.ice.drill,0,1):0;
     const lightLevel=Math.max(.18,1-U.clamp(L.dark/.6,0,1)*.96);hemisphere.intensity=1.3*lightLevel;keyLight.intensity=1.9*lightLevel;rimLight.intensity=.8*lightLevel;
     const precipitation=v.ice&&(v.wx.sky==='rain'||v.wx.sky==='storm')?'snow':v.wx.sky;
