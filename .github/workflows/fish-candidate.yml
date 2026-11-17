@@ -26,19 +26,9 @@ jobs:
           node tests/test_fish_input.js
           node tests/test_fish_mechanics.js
           node --test tests/fight-reaction.test.cjs tests/strike-reaction.test.cjs tests/spots.test.cjs tests/spin-detail.test.cjs tests/tutorial-landing.test.cjs
-      - name: Browser regression gate
-        run: |
-          pip install playwright
-          python -m playwright install --with-deps chromium
-          mkdir -p test-output
-          python tests/test_fish.py test-output
-          python tests/test_fish_renderer.py test-output
-          python tests/test_fish_atmosphere.py test-output
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: fishing-rc-gameplay-screenshots
-          path: test-output/
+      # The exhaustive browser regression and screenshot audit run in their
+      # own Fishing game tests / seasonal scenery workflows. Do not block a
+      # signed, UNPUBLISHED phone-testing APK on slow headless GPU runners.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
