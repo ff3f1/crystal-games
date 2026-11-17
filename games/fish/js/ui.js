@@ -607,7 +607,9 @@
     const rect = cv.getBoundingClientRect(); cv.width = rect.width * dpr; cv.height = rect.height * dpr;
     const g = cv.getContext("2d");
     const t0 = performance.now();
-    const len = Math.min(rect.width * 0.95, rect.height * 2.6);
+    // Fish sprites can be half as tall as they are wide; leave room for fins
+    // and the small rolling animation on short screens.
+    const len = Math.min(rect.width * 0.95, rect.height * 1.72);
     const drops = [];
     for (let i = 0; i < 40; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 260, r: 1 + Math.random() * 3 });
     if (catchAnim) cancelAnimationFrame(catchAnim);
