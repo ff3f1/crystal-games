@@ -361,7 +361,7 @@
     tackleMetrics={winter:isIce,rodLength:len,blankLength:len*(isIce?.65:.78),
       assetMode:mode,assetReady:!!(active&&active.userData.ready),
       tipScreenY:H/2-top.y,holeScreenY:R.holeGeom().y,
-      reelVisible:!!active&&!menu&&!isIce,iceDrumVisible:reelCrank.visible&&isIce,
+      reelVisible:!!active&&!menu&&!isIce,iceDrumVisible:!!active&&!menu&&isIce,
       reelRate:v.rod.reelRate||0};
     const landing=v.landing&&f&&!isIce?FZ.RodArt.landingPose(v,W,H,R.proj):null;
     net.visible=!!landing&&f.w>=.35&&!menu;netDrops.visible=net.visible&&landing.lift>0;

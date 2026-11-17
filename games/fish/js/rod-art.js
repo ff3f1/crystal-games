@@ -3,10 +3,10 @@
 (function(FZ){
  "use strict";
  const C={
-   float:{tipX:70,baseX:1240,axisY:145,reelX:1137,reelY:215},
+   float:{tipX:59,baseX:1108,axisY:112,reelX:818,reelY:206,hd:true},
    feeder:{tipX:55,baseX:818,axisY:130,reelX:562,reelY:196,hd:true},
    spin:{tipX:57,baseX:836,axisY:132,reelX:567,reelY:208,hd:true},
-   ice:{tipX:505,baseX:1240,axisY:145,reelX:1088,reelY:189}
+   ice:{tipX:920,baseX:1390,axisY:53,reelX:1202,reelY:145,hd:true}
  };
  const modes=Object.keys(C), images={};
  function load(mode){
