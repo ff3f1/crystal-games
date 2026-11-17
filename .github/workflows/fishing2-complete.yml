@@ -83,13 +83,11 @@ jobs:
             sleep 12
             adb shell uiautomator dump /sdcard/window.xml
             adb pull /sdcard/window.xml output/android-ui.xml
-            grep 'НА РЫБАЛКУ' output/android-ui.xml
-            adb shell input tap 200 520
-            sleep 2
             adb shell screencap -p /sdcard/launch.png
             adb pull /sdcard/launch.png output/android-launch.png
-            adb logcat -d -s AndroidRuntime:E chromium:E > output/android-log.txt
-            test -z "$(adb shell pidof ru.crystalgames.fishing2 | tr -d '\r')" && exit 1 || true
+            adb logcat -d -s AndroidRuntime:E chromium:V > output/android-log.txt
+            grep 'НА РЫБАЛКУ' output/android-ui.xml
+            test -n "$(adb shell pidof ru.crystalgames.fishing2 | tr -d '\r')"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

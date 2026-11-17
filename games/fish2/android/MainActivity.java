@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript("window.gameBack&&window.gameBack()", null);
     }
     @Override protected void onPause() {
-        if (web != null) web.evaluateJavascript("window.__appPause&&window.__appPause()", result -> web.onPause());
+        if (web != null) web.evaluateJavascript("window.__appPause&&window.__appPause()", result -> { if (web != null) web.onPause(); });
         super.onPause();
     }
     @Override protected void onResume() {

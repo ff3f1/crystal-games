@@ -26,5 +26,5 @@ window.FishingAudio=(()=>{
  function setReel(on){if(on&&active&&!hidden){if(!reel)reel=loop('reel',prefs.effects*.36);else if(reel.paused)reel.play().catch(()=>{})}else if(reel)reel.pause()}
  function pause(){hidden=true;[music,nature,reel].forEach(a=>a&&a.pause());for(const s of voices){try{s.stop()}catch(_){}}if(ctx&&ctx.state==='running')ctx.suspend()}
  function resume(){hidden=false;if(!active)return;[music,nature].forEach(a=>a&&a.play().catch(()=>{}));if(ctx&&ctx.state==='suspended')ctx.resume();sync()}
- return {unlock,cue,setReel,pause,resume,configure(p){prefs={...prefs,...p};apply()},scene(type,ice){biome=type;winter=ice;sync()},get status(){return {active,hidden,prefs,music:music?.dataset.track,nature:nature?.dataset.track}}};
+ return {unlock,cue,setReel,pause,resume,configure(p){prefs={...prefs,...p};apply()},scene(type,ice){biome=type;winter=ice;sync()},get status(){return {active,hidden,prefs,music:music?music.dataset.track:null,nature:nature?nature.dataset.track:null}}};
 })();
