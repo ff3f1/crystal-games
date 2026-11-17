@@ -18,4 +18,7 @@
 .shore-challenge b{font-weight:500;color:#e6e9d8}.shore-challenge span{margin-top:3px;color:#cdbb92}
 .expedition-reward{color:#d8c494}.expedition.done{opacity:.78}
 .lodge-grid .tile{position:relative}.reward-dot{position:absolute;right:11px;top:10px;width:7px;height:7px;border-radius:50%;background:#f1c97f;box-shadow:0 0 7px #f2cb81aa}
+/* Absolute centring also works in older Android WebView button layouts. */
+.sheet>.x{display:block;padding:0;line-height:1}
+.sheet>.x>svg{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:0;transform:translate(-50%,-50%);display:block}
 @media(max-height:640px){.catch{padding-top:10px;padding-bottom:11px}.catch canvas{height:125px}.catch .acts{margin-top:10px;gap:6px}.catch-goal{margin-top:8px;padding:7px 10px}.catch .note,.catch .pct{font-size:9px}.catch .acts .two .btn{height:46px}.catch .wt{font-size:32px}}
