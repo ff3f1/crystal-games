@@ -1,21 +1,220 @@
 /* A state change and its recovery snapshot commit in one IndexedDB transaction. */
-window.LevelStore=(()=>{
-'use strict';let db;const DB='ty-uroven-release',C=LevelCore;
-function txPromise(tx){return new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error('Не удалось записать данные'));tx.onabort=()=>reject(tx.error||Error('Сохранение прервано'))})}
-const req=r=>new Promise((ok,no)=>{r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
-async function open(){db=await new Promise((ok,no)=>{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{r.result.createObjectStore('meta');r.result.createObjectStore('photos',{keyPath:'id'})};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);r.onblocked=()=>no(Error('Закрой другие окна приложения и повтори'))});db.onversionchange=()=>db.close();let s=await req(db.transaction('meta').objectStore('meta').get('state'));if(!s){let old;try{old=JSON.parse(localStorage.getItem('ty-level-v2')||'null')}catch{}s=old?.v===2?C.migrate(old):C.fresh();const photos=await legacyPhotos();await save(s,undefined,photos);return {state:s,migrated:!!old}}return {state:C.validate(s),migrated:false}}
-async function legacyPhotos(){return new Promise(resolve=>{const r=indexedDB.open('ty-photos',1);r.onupgradeneeded=()=>{r.transaction.abort();resolve([])};r.onerror=()=>resolve([]);r.onsuccess=()=>{const old=r.result;if(!old.objectStoreNames.contains('shots')){old.close();return resolve([])}const q=old.transaction('shots').objectStore('shots').getAll();q.onsuccess=()=>{old.close();resolve(q.result.filter(p=>/^data:image\/(jpeg|png|webp);base64,/.test(p.data||'')).map(p=>({...p,id:String(p.id),note:''})))};q.onerror=()=>{old.close();resolve([])}}})}
-async function read(){return C.validate(await req(db.transaction('meta').objectStore('meta').get('state')))}
-async function photos(){return await req(db.transaction('photos').objectStore('photos').getAll())}
-async function save(state,expected,replacePhotos){const clean=C.validate(state);const tx=db.transaction(['meta','photos'],'readwrite'),done=txPromise(tx),meta=tx.objectStore('meta');let conflict=false,failure;const r=meta.get('state');r.onsuccess=()=>{try{const previous=r.result;if(expected!==undefined&&previous?.revision!==expected){conflict=true;tx.abort();return}if(previous)meta.put(previous,'previous');meta.put(clean,'state');if(replacePhotos){const store=tx.objectStore('photos');store.clear();replacePhotos.forEach(p=>store.put(p))}}catch(e){failure=e;tx.abort()}};try{await done}catch(e){if(failure)throw failure;if(conflict)throw Error('Данные изменились в другом окне. Открой экран заново');throw e}}
-async function mutate(state,action,p){const next=structuredClone(state);C.apply(next,action,p);next.revision=state.revision+1;await save(next,state.revision);return next}
-async function putPhoto(state,photo){const next=structuredClone(state);next.revision++;const all=await photos();if(all.length>=240)throw Error('Лимит — 240 фотографий. Сохрани резервную копию и освободи место');await save(next,state.revision,[...all,photo]);return next}
-async function removePhoto(state,id){const next=structuredClone(state);next.revision++;await save(next,state.revision,(await photos()).filter(p=>p.id!==id));return next}
-async function backup(state){return JSON.stringify({format:'ty-uroven-backup',version:3,exported:new Date().toISOString(),state,photos:await photos()})}
-async function restore(current,raw){let pack;try{pack=JSON.parse(raw)}catch{throw Error('Не удалось прочитать JSON')}
-const s=C.migrate(pack.state||pack);const photos=pack.photos||[];if(!Array.isArray(photos)||photos.length>240)throw Error('Некорректный фотодневник');
-for(const p of photos){p.note??='';if(!(/^[a-zA-Z0-9_-]{1,100}$/.test(p.id))||!C.validDate(p.date)||typeof p.note!=='string'||p.note.length>120||typeof p.data!=='string'||p.data.length>4000000||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data))throw Error('Повреждена фотография');}
-if(new Set(photos.map(p=>p.id)).size!==photos.length)throw Error('Повторные фотографии');s.revision=(current?.revision||0)+1;await save(s,current?.revision,photos);return s}
-async function recover(){const previous=await req(db.transaction('meta').objectStore('meta').get('previous'));if(!previous)throw Error('Предыдущая копия не найдена. Импортируй свой файл резервной копии');const s=C.validate(previous);s.revision++;await save(s);return s}
-return {open,read,photos,mutate,putPhoto,removePhoto,backup,restore,recover};
+window.LevelStore = (() => {
+  "use strict";
+  let db;
+  const DB = "ty-uroven-release",
+    C = LevelCore;
+  function txPromise(tx) {
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = resolve;
+      tx.onerror = () =>
+        reject(tx.error || Error("Не удалось записать данные"));
+      tx.onabort = () => reject(tx.error || Error("Сохранение прервано"));
+    });
+  }
+  const req = (r) =>
+    new Promise((ok, no) => {
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => no(r.error);
+    });
+  async function open() {
+    db = await new Promise((ok, no) => {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => {
+        r.result.createObjectStore("meta");
+        r.result.createObjectStore("photos", { keyPath: "id" });
+      };
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => no(r.error);
+      r.onblocked = () => no(Error("Закрой другие окна приложения и повтори"));
+    });
+    db.onversionchange = () => db.close();
+    let s = await req(db.transaction("meta").objectStore("meta").get("state"));
+    if (!s) {
+      let old;
+      try {
+        old = JSON.parse(localStorage.getItem("ty-level-v2") || "null");
+      } catch {}
+      s = old?.v === 2 ? C.migrate(old) : C.fresh();
+      const photos = await legacyPhotos();
+      await save(s, undefined, photos);
+      return { state: s, migrated: !!old };
+    }
+    return { state: C.validate(s), migrated: false };
+  }
+  async function legacyPhotos() {
+    return new Promise((resolve) => {
+      const r = indexedDB.open("ty-photos", 1);
+      r.onupgradeneeded = () => {
+        r.transaction.abort();
+        resolve([]);
+      };
+      r.onerror = () => resolve([]);
+      r.onsuccess = () => {
+        const old = r.result;
+        if (!old.objectStoreNames.contains("shots")) {
+          old.close();
+          return resolve([]);
+        }
+        const q = old.transaction("shots").objectStore("shots").getAll();
+        q.onsuccess = () => {
+          old.close();
+          resolve(
+            q.result
+              .filter((p) =>
+                /^data:image\/(jpeg|png|webp);base64,/.test(p.data || ""),
+              )
+              .map((p) => ({ ...p, id: String(p.id), note: "" })),
+          );
+        };
+        q.onerror = () => {
+          old.close();
+          resolve([]);
+        };
+      };
+    });
+  }
+  async function read() {
+    return C.validate(
+      await req(db.transaction("meta").objectStore("meta").get("state")),
+    );
+  }
+  async function photos() {
+    return await req(db.transaction("photos").objectStore("photos").getAll());
+  }
+  async function save(state, expected, replacePhotos) {
+    const clean = C.validate(state);
+    const tx = db.transaction(["meta", "photos"], "readwrite"),
+      done = txPromise(tx),
+      meta = tx.objectStore("meta");
+    let conflict = false,
+      failure;
+    const r = meta.get("state");
+    r.onsuccess = () => {
+      try {
+        const previous = r.result;
+        if (expected !== undefined && previous?.revision !== expected) {
+          conflict = true;
+          tx.abort();
+          return;
+        }
+        if (previous) meta.put(previous, "previous");
+        meta.put(clean, "state");
+        if (replacePhotos) {
+          const store = tx.objectStore("photos");
+          store.clear();
+          replacePhotos.forEach((p) => store.put(p));
+        }
+      } catch (e) {
+        failure = e;
+        tx.abort();
+      }
+    };
+    try {
+      await done;
+    } catch (e) {
+      if (failure) throw failure;
+      if (conflict)
+        throw Error("Данные изменились в другом окне. Открой экран заново");
+      throw e;
+    }
+  }
+  async function mutate(state, action, p) {
+    const next = structuredClone(state);
+    C.apply(next, action, p);
+    next.revision = state.revision + 1;
+    await save(next, state.revision);
+    return next;
+  }
+  async function putPhoto(state, photo) {
+    const next = structuredClone(state);
+    next.revision++;
+    const all = await photos();
+    if (all.length >= 240)
+      throw Error(
+        "Лимит — 240 фотографий. Сохрани резервную копию и освободи место",
+      );
+    await save(next, state.revision, [...all, photo]);
+    return next;
+  }
+  async function removePhoto(state, id) {
+    const next = structuredClone(state);
+    next.revision++;
+    await save(
+      next,
+      state.revision,
+      (await photos()).filter((p) => p.id !== id),
+    );
+    return next;
+  }
+  async function backup() {
+    const tx = db.transaction(["meta", "photos"], "readonly"),
+      done = txPromise(tx);
+    const [state, photos] = await Promise.all([
+      req(tx.objectStore("meta").get("state")),
+      req(tx.objectStore("photos").getAll()),
+    ]);
+    await done;
+    return JSON.stringify({
+      format: "ty-uroven-backup",
+      version: 3,
+      exported: new Date().toISOString(),
+      state: C.validate(state),
+      photos,
+    });
+  }
+  async function restore(current, raw) {
+    let pack;
+    try {
+      pack = JSON.parse(raw);
+    } catch {
+      throw Error("Не удалось прочитать JSON");
+    }
+    const s = C.migrate(pack.state || pack);
+    const photos = pack.photos || [];
+    if (!Array.isArray(photos) || photos.length > 240)
+      throw Error("Некорректный фотодневник");
+    for (const p of photos) {
+      p.note ??= "";
+      if (
+        !/^[a-zA-Z0-9_-]{1,100}$/.test(p.id) ||
+        !C.validDate(p.date) ||
+        typeof p.note !== "string" ||
+        p.note.length > 120 ||
+        typeof p.data !== "string" ||
+        p.data.length > 4000000 ||
+        !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data)
+      )
+        throw Error("Повреждена фотография");
+    }
+    if (new Set(photos.map((p) => p.id)).size !== photos.length)
+      throw Error("Повторные фотографии");
+    s.revision = (current?.revision || 0) + 1;
+    await save(s, current?.revision, photos);
+    return s;
+  }
+  async function recover() {
+    const previous = await req(
+      db.transaction("meta").objectStore("meta").get("previous"),
+    );
+    if (!previous)
+      throw Error(
+        "Предыдущая копия не найдена. Импортируй свой файл резервной копии",
+      );
+    const s = C.validate(previous);
+    s.revision++;
+    await save(s);
+    return s;
+  }
+  return {
+    open,
+    read,
+    photos,
+    mutate,
+    putPhoto,
+    removePhoto,
+    backup,
+    restore,
+    recover,
+  };
 })();

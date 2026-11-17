@@ -1,130 +1,1622 @@
-(()=>{'use strict';
-const C=LevelCore,A=LevelArt,S=LevelStore,$=id=>document.getElementById(id),ico=A.icon;
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=c=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(c/100)+' ₽';
-const shortDate=d=>new Date(d+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
-const skillIcon={body:'activity',mind:'book',care:'heart',wealth:'wallet'};
-const monthName=m=>new Date(m+'-01T12:00:00').toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
-let state,photos=[],page='home',questTab='habits',calendarDate=C.day(),calendarMonth=C.day().slice(0,7),financeMonth=C.day().slice(0,7),busy=false,focusBefore,editorDraft,onboardingStep=0,toastTimer,photoBusy=false,lastDay=C.day();
-const button=(label,action,extra='',cls='secondary')=>`<button type="button" class="btn ${cls}" data-action="${action}" ${extra}>${label}</button>`;
-const iconButton=(icon,label,action,extra='')=>`<button type="button" class="icon-btn" aria-label="${esc(label)}" data-action="${action}" ${extra}>${ico(icon,19)}</button>`;
-const progress=(n)=>`<div class="progress" style="--value:${Math.max(0,Math.min(100,n))}%"><i></i></div>`;
-const empty=(icon,msg)=>`<div class="empty">${ico(icon,26)}${msg}</div>`;
-const card=(title,body)=>`<section class="card">${title?`<h2>${title}</h2>`:''}${body}</section>`;
-const heading=(title,sub,kicker='ТВОЙ ПУТЬ',extra='')=>`<div class="title-row"><div><div class="eyebrow">${kicker}</div><h1>${title}</h1><p class="subtitle">${sub}</p></div>${extra}</div>`;
-const field=(label,name,value='',type='text',attrs='')=>`<label class="field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;
-const select=(label,name,options,current)=>`<label class="field">${label}<select name="${name}">${options.map(([v,l])=>`<option value="${esc(v)}" ${v===current?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
-const skills=()=>C.SKILLS.map(k=>[k,C.SKILL_NAMES[k]]);
-const form=(id,body,label='Сохранить')=>`<form id="${id}">${body}<p class="form-error" role="alert"></p><button class="btn wide form-submit" type="submit">${label}</button></form>`;
-const sum=(items,key)=>items.reduce((a,v)=>a+(v[key]||0),0);
-function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3500)}
-function theme(){const light=state.settings.theme==='light'||state.settings.theme==='system'&&matchMedia('(prefers-color-scheme: light)').matches;document.body.classList.toggle('light',light);document.body.classList.toggle('no-motion',!state.settings.motion);document.querySelector('meta[name=theme-color]').content=light?'#f4f3f8':'#101222';LevelSound.configure(state.settings)}
-function render(){theme();const titles={home:'Сегодня',quests:'Квесты',money:'Финансы',hero:'Герой',more:'Ещё'};$('app').innerHTML=`<header class="topbar"><button class="brand" data-action="go" data-page="home" aria-label="ТЫ.УРОВЕНЬ — главная">ТЫ<span>.</span>УРОВЕНЬ<small>ЖИЗНЬ — ТВОЁ ПРИКЛЮЧЕНИЕ</small></button><div class="top-actions"><span class="chip gold" aria-label="${C.coins(state)} кристаллов">${ico('gem',16)} ${C.coins(state)}</span>${iconButton('settings','Настройки','go','data-page="settings"')}</div></header><main class="content" id="content">${views[page]()}</main><nav class="nav" aria-label="Основная навигация">${Object.entries(titles).map(([id,name])=>`<button data-action="go" data-page="${id}" class="${(page===id||id==='more'&&!Object.keys(titles).includes(page))?'active':''}" ${page===id?'aria-current="page"':''}>${ico({home:'home',quests:'quest',money:'wallet',hero:'hero',more:'grid'}[id])}<span>${name}</span></button>`).join('')}</nav>`}
-function go(p){if(!views[p])return;closeModal();page=p;render();window.scrollTo(0,0);const h=$('content').querySelector('h1');if(h){h.tabIndex=-1;h.focus({preventScroll:true})}}
-function habitRow(h){const done=C.habitDone(state,h.id),entry=state.entries.find(e=>e.habitId===h.id&&e.date===C.day());return `<div class="list-item"><span class="tile-icon ${h.skill}">${ico(skillIcon[h.skill])}</span><div class="grow"><div class="item-name">${esc(h.name)}</div><div class="item-meta">${done?`${entry.value} ${esc(entry.unit)} · выполнено`:h.target+' '+esc(h.unit)+' · '+C.SKILL_NAMES[h.skill]+' · <span class="mint">+20 XP</span>'}</div></div><button class="check-btn ${done?'done':''}" data-action="habit" data-id="${h.id}" aria-label="${done?'Результат':'Записать выполнение'}: ${esc(h.name)}">${ico(done?'check':'plus',19)}</button></div>`}
-function quick(title,sub,icon,target){return `<button class="quick" data-action="go" data-page="${target}"><span class="tile-icon">${ico(icon)}</span><span>${title}<small>${sub}</small></span></button>`}
-function home(){const l=C.level(state),habits=state.habits.filter(h=>h.active),done=habits.filter(h=>C.habitDone(state,h.id)).length;return heading(`Привет, ${esc(state.profile.name)}.`, 'Небольшой шаг сегодня. Новый уровень завтра.',new Date().toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'}))+`<div class="desktop-grid"><div class="col"><section class="adventure"><div class="hero-copy"><div class="eyebrow">ГЛАВНЫЙ ГЕРОЙ — ТЫ</div><h2>Прокачивай<br><em>свою жизнь.</em></h2><p>Твои реальные действия<br>становятся частью<br>большой истории.</p><span class="tag">${ico('spark',12)} УРОВЕНЬ ${l.n}</span></div><div class="hero-figure">${A.avatar(state.profile,l.n)}</div><div class="hero-progress"><div class="progress-label"><span>До уровня ${l.n+1}</span><span>${l.x} / ${l.max} XP</span></div>${progress(l.percent)}</div></section><div class="metric-grid"><div class="metric">${ico('check',19)}<strong>${done}<small> / ${habits.length}</small></strong><span>привычек сегодня</span></div><div class="metric">${ico('flame',19)}<strong>${C.streak(state)}<small> дн.</small></strong><span>текущая серия</span></div><div class="metric">${ico('spark',19)}<strong>${C.xp(state)}</strong><span>опыта за весь путь</span></div></div><div class="section-heading"><h2>Твой тихий мир</h2><button class="link-btn" data-action="go" data-page="world">Исследовать ${ico('arrow',15)}</button></div><button class="card world-banner wide" data-action="go" data-page="world" aria-label="Открыть мир"><img src="assets/island.webp" alt="Парящий остров с домиком, лесом и светящимся кристаллом"><div class="world-caption"><strong>${worldChapter()[1]}</strong><p>Остров растёт вместе с твоим опытом</p></div></button></div><div class="col"><div class="section-heading"><h2>Маленькие победы</h2><span class="tag">СЕГОДНЯ</span></div><section class="card flush">${habits.length?habits.slice(0,4).map(habitRow).join(''):empty('leaf','Добавь привычку, с которой хочется начать.')}<div class="card-header"><button class="link-btn" data-action="go" data-page="quests">Все привычки и квесты ${ico('arrow',16)}</button></div></section><div class="section-heading"><h2>Ресурсы для жизни</h2></div><div class="quick-grid">${quick('Финансы','Баланс '+money(C.balance(state)),'wallet','money')}${quick('Ежедневник','Дела и планы','calendar','calendar')}${quick('Здоровье','Тело и энергия','activity','health')}${quick('Фотодневник','Сохрани свой путь','camera','photos')}</div><div class="section-heading"><h2>Точка опоры</h2></div>${card('',`<div class="row"><span class="tile-icon care">${ico('heart')}</span><div><h3>В своём темпе</h3><p class="small" style="margin:0">Пропущенный день не отнимает опыт. Твоя история продолжается.</p></div></div>`)}</div></div>`}
-function taskRow(t){return `<div class="list-item"><span class="tile-icon ${t.skill}">${ico(skillIcon[t.skill])}</span><div class="grow"><div class="item-name">${esc(t.name)}</div><div class="item-meta">${shortDate(t.date)} · ${t.done?'Завершено':'25 XP за результат'}</div>${t.note?`<div class="journal-note">${esc(t.note)}</div>`:''}</div>${t.done?'<span class="mint">'+ico('check',19)+'</span>':`<button class="check-btn" data-action="taskComplete" data-id="${t.id}" aria-label="Завершить ${esc(t.name)}">${ico('check',19)}</button>`}${iconButton('trash','Удалить дело','taskDelete',`data-id="${t.id}"`)}</div>`}
-function quests(){const tabs=[['habits','Привычки'],['tasks','Дела'],['goals','Цели']];let body='';if(questTab==='habits'){body=`<section class="card flush">${state.habits.filter(h=>h.active).map(habitRow).join('')||empty('leaf','Добавь свою первую привычку.')}</section><div class="actions">${button(ico('plus',18)+' Своя привычка','habitAdd')}${button('Управлять','habitsManage')}</div><div class="notice">Опыт начисляется один раз в день за каждую привычку после записи результата. Действия отмечаешь ты — приложение доверяет тебе.</div>`}else if(questTab==='tasks'){body=`<div class="actions">${button(ico('plus',18)+' Новое дело','taskAdd','', '')}${button(ico('calendar',18)+' Календарь','go','data-page="calendar"')}</div><div style="height:16px"></div><section class="card flush">${state.tasks.length?state.tasks.slice().sort((a,b)=>Number(a.done)-Number(b.done)||a.date.localeCompare(b.date)).map(taskRow).join(''):empty('calendar','Запиши дело и выбери день. После выполнения сохрани результат.')}</section>`}else{body=button(ico('plus',18)+' Новая цель','goalAdd','','')+`<div style="height:16px"></div>`+(state.goals.length?state.goals.map(g=>`<section class="goal"><div class="between"><div><h3>${esc(g.name)}</h3><small>До ${shortDate(g.date)} · ${g.steps.filter(t=>t.done).length} / ${g.steps.length} этапов</small></div>${ico(g.steps.every(t=>t.done)?'check':'flag',22)}</div>${progress(g.steps.filter(t=>t.done).length/g.steps.length*100)}${g.steps.map(t=>`<div class="goal-step"><span>${esc(t.name)}${t.note?`<div class="item-meta">${esc(t.note)}</div>`:''}</span><button class="check-btn ${t.done?'done':''}" data-action="goalStep" data-id="${g.id}" data-step="${t.id}" aria-label="Этап: ${esc(t.name)}" ${t.done?'disabled':''}>${ico(t.done?'check':'plus',17)}</button></div>`).join('')}${button('Удалить цель','goalDelete',`data-id="${g.id}"`,'danger')}</section>`).join(''):empty('flag','Большие перемены складываются из небольших этапов. Создай цель и свой маршрут.'))}return heading('Дела становятся опытом','Выбери то, что имеет значение для тебя.','КВЕСТЫ И ПРИВЫЧКИ')+`<div class="segments">${tabs.map(([id,name])=>`<button class="${questTab===id?'active':''}" data-action="questTab" data-value="${id}">${name}</button>`).join('')}</div>`+body}
-function txRow(t){return `<div class="list-item"><span class="tile-icon ${t.kind==='income'?'care':'wealth'}">${ico(t.kind==='income'?'download':'wallet',19)}</span><div class="grow"><div class="item-name">${esc(t.note||t.category)}</div><div class="item-meta">${shortDate(t.date)} · ${esc(t.category)}</div></div><strong class="amount ${t.kind==='income'?'mint':'red'}">${t.kind==='income'?'+':'−'}${money(t.cents)}</strong>${iconButton('edit','Изменить операцию','txEdit',`data-id="${t.id}"`)}</div>`}
-function donut(){const items=state.tx.filter(t=>t.kind==='expense'&&t.date.startsWith(financeMonth)),group={};items.forEach(t=>group[t.category]=(group[t.category]||0)+t.cents);const entries=Object.entries(group).sort((a,b)=>b[1]-a[1]),total=sum(items,'cents'),colors=['#b3a1e8','#a6d9c8','#e6ba85','#d39ab6','#91b4d2','#c2c89a'];if(!total)return empty('chart','Расходов за этот месяц пока нет. Диаграмма появится по твоим записям.');let cursor=0;return `<div class="donut-layout"><div class="donut" role="img" aria-label="Расходы по категориям, всего ${money(total)}" style="background:conic-gradient(${entries.map(([name,n],i)=>{const start=cursor;cursor+=n/total*100;return colors[i%colors.length]+' '+start+'% '+cursor+'%'}).join(',')})"><span>${ico('wallet',22)}<br><small>расходы</small></span></div><div class="legend">${entries.map(([name,n],i)=>`<div><span><i style="background:${colors[i%colors.length]}"></i>${esc(name)}</span><b>${money(n)}</b></div>`).join('')}</div></div>`}
-function moneyView(){const totals=C.totals(state,financeMonth),budgets=state.budgets.filter(b=>b.month===financeMonth),tx=state.tx.filter(t=>t.date.startsWith(financeMonth)).reverse().sort((a,b)=>b.date.localeCompare(a.date));return heading('Финансовая ясность','Ручной учёт. Данные остаются у тебя.','ТВОИ РЕСУРСЫ')+`<section class="money-hero"><div class="eyebrow">ТЕКУЩИЙ БАЛАНС</div><div class="balance">${money(C.balance(state))}</div><p>Все записанные доходы и расходы · начальный баланс 0 ₽</p><div class="actions">${button(ico('plus',17)+' Доход','txAdd','data-kind="income"','')}${button('− Расход','txAdd','data-kind="expense"','secondary')}</div></section><label class="field">Месяц отчёта<input type="month" id="finance-month" value="${financeMonth}" required></label><div class="two-grid"><div class="card money-stat"><small>Доходы месяца</small><strong class="mint">${money(totals.income)}</strong></div><div class="card money-stat"><small>Расходы месяца</small><strong class="red">${money(totals.expense)}</strong></div></div><div class="desktop-grid"><div class="col">${card('Куда уходят деньги',donut())}<section class="card"><div class="between"><h2 style="margin:0">Бюджеты месяца</h2><button class="link-btn" data-action="budget">${ico('plus',17)} Лимит</button></div>${budgets.length?budgets.map(b=>{const spent=b.category==='Все категории'?totals.expense:sum(tx.filter(t=>t.kind==='expense'&&t.category===b.category),'cents');return `<div class="budget-line"><div class="between"><strong class="small">${esc(b.category)}</strong>${iconButton('trash','Удалить бюджет','budgetDelete',`data-category="${esc(b.category)}"`)}</div>${progress(spent/b.cents*100)}<div class="between"><small>${money(spent)} / ${money(b.cents)}</small><small class="${spent>b.cents?'red':'mint'}">${spent>b.cents?'Перерасход '+money(spent-b.cents):'Осталось '+money(b.cents-spent)}</small></div></div>`}).join(''):`<p class="small" style="margin:18px 0 0">Задай общий лимит или отдельные бюджеты по категориям.</p>`}</section><section class="card"><div class="between"><h2 style="margin:0">Регулярные платежи</h2><button class="link-btn" data-action="billAdd">${ico('plus',17)} Добавить</button></div><p class="small" style="margin:12px 0">Отметка оплаты создаёт расход. Автоматического списания нет.</p>${state.bills.map(b=>`<div class="budget-line"><div class="between"><div class="grow"><h3>${esc(b.name)}</h3><small>До ${b.day} числа · ${money(b.cents)}</small></div><button class="check-btn ${C.paid(state,b.id)?'done':''}" data-action="billPay" data-id="${b.id}" aria-label="Учесть оплату: ${esc(b.name)}" ${C.paid(state,b.id)?'disabled':''}>${ico(C.paid(state,b.id)?'check':'plus',18)}</button>${iconButton('trash','Удалить регулярный платёж','billDelete',`data-id="${b.id}"`)}</div></div>`).join('')||empty('calendar','Добавь аренду, связь или подписку.')}</section></div><div class="col"><div class="section-heading"><h2>Операции</h2><span class="tag">${tx.length}</span></div><section class="card flush">${tx.length?tx.map(txRow).join(''):empty('wallet','Начни с первой операции. Никаких придуманных доходов и расходов.')}</section></div></div>`}
-function skillView(){return card('Твои навыки',C.SKILLS.map(k=>{const value=sum(state.rewards.filter(r=>r.skill===k),'xp'),n=Math.floor(value/100)+1;return `<div class="skill-row"><span class="mint">${ico(skillIcon[k],22)}</span><div><strong>${C.SKILL_NAMES[k]}</strong>${progress(value%100)}</div><span>ур. ${n}</span></div>`}).join('')+'<p class="small">Игровое отражение твоих действий, без оценки здоровья и личности.</p>')}
-function hero(){const l=C.level(state);return heading(esc(state.profile.name),'Главный герой своей истории.','ПЕРСОНАЖ',iconButton('edit','Редактировать персонажа','editor'))+`<div class="desktop-grid"><div class="col"><div class="profile-stage"><span class="tag">${ico('spark',13)} УРОВЕНЬ ${l.n}</span>${A.avatar(state.profile,l.n)}<span class="stage-caption">ТВОЙ ПУТЬ УНИКАЛЕН</span></div><div style="height:12px"></div>${button(ico('edit',17)+' Изменить внешность','editor','','wide secondary')}<div style="height:16px"></div>${skillView()}</div><div class="col"><div class="section-heading"><h2>Гардероб</h2><span class="chip gold">${ico('gem',14)} ${C.coins(state)}</span></div><div class="wardrobe">${C.OUTFITS.map(o=>{const owned=state.owned.includes(o.id),selected=state.profile.outfit===o.id;return `<div class="outfit-card">${A.avatar({...state.profile,outfit:o.id},l.n)}<h3>${o.name}</h3><small>${owned?'В коллекции':`Уровень ${o.level} · ${o.price} кристаллов`}</small>${button(selected?'Надето':owned?'Надеть':l.n<o.level?ico('lock',13)+' Уровень '+o.level:'Открыть за '+o.price,'outfit',`data-id="${o.id}" ${selected||l.n<o.level?'disabled':''}`,selected?'secondary':'')}</div>`}).join('')}</div><div class="notice">Кристаллы даются за реальные действия. Покупки в гардеробе используют только игровую валюту.</div></div></div>`}
-function more(){return heading('Всё под рукой','Твои инструменты для повседневной жизни.','ПРОСТРАНСТВО ЖИЗНИ')+`<div class="quick-grid">${quick('Ежедневник','Планы по дням','calendar','calendar')}${quick('Здоровье','Питание, спорт, вес','activity','health')}${quick('Фотодневник','История в кадрах','camera','photos')}${quick('Аналитика','Твой реальный прогресс','chart','analytics')}${quick('Мир','Остров твоего пути','compass','world')}${quick('Достижения','Маленькие и большие','spark','achievements')}${quick('Настройки','Темы, звук и данные','settings','settings')}</div>`}
-function calendar(){const first=new Date(calendarMonth+'-01T12:00:00'),offset=(first.getDay()+6)%7,count=new Date(first.getFullYear(),first.getMonth()+1,0).getDate(),tasks=state.tasks.filter(t=>t.date===calendarDate);return heading('Место для планов','Освободи голову. Запиши важное.','ЕЖЕДНЕВНИК')+card('',`<div class="calendar-head">${iconButton('back','Предыдущий месяц','calendarShift','data-offset="-1"')}<strong style="text-transform:capitalize">${monthName(calendarMonth)}</strong>${iconButton('arrow','Следующий месяц','calendarShift','data-offset="1"')}</div><div class="calendar">${['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'].map(d=>'<span>'+d+'</span>').join('')}${'<span></span>'.repeat(offset)}${Array.from({length:count},(_,i)=>{const date=calendarMonth+'-'+String(i+1).padStart(2,'0');return `<button data-action="calendarDay" data-date="${date}" class="${date===calendarDate?'selected':''} ${date===C.day()?'today':''} ${state.tasks.some(t=>t.date===date)?'has-task':''}" aria-label="${shortDate(date)}">${i+1}</button>`}).join('')}</div>`)+`<div class="section-heading"><h2>${shortDate(calendarDate)}</h2><button class="link-btn" data-action="taskAdd">${ico('plus',17)} Дело</button></div><section class="card flush">${tasks.length?tasks.map(taskRow).join(''):empty('calendar','На этот день пока нет дел.')}</section>`}
-function health(){const today=C.day(),meals=state.meals.filter(m=>m.date===today),workouts=state.workouts.filter(w=>w.date===today),weights=state.weights.slice().sort((a,b)=>a.date.localeCompare(b.date)),last=weights.at(-1);return heading('Забота о себе','Наблюдай за своим ритмом, без оценок и давления.','ТЕЛО И ЭНЕРГИЯ')+`<div class="metric-grid"><div class="metric">${ico('food',19)}<strong>${meals.length}</strong><span>приёмов пищи сегодня</span></div><div class="metric">${ico('activity',19)}<strong>${sum(workouts,'minutes')}<small> мин</small></strong><span>движения сегодня</span></div><div class="metric">${ico('heart',19)}<strong>${last?last.kg:'—'}<small>${last?' кг':''}</small></strong><span>${last?'запись '+shortDate(last.date):'вес пока не записан'}</span></div></div><div class="section-heading"><h2>Питание</h2><button class="link-btn" data-action="meal">${ico('plus',17)} Записать</button></div><section class="card flush">${meals.length?meals.map(m=>`<div class="list-item"><span class="tile-icon care">${ico('food',19)}</span><div class="grow"><div class="item-name">${esc(m.name)}</div><div class="item-meta">${esc(m.type)}${m.kcal?' · '+m.kcal+' ккал':''}</div></div>${iconButton('trash','Удалить приём пищи','healthDelete',`data-collection="meals" data-id="${m.id}"`)}</div>`).join(''):empty('food','Что было на твоём столе сегодня? Калорийность указывать необязательно.')}</section><div class="section-heading"><h2>Движение</h2><button class="link-btn" data-action="workout">${ico('plus',17)} Тренировка</button></div><section class="card flush">${workouts.length?workouts.map(w=>`<div class="list-item"><span class="tile-icon body">${ico('activity',19)}</span><div class="grow"><div class="item-name">${esc(w.type)}</div><div class="item-meta">${w.minutes} мин${w.note?' · '+esc(w.note):''}</div></div>${iconButton('trash','Удалить тренировку','healthDelete',`data-collection="workouts" data-id="${w.id}"`)}</div>`).join(''):empty('activity','Прогулка, растяжка или тренировка — движение может быть разным.')}</section><div class="section-heading"><h2>История веса</h2><button class="link-btn" data-action="weight">${ico('plus',17)} Запись</button></div>${card('',weights.length?lineChart(weights.slice(-14).map(w=>({date:w.date,value:w.kg})),'кг')+weights.slice(-10).reverse().map(w=>`<div class="between" style="padding:10px 0"><span class="small">${shortDate(w.date)}</span><strong>${w.kg} кг</strong>${iconButton('trash','Удалить запись веса','healthDelete',`data-collection="weights" data-id="${w.id}"`)}</div>`).join(''):empty('heart','Вес — только наблюдение. За его изменение опыт не начисляется.'))}<div class="notice">Питание: 10 XP за первую запись дня. Тренировка от 5 минут: 25 XP один раз в день. Вес не влияет на игровые награды.</div><div class="section-heading"><h2>Предыдущие записи</h2></div>${card('',[...state.meals.filter(m=>m.date!==today).map(m=>({date:m.date,label:m.name,meta:m.kcal?m.kcal+' ккал':'Приём пищи',id:m.id,collection:'meals'})),...state.workouts.filter(w=>w.date!==today).map(w=>({date:w.date,label:w.type,meta:w.minutes+' мин',id:w.id,collection:'workouts'}))].sort((a,b)=>b.date.localeCompare(a.date)).map(r=>`<div class="between" style="padding:12px 0"><div class="grow"><div class="item-name">${esc(r.label)}</div><small>${shortDate(r.date)} · ${esc(r.meta)}</small></div>${iconButton('trash','Удалить запись','healthDelete',`data-collection="${r.collection}" data-id="${r.id}"`)}</div>`).join('')||'<p class="small">Здесь сохранятся записи за прошлые дни.</p>')}`}
-function lineChart(data,unit){if(data.length<2)return '<p class="small">Для графика нужны хотя бы две записи.</p>';const min=Math.min(...data.map(d=>d.value)),max=Math.max(...data.map(d=>d.value)),range=max-min||1;return `<svg viewBox="0 0 420 145" width="100%" role="img" aria-label="График: ${data.map(d=>d.date+': '+d.value+' '+unit).join(', ')}"><path d="M15 115H405M15 65H405M15 15H405" stroke="var(--line)" fill="none"/><polyline points="${data.map((d,i)=>(15+i/(data.length-1)*390)+','+(110-(d.value-min)/range*90)).join(' ')}" stroke="var(--mint)" fill="none" stroke-width="3" stroke-linejoin="round"/>${data.map((d,i)=>`<circle cx="${15+i/(data.length-1)*390}" cy="${110-(d.value-min)/range*90}" r="4" fill="var(--mint)"/>`).join('')}<text x="15" y="140" fill="var(--muted)" font-size="10">${esc(shortDate(data[0].date))} · ${min}–${max} ${unit}</text><text x="405" y="140" fill="var(--muted)" font-size="10" text-anchor="end">${esc(shortDate(data.at(-1).date))}</text></svg>`}
-function photosView(){return heading('Твоя история в кадрах','Сохрани момент. Через время он расскажет больше.','ФОТОДНЕВНИК')+button(ico('plus',18)+' Добавить фотографию','photoAdd','','')+`<div class="notice"><div class="row">${ico('shield',20)}<span>Фото хранятся только на устройстве и включаются в твою резервную копию. Доступ ко всей галерее не нужен.</span></div></div>`+(photos.length>=2?button('Сравнить фотографии','compare')+'<div style="height:16px"></div>':'')+(photos.length?`<div class="photo-grid">${photos.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(p=>`<article class="photo-card"><button data-action="photoView" data-id="${p.id}" aria-label="Открыть фото от ${shortDate(p.date)}"><img src="${p.data}" alt="Фото от ${shortDate(p.date)}" loading="lazy"></button><div class="photo-foot between"><span>${shortDate(p.date)}${p.note?'<div class="item-meta">'+esc(p.note)+'</div>':''}</span>${iconButton('trash','Удалить фото','photoDelete',`data-id="${p.id}"`)}</div></article>`).join('')}</div>`:empty('camera','Здесь появится твоя личная хроника. Добавь первый кадр — своего пути, занятия или важного момента.'))}
-function analytics(){const dates=Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(13-i));return C.day(d)}),counts=dates.map(date=>state.rewards.filter(r=>r.date===date).length),max=Math.max(1,...counts);return heading('Ты движешься вперёд','Здесь только данные из твоих записей.','АНАЛИТИКА')+`<div class="metric-grid"><div class="metric">${ico('spark',19)}<strong>${C.xp(state)}</strong><span>опыта за весь путь</span></div><div class="metric">${ico('flame',19)}<strong>${C.streak(state)}</strong><span>дней подряд</span></div><div class="metric">${ico('flag',19)}<strong>${state.goals.filter(g=>g.steps.every(t=>t.done)).length}</strong><span>завершённых целей</span></div></div><div style="height:16px"></div>${card('Действия за 14 дней',`<div class="week-bars" role="img" aria-label="${dates.map((d,i)=>d+': '+counts[i]).join('; ')}">${counts.map((v,i)=>`<div class="bar-col"><b>${v||''}</b><i style="--bar:${Math.max(2,v/max*85)}px;${v?'':'background:var(--line)'}"></i><small>${dates[i].slice(-2)}</small></div>`).join('')}</div><p class="small">${counts.reduce((a,b)=>a+b,0)} действий с наградами за последние две недели</p>`)}${skillView()}${card('Привычки за 14 дней',state.habits.map(h=>{const count=state.entries.filter(e=>e.habitId===h.id&&dates.includes(e.date)).length;return `<div class="budget-line"><div class="between"><strong class="small">${esc(h.name)}${h.active?'':' · архив'}</strong><small>${count} / 14 дней</small></div>${progress(count/14*100)}</div>`}).join(''))}${button('Посмотреть достижения','go','data-page="achievements"','wide secondary')}`}
-function achievementView(){const badges=C.achievements(state,photos.length);return heading('То, что уже получилось','Достижения остаются с тобой.','КОЛЛЕКЦИЯ')+`<div class="badges">${badges.map(b=>`<article class="badge ${b.ok?'':'locked'}">${ico(b.ok?b.icon:'lock',28)}<h3>${b.name}</h3><p>${b.desc}</p><div class="item-meta">${b.ok?'Получено':'Ещё впереди'}</div></article>`).join('')}</div>`}
-const chapters=[[1,'Тихая гавань','Здесь начинается твой путь.'],[2,'Тропа привычек','На острове загораются первые огни.'],[3,'Кристальная роща','Уверенность растёт с каждым действием.'],[5,'Хранитель вершин','У тебя уже есть своя история.'],[8,'Новый горизонт','Впереди ещё много открытий.']];
-function worldChapter(){return chapters.filter(c=>C.level(state).n>=c[0]).at(-1)}
-function world(){const l=C.level(state),chapter=worldChapter(),index=chapters.indexOf(chapter);return heading('Остров твоего пути','Возвращайся сюда после маленьких побед.','МИР ПРИКЛЮЧЕНИЯ')+`<div class="world-full chapter-${Math.min(3,index+1)}"><img src="assets/island.webp" alt="Парящий остров твоего пути"><span class="chapter-tag">Глава ${index+1} · ${chapter[1]}</span>${index>=1?'<span class="world-light light-cabin"></span>':''}${index>=2?'<span class="world-light light-crystal"></span>':''}${index>=3?'<span class="world-star">✦</span>':''}</div><div class="notice">${chapter[2]} Новые главы и детали острова открываются за уровни.</div>${card('Твой маршрут',chapters.map(([min,name,desc],i)=>`<div class="journey-node ${l.n<min?'locked':''}"><span class="tile-icon">${ico(l.n>=min?'compass':'lock',20)}</span><div class="grow"><h3>${name}</h3><small>${l.n>=min?desc:'Откроется на уровне '+min}</small></div>${l.n>=min?'<span class="mint">'+ico('check',18)+'</span>':'<span class="tag">'+min+'</span>'}</div>`).join(''))}${button('Продолжить путь','go','data-page="quests"','wide')}`}
-function settings(){return heading('Как удобно тебе','Твоё пространство, твои правила.','НАСТРОЙКИ')+card('Оформление',select('Тема','theme',[['dark','Тёмная'],['light','Светлая'],['system','Как на устройстве']],state.settings.theme).replace('<select','<select data-setting="theme"')+`<label class="toggle-row"><span><strong>Анимации</strong><small>Плавные переходы и движение персонажа</small></span><input data-setting="motion" type="checkbox" ${state.settings.motion?'checked':''}></label>`)+card('Звук и отклик',select('Музыкальная тема','track',[['haven','Тихая гавань'],['focus','Сосредоточенность'],['dawn','Новый день']],state.settings.track).replace('<select','<select data-setting="track"')+`<label class="field">Музыка · ${Math.round(state.settings.music*100)}%<input data-setting="music" type="range" min="0" max="1" step="0.05" value="${state.settings.music}" aria-label="Громкость музыки"></label><label class="field">Звуки действий · ${Math.round(state.settings.sfx*100)}%<input data-setting="sfx" type="range" min="0" max="1" step="0.05" value="${state.settings.sfx}" aria-label="Громкость звуков"></label><label class="toggle-row"><span><strong>Тактильный отклик</strong><small>При выполнении и наградах</small></span><input data-setting="haptics" type="checkbox" ${state.settings.haptics?'checked':''}></label><div class="actions">${button('Послушать','soundTest')}${button('Выключить всё','mute')}</div>`)+card('Данные принадлежат тебе',`<p class="small">Приложение работает офлайн. Аккаунтов, рекламы, аналитических SDK и передачи данных на сервер нет.</p><div class="actions">${button(ico('download',17)+' Экспорт','export')}${button(ico('upload',17)+' Импорт','import')}</div><div class="notice">Резервная копия JSON включает все записи и фотографии. Храни её в надёжном месте: файл не зашифрован. Копия нужна перед удалением приложения или сменой телефона.</div>`)+card('Знакомство и правила',`<div class="stack">${button('Пройти знакомство ещё раз','tutorial')}${button('Как начисляется опыт','rules')}${button('Конфиденциальность','privacy')}</div>`)+card('Управление',`<p class="small">Очистка удалит записи и фотографии с этого устройства.</p>${button('Удалить все данные','reset','','wide danger')}`)+`<p class="version">ТЫ.УРОВЕНЬ · 1.0.0<br>Твоя жизнь — твоё приключение<br>Сделано для ежедневных маленьких побед</p>`}
-const views={home,quests,money:moneyView,hero,more,calendar,health,photos:photosView,analytics,achievements:achievementView,world,settings};
-function modal(title,body,canClose=true){if($('modal').hidden)focusBefore=document.activeElement;$('sheet').innerHTML=`<div class="modal-head"><span class="eyebrow">ТЫ.УРОВЕНЬ</span>${canClose?iconButton('close','Закрыть','close'):''}</div><h2 id="modal-title">${title}</h2>${body}`;$('modal').hidden=false;document.body.style.overflow='hidden';$('sheet').scrollTop=0;$('sheet').focus({preventScroll:true});$('sheet').dataset.locked=canClose?'':'1'}
-function closeModal(){if($('sheet').dataset.locked)return;$('modal').hidden=true;document.body.style.overflow='';focusBefore?.focus?.({preventScroll:true})}
-function confirmAction(title,description,action,extra='',label='Подтвердить'){modal(title,`<p class="subtitle">${description}</p><div class="actions">${button('Отмена','close')}${button(label,action,extra,'danger')}</div>`)}
-function errorInForm(msg){const el=$('sheet').querySelector('.form-error');if(el)el.textContent=msg;else toast(msg)}
-async function commit(action,p={},opts={}){if(busy)return false;busy=true;const oldLevel=C.level(state).n,oldXp=C.xp(state),oldCoins=C.coins(state);const submit=$('sheet').querySelector('[type=submit]');if(submit)submit.disabled=true;try{state=await S.mutate(state,action,p);if(action==='profile')delete $('sheet').dataset.locked;closeModal();render();if(C.xp(state)>oldXp){LevelSound.play(C.level(state).n>oldLevel?'level':'reward');haptic();if(C.level(state).n>oldLevel)modal('Новый уровень!',`<div class="reward-panel"><div class="reward-emblem">${ico('spark',46)}</div><h2>Уровень ${C.level(state).n}</h2><p class="subtitle">Твои действия меняют твою историю.</p><div class="reward-values">+${C.xp(state)-oldXp} XP · +${C.coins(state)-oldCoins} ${ico('gem',18)}</div>${button('Продолжить','close','','wide')}</div>`);else toast(`Записано · +${C.xp(state)-oldXp} XP · +${C.coins(state)-oldCoins} кристалла`)}else if(!opts.silent)toast('Сохранено');return true}catch(e){errorInForm('Не сохранено: '+e.message);if(/другом окне/.test(e.message)){state=await S.read();render()}return false}finally{busy=false;if(submit?.isConnected)submit.disabled=false}}
-function haptic(){if(!state.settings.haptics)return;try{if(window.AndroidBridge?.haptic)AndroidBridge.haptic();else navigator.vibrate?.(18)}catch{}}
-function editor(){editorDraft=structuredClone(state.profile);modal('Твой персонаж',`<p class="subtitle">Создай образ, в котором узнаёшь себя.</p>${form('profile',field('Как тебя называть','name',editorDraft.name,'text','required maxlength="32" autocomplete="given-name"')+`<div class="editor"><div class="profile-stage" id="editor-preview">${A.avatar(editorDraft,C.level(state).n)}</div><div class="editor-controls">${select('Пол','gender',[['neutral','Без акцента'],['male','Мужской'],['female','Женский']],editorDraft.gender)}${select('Телосложение','body',[['slim','Стройное'],['regular','Среднее'],['broad','Крупное']],editorDraft.body)}${select('Черты лица','face',[['soft','Мягкие'],['angular','Угловатые'],['round','Округлые']],editorDraft.face)}${select('Причёска','hairstyle',[['short','Короткая'],['crop','Под машинку'],['long','Длинная'],['curls','Кудри'],['bald','Без волос']],editorDraft.hairstyle)}${select('Аксессуар','accessory',[['none','Без аксессуара'],['glasses','Очки'],['earring','Серьга'],['scarf','Шарф']],editorDraft.accessory)}</div></div><div class="editor-label">Натуральный оттенок кожи</div><div class="palette">${['#f3d8bb','#e7bd99','#dbac88','#bd8968','#996649','#704936','#493128'].map((c,i)=>`<button type="button" class="swatch ${editorDraft.tone===c?'selected':''}" style="--swatch:${c}" aria-label="Оттенок кожи ${i+1}" aria-pressed="${editorDraft.tone===c}" data-action="swatch" data-key="tone" data-color="${c}"></button>`).join('')}</div><div class="editor-label">Цвет волос</div><div class="palette">${['#302b34','#5b3d32','#916347','#d8bc85','#a45435','#c9c8cc','#604b3d'].map((c,i)=>`<button type="button" class="swatch ${editorDraft.hair===c?'selected':''}" style="--swatch:${c}" aria-label="Цвет волос ${i+1}" aria-pressed="${editorDraft.hair===c}" data-action="swatch" data-key="hair" data-color="${c}"></button>`).join('')}</div>${select('Одежда из твоей коллекции','outfit',C.OUTFITS.filter(o=>state.owned.includes(o.id)).map(o=>[o.id,o.name]),editorDraft.outfit)}`)}`)}
-function previewEditor(){const f=$('profile');if(!f||!editorDraft)return;for(const key of ['name','gender','body','face','hairstyle','accessory','outfit'])editorDraft[key]=f.elements[key].value;$('editor-preview').innerHTML=A.avatar(editorDraft,C.level(state).n)}
-function onboarding(){const steps=[['Твоя жизнь.<br>Твоё приключение.','Развиваешься ты — растёт и твой герой. Привычки, цели и полезные инструменты в одном спокойном пространстве.'],['Маленькие дела.<br>Настоящий опыт.','Записывай реальные действия, получай опыт и кристаллы, открывай главы острова и новые образы. Пропуски не отнимают прогресс.'],['Твои данные.<br>Твои правила.','Всё работает без интернета. Личные записи и фотографии хранятся на устройстве. Резервную копию можно сохранить в настройках.']];const [title,desc]=steps[onboardingStep];modal(title,`<div class="onboarding"><div class="onboarding-dots">${steps.map((_,i)=>`<i class="${i===onboardingStep?'on':''}"></i>`).join('')}</div><div class="onboarding-art"><img src="assets/island.webp" alt="Остров твоего приключения">${A.avatar(state.profile,1)}</div><p class="subtitle">${desc}</p>${button(onboardingStep===2?'Создать персонажа':'Дальше '+ico('arrow',16),'onboardingNext','','wide')}<p class="version">${onboardingStep+1} / 3</p></div>`,state.onboard)}
-function recordForm(action,id,step){const attrs=`<input type="hidden" name="id" value="${id}">${step?`<input type="hidden" name="step" value="${step}">`:''}`;modal('Зафиксируй результат',`<p class="subtitle">Что получилось сделать в реальной жизни?</p>${form(action,attrs+field('Краткий результат','note','','text','required minlength="2" maxlength="120" placeholder="Например: прочитал главу и записал три идеи"'),'Завершить и получить опыт')}`)}
-function txForm(kind,t){modal(t?'Изменить операцию':kind==='income'?'Новый доход':'Новый расход',form(t?'txEdit':'txAdd',`<input type="hidden" name="id" value="${t?.id||''}">`+select('Вид операции','kind',[['income','Доход'],['expense','Расход']],t?.kind||kind)+field('Сумма, ₽','amount',t?(t.cents/100).toFixed(2):'','text','inputmode="decimal" required maxlength="15" placeholder="0,00"')+field('Категория','category',t?.category||(kind==='income'?'Доход':'Продукты'),'text','list="categories" required maxlength="40"')+`<datalist id="categories">${['Продукты','Дом','Транспорт','Здоровье','Обучение','Развлечения','Связь','Подписки','Зарплата','Подарки','Другое'].map(c=>`<option value="${c}">`).join('')}</datalist>`+field('Дата','date',t?.date||C.day(),'date','required')+field('Комментарий','note',t?.note||'','text','maxlength="100"'))+(t?`<div style="margin-top:12px">${button('Удалить операцию','txDelete',`data-id="${t.id}"`,'wide danger')}</div>`:''))}
-async function action(name,el){const d=el.dataset;switch(name){
-case 'go':go(d.page);break;
-case 'close':closeModal();break;
-case 'questTab':questTab=d.value;render();break;
-case 'editor':editor();break;
-case 'swatch':editorDraft[d.key]=d.color;el.closest('.palette').querySelectorAll('button').forEach(b=>{b.classList.toggle('selected',b===el);b.setAttribute('aria-pressed',String(b===el))});previewEditor();break;
-case 'onboardingNext':if(onboardingStep<2){onboardingStep++;onboarding()}else{delete $('sheet').dataset.locked;editor()}break;
-case 'tutorial':onboardingStep=0;onboarding();break;
-case 'habit':{const h=state.habits.find(h=>h.id===d.id);if(C.habitDone(state,h.id)){const e=state.entries.find(e=>e.habitId===h.id&&e.date===C.day());modal('Сегодня уже получилось',`<h3>${esc(h.name)}</h3><p class="subtitle">${e.value} ${esc(e.unit)}${e.note?'<br>'+esc(e.note):''}</p><div class="notice">Награда за эту привычку сегодня уже начислена.</div>${button('Отлично','close','','wide')}`)}else modal(esc(h.name),`<p class="subtitle">Запиши фактический результат за сегодня.</p>${form('habitComplete',`<input type="hidden" name="id" value="${h.id}">`+field('Сколько получилось, '+esc(h.unit),'value',h.target,'number',`required min="${h.target}" max="100000" step="1"`)+field('Заметка · необязательно','note','','text','maxlength="120"')+`<div class="notice">Цель: ${h.target} ${esc(h.unit)} · 20 XP и 4 кристалла один раз в день.</div>`,'Записать выполнение')}`);break}
-case 'habitAdd':modal('Своя привычка',form('habitAdd',field('Название','name','','text','required maxlength="65" placeholder="Например, читать каждый день"')+select('Сфера развития','skill',skills(),'mind')+`<div class="two-grid">${field('Цель за день','target',15,'number','required min="1" max="1440"')}${select('Единица','unit',[['мин','Минуты'],['раз','Раз'],['страниц','Страницы'],['км','Километры']],'мин')}</div>`));break;
-case 'habitsManage':modal('Мои привычки',state.habits.filter(h=>h.active).map(h=>`<div class="between" style="padding:12px 0"><span class="item-name">${esc(h.name)}</span>${iconButton('trash','В архив: '+h.name,'habitArchive',`data-id="${h.id}"`)}</div>`).join('')+'<p class="small">Архивирование сохраняет историю и полученные награды.</p>');break;
-case 'habitArchive':await commit('habitArchive',{id:d.id});break;
-case 'taskAdd':modal('Новое дело',form('taskAdd',field('Что нужно сделать','name','','text','required maxlength="100"')+field('Когда','date',page==='calendar'?calendarDate:C.day(),'date','required')+select('Сфера','skill',skills(),'mind')));break;
-case 'taskComplete':recordForm('taskComplete',d.id);break;
-case 'goalAdd':modal('Большая цель',form('goalAdd',field('Что хочешь изменить','name','','text','required maxlength="80" placeholder="Например, пробежать первые 5 км"')+field('Желаемая дата','date',C.day(),'date','required')+'<label class="field">Этапы · каждый с новой строки<textarea name="steps" required maxlength="2200" placeholder="Выбрать маршрут\nПройти первые 2 км\nПробежать 5 км"></textarea></label><div class="notice">30 XP за этап и 50 XP за завершённую цель. Записывай реальный результат.</div>'));break;
-case 'goalStep':recordForm('goalStep',d.id,d.step);break;
-case 'taskDelete':case 'goalDelete':confirmAction('Удалить запись?','История наград сохранится. Сама запись будет удалена.',name+'Confirm',`data-id="${d.id}"`,'Удалить');break;
-case 'taskDeleteConfirm':case 'goalDeleteConfirm':await commit(name.replace('Confirm',''),{id:d.id});break;
-case 'txAdd':txForm(d.kind);break;
-case 'txEdit':txForm('',state.tx.find(t=>t.id===d.id));break;
-case 'txDelete':confirmAction('Удалить операцию?','Баланс и отчёты будут пересчитаны.', 'txDeleteConfirm',`data-id="${d.id}"`,'Удалить');break;
-case 'txDeleteConfirm':await commit('txDelete',{id:d.id});break;
-case 'budget':modal('Бюджет на месяц',form('budget',field('Месяц','month',financeMonth,'month','required')+field('Категория или «Все категории»','category','Все категории','text','required maxlength="40" list="budget-categories"')+`<datalist id="budget-categories">${['Все категории',...new Set(state.tx.map(t=>t.category))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`+field('Лимит, ₽','amount','','text','required inputmode="decimal" maxlength="15"')+'<div class="notice">Новый лимит заменяет прежний для выбранного месяца и категории.</div>'));break;
-case 'budgetDelete':await commit('budgetDelete',{month:financeMonth,category:d.category});break;
-case 'billAdd':modal('Регулярный платёж',form('billAdd',field('Название','name','','text','required maxlength="60"')+field('Сумма, ₽','amount','','text','inputmode="decimal" required maxlength="15"')+field('Оплатить до числа','day',10,'number','min="1" max="31" required')+field('Категория','category','Подписки','text','required maxlength="40"')));break;
-case 'billPay':{const b=state.bills.find(b=>b.id===d.id);confirmAction('Платёж уже оплачен?',`Записать расход ${money(b.cents)} — ${esc(b.name)} за ${monthName(C.day().slice(0,7))}?`,'billPayConfirm',`data-id="${d.id}"`,'Учесть оплату');break}
-case 'billPayConfirm':await commit('billPay',{id:d.id});break;
-case 'billDelete':confirmAction('Удалить регулярный платёж?','Ранее записанные расходы сохранятся.','billDeleteConfirm',`data-id="${d.id}"`,'Удалить');break;
-case 'billDeleteConfirm':await commit('billDelete',{id:d.id});break;
-case 'outfit':{const o=C.OUTFITS.find(o=>o.id===d.id);if(state.owned.includes(o.id))await commit('outfit',{id:o.id});else modal('Новый образ',`<p class="subtitle">${o.name} · ${o.price} игровых кристаллов</p><div class="profile-stage">${A.avatar({...state.profile,outfit:o.id},C.level(state).n)}</div><div style="height:16px"></div>${button('Открыть за '+o.price,'outfitConfirm',`data-id="${o.id}"`,'wide')}`);break}
-case 'outfitConfirm':await commit('outfit',{id:d.id});break;
-case 'calendarShift':{const date=new Date(calendarMonth+'-01T12:00:00');date.setMonth(date.getMonth()+Number(d.offset));calendarMonth=C.day(date).slice(0,7);render();break}
-case 'calendarDay':calendarDate=d.date;render();break;
-case 'meal':modal('Приём пищи',form('meal',select('Когда','type',[['Завтрак','Завтрак'],['Обед','Обед'],['Ужин','Ужин'],['Перекус','Перекус']],'Обед')+field('Что было на тарелке','name','','text','required maxlength="100" placeholder="Например, гречка с овощами и рыбой"')+field('Калорийность · необязательно','kcal','','number','min="1" max="10000" placeholder="ккал"')));break;
-case 'workout':modal('Твоё движение',form('workout',field('Вид занятия','type','','text','required maxlength="60" placeholder="Прогулка, силовая, йога…"')+field('Продолжительность, мин','minutes',20,'number','required min="1" max="600"')+field('Как прошло · необязательно','note','','text','maxlength="120"')));break;
-case 'weight':modal('Наблюдение за весом',form('weight',field('Вес, кг','kg',state.weights.at(-1)?.kg||'','number','required min="20" max="500" step="0.1"')+'<div class="notice">Одна запись в день. Повторная запись обновит сегодняшнюю. Вес не влияет на награды.</div>'));break;
-case 'healthDelete':confirmAction('Удалить запись?','Полученные награды сохранятся. Повторная запись сегодня не принесёт повторную награду.','healthDeleteConfirm',`data-id="${d.id}" data-collection="${d.collection}"`,'Удалить');break;
-case 'healthDeleteConfirm':await commit('healthDelete',{id:d.id,collection:d.collection});break;
-case 'photoAdd':if(!photoBusy)$('photo-input').click();break;
-case 'photoView':{const p=photos.find(p=>p.id===d.id);modal('Момент твоего пути',`<img class="photo-full" src="${p.data}" alt="Фотография от ${shortDate(p.date)}"><p class="small" style="margin-top:12px">${shortDate(p.date)}${p.note?' · '+esc(p.note):''}</p>`);break}
-case 'photoDelete':confirmAction('Удалить фотографию?','В приложении останется только то, что ты решишь сохранить.','photoDeleteConfirm',`data-id="${d.id}"`,'Удалить');break;
-case 'photoDeleteConfirm':if(busy)return;busy=true;try{state=await S.removePhoto(state,d.id);photos=await S.photos();closeModal();render();toast('Фото удалено')}catch(e){toast('Не удалено: '+e.message)}finally{busy=false}break;
-case 'compare':{const sorted=photos.slice().sort((a,b)=>a.date.localeCompare(b.date));modal('Два момента твоего пути',`<div class="two-grid">${select('Первое фото','compare-first',sorted.map(p=>[p.id,shortDate(p.date)+(p.note?' · '+p.note:'')]),sorted[0].id)}${select('Второе фото','compare-last',sorted.map(p=>[p.id,shortDate(p.date)+(p.note?' · '+p.note:'')]),sorted.at(-1).id)}</div><div class="compare" id="compare-images"></div>`);updateCompare();break}
-case 'export':await exportBackup();break;
-case 'import':$('import-input').click();break;
-case 'restoreConfirm':await restorePending();break;
-case 'soundTest':LevelSound.play('level');LevelSound.start();haptic();break;
-case 'mute':await commit('settings',{music:0,sfx:0,haptics:false});break;
-case 'rules':modal('Опыт за реальные действия',`<div class="stack"><div class="notice">Привычка: 20 XP за запись результата, один раз в день.<br>Дело: 25 XP за завершение с результатом.<br>Этап цели: 30 XP. Вся цель: ещё 50 XP.<br>Тренировка от 5 минут: 25 XP, раз в день.<br>Питание: 10 XP, раз в день.<br>Финансовая запись: 10 XP, раз в день.</div><p class="small">Кристаллы: 1 за каждые 5 XP награды. Удаление записи не возвращает возможность получить награду. За изменение веса, добавление фотографий и нажатия в меню XP не начисляется.</p><p class="small">Данные вводишь ты. Приложение не подтверждает действия датчиками. Здесь нет соревнований, штрафов за пропуск и покупок за реальные деньги.</p></div>`);break;
-case 'privacy':modal('Личное остаётся личным',`<p class="subtitle">ТЫ.УРОВЕНЬ работает полностью на устройстве.</p><div class="notice">Нет регистрации, сети, рекламы и сторонней аналитики. Финансы, заметки, здоровье и фотографии никуда не отправляются. Приложение не запрашивает доступ к контактам, геолокации, камере или всей галерее.</div><p class="small">Фото выбираются через системное окно. Резервные копии сохраняются только по твоему действию; их содержимое не зашифровано. Данные защищает блокировка и шифрование устройства. При удалении приложения локальное хранилище удаляется.</p><p class="small">Экспортируй данные перед сменой устройства. Не передавай резервную копию людям, которым не доверяешь.</p>`);break;
-case 'reset':modal('Удалить все данные',form('reset',`<p class="subtitle">Это удалит профиль, прогресс, финансовые записи и все фотографии из приложения. Сначала сохрани резервную копию.</p>${field('Для подтверждения введи УДАЛИТЬ','confirm','','text','required autocomplete="off"')}`,'Удалить безвозвратно'));break;
-case 'recover':try{state=await S.recover();photos=await S.photos();render();toast('Восстановлена предыдущая версия записей')}catch(e){toast(e.message)}break;
-case 'reload':location.reload();break;
-}}
-let pendingImport;
-async function submit(e){e.preventDefault();const f=e.target;if(!(f instanceof HTMLFormElement)||busy)return;const p=Object.fromEntries(new FormData(f)),formId=f.getAttribute('id');try{if(formId==='profile'){previewEditor();if(await commit('profile',{...editorDraft,name:p.name}))delete $('sheet').dataset.locked;return}if(formId==='reset'){if(p.confirm!=='УДАЛИТЬ')throw Error('Введи УДАЛИТЬ полностью');busy=true;try{const fresh=C.fresh();fresh.revision=state.revision+1;await S.restore(state,JSON.stringify({state:fresh,photos:[]}));state=await S.read();photos=[];closeModal();page='home';render();onboardingStep=0;onboarding()}finally{busy=false}return}await commit(formId,p)}catch(err){errorInForm(err.message)}}
-async function exportBackup(){if(busy||photoBusy)return toast('Дождись сохранения');try{const raw=await S.backup(state);if(window.AndroidBridge?.exportJson){const bytes=new TextEncoder().encode(raw);if(bytes.length>1_000_000)await nativeExport(raw);else AndroidBridge.exportJson(btoa(Array.from(bytes,b=>String.fromCharCode(b)).join('')))}else{const blob=new Blob([raw],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='ty-uroven-'+C.day()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Резервная копия подготовлена')}}catch(e){toast('Экспорт не выполнен: '+e.message)}}
-async function nativeExport(raw){if(!AndroidBridge.beginExport)throw Error('Обнови Android-оболочку для больших копий');AndroidBridge.beginExport();const bytes=new TextEncoder().encode(raw);for(let i=0;i<bytes.length;i+=49152){const chunk=bytes.slice(i,i+49152);AndroidBridge.appendExport(btoa(Array.from(chunk,b=>String.fromCharCode(b)).join('')))}AndroidBridge.finishExport()}
-async function restorePending(){if(busy)return;busy=true;try{state=await S.restore(state,pendingImport);photos=await S.photos();pendingImport=null;closeModal();page='home';render();if(!state.onboard){onboardingStep=0;onboarding()}toast('Резервная копия восстановлена')}catch(e){toast('Восстановление не выполнено: '+e.message)}finally{busy=false}}
-async function importFile(file){if(!file)return;if(file.size>160*1024*1024)return toast('Файл слишком большой: максимум 160 МБ');try{const raw=await file.text(),pack=JSON.parse(raw);C.migrate(pack.state||pack);pendingImport=raw;confirmAction('Восстановить резервную копию?','Текущие записи и фото будут заменены содержимым файла. Перед этим экспортируй текущие данные.','restoreConfirm','','Восстановить')}catch(e){toast('Файл не принят: '+e.message)}}
-async function loadPhoto(file){if(!file||photoBusy)return;if(!file.type.startsWith('image/'))return toast('Выбери изображение');if(file.size>30*1024*1024)return toast('Фото должно быть меньше 30 МБ');photoBusy=true;try{const url=URL.createObjectURL(file),im=new Image();try{await new Promise((ok,no)=>{im.onload=ok;im.onerror=()=>no(Error('Не удалось открыть изображение. Выбери JPEG, PNG или WebP'));im.src=url});const scale=Math.min(1,1400/Math.max(im.naturalWidth,im.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(im.naturalWidth*scale));canvas.height=Math.max(1,Math.round(im.naturalHeight*scale));canvas.getContext('2d').drawImage(im,0,0,canvas.width,canvas.height);const photo={id:C.uid(),date:C.day(),data:canvas.toDataURL('image/jpeg',.83),note:''};state=await S.putPhoto(state,photo);photos=await S.photos();page='photos';render();toast('Момент сохранён')}finally{URL.revokeObjectURL(url)}}catch(e){toast('Фото не сохранено: '+e.message)}finally{photoBusy=false}}
-function updateCompare(){const f=$('sheet').querySelector('[name=compare-first]'),l=$('sheet').querySelector('[name=compare-last]');if(!f||!l)return;$('compare-images').innerHTML=[f.value,l.value].map(id=>{const p=photos.find(p=>p.id===id);return `<div><img src="${p.data}" alt="Фото от ${shortDate(p.date)}"><small>${shortDate(p.date)}</small></div>`}).join('')}
-document.addEventListener('click',e=>{LevelSound.start();const el=e.target.closest('[data-action]');if(el&&!el.disabled){LevelSound.play('tap');Promise.resolve(action(el.dataset.action,el)).catch(err=>toast(err.message))}});
-document.addEventListener('submit',submit);
-document.addEventListener('change',async e=>{const el=e.target;if(el.closest('#profile'))previewEditor();if(el.matches('[name^=compare-]'))updateCompare();if(el.id==='finance-month'&&/^\d{4}-(0[1-9]|1[0-2])$/.test(el.value)){financeMonth=el.value;render()}if(el.dataset.setting){const key=el.dataset.setting,val=el.type==='checkbox'?el.checked:el.type==='range'?Number(el.value):el.value;await commit('settings',{[key]:val},{silent:true})}});
-$('photo-input').addEventListener('change',e=>{loadPhoto(e.target.files?.[0]);e.target.value=''});$('import-input').addEventListener('change',e=>{importFile(e.target.files?.[0]);e.target.value=''});
-$('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal()});
-document.addEventListener('keydown',e=>{if($('modal').hidden)return;if(e.key==='Escape'){e.preventDefault();closeModal()}if(e.key==='Tab'){const nodes=[...$('sheet').querySelectorAll('button:not(:disabled),input:not([type=hidden]),select,textarea,a[href]')].filter(n=>n.offsetParent!==null);if(!nodes.length)return;if(e.shiftKey&&(document.activeElement===nodes[0]||document.activeElement===$('sheet'))){e.preventDefault();nodes.at(-1).focus()}else if(!e.shiftKey&&(document.activeElement===nodes.at(-1)||document.activeElement===$('sheet'))){e.preventDefault();nodes[0].focus()}}});
-window.LevelBack=()=>{if(!$('modal').hidden){closeModal();return true}if(page!=='home'){go('home');return true}return false};
-window.LevelNativeStatus=msg=>toast(msg);
-async function refresh(){if(!state||busy||photoBusy)return;try{const next=await S.read();if(next.revision!==state.revision){state=next;photos=await S.photos();render()}if(C.day()!==lastDay){lastDay=C.day();calendarDate=C.day();render()}}catch(e){toast('Не удалось обновить данные: '+e.message)}}
-document.addEventListener('visibilitychange',()=>{if(document.hidden)LevelSound.pause();else{refresh();LevelSound.start()}});window.addEventListener('focus',refresh);matchMedia('(prefers-color-scheme: light)').addEventListener('change',()=>state&&theme());
-S.open().then(async result=>{state=result.state;photos=await S.photos();render();if(!state.onboard)onboarding();else if(result.migrated)toast('Записи из предыдущей версии перенесены');navigator.storage?.persist?.().catch(()=>{})}).catch(e=>{$('app').innerHTML=`<div class="fatal"><h1>Не удалось открыть записи</h1><p>${esc(e.message)}</p><p>Данные не были сброшены. Перезапусти приложение или освободи место на устройстве.</p><div class="stack">${button('Попробовать снова','reload','','wide')}${button('Восстановить предыдущую запись','recover','','wide secondary')}${button('Импорт резервной копии','import','','wide secondary')}</div></div>`});
+(() => {
+  "use strict";
+  const C = LevelCore,
+    A = LevelArt,
+    S = LevelStore,
+    $ = (id) => document.getElementById(id),
+    ico = A.icon;
+  const esc = (v) =>
+    String(v ?? "").replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
+    );
+  const money = (c) =>
+    new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(
+      c / 100,
+    ) + " ₽";
+  const shortDate = (d) =>
+    new Date(d + "T12:00:00").toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "short",
+    });
+  const skillIcon = {
+    body: "activity",
+    mind: "book",
+    care: "heart",
+    wealth: "wallet",
+  };
+  const monthName = (m) =>
+    new Date(m + "-01T12:00:00").toLocaleDateString("ru-RU", {
+      month: "long",
+      year: "numeric",
+    });
+  let state,
+    photos = [],
+    page = "home",
+    questTab = "habits",
+    calendarDate = C.day(),
+    calendarMonth = C.day().slice(0, 7),
+    financeMonth = C.day().slice(0, 7),
+    busy = false,
+    focusBefore,
+    editorDraft,
+    onboardingStep = 0,
+    toastTimer,
+    photoBusy = false,
+    lastDay = C.day();
+  const button = (label, action, extra = "", cls = "secondary") =>
+    `<button type="button" class="btn ${cls}" data-action="${action}" ${extra}>${label}</button>`;
+  const iconButton = (icon, label, action, extra = "") =>
+    `<button type="button" class="icon-btn" aria-label="${esc(label)}" data-action="${action}" ${extra}>${ico(icon, 19)}</button>`;
+  const progress = (n) =>
+    `<div class="progress" style="--value:${Math.max(0, Math.min(100, n))}%"><i></i></div>`;
+  const empty = (icon, msg) =>
+    `<div class="empty">${ico(icon, 26)}${msg}</div>`;
+  const card = (title, body) =>
+    `<section class="card">${title ? `<h2>${title}</h2>` : ""}${body}</section>`;
+  const heading = (title, sub, kicker = "ТВОЙ ПУТЬ", extra = "") =>
+    `<div class="title-row"><div><div class="eyebrow">${kicker}</div><h1>${title}</h1><p class="subtitle">${sub}</p></div>${extra}</div>`;
+  const field = (label, name, value = "", type = "text", attrs = "") =>
+    `<label class="field">${label}<input name="${name}" type="${type}" value="${esc(value)}" ${attrs}></label>`;
+  const select = (label, name, options, current) =>
+    `<label class="field">${label}<select name="${name}">${options.map(([v, l]) => `<option value="${esc(v)}" ${v === current ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></label>`;
+  const skills = () => C.SKILLS.map((k) => [k, C.SKILL_NAMES[k]]);
+  const form = (id, body, label = "Сохранить") =>
+    `<form id="${id}">${body}<p class="form-error" role="alert"></p><button class="btn wide form-submit" type="submit">${label}</button></form>`;
+  const sum = (items, key) => items.reduce((a, v) => a + (v[key] || 0), 0);
+  function toast(msg) {
+    $("toast").textContent = msg;
+    $("toast").classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3500);
+  }
+  function theme() {
+    const light =
+      state.settings.theme === "light" ||
+      (state.settings.theme === "system" &&
+        matchMedia("(prefers-color-scheme: light)").matches);
+    document.body.classList.toggle("light", light);
+    document.body.classList.toggle("no-motion", !state.settings.motion);
+    document.querySelector("meta[name=theme-color]").content = light
+      ? "#f4f3f8"
+      : "#101222";
+    LevelSound.configure(state.settings);
+  }
+  function render() {
+    theme();
+    const titles = {
+      home: "Сегодня",
+      quests: "Квесты",
+      money: "Финансы",
+      hero: "Герой",
+      more: "Ещё",
+    };
+    $("app").innerHTML =
+      `<header class="topbar"><button class="brand" data-action="go" data-page="home" aria-label="ТЫ.УРОВЕНЬ — главная">ТЫ<span>.</span>УРОВЕНЬ<small>ЖИЗНЬ — ТВОЁ ПРИКЛЮЧЕНИЕ</small></button><div class="top-actions"><span class="chip gold" aria-label="${C.coins(state)} кристаллов">${ico("gem", 16)} ${C.coins(state)}</span>${iconButton("settings", "Настройки", "go", 'data-page="settings"')}</div></header><main class="content" id="content">${views[page]()}</main><nav class="nav" aria-label="Основная навигация">${Object.entries(
+        titles,
+      )
+        .map(
+          ([id, name]) =>
+            `<button data-action="go" data-page="${id}" class="${page === id || (id === "more" && !Object.keys(titles).includes(page)) ? "active" : ""}" ${page === id ? 'aria-current="page"' : ""}>${ico({ home: "home", quests: "quest", money: "wallet", hero: "hero", more: "grid" }[id])}<span>${name}</span></button>`,
+        )
+        .join("")}</nav>`;
+  }
+  function go(p) {
+    if (!views[p]) return;
+    closeModal();
+    page = p;
+    render();
+    window.scrollTo(0, 0);
+    const h = $("content").querySelector("h1");
+    if (h) {
+      h.tabIndex = -1;
+      h.focus({ preventScroll: true });
+    }
+  }
+  function habitRow(h) {
+    const done = C.habitDone(state, h.id),
+      entry = state.entries.find(
+        (e) => e.habitId === h.id && e.date === C.day(),
+      );
+    return `<div class="list-item"><span class="tile-icon ${h.skill}">${ico(skillIcon[h.skill])}</span><div class="grow"><div class="item-name">${esc(h.name)}</div><div class="item-meta">${done ? `${entry.value} ${esc(entry.unit)} · выполнено` : h.target + " " + esc(h.unit) + " · " + C.SKILL_NAMES[h.skill] + ' · <span class="mint">+20 XP</span>'}</div></div><button class="check-btn ${done ? "done" : ""}" data-action="habit" data-id="${h.id}" aria-label="${done ? "Результат" : "Записать выполнение"}: ${esc(h.name)}">${ico(done ? "check" : "plus", 19)}</button></div>`;
+  }
+  function quick(title, sub, icon, target) {
+    return `<button class="quick" data-action="go" data-page="${target}"><span class="tile-icon">${ico(icon)}</span><span>${title}<small>${sub}</small></span></button>`;
+  }
+  function home() {
+    const l = C.level(state),
+      habits = state.habits.filter((h) => h.active),
+      done = habits.filter((h) => C.habitDone(state, h.id)).length;
+    return (
+      heading(
+        `Привет, ${esc(state.profile.name)}.`,
+        "Небольшой шаг сегодня. Новый уровень завтра.",
+        new Date().toLocaleDateString("ru-RU", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+        }),
+      ) +
+      `<div class="desktop-grid"><div class="col"><section class="adventure"><div class="hero-copy"><div class="eyebrow">ГЛАВНЫЙ ГЕРОЙ — ТЫ</div><h2>Прокачивай<br><em>свою жизнь.</em></h2><p>Твои реальные действия<br>становятся частью<br>большой истории.</p><span class="tag">${ico("spark", 12)} УРОВЕНЬ ${l.n}</span></div><div class="hero-figure">${A.avatar(state.profile, l.n)}</div><div class="hero-progress"><div class="progress-label"><span>До уровня ${l.n + 1}</span><span>${l.x} / ${l.max} XP</span></div>${progress(l.percent)}</div></section><div class="metric-grid"><div class="metric">${ico("check", 19)}<strong>${done}<small> / ${habits.length}</small></strong><span>привычек сегодня</span></div><div class="metric">${ico("flame", 19)}<strong>${C.streak(state)}<small> дн.</small></strong><span>текущая серия</span></div><div class="metric">${ico("spark", 19)}<strong>${C.xp(state)}</strong><span>опыта за весь путь</span></div></div><div class="section-heading"><h2>Твой тихий мир</h2><button class="link-btn" data-action="go" data-page="world">Исследовать ${ico("arrow", 15)}</button></div><button class="card world-banner wide" data-action="go" data-page="world" aria-label="Открыть мир"><img src="assets/island.webp" alt="Парящий остров с домиком, лесом и светящимся кристаллом"><div class="world-caption"><strong>${worldChapter()[1]}</strong><p>Остров растёт вместе с твоим опытом</p></div></button></div><div class="col"><div class="section-heading"><h2>Маленькие победы</h2><span class="tag">СЕГОДНЯ</span></div><section class="card flush">${habits.length ? habits.slice(0, 4).map(habitRow).join("") : empty("leaf", "Добавь привычку, с которой хочется начать.")}<div class="card-header"><button class="link-btn" data-action="go" data-page="quests">Все привычки и квесты ${ico("arrow", 16)}</button></div></section><div class="section-heading"><h2>Ресурсы для жизни</h2></div><div class="quick-grid">${quick("Финансы", "Баланс " + money(C.balance(state)), "wallet", "money")}${quick("Ежедневник", "Дела и планы", "calendar", "calendar")}${quick("Здоровье", "Тело и энергия", "activity", "health")}${quick("Фотодневник", "Сохрани свой путь", "camera", "photos")}</div><div class="section-heading"><h2>Точка опоры</h2></div>${card("", `<div class="row"><span class="tile-icon care">${ico("heart")}</span><div><h3>В своём темпе</h3><p class="small" style="margin:0">Пропущенный день не отнимает опыт. Твоя история продолжается.</p></div></div>`)}</div></div>`
+    );
+  }
+  function taskRow(t) {
+    return `<div class="list-item"><span class="tile-icon ${t.skill}">${ico(skillIcon[t.skill])}</span><div class="grow"><div class="item-name">${esc(t.name)}</div><div class="item-meta">${shortDate(t.date)} · ${t.done ? "Завершено" : "25 XP за результат"}</div>${t.note ? `<div class="journal-note">${esc(t.note)}</div>` : ""}</div>${t.done ? '<span class="mint">' + ico("check", 19) + "</span>" : `<button class="check-btn" data-action="taskComplete" data-id="${t.id}" aria-label="Завершить ${esc(t.name)}">${ico("check", 19)}</button>`}${iconButton("trash", "Удалить дело", "taskDelete", `data-id="${t.id}"`)}</div>`;
+  }
+  function quests() {
+    const tabs = [
+      ["habits", "Привычки"],
+      ["tasks", "Дела"],
+      ["goals", "Цели"],
+    ];
+    let body = "";
+    if (questTab === "habits") {
+      body = `<section class="card flush">${
+        state.habits
+          .filter((h) => h.active)
+          .map(habitRow)
+          .join("") || empty("leaf", "Добавь свою первую привычку.")
+      }</section><div class="actions">${button(ico("plus", 18) + " Своя привычка", "habitAdd")}${button("Управлять", "habitsManage")}</div><div class="notice">Опыт начисляется один раз в день за каждую привычку после записи результата. Действия отмечаешь ты — приложение доверяет тебе.</div>`;
+    } else if (questTab === "tasks") {
+      body = `<div class="actions">${button(ico("plus", 18) + " Новое дело", "taskAdd", "", "")}${button(ico("calendar", 18) + " Календарь", "go", 'data-page="calendar"')}</div><div style="height:16px"></div><section class="card flush">${
+        state.tasks.length
+          ? state.tasks
+              .slice()
+              .sort(
+                (a, b) =>
+                  Number(a.done) - Number(b.done) ||
+                  a.date.localeCompare(b.date),
+              )
+              .map(taskRow)
+              .join("")
+          : empty(
+              "calendar",
+              "Запиши дело и выбери день. После выполнения сохрани результат.",
+            )
+      }</section>`;
+    } else {
+      body =
+        button(ico("plus", 18) + " Новая цель", "goalAdd", "", "") +
+        `<div style="height:16px"></div>` +
+        (state.goals.length
+          ? state.goals
+              .map(
+                (g) =>
+                  `<section class="goal"><div class="between"><div><h3>${esc(g.name)}</h3><small>До ${shortDate(g.date)} · ${g.steps.filter((t) => t.done).length} / ${g.steps.length} этапов</small></div>${ico(g.steps.every((t) => t.done) ? "check" : "flag", 22)}</div>${progress((g.steps.filter((t) => t.done).length / g.steps.length) * 100)}${g.steps.map((t) => `<div class="goal-step"><span>${esc(t.name)}${t.note ? `<div class="item-meta">${esc(t.note)}</div>` : ""}</span><button class="check-btn ${t.done ? "done" : ""}" data-action="goalStep" data-id="${g.id}" data-step="${t.id}" aria-label="Этап: ${esc(t.name)}" ${t.done ? "disabled" : ""}>${ico(t.done ? "check" : "plus", 17)}</button></div>`).join("")}${button("Удалить цель", "goalDelete", `data-id="${g.id}"`, "danger")}</section>`,
+              )
+              .join("")
+          : empty(
+              "flag",
+              "Большие перемены складываются из небольших этапов. Создай цель и свой маршрут.",
+            ));
+    }
+    return (
+      heading(
+        "Дела становятся опытом",
+        "Выбери то, что имеет значение для тебя.",
+        "КВЕСТЫ И ПРИВЫЧКИ",
+      ) +
+      `<div class="segments">${tabs.map(([id, name]) => `<button class="${questTab === id ? "active" : ""}" data-action="questTab" data-value="${id}">${name}</button>`).join("")}</div>` +
+      body
+    );
+  }
+  function txRow(t) {
+    return `<div class="list-item"><span class="tile-icon ${t.kind === "income" ? "care" : "wealth"}">${ico(t.kind === "income" ? "download" : "wallet", 19)}</span><div class="grow"><div class="item-name">${esc(t.note || t.category)}</div><div class="item-meta">${shortDate(t.date)} · ${esc(t.category)}</div></div><strong class="amount ${t.kind === "income" ? "mint" : "red"}">${t.kind === "income" ? "+" : "−"}${money(t.cents)}</strong>${iconButton("edit", "Изменить операцию", "txEdit", `data-id="${t.id}"`)}</div>`;
+  }
+  function donut() {
+    const items = state.tx.filter(
+        (t) => t.kind === "expense" && t.date.startsWith(financeMonth),
+      ),
+      group = {};
+    items.forEach(
+      (t) => (group[t.category] = (group[t.category] || 0) + t.cents),
+    );
+    const entries = Object.entries(group).sort((a, b) => b[1] - a[1]),
+      total = sum(items, "cents"),
+      colors = [
+        "#b3a1e8",
+        "#a6d9c8",
+        "#e6ba85",
+        "#d39ab6",
+        "#91b4d2",
+        "#c2c89a",
+      ];
+    if (!total)
+      return empty(
+        "chart",
+        "Расходов за этот месяц пока нет. Диаграмма появится по твоим записям.",
+      );
+    let cursor = 0;
+    return `<div class="donut-layout"><div class="donut" role="img" aria-label="Расходы по категориям, всего ${money(total)}" style="background:conic-gradient(${entries
+      .map(([name, n], i) => {
+        const start = cursor;
+        cursor += (n / total) * 100;
+        return colors[i % colors.length] + " " + start + "% " + cursor + "%";
+      })
+      .join(
+        ",",
+      )})"><span>${ico("wallet", 22)}<br><small>расходы</small></span></div><div class="legend">${entries.map(([name, n], i) => `<div><span><i style="background:${colors[i % colors.length]}"></i>${esc(name)}</span><b>${money(n)}</b></div>`).join("")}</div></div>`;
+  }
+  function moneyView() {
+    const totals = C.totals(state, financeMonth),
+      budgets = state.budgets.filter((b) => b.month === financeMonth),
+      tx = state.tx
+        .filter((t) => t.date.startsWith(financeMonth))
+        .reverse()
+        .sort((a, b) => b.date.localeCompare(a.date));
+    return (
+      heading(
+        "Финансовая ясность",
+        "Ручной учёт. Данные остаются у тебя.",
+        "ТВОИ РЕСУРСЫ",
+      ) +
+      `<section class="money-hero"><div class="eyebrow">ТЕКУЩИЙ БАЛАНС</div><div class="balance">${money(C.balance(state))}</div><p>Все записанные доходы и расходы · начальный баланс 0 ₽</p><div class="actions">${button(ico("plus", 17) + " Доход", "txAdd", 'data-kind="income"', "")}${button("− Расход", "txAdd", 'data-kind="expense"', "secondary")}</div></section><label class="field">Месяц отчёта<input type="month" id="finance-month" value="${financeMonth}" required></label><div class="two-grid"><div class="card money-stat"><small>Доходы месяца</small><strong class="mint">${money(totals.income)}</strong></div><div class="card money-stat"><small>Расходы месяца</small><strong class="red">${money(totals.expense)}</strong></div></div><div class="desktop-grid"><div class="col">${card("Куда уходят деньги", donut())}<section class="card"><div class="between"><h2 style="margin:0">Бюджеты месяца</h2><button class="link-btn" data-action="budget">${ico("plus", 17)} Лимит</button></div>${
+        budgets.length
+          ? budgets
+              .map((b) => {
+                const spent =
+                  b.category === "Все категории"
+                    ? totals.expense
+                    : sum(
+                        tx.filter(
+                          (t) =>
+                            t.kind === "expense" && t.category === b.category,
+                        ),
+                        "cents",
+                      );
+                return `<div class="budget-line"><div class="between"><strong class="small">${esc(b.category)}</strong>${iconButton("trash", "Удалить бюджет", "budgetDelete", `data-category="${esc(b.category)}"`)}</div>${progress((spent / b.cents) * 100)}<div class="between"><small>${money(spent)} / ${money(b.cents)}</small><small class="${spent > b.cents ? "red" : "mint"}">${spent > b.cents ? "Перерасход " + money(spent - b.cents) : "Осталось " + money(b.cents - spent)}</small></div></div>`;
+              })
+              .join("")
+          : `<p class="small" style="margin:18px 0 0">Задай общий лимит или отдельные бюджеты по категориям.</p>`
+      }</section><section class="card"><div class="between"><h2 style="margin:0">Регулярные платежи</h2><button class="link-btn" data-action="billAdd">${ico("plus", 17)} Добавить</button></div><p class="small" style="margin:12px 0">Отметка оплаты создаёт расход. Автоматического списания нет.</p>${state.bills.map((b) => `<div class="budget-line"><div class="between"><div class="grow"><h3>${esc(b.name)}</h3><small>До ${b.day} числа · ${money(b.cents)}</small></div><button class="check-btn ${C.paid(state, b.id) ? "done" : ""}" data-action="billPay" data-id="${b.id}" aria-label="Учесть оплату: ${esc(b.name)}" ${C.paid(state, b.id) ? "disabled" : ""}>${ico(C.paid(state, b.id) ? "check" : "plus", 18)}</button>${iconButton("trash", "Удалить регулярный платёж", "billDelete", `data-id="${b.id}"`)}</div></div>`).join("") || empty("calendar", "Добавь аренду, связь или подписку.")}</section></div><div class="col"><div class="section-heading"><h2>Операции</h2><span class="tag">${tx.length}</span></div><section class="card flush">${tx.length ? tx.map(txRow).join("") : empty("wallet", "Начни с первой операции. Никаких придуманных доходов и расходов.")}</section></div></div>`
+    );
+  }
+  function skillView() {
+    return card(
+      "Твои навыки",
+      C.SKILLS.map((k) => {
+        const value = sum(
+            state.rewards.filter((r) => r.skill === k),
+            "xp",
+          ),
+          n = Math.floor(value / 100) + 1;
+        return `<div class="skill-row"><span class="mint">${ico(skillIcon[k], 22)}</span><div><strong>${C.SKILL_NAMES[k]}</strong>${progress(value % 100)}</div><span>ур. ${n}</span></div>`;
+      }).join("") +
+        '<p class="small">Игровое отражение твоих действий, без оценки здоровья и личности.</p>',
+    );
+  }
+  function hero() {
+    const l = C.level(state);
+    return (
+      heading(
+        esc(state.profile.name),
+        "Главный герой своей истории.",
+        "ПЕРСОНАЖ",
+        iconButton("edit", "Редактировать персонажа", "editor"),
+      ) +
+      `<div class="desktop-grid"><div class="col"><div class="profile-stage"><span class="tag">${ico("spark", 13)} УРОВЕНЬ ${l.n}</span>${A.avatar(state.profile, l.n)}<span class="stage-caption">ТВОЙ ПУТЬ УНИКАЛЕН</span></div><div style="height:12px"></div>${button(ico("edit", 17) + " Изменить внешность", "editor", "", "wide secondary")}<div style="height:16px"></div>${skillView()}</div><div class="col"><div class="section-heading"><h2>Гардероб</h2><span class="chip gold">${ico("gem", 14)} ${C.coins(state)}</span></div><div class="wardrobe">${C.OUTFITS.map(
+        (o) => {
+          const owned = state.owned.includes(o.id),
+            selected = state.profile.outfit === o.id;
+          return `<div class="outfit-card">${A.avatar({ ...state.profile, outfit: o.id }, l.n)}<h3>${o.name}</h3><small>${owned ? "В коллекции" : `Уровень ${o.level} · ${o.price} кристаллов`}</small>${button(selected ? "Надето" : owned ? "Надеть" : l.n < o.level ? ico("lock", 13) + " Уровень " + o.level : "Открыть за " + o.price, "outfit", `data-id="${o.id}" ${selected || l.n < o.level ? "disabled" : ""}`, selected ? "secondary" : "")}</div>`;
+        },
+      ).join(
+        "",
+      )}</div><div class="notice">Кристаллы даются за реальные действия. Покупки в гардеробе используют только игровую валюту.</div></div></div>`
+    );
+  }
+  function more() {
+    return (
+      heading(
+        "Всё под рукой",
+        "Твои инструменты для повседневной жизни.",
+        "ПРОСТРАНСТВО ЖИЗНИ",
+      ) +
+      `<div class="quick-grid">${quick("Ежедневник", "Планы по дням", "calendar", "calendar")}${quick("Здоровье", "Питание, спорт, вес", "activity", "health")}${quick("Фотодневник", "История в кадрах", "camera", "photos")}${quick("Аналитика", "Твой реальный прогресс", "chart", "analytics")}${quick("Мир", "Остров твоего пути", "compass", "world")}${quick("Достижения", "Маленькие и большие", "spark", "achievements")}${quick("Настройки", "Темы, звук и данные", "settings", "settings")}</div>`
+    );
+  }
+  function calendar() {
+    const first = new Date(calendarMonth + "-01T12:00:00"),
+      offset = (first.getDay() + 6) % 7,
+      count = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate(),
+      tasks = state.tasks.filter((t) => t.date === calendarDate);
+    return (
+      heading(
+        "Место для планов",
+        "Освободи голову. Запиши важное.",
+        "ЕЖЕДНЕВНИК",
+      ) +
+      card(
+        "",
+        `<div class="calendar-head">${iconButton("back", "Предыдущий месяц", "calendarShift", 'data-offset="-1"')}<strong style="text-transform:capitalize">${monthName(calendarMonth)}</strong>${iconButton("arrow", "Следующий месяц", "calendarShift", 'data-offset="1"')}</div><div class="calendar">${["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"].map((d) => "<span>" + d + "</span>").join("")}${"<span></span>".repeat(offset)}${Array.from(
+          { length: count },
+          (_, i) => {
+            const date = calendarMonth + "-" + String(i + 1).padStart(2, "0");
+            return `<button data-action="calendarDay" data-date="${date}" class="${date === calendarDate ? "selected" : ""} ${date === C.day() ? "today" : ""} ${state.tasks.some((t) => t.date === date) ? "has-task" : ""}" aria-label="${shortDate(date)}">${i + 1}</button>`;
+          },
+        ).join("")}</div>`,
+      ) +
+      `<div class="section-heading"><h2>${shortDate(calendarDate)}</h2><button class="link-btn" data-action="taskAdd">${ico("plus", 17)} Дело</button></div><section class="card flush">${tasks.length ? tasks.map(taskRow).join("") : empty("calendar", "На этот день пока нет дел.")}</section>`
+    );
+  }
+  function health() {
+    const today = C.day(),
+      meals = state.meals.filter((m) => m.date === today),
+      workouts = state.workouts.filter((w) => w.date === today),
+      weights = state.weights
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date)),
+      last = weights.at(-1);
+    return (
+      heading(
+        "Забота о себе",
+        "Наблюдай за своим ритмом, без оценок и давления.",
+        "ТЕЛО И ЭНЕРГИЯ",
+      ) +
+      `<div class="metric-grid"><div class="metric">${ico("food", 19)}<strong>${meals.length}</strong><span>приёмов пищи сегодня</span></div><div class="metric">${ico("activity", 19)}<strong>${sum(workouts, "minutes")}<small> мин</small></strong><span>движения сегодня</span></div><div class="metric">${ico("heart", 19)}<strong>${last ? last.kg : "—"}<small>${last ? " кг" : ""}</small></strong><span>${last ? "запись " + shortDate(last.date) : "вес пока не записан"}</span></div></div><div class="section-heading"><h2>Питание</h2><button class="link-btn" data-action="meal">${ico("plus", 17)} Записать</button></div><section class="card flush">${meals.length ? meals.map((m) => `<div class="list-item"><span class="tile-icon care">${ico("food", 19)}</span><div class="grow"><div class="item-name">${esc(m.name)}</div><div class="item-meta">${esc(m.type)}${m.kcal ? " · " + m.kcal + " ккал" : ""}</div></div>${iconButton("trash", "Удалить приём пищи", "healthDelete", `data-collection="meals" data-id="${m.id}"`)}</div>`).join("") : empty("food", "Что было на твоём столе сегодня? Калорийность указывать необязательно.")}</section><div class="section-heading"><h2>Движение</h2><button class="link-btn" data-action="workout">${ico("plus", 17)} Тренировка</button></div><section class="card flush">${workouts.length ? workouts.map((w) => `<div class="list-item"><span class="tile-icon body">${ico("activity", 19)}</span><div class="grow"><div class="item-name">${esc(w.type)}</div><div class="item-meta">${w.minutes} мин${w.note ? " · " + esc(w.note) : ""}</div></div>${iconButton("trash", "Удалить тренировку", "healthDelete", `data-collection="workouts" data-id="${w.id}"`)}</div>`).join("") : empty("activity", "Прогулка, растяжка или тренировка — движение может быть разным.")}</section><div class="section-heading"><h2>История веса</h2><button class="link-btn" data-action="weight">${ico("plus", 17)} Запись</button></div>${card(
+        "",
+        weights.length
+          ? lineChart(
+              weights.slice(-14).map((w) => ({ date: w.date, value: w.kg })),
+              "кг",
+            ) +
+              weights
+                .slice(-10)
+                .reverse()
+                .map(
+                  (w) =>
+                    `<div class="between" style="padding:10px 0"><span class="small">${shortDate(w.date)}</span><strong>${w.kg} кг</strong>${iconButton("trash", "Удалить запись веса", "healthDelete", `data-collection="weights" data-id="${w.id}"`)}</div>`,
+                )
+                .join("")
+          : empty(
+              "heart",
+              "Вес — только наблюдение. За его изменение опыт не начисляется.",
+            ),
+      )}<div class="notice">Питание: 10 XP за первую запись дня. Тренировка от 5 минут: 25 XP один раз в день. Вес не влияет на игровые награды.</div><div class="section-heading"><h2>Предыдущие записи</h2></div>${card(
+        "",
+        [
+          ...state.meals
+            .filter((m) => m.date !== today)
+            .map((m) => ({
+              date: m.date,
+              label: m.name,
+              meta: m.kcal ? m.kcal + " ккал" : "Приём пищи",
+              id: m.id,
+              collection: "meals",
+            })),
+          ...state.workouts
+            .filter((w) => w.date !== today)
+            .map((w) => ({
+              date: w.date,
+              label: w.type,
+              meta: w.minutes + " мин",
+              id: w.id,
+              collection: "workouts",
+            })),
+        ]
+          .sort((a, b) => b.date.localeCompare(a.date))
+          .map(
+            (r) =>
+              `<div class="between" style="padding:12px 0"><div class="grow"><div class="item-name">${esc(r.label)}</div><small>${shortDate(r.date)} · ${esc(r.meta)}</small></div>${iconButton("trash", "Удалить запись", "healthDelete", `data-collection="${r.collection}" data-id="${r.id}"`)}</div>`,
+          )
+          .join("") ||
+          '<p class="small">Здесь сохранятся записи за прошлые дни.</p>',
+      )}`
+    );
+  }
+  function lineChart(data, unit) {
+    if (data.length < 2)
+      return '<p class="small">Для графика нужны хотя бы две записи.</p>';
+    const min = Math.min(...data.map((d) => d.value)),
+      max = Math.max(...data.map((d) => d.value)),
+      range = max - min || 1;
+    return `<svg viewBox="0 0 420 145" width="100%" role="img" aria-label="График: ${data.map((d) => d.date + ": " + d.value + " " + unit).join(", ")}"><path d="M15 115H405M15 65H405M15 15H405" stroke="var(--line)" fill="none"/><polyline points="${data.map((d, i) => 15 + (i / (data.length - 1)) * 390 + "," + (110 - ((d.value - min) / range) * 90)).join(" ")}" stroke="var(--mint)" fill="none" stroke-width="3" stroke-linejoin="round"/>${data.map((d, i) => `<circle cx="${15 + (i / (data.length - 1)) * 390}" cy="${110 - ((d.value - min) / range) * 90}" r="4" fill="var(--mint)"/>`).join("")}<text x="15" y="140" fill="var(--muted)" font-size="10">${esc(shortDate(data[0].date))} · ${min}–${max} ${unit}</text><text x="405" y="140" fill="var(--muted)" font-size="10" text-anchor="end">${esc(shortDate(data.at(-1).date))}</text></svg>`;
+  }
+  function photosView() {
+    return (
+      heading(
+        "Твоя история в кадрах",
+        "Сохрани момент. Через время он расскажет больше.",
+        "ФОТОДНЕВНИК",
+      ) +
+      button(ico("plus", 18) + " Добавить фотографию", "photoAdd", "", "") +
+      `<div class="notice"><div class="row">${ico("shield", 20)}<span>Фото хранятся только на устройстве и включаются в твою резервную копию. Доступ ко всей галерее не нужен.</span></div></div>` +
+      (photos.length >= 2
+        ? button("Сравнить фотографии", "compare") +
+          '<div style="height:16px"></div>'
+        : "") +
+      (photos.length
+        ? `<div class="photo-grid">${photos
+            .slice()
+            .sort((a, b) => b.date.localeCompare(a.date))
+            .map(
+              (p) =>
+                `<article class="photo-card"><button data-action="photoView" data-id="${p.id}" aria-label="Открыть фото от ${shortDate(p.date)}"><img src="${p.data}" alt="Фото от ${shortDate(p.date)}" loading="lazy"></button><div class="photo-foot between"><span>${shortDate(p.date)}${p.note ? '<div class="item-meta">' + esc(p.note) + "</div>" : ""}</span>${iconButton("trash", "Удалить фото", "photoDelete", `data-id="${p.id}"`)}</div></article>`,
+            )
+            .join("")}</div>`
+        : empty(
+            "camera",
+            "Здесь появится твоя личная хроника. Добавь первый кадр — своего пути, занятия или важного момента.",
+          ))
+    );
+  }
+  function analytics() {
+    const dates = Array.from({ length: 14 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (13 - i));
+        return C.day(d);
+      }),
+      counts = dates.map(
+        (date) => state.rewards.filter((r) => r.date === date).length,
+      ),
+      max = Math.max(1, ...counts);
+    return (
+      heading(
+        "Ты движешься вперёд",
+        "Здесь только данные из твоих записей.",
+        "АНАЛИТИКА",
+      ) +
+      `<div class="metric-grid"><div class="metric">${ico("spark", 19)}<strong>${C.xp(state)}</strong><span>опыта за весь путь</span></div><div class="metric">${ico("flame", 19)}<strong>${C.streak(state)}</strong><span>дней подряд</span></div><div class="metric">${ico("flag", 19)}<strong>${state.goals.filter((g) => g.steps.every((t) => t.done)).length}</strong><span>завершённых целей</span></div></div><div style="height:16px"></div>${card("Действия за 14 дней", `<div class="week-bars" role="img" aria-label="${dates.map((d, i) => d + ": " + counts[i]).join("; ")}">${counts.map((v, i) => `<div class="bar-col"><b>${v || ""}</b><i style="--bar:${Math.max(2, (v / max) * 85)}px;${v ? "" : "background:var(--line)"}"></i><small>${dates[i].slice(-2)}</small></div>`).join("")}</div><p class="small">${counts.reduce((a, b) => a + b, 0)} действий с наградами за последние две недели</p>`)}${skillView()}${card(
+        "Привычки за 14 дней",
+        state.habits
+          .map((h) => {
+            const count = state.entries.filter(
+              (e) => e.habitId === h.id && dates.includes(e.date),
+            ).length;
+            return `<div class="budget-line"><div class="between"><strong class="small">${esc(h.name)}${h.active ? "" : " · архив"}</strong><small>${count} / 14 дней</small></div>${progress((count / 14) * 100)}</div>`;
+          })
+          .join(""),
+      )}${button("Посмотреть достижения", "go", 'data-page="achievements"', "wide secondary")}`
+    );
+  }
+  function achievementView() {
+    const badges = C.achievements(state, photos.length);
+    return (
+      heading(
+        "То, что уже получилось",
+        "Достижения остаются с тобой.",
+        "КОЛЛЕКЦИЯ",
+      ) +
+      `<div class="badges">${badges.map((b) => `<article class="badge ${b.ok ? "" : "locked"}">${ico(b.ok ? b.icon : "lock", 28)}<h3>${b.name}</h3><p>${b.desc}</p><div class="item-meta">${b.ok ? "Получено" : "Ещё впереди"}</div></article>`).join("")}</div>`
+    );
+  }
+  const chapters = [
+    [1, "Тихая гавань", "Здесь начинается твой путь."],
+    [2, "Тропа привычек", "На острове загораются первые огни."],
+    [3, "Кристальная роща", "Уверенность растёт с каждым действием."],
+    [5, "Хранитель вершин", "У тебя уже есть своя история."],
+    [8, "Новый горизонт", "Впереди ещё много открытий."],
+  ];
+  function worldChapter() {
+    return chapters.filter((c) => C.level(state).n >= c[0]).at(-1);
+  }
+  function world() {
+    const l = C.level(state),
+      chapter = worldChapter(),
+      index = chapters.indexOf(chapter);
+    return (
+      heading(
+        "Остров твоего пути",
+        "Возвращайся сюда после маленьких побед.",
+        "МИР ПРИКЛЮЧЕНИЯ",
+      ) +
+      `<div class="world-full chapter-${Math.min(3, index + 1)}"><img src="assets/island.webp" alt="Парящий остров твоего пути"><span class="chapter-tag">Глава ${index + 1} · ${chapter[1]}</span>${index >= 1 ? '<span class="world-light light-cabin"></span>' : ""}${index >= 2 ? '<span class="world-light light-crystal"></span>' : ""}${index >= 3 ? '<span class="world-star">✦</span>' : ""}</div><div class="notice">${chapter[2]} Новые главы и детали острова открываются за уровни.</div>${card("Твой маршрут", chapters.map(([min, name, desc], i) => `<div class="journey-node ${l.n < min ? "locked" : ""}"><span class="tile-icon">${ico(l.n >= min ? "compass" : "lock", 20)}</span><div class="grow"><h3>${name}</h3><small>${l.n >= min ? desc : "Откроется на уровне " + min}</small></div>${l.n >= min ? '<span class="mint">' + ico("check", 18) + "</span>" : '<span class="tag">' + min + "</span>"}</div>`).join(""))}${button("Продолжить путь", "go", 'data-page="quests"', "wide")}`
+    );
+  }
+  function settings() {
+    return (
+      heading(
+        "Как удобно тебе",
+        "Твоё пространство, твои правила.",
+        "НАСТРОЙКИ",
+      ) +
+      card(
+        "Оформление",
+        select(
+          "Тема",
+          "theme",
+          [
+            ["dark", "Тёмная"],
+            ["light", "Светлая"],
+            ["system", "Как на устройстве"],
+          ],
+          state.settings.theme,
+        ).replace("<select", '<select data-setting="theme"') +
+          `<label class="toggle-row"><span><strong>Анимации</strong><small>Плавные переходы и движение персонажа</small></span><input data-setting="motion" type="checkbox" ${state.settings.motion ? "checked" : ""}></label>`,
+      ) +
+      card(
+        "Звук и отклик",
+        select(
+          "Музыкальная тема",
+          "track",
+          [
+            ["haven", "Тихая гавань"],
+            ["focus", "Сосредоточенность"],
+            ["dawn", "Новый день"],
+          ],
+          state.settings.track,
+        ).replace("<select", '<select data-setting="track"') +
+          `<label class="field">Музыка · ${Math.round(state.settings.music * 100)}%<input data-setting="music" type="range" min="0" max="1" step="0.05" value="${state.settings.music}" aria-label="Громкость музыки"></label><label class="field">Звуки действий · ${Math.round(state.settings.sfx * 100)}%<input data-setting="sfx" type="range" min="0" max="1" step="0.05" value="${state.settings.sfx}" aria-label="Громкость звуков"></label><label class="toggle-row"><span><strong>Тактильный отклик</strong><small>При выполнении и наградах</small></span><input data-setting="haptics" type="checkbox" ${state.settings.haptics ? "checked" : ""}></label><div class="actions">${button("Послушать", "soundTest")}${button("Выключить всё", "mute")}</div>`,
+      ) +
+      card(
+        "Данные принадлежат тебе",
+        `<p class="small">Приложение работает офлайн. Аккаунтов, рекламы, аналитических SDK и передачи данных на сервер нет.</p><div class="actions">${button(ico("download", 17) + " Экспорт", "export")}${button(ico("upload", 17) + " Импорт", "import")}</div><div class="notice">Резервная копия JSON включает все записи и фотографии. Храни её в надёжном месте: файл не зашифрован. Копия нужна перед удалением приложения или сменой телефона.</div>`,
+      ) +
+      card(
+        "Знакомство и правила",
+        `<div class="stack">${button("Пройти знакомство ещё раз", "tutorial")}${button("Как начисляется опыт", "rules")}${button("Конфиденциальность", "privacy")}</div>`,
+      ) +
+      card(
+        "Управление",
+        `<p class="small">Очистка удалит записи и фотографии с этого устройства.</p>${button("Удалить все данные", "reset", "", "wide danger")}`,
+      ) +
+      `<p class="version">ТЫ.УРОВЕНЬ · 1.0.0<br>Твоя жизнь — твоё приключение<br>Сделано для ежедневных маленьких побед</p>`
+    );
+  }
+  const views = {
+    home,
+    quests,
+    money: moneyView,
+    hero,
+    more,
+    calendar,
+    health,
+    photos: photosView,
+    analytics,
+    achievements: achievementView,
+    world,
+    settings,
+  };
+  function modal(title, body, canClose = true) {
+    if ($("modal").hidden) focusBefore = document.activeElement;
+    $("sheet").innerHTML =
+      `<div class="modal-head"><span class="eyebrow">ТЫ.УРОВЕНЬ</span>${canClose ? iconButton("close", "Закрыть", "close") : ""}</div><h2 id="modal-title">${title}</h2>${body}`;
+    $("modal").hidden = false;
+    document.body.style.overflow = "hidden";
+    $("sheet").scrollTop = 0;
+    $("sheet").focus({ preventScroll: true });
+    $("sheet").dataset.locked = canClose ? "" : "1";
+  }
+  function closeModal() {
+    if ($("sheet").dataset.locked) return;
+    $("modal").hidden = true;
+    document.body.style.overflow = "";
+    focusBefore?.focus?.({ preventScroll: true });
+  }
+  function confirmAction(
+    title,
+    description,
+    action,
+    extra = "",
+    label = "Подтвердить",
+  ) {
+    modal(
+      title,
+      `<p class="subtitle">${description}</p><div class="actions">${button("Отмена", "close")}${button(label, action, extra, "danger")}</div>`,
+    );
+  }
+  function errorInForm(msg) {
+    const el = $("sheet").querySelector(".form-error");
+    if (el) el.textContent = msg;
+    else toast(msg);
+  }
+  async function commit(action, p = {}, opts = {}) {
+    if (busy) return false;
+    busy = true;
+    const oldLevel = C.level(state).n,
+      oldXp = C.xp(state),
+      oldCoins = C.coins(state);
+    const submit = $("sheet").querySelector("[type=submit]");
+    if (submit) submit.disabled = true;
+    try {
+      state = await S.mutate(state, action, p);
+      if (action === "profile") delete $("sheet").dataset.locked;
+      closeModal();
+      render();
+      if (C.xp(state) > oldXp) {
+        LevelSound.play(C.level(state).n > oldLevel ? "level" : "reward");
+        haptic();
+        if (C.level(state).n > oldLevel)
+          modal(
+            "Новый уровень!",
+            `<div class="reward-panel"><div class="reward-emblem">${ico("spark", 46)}</div><h2>Уровень ${C.level(state).n}</h2><p class="subtitle">Твои действия меняют твою историю.</p><div class="reward-values">+${C.xp(state) - oldXp} XP · +${C.coins(state) - oldCoins} ${ico("gem", 18)}</div>${button("Продолжить", "close", "", "wide")}</div>`,
+          );
+        else
+          toast(
+            `Записано · +${C.xp(state) - oldXp} XP · +${C.coins(state) - oldCoins} кристалла`,
+          );
+      } else if (!opts.silent) toast("Сохранено");
+      return true;
+    } catch (e) {
+      errorInForm("Не сохранено: " + e.message);
+      if (/другом окне/.test(e.message)) {
+        state = await S.read();
+        render();
+      }
+      return false;
+    } finally {
+      busy = false;
+      if (submit?.isConnected) submit.disabled = false;
+    }
+  }
+  function haptic() {
+    if (!state.settings.haptics) return;
+    try {
+      if (window.AndroidBridge?.haptic) AndroidBridge.haptic();
+      else navigator.vibrate?.(18);
+    } catch {}
+  }
+  function editor() {
+    editorDraft = structuredClone(state.profile);
+    modal(
+      "Твой персонаж",
+      `<p class="subtitle">Создай образ, в котором узнаёшь себя.</p>${form(
+        "profile",
+        field(
+          "Как тебя называть",
+          "name",
+          editorDraft.name,
+          "text",
+          'required maxlength="32" autocomplete="given-name"',
+        ) +
+          `<div class="editor"><div class="profile-stage" id="editor-preview">${A.avatar(editorDraft, C.level(state).n)}</div><div class="editor-controls">${select(
+            "Пол",
+            "gender",
+            [
+              ["neutral", "Без акцента"],
+              ["male", "Мужской"],
+              ["female", "Женский"],
+            ],
+            editorDraft.gender,
+          )}${select(
+            "Телосложение",
+            "body",
+            [
+              ["slim", "Стройное"],
+              ["regular", "Среднее"],
+              ["broad", "Крупное"],
+            ],
+            editorDraft.body,
+          )}${select(
+            "Черты лица",
+            "face",
+            [
+              ["soft", "Мягкие"],
+              ["angular", "Угловатые"],
+              ["round", "Округлые"],
+            ],
+            editorDraft.face,
+          )}${select(
+            "Причёска",
+            "hairstyle",
+            [
+              ["short", "Короткая"],
+              ["crop", "Под машинку"],
+              ["long", "Длинная"],
+              ["curls", "Кудри"],
+              ["bald", "Без волос"],
+            ],
+            editorDraft.hairstyle,
+          )}${select(
+            "Аксессуар",
+            "accessory",
+            [
+              ["none", "Без аксессуара"],
+              ["glasses", "Очки"],
+              ["earring", "Серьга"],
+              ["scarf", "Шарф"],
+            ],
+            editorDraft.accessory,
+          )}</div></div><div class="editor-label">Натуральный оттенок кожи</div><div class="palette">${["#f3d8bb", "#e7bd99", "#dbac88", "#bd8968", "#996649", "#704936", "#493128"].map((c, i) => `<button type="button" class="swatch ${editorDraft.tone === c ? "selected" : ""}" style="--swatch:${c}" aria-label="Оттенок кожи ${i + 1}" aria-pressed="${editorDraft.tone === c}" data-action="swatch" data-key="tone" data-color="${c}"></button>`).join("")}</div><div class="editor-label">Цвет волос</div><div class="palette">${["#302b34", "#5b3d32", "#916347", "#d8bc85", "#a45435", "#c9c8cc", "#604b3d"].map((c, i) => `<button type="button" class="swatch ${editorDraft.hair === c ? "selected" : ""}" style="--swatch:${c}" aria-label="Цвет волос ${i + 1}" aria-pressed="${editorDraft.hair === c}" data-action="swatch" data-key="hair" data-color="${c}"></button>`).join("")}</div>${select(
+            "Одежда из твоей коллекции",
+            "outfit",
+            C.OUTFITS.filter((o) => state.owned.includes(o.id)).map((o) => [
+              o.id,
+              o.name,
+            ]),
+            editorDraft.outfit,
+          )}`,
+      )}`,
+    );
+  }
+  function previewEditor() {
+    const f = $("profile");
+    if (!f || !editorDraft) return;
+    for (const key of [
+      "name",
+      "gender",
+      "body",
+      "face",
+      "hairstyle",
+      "accessory",
+      "outfit",
+    ])
+      editorDraft[key] = f.elements[key].value;
+    $("editor-preview").innerHTML = A.avatar(editorDraft, C.level(state).n);
+  }
+  function onboarding() {
+    const steps = [
+      [
+        "Твоя жизнь.<br>Твоё приключение.",
+        "Развиваешься ты — растёт и твой герой. Привычки, цели и полезные инструменты в одном спокойном пространстве.",
+      ],
+      [
+        "Маленькие дела.<br>Настоящий опыт.",
+        "Записывай реальные действия, получай опыт и кристаллы, открывай главы острова и новые образы. Пропуски не отнимают прогресс.",
+      ],
+      [
+        "Твои данные.<br>Твои правила.",
+        "Всё работает без интернета. Личные записи и фотографии хранятся на устройстве. Резервную копию можно сохранить в настройках.",
+      ],
+    ];
+    const [title, desc] = steps[onboardingStep];
+    modal(
+      title,
+      `<div class="onboarding"><div class="onboarding-dots">${steps.map((_, i) => `<i class="${i === onboardingStep ? "on" : ""}"></i>`).join("")}</div><div class="onboarding-art"><img src="assets/island.webp" alt="Остров твоего приключения">${A.avatar(state.profile, 1)}</div><p class="subtitle">${desc}</p>${button(onboardingStep === 2 ? "Создать персонажа" : "Дальше " + ico("arrow", 16), "onboardingNext", "", "wide")}<p class="version">${onboardingStep + 1} / 3</p></div>`,
+      state.onboard,
+    );
+  }
+  function recordForm(action, id, step) {
+    const attrs = `<input type="hidden" name="id" value="${id}">${step ? `<input type="hidden" name="step" value="${step}">` : ""}`;
+    modal(
+      "Зафиксируй результат",
+      `<p class="subtitle">Что получилось сделать в реальной жизни?</p>${form(action, attrs + field("Краткий результат", "note", "", "text", 'required minlength="2" maxlength="120" placeholder="Например: прочитал главу и записал три идеи"'), "Завершить и получить опыт")}`,
+    );
+  }
+  function txForm(kind, t) {
+    modal(
+      t
+        ? "Изменить операцию"
+        : kind === "income"
+          ? "Новый доход"
+          : "Новый расход",
+      form(
+        t ? "txEdit" : "txAdd",
+        `<input type="hidden" name="id" value="${t?.id || ""}">` +
+          select(
+            "Вид операции",
+            "kind",
+            [
+              ["income", "Доход"],
+              ["expense", "Расход"],
+            ],
+            t?.kind || kind,
+          ) +
+          field(
+            "Сумма, ₽",
+            "amount",
+            t ? (t.cents / 100).toFixed(2) : "",
+            "text",
+            'inputmode="decimal" required maxlength="15" placeholder="0,00"',
+          ) +
+          field(
+            "Категория",
+            "category",
+            t?.category || (kind === "income" ? "Доход" : "Продукты"),
+            "text",
+            'list="categories" required maxlength="40"',
+          ) +
+          `<datalist id="categories">${["Продукты", "Дом", "Транспорт", "Здоровье", "Обучение", "Развлечения", "Связь", "Подписки", "Зарплата", "Подарки", "Другое"].map((c) => `<option value="${c}">`).join("")}</datalist>` +
+          field("Дата", "date", t?.date || C.day(), "date", "required") +
+          field(
+            "Комментарий",
+            "note",
+            t?.note || "",
+            "text",
+            'maxlength="100"',
+          ),
+      ) +
+        (t
+          ? `<div style="margin-top:12px">${button("Удалить операцию", "txDelete", `data-id="${t.id}"`, "wide danger")}</div>`
+          : ""),
+    );
+  }
+  async function action(name, el) {
+    const d = el.dataset;
+    switch (name) {
+      case "go":
+        go(d.page);
+        break;
+      case "close":
+        closeModal();
+        break;
+      case "questTab":
+        questTab = d.value;
+        render();
+        break;
+      case "editor":
+        editor();
+        break;
+      case "swatch":
+        editorDraft[d.key] = d.color;
+        el.closest(".palette")
+          .querySelectorAll("button")
+          .forEach((b) => {
+            b.classList.toggle("selected", b === el);
+            b.setAttribute("aria-pressed", String(b === el));
+          });
+        previewEditor();
+        break;
+      case "onboardingNext":
+        if (onboardingStep < 2) {
+          onboardingStep++;
+          onboarding();
+        } else {
+          delete $("sheet").dataset.locked;
+          editor();
+        }
+        break;
+      case "tutorial":
+        onboardingStep = 0;
+        onboarding();
+        break;
+      case "habit": {
+        const h = state.habits.find((h) => h.id === d.id);
+        if (C.habitDone(state, h.id)) {
+          const e = state.entries.find(
+            (e) => e.habitId === h.id && e.date === C.day(),
+          );
+          modal(
+            "Сегодня уже получилось",
+            `<h3>${esc(h.name)}</h3><p class="subtitle">${e.value} ${esc(e.unit)}${e.note ? "<br>" + esc(e.note) : ""}</p><div class="notice">Награда за эту привычку сегодня уже начислена.</div>${button("Отлично", "close", "", "wide")}`,
+          );
+        } else
+          modal(
+            esc(h.name),
+            `<p class="subtitle">Запиши фактический результат за сегодня.</p>${form("habitComplete", `<input type="hidden" name="id" value="${h.id}">` + field("Сколько получилось, " + esc(h.unit), "value", h.target, "number", `required min="${h.target}" max="100000" step="1"`) + field("Заметка · необязательно", "note", "", "text", 'maxlength="120"') + `<div class="notice">Цель: ${h.target} ${esc(h.unit)} · 20 XP и 4 кристалла один раз в день.</div>`, "Записать выполнение")}`,
+          );
+        break;
+      }
+      case "habitAdd":
+        modal(
+          "Своя привычка",
+          form(
+            "habitAdd",
+            field(
+              "Название",
+              "name",
+              "",
+              "text",
+              'required maxlength="65" placeholder="Например, читать каждый день"',
+            ) +
+              select("Сфера развития", "skill", skills(), "mind") +
+              `<div class="two-grid">${field("Цель за день", "target", 15, "number", 'required min="1" max="1440"')}${select(
+                "Единица",
+                "unit",
+                [
+                  ["мин", "Минуты"],
+                  ["раз", "Раз"],
+                  ["страниц", "Страницы"],
+                  ["км", "Километры"],
+                ],
+                "мин",
+              )}</div>`,
+          ),
+        );
+        break;
+      case "habitsManage":
+        modal(
+          "Мои привычки",
+          state.habits
+            .filter((h) => h.active)
+            .map(
+              (h) =>
+                `<div class="between" style="padding:12px 0"><span class="item-name">${esc(h.name)}</span>${iconButton("trash", "В архив: " + h.name, "habitArchive", `data-id="${h.id}"`)}</div>`,
+            )
+            .join("") +
+            '<p class="small">Архивирование сохраняет историю и полученные награды.</p>',
+        );
+        break;
+      case "habitArchive":
+        await commit("habitArchive", { id: d.id });
+        break;
+      case "taskAdd":
+        modal(
+          "Новое дело",
+          form(
+            "taskAdd",
+            field(
+              "Что нужно сделать",
+              "name",
+              "",
+              "text",
+              'required maxlength="100"',
+            ) +
+              field(
+                "Когда",
+                "date",
+                page === "calendar" ? calendarDate : C.day(),
+                "date",
+                "required",
+              ) +
+              select("Сфера", "skill", skills(), "mind"),
+          ),
+        );
+        break;
+      case "taskComplete":
+        recordForm("taskComplete", d.id);
+        break;
+      case "goalAdd":
+        modal(
+          "Большая цель",
+          form(
+            "goalAdd",
+            field(
+              "Что хочешь изменить",
+              "name",
+              "",
+              "text",
+              'required maxlength="80" placeholder="Например, пробежать первые 5 км"',
+            ) +
+              field("Желаемая дата", "date", C.day(), "date", "required") +
+              '<label class="field">Этапы · каждый с новой строки<textarea name="steps" required maxlength="2200" placeholder="Выбрать маршрут\nПройти первые 2 км\nПробежать 5 км"></textarea></label><div class="notice">30 XP за этап и 50 XP за завершённую цель. Записывай реальный результат.</div>',
+          ),
+        );
+        break;
+      case "goalStep":
+        recordForm("goalStep", d.id, d.step);
+        break;
+      case "taskDelete":
+      case "goalDelete":
+        confirmAction(
+          "Удалить запись?",
+          "История наград сохранится. Сама запись будет удалена.",
+          name + "Confirm",
+          `data-id="${d.id}"`,
+          "Удалить",
+        );
+        break;
+      case "taskDeleteConfirm":
+      case "goalDeleteConfirm":
+        await commit(name.replace("Confirm", ""), { id: d.id });
+        break;
+      case "txAdd":
+        txForm(d.kind);
+        break;
+      case "txEdit":
+        txForm(
+          "",
+          state.tx.find((t) => t.id === d.id),
+        );
+        break;
+      case "txDelete":
+        confirmAction(
+          "Удалить операцию?",
+          "Баланс и отчёты будут пересчитаны.",
+          "txDeleteConfirm",
+          `data-id="${d.id}"`,
+          "Удалить",
+        );
+        break;
+      case "txDeleteConfirm":
+        await commit("txDelete", { id: d.id });
+        break;
+      case "budget":
+        modal(
+          "Бюджет на месяц",
+          form(
+            "budget",
+            field("Месяц", "month", financeMonth, "month", "required") +
+              field(
+                "Категория или «Все категории»",
+                "category",
+                "Все категории",
+                "text",
+                'required maxlength="40" list="budget-categories"',
+              ) +
+              `<datalist id="budget-categories">${["Все категории", ...new Set(state.tx.map((t) => t.category))].map((c) => `<option value="${esc(c)}">`).join("")}</datalist>` +
+              field(
+                "Лимит, ₽",
+                "amount",
+                "",
+                "text",
+                'required inputmode="decimal" maxlength="15"',
+              ) +
+              '<div class="notice">Новый лимит заменяет прежний для выбранного месяца и категории.</div>',
+          ),
+        );
+        break;
+      case "budgetDelete":
+        await commit("budgetDelete", {
+          month: financeMonth,
+          category: d.category,
+        });
+        break;
+      case "billAdd":
+        modal(
+          "Регулярный платёж",
+          form(
+            "billAdd",
+            field("Название", "name", "", "text", 'required maxlength="60"') +
+              field(
+                "Сумма, ₽",
+                "amount",
+                "",
+                "text",
+                'inputmode="decimal" required maxlength="15"',
+              ) +
+              field(
+                "Оплатить до числа",
+                "day",
+                10,
+                "number",
+                'min="1" max="31" required',
+              ) +
+              field(
+                "Категория",
+                "category",
+                "Подписки",
+                "text",
+                'required maxlength="40"',
+              ),
+          ),
+        );
+        break;
+      case "billPay": {
+        const b = state.bills.find((b) => b.id === d.id);
+        confirmAction(
+          "Платёж уже оплачен?",
+          `Записать расход ${money(b.cents)} — ${esc(b.name)} за ${monthName(C.day().slice(0, 7))}?`,
+          "billPayConfirm",
+          `data-id="${d.id}"`,
+          "Учесть оплату",
+        );
+        break;
+      }
+      case "billPayConfirm":
+        await commit("billPay", { id: d.id });
+        break;
+      case "billDelete":
+        confirmAction(
+          "Удалить регулярный платёж?",
+          "Ранее записанные расходы сохранятся.",
+          "billDeleteConfirm",
+          `data-id="${d.id}"`,
+          "Удалить",
+        );
+        break;
+      case "billDeleteConfirm":
+        await commit("billDelete", { id: d.id });
+        break;
+      case "outfit": {
+        const o = C.OUTFITS.find((o) => o.id === d.id);
+        if (state.owned.includes(o.id)) await commit("outfit", { id: o.id });
+        else
+          modal(
+            "Новый образ",
+            `<p class="subtitle">${o.name} · ${o.price} игровых кристаллов</p><div class="profile-stage">${A.avatar({ ...state.profile, outfit: o.id }, C.level(state).n)}</div><div style="height:16px"></div>${button("Открыть за " + o.price, "outfitConfirm", `data-id="${o.id}"`, "wide")}`,
+          );
+        break;
+      }
+      case "outfitConfirm":
+        await commit("outfit", { id: d.id });
+        break;
+      case "calendarShift": {
+        const date = new Date(calendarMonth + "-01T12:00:00");
+        date.setMonth(date.getMonth() + Number(d.offset));
+        calendarMonth = C.day(date).slice(0, 7);
+        render();
+        break;
+      }
+      case "calendarDay":
+        calendarDate = d.date;
+        render();
+        break;
+      case "meal":
+        modal(
+          "Приём пищи",
+          form(
+            "meal",
+            select(
+              "Когда",
+              "type",
+              [
+                ["Завтрак", "Завтрак"],
+                ["Обед", "Обед"],
+                ["Ужин", "Ужин"],
+                ["Перекус", "Перекус"],
+              ],
+              "Обед",
+            ) +
+              field(
+                "Что было на тарелке",
+                "name",
+                "",
+                "text",
+                'required maxlength="100" placeholder="Например, гречка с овощами и рыбой"',
+              ) +
+              field(
+                "Калорийность · необязательно",
+                "kcal",
+                "",
+                "number",
+                'min="1" max="10000" placeholder="ккал"',
+              ),
+          ),
+        );
+        break;
+      case "workout":
+        modal(
+          "Твоё движение",
+          form(
+            "workout",
+            field(
+              "Вид занятия",
+              "type",
+              "",
+              "text",
+              'required maxlength="60" placeholder="Прогулка, силовая, йога…"',
+            ) +
+              field(
+                "Продолжительность, мин",
+                "minutes",
+                20,
+                "number",
+                'required min="1" max="600"',
+              ) +
+              field(
+                "Как прошло · необязательно",
+                "note",
+                "",
+                "text",
+                'maxlength="120"',
+              ),
+          ),
+        );
+        break;
+      case "weight":
+        modal(
+          "Наблюдение за весом",
+          form(
+            "weight",
+            field(
+              "Вес, кг",
+              "kg",
+              state.weights.at(-1)?.kg || "",
+              "number",
+              'required min="20" max="500" step="0.1"',
+            ) +
+              '<div class="notice">Одна запись в день. Повторная запись обновит сегодняшнюю. Вес не влияет на награды.</div>',
+          ),
+        );
+        break;
+      case "healthDelete":
+        confirmAction(
+          "Удалить запись?",
+          "Полученные награды сохранятся. Повторная запись сегодня не принесёт повторную награду.",
+          "healthDeleteConfirm",
+          `data-id="${d.id}" data-collection="${d.collection}"`,
+          "Удалить",
+        );
+        break;
+      case "healthDeleteConfirm":
+        await commit("healthDelete", { id: d.id, collection: d.collection });
+        break;
+      case "photoAdd":
+        if (!photoBusy) $("photo-input").click();
+        break;
+      case "photoView": {
+        const p = photos.find((p) => p.id === d.id);
+        modal(
+          "Момент твоего пути",
+          `<img class="photo-full" src="${p.data}" alt="Фотография от ${shortDate(p.date)}"><p class="small" style="margin-top:12px">${shortDate(p.date)}${p.note ? " · " + esc(p.note) : ""}</p>`,
+        );
+        break;
+      }
+      case "photoDelete":
+        confirmAction(
+          "Удалить фотографию?",
+          "В приложении останется только то, что ты решишь сохранить.",
+          "photoDeleteConfirm",
+          `data-id="${d.id}"`,
+          "Удалить",
+        );
+        break;
+      case "photoDeleteConfirm":
+        if (busy) return;
+        busy = true;
+        try {
+          state = await S.removePhoto(state, d.id);
+          photos = await S.photos();
+          closeModal();
+          render();
+          toast("Фото удалено");
+        } catch (e) {
+          toast("Не удалено: " + e.message);
+        } finally {
+          busy = false;
+        }
+        break;
+      case "compare": {
+        const sorted = photos
+          .slice()
+          .sort((a, b) => a.date.localeCompare(b.date));
+        modal(
+          "Два момента твоего пути",
+          `<div class="two-grid">${select(
+            "Первое фото",
+            "compare-first",
+            sorted.map((p) => [
+              p.id,
+              shortDate(p.date) + (p.note ? " · " + p.note : ""),
+            ]),
+            sorted[0].id,
+          )}${select(
+            "Второе фото",
+            "compare-last",
+            sorted.map((p) => [
+              p.id,
+              shortDate(p.date) + (p.note ? " · " + p.note : ""),
+            ]),
+            sorted.at(-1).id,
+          )}</div><div class="compare" id="compare-images"></div>`,
+        );
+        updateCompare();
+        break;
+      }
+      case "export":
+        await exportBackup();
+        break;
+      case "import":
+        $("import-input").click();
+        break;
+      case "restoreConfirm":
+        await restorePending();
+        break;
+      case "soundTest":
+        LevelSound.play("level");
+        LevelSound.start();
+        haptic();
+        break;
+      case "mute":
+        await commit("settings", { music: 0, sfx: 0, haptics: false });
+        break;
+      case "rules":
+        modal(
+          "Опыт за реальные действия",
+          `<div class="stack"><div class="notice">Привычка: 20 XP за запись результата, один раз в день.<br>Дело: 25 XP за завершение с результатом.<br>Этап цели: 30 XP. Вся цель: ещё 50 XP.<br>Тренировка от 5 минут: 25 XP, раз в день.<br>Питание: 10 XP, раз в день.<br>Финансовая запись: 10 XP, раз в день.</div><p class="small">Кристаллы: 1 за каждые 5 XP награды. Удаление записи не возвращает возможность получить награду. За изменение веса, добавление фотографий и нажатия в меню XP не начисляется.</p><p class="small">Данные вводишь ты. Приложение не подтверждает действия датчиками. Здесь нет соревнований, штрафов за пропуск и покупок за реальные деньги.</p></div>`,
+        );
+        break;
+      case "privacy":
+        modal(
+          "Личное остаётся личным",
+          `<p class="subtitle">ТЫ.УРОВЕНЬ работает полностью на устройстве.</p><div class="notice">Нет регистрации, сети, рекламы и сторонней аналитики. Финансы, заметки, здоровье и фотографии никуда не отправляются. Приложение не запрашивает доступ к контактам, геолокации, камере или всей галерее.</div><p class="small">Фото выбираются через системное окно. Резервные копии сохраняются только по твоему действию; их содержимое не зашифровано. Данные защищает блокировка и шифрование устройства. При удалении приложения локальное хранилище удаляется.</p><p class="small">Экспортируй данные перед сменой устройства. Не передавай резервную копию людям, которым не доверяешь.</p>`,
+        );
+        break;
+      case "reset":
+        modal(
+          "Удалить все данные",
+          form(
+            "reset",
+            `<p class="subtitle">Это удалит профиль, прогресс, финансовые записи и все фотографии из приложения. Сначала сохрани резервную копию.</p>${field("Для подтверждения введи УДАЛИТЬ", "confirm", "", "text", 'required autocomplete="off"')}`,
+            "Удалить безвозвратно",
+          ),
+        );
+        break;
+      case "recover":
+        try {
+          state = await S.recover();
+          photos = await S.photos();
+          render();
+          toast("Восстановлена предыдущая версия записей");
+        } catch (e) {
+          toast(e.message);
+        }
+        break;
+      case "reload":
+        location.reload();
+        break;
+    }
+  }
+  let pendingImport;
+  async function submit(e) {
+    e.preventDefault();
+    const f = e.target;
+    if (!(f instanceof HTMLFormElement) || busy) return;
+    const p = Object.fromEntries(new FormData(f)),
+      formId = f.getAttribute("id");
+    try {
+      if (formId === "profile") {
+        previewEditor();
+        if (await commit("profile", { ...editorDraft, name: p.name }))
+          delete $("sheet").dataset.locked;
+        return;
+      }
+      if (formId === "reset") {
+        if (p.confirm !== "УДАЛИТЬ") throw Error("Введи УДАЛИТЬ полностью");
+        busy = true;
+        try {
+          const fresh = C.fresh();
+          fresh.revision = state.revision + 1;
+          await S.restore(state, JSON.stringify({ state: fresh, photos: [] }));
+          state = await S.read();
+          photos = [];
+          closeModal();
+          page = "home";
+          render();
+          onboardingStep = 0;
+          onboarding();
+        } finally {
+          busy = false;
+        }
+        return;
+      }
+      await commit(formId, p);
+    } catch (err) {
+      errorInForm(err.message);
+    }
+  }
+  async function exportBackup() {
+    if (busy || photoBusy) return toast("Дождись сохранения");
+    try {
+      const raw = await S.backup(state);
+      if (window.AndroidBridge?.exportJson) {
+        const bytes = new TextEncoder().encode(raw);
+        if (bytes.length > 1_000_000) await nativeExport(raw);
+        else
+          AndroidBridge.exportJson(
+            btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join("")),
+          );
+      } else {
+        const blob = new Blob([raw], { type: "application/json" }),
+          url = URL.createObjectURL(blob),
+          a = document.createElement("a");
+        a.href = url;
+        a.download = "ty-uroven-" + C.day() + ".json";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        toast("Резервная копия подготовлена");
+      }
+    } catch (e) {
+      toast("Экспорт не выполнен: " + e.message);
+    }
+  }
+  async function nativeExport(raw) {
+    if (!AndroidBridge.beginExport)
+      throw Error("Обнови Android-оболочку для больших копий");
+    AndroidBridge.beginExport();
+    const bytes = new TextEncoder().encode(raw);
+    for (let i = 0; i < bytes.length; i += 49152) {
+      const chunk = bytes.slice(i, i + 49152);
+      AndroidBridge.appendExport(
+        btoa(Array.from(chunk, (b) => String.fromCharCode(b)).join("")),
+      );
+    }
+    AndroidBridge.finishExport();
+  }
+  async function restorePending() {
+    if (busy) return;
+    busy = true;
+    try {
+      state = await S.restore(state, pendingImport);
+      photos = await S.photos();
+      pendingImport = null;
+      closeModal();
+      page = "home";
+      render();
+      if (!state.onboard) {
+        onboardingStep = 0;
+        onboarding();
+      }
+      toast("Резервная копия восстановлена");
+    } catch (e) {
+      toast("Восстановление не выполнено: " + e.message);
+    } finally {
+      busy = false;
+    }
+  }
+  async function importFile(file) {
+    if (!file) return;
+    if (file.size > 160 * 1024 * 1024)
+      return toast("Файл слишком большой: максимум 160 МБ");
+    try {
+      const raw = await file.text(),
+        pack = JSON.parse(raw);
+      C.migrate(pack.state || pack);
+      pendingImport = raw;
+      confirmAction(
+        "Восстановить резервную копию?",
+        "Текущие записи и фото будут заменены содержимым файла. Перед этим экспортируй текущие данные.",
+        "restoreConfirm",
+        "",
+        "Восстановить",
+      );
+    } catch (e) {
+      toast("Файл не принят: " + e.message);
+    }
+  }
+  async function loadPhoto(file) {
+    if (!file || photoBusy) return;
+    if (!file.type.startsWith("image/")) return toast("Выбери изображение");
+    if (file.size > 30 * 1024 * 1024)
+      return toast("Фото должно быть меньше 30 МБ");
+    photoBusy = true;
+    try {
+      const url = URL.createObjectURL(file),
+        im = new Image();
+      try {
+        await new Promise((ok, no) => {
+          im.onload = ok;
+          im.onerror = () =>
+            no(
+              Error(
+                "Не удалось открыть изображение. Выбери JPEG, PNG или WebP",
+              ),
+            );
+          im.src = url;
+        });
+        const scale = Math.min(
+            1,
+            1400 / Math.max(im.naturalWidth, im.naturalHeight),
+          ),
+          canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(im.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(im.naturalHeight * scale));
+        canvas
+          .getContext("2d")
+          .drawImage(im, 0, 0, canvas.width, canvas.height);
+        const photo = {
+          id: C.uid(),
+          date: C.day(),
+          data: canvas.toDataURL("image/jpeg", 0.83),
+          note: "",
+        };
+        state = await S.putPhoto(state, photo);
+        photos = await S.photos();
+        page = "photos";
+        render();
+        toast("Момент сохранён");
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch (e) {
+      toast("Фото не сохранено: " + e.message);
+    } finally {
+      photoBusy = false;
+    }
+  }
+  function updateCompare() {
+    const f = $("sheet").querySelector("[name=compare-first]"),
+      l = $("sheet").querySelector("[name=compare-last]");
+    if (!f || !l) return;
+    $("compare-images").innerHTML = [f.value, l.value]
+      .map((id) => {
+        const p = photos.find((p) => p.id === id);
+        return `<div><img src="${p.data}" alt="Фото от ${shortDate(p.date)}"><small>${shortDate(p.date)}</small></div>`;
+      })
+      .join("");
+  }
+  document.addEventListener("click", (e) => {
+    LevelSound.start();
+    const el = e.target.closest("[data-action]");
+    if (el && !el.disabled) {
+      LevelSound.play("tap");
+      Promise.resolve(action(el.dataset.action, el)).catch((err) =>
+        toast(err.message),
+      );
+    }
+  });
+  document.addEventListener("submit", submit);
+  document.addEventListener("change", async (e) => {
+    const el = e.target;
+    if (el.closest("#profile")) previewEditor();
+    if (el.matches("[name^=compare-]")) updateCompare();
+    if (el.id === "finance-month" && /^\d{4}-(0[1-9]|1[0-2])$/.test(el.value)) {
+      financeMonth = el.value;
+      render();
+    }
+    if (el.dataset.setting) {
+      const key = el.dataset.setting,
+        val =
+          el.type === "checkbox"
+            ? el.checked
+            : el.type === "range"
+              ? Number(el.value)
+              : el.value;
+      await commit("settings", { [key]: val }, { silent: true });
+    }
+  });
+  $("photo-input").addEventListener("change", (e) => {
+    loadPhoto(e.target.files?.[0]);
+    e.target.value = "";
+  });
+  $("import-input").addEventListener("change", (e) => {
+    importFile(e.target.files?.[0]);
+    e.target.value = "";
+  });
+  $("modal").addEventListener("click", (e) => {
+    if (e.target === $("modal")) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if ($("modal").hidden) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeModal();
+    }
+    if (e.key === "Tab") {
+      const nodes = [
+        ...$("sheet").querySelectorAll(
+          "button:not(:disabled),input:not([type=hidden]),select,textarea,a[href]",
+        ),
+      ].filter((n) => n.offsetParent !== null);
+      if (!nodes.length) return;
+      if (
+        e.shiftKey &&
+        (document.activeElement === nodes[0] ||
+          document.activeElement === $("sheet"))
+      ) {
+        e.preventDefault();
+        nodes.at(-1).focus();
+      } else if (
+        !e.shiftKey &&
+        (document.activeElement === nodes.at(-1) ||
+          document.activeElement === $("sheet"))
+      ) {
+        e.preventDefault();
+        nodes[0].focus();
+      }
+    }
+  });
+  window.LevelBack = () => {
+    if (!$("modal").hidden) {
+      closeModal();
+      return true;
+    }
+    if (page !== "home") {
+      go("home");
+      return true;
+    }
+    return false;
+  };
+  window.LevelNativeStatus = (msg) => toast(msg);
+  async function refresh() {
+    if (!state || busy || photoBusy) return;
+    try {
+      const next = await S.read();
+      if (next.revision !== state.revision) {
+        state = next;
+        photos = await S.photos();
+        render();
+      }
+      if (C.day() !== lastDay) {
+        lastDay = C.day();
+        calendarDate = C.day();
+        render();
+      }
+    } catch (e) {
+      toast("Не удалось обновить данные: " + e.message);
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) LevelSound.pause();
+    else {
+      refresh();
+      LevelSound.start();
+    }
+  });
+  window.addEventListener("focus", refresh);
+  matchMedia("(prefers-color-scheme: light)").addEventListener(
+    "change",
+    () => state && theme(),
+  );
+  S.open()
+    .then(async (result) => {
+      state = result.state;
+      photos = await S.photos();
+      render();
+      if (!state.onboard) onboarding();
+      else if (result.migrated) toast("Записи из предыдущей версии перенесены");
+      navigator.storage?.persist?.().catch(() => {});
+    })
+    .catch((e) => {
+      $("app").innerHTML =
+        `<div class="fatal"><h1>Не удалось открыть записи</h1><p>${esc(e.message)}</p><p>Данные не были сброшены. Перезапусти приложение или освободи место на устройстве.</p><div class="stack">${button("Попробовать снова", "reload", "", "wide")}${button("Восстановить предыдущую запись", "recover", "", "wide secondary")}${button("Импорт резервной копии", "import", "", "wide secondary")}</div></div>`;
+    });
 })();

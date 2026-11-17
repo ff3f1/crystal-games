@@ -1,27 +1,84 @@
-window.LevelArt=(()=>{
-const paths={home:'<path d="m3 10 9-7 9 7v10H15v-7H9v7H3z"/>',quest:'<path d="m15 3 6 6M4 20l4-4m-4-5 9 9M7 14 18 3l3 3-11 11"/>',wallet:'<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M3 9V6l14-3v3m4 7h-6v4h6"/>',hero:'<circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',spark:'<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>',gem:'<path d="m7 3-5 7 10 12 10-12-5-7zM2 10h20M7 3l5 19 5-19"/>',arrow:'<path d="M5 12h14m-5-5 5 5-5 5"/>',plus:'<path d="M12 5v14M5 12h14"/>',check:'<path d="m5 12 4 4L19 6"/>',close:'<path d="m6 6 12 12M6 18 18 6"/>',settings:'<path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="4"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/>',activity:'<path d="M2 12h5l3-8 4 16 3-8h5"/>',heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>',book:'<path d="M12 5v16M3 3q5-1 9 2 4-3 9-2v16q-5-1-9 2-4-3-9-2z"/>',leaf:'<path d="M5 20 19 5M4 15C0 6 11 2 21 3c0 10-6 20-14 15"/>',camera:'<path d="M3 7h4l2-3h6l2 3h4v14H3z"/><circle cx="12" cy="13" r="4"/>',chart:'<path d="M3 3v18h18M7 16v-4m5 4V7m5 9v-7"/>',shield:'<path d="m12 2 9 4v7c0 5-9 9-9 9s-9-4-9-9V6z"/><path d="m8 12 3 3 5-6"/>',flame:'<path d="M12 2c2 7 8 7 8 13a8 8 0 0 1-16 0c0-3 2-5 4-7 0 4 2 4 2 4s4-3 2-10z"/>',compass:'<circle cx="12" cy="12" r="10"/><path d="m16 8-3 5-5 3 3-5z"/>',flag:'<path d="M5 22V3c6-4 8 4 15 0v11c-7 4-9-4-15 0"/>',moon:'<path d="M21 14A9 9 0 0 1 10 3a9 9 0 1 0 11 11z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',sound:'<path d="m3 9 5 0 5-5v16l-5-5H3zm13-2q6 5 0 10m3-13q9 8 0 16"/>',download:'<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>',upload:'<path d="M12 16V4m-4 4 4-4 4 4M4 16v5h16v-5"/>',trash:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',lock:'<rect x="5" y="10" width="14" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v3"/>',edit:'<path d="m15 4 5 5M4 15 16 3l5 5L9 20l-6 1z"/>',back:'<path d="m14 5-7 7 7 7"/>',food:'<path d="M4 2v7q0 4 3 4t3-4V2M7 2v20m13 0V2q-6 4-5 12h5"/>'};
-function icon(name,size=22){return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.spark}</svg>`}
-let counter=0;
-function avatar(p,level=1){const id='av'+counter++,w=p.body==='broad'?53:p.body==='slim'?36:44,skin=p.tone,hair=p.hair,color=LevelCore.OUTFITS.find(o=>o.id===p.outfit)?.color||'#8ddbc3',female=p.gender==='female',face=p.face==='round'?27:p.face==='angular'?22:24;
-return `<svg class="avatar" viewBox="0 0 240 410" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Персонаж ${String(p.name).replace(/[<>"&]/g,'')} в полный рост"><defs><linearGradient id="${id}cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${color}"/><stop offset="1" stop-color="#295260"/></linearGradient><linearGradient id="${id}skin" x1="0" y1="0" x2="1" y2="0"><stop stop-color="${skin}"/><stop offset="1" stop-color="${skin}" stop-opacity=".78"/></linearGradient><linearGradient id="${id}pants"><stop stop-color="#333d59"/><stop offset="1" stop-color="#20283c"/></linearGradient></defs>
+window.LevelArt = (() => {
+  const paths = {
+    home: '<path d="m3 10 9-7 9 7v10H15v-7H9v7H3z"/>',
+    quest: '<path d="m15 3 6 6M4 20l4-4m-4-5 9 9M7 14 18 3l3 3-11 11"/>',
+    wallet:
+      '<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M3 9V6l14-3v3m4 7h-6v4h6"/>',
+    hero: '<circle cx="12" cy="7" r="4"/><path d="M4 22v-3a8 8 0 0 1 16 0v3"/>',
+    grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+    spark: '<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>',
+    gem: '<path d="m7 3-5 7 10 12 10-12-5-7zM2 10h20M7 3l5 19 5-19"/>',
+    arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    check: '<path d="m5 12 4 4L19 6"/>',
+    close: '<path d="m6 6 12 12M6 18 18 6"/>',
+    settings:
+      '<path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/><circle cx="12" cy="12" r="4"/>',
+    calendar:
+      '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-13 5h2m4 0h2"/>',
+    activity: '<path d="M2 12h5l3-8 4 16 3-8h5"/>',
+    heart:
+      '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>',
+    book: '<path d="M12 5v16M3 3q5-1 9 2 4-3 9-2v16q-5-1-9 2-4-3-9-2z"/>',
+    leaf: '<path d="M5 20 19 5M4 15C0 6 11 2 21 3c0 10-6 20-14 15"/>',
+    camera:
+      '<path d="M3 7h4l2-3h6l2 3h4v14H3z"/><circle cx="12" cy="13" r="4"/>',
+    chart: '<path d="M3 3v18h18M7 16v-4m5 4V7m5 9v-7"/>',
+    shield:
+      '<path d="m12 2 9 4v7c0 5-9 9-9 9s-9-4-9-9V6z"/><path d="m8 12 3 3 5-6"/>',
+    flame:
+      '<path d="M12 2c2 7 8 7 8 13a8 8 0 0 1-16 0c0-3 2-5 4-7 0 4 2 4 2 4s4-3 2-10z"/>',
+    compass: '<circle cx="12" cy="12" r="10"/><path d="m16 8-3 5-5 3 3-5z"/>',
+    flag: '<path d="M5 22V3c6-4 8 4 15 0v11c-7 4-9-4-15 0"/>',
+    moon: '<path d="M21 14A9 9 0 0 1 10 3a9 9 0 1 0 11 11z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1"/>',
+    sound: '<path d="m3 9 5 0 5-5v16l-5-5H3zm13-2q6 5 0 10m3-13q9 8 0 16"/>',
+    download: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/>',
+    upload: '<path d="M12 16V4m-4 4 4-4 4 4M4 16v5h16v-5"/>',
+    trash: '<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
+    lock: '<rect x="5" y="10" width="14" height="12" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v3"/>',
+    edit: '<path d="m15 4 5 5M4 15 16 3l5 5L9 20l-6 1z"/>',
+    back: '<path d="m14 5-7 7 7 7"/>',
+    food: '<path d="M4 2v7q0 4 3 4t3-4V2M7 2v20m13 0V2q-6 4-5 12h5"/>',
+  };
+  function icon(name, size = 22) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
+  }
+  let counter = 0;
+  function avatar(p, level = 1) {
+    const id = "av" + counter++,
+      w = p.body === "broad" ? 53 : p.body === "slim" ? 36 : 44,
+      skin = p.tone,
+      hair = p.hair,
+      color =
+        LevelCore.OUTFITS.find((o) => o.id === p.outfit)?.color || "#8ddbc3",
+      female = p.gender === "female",
+      face = p.face === "round" ? 27 : p.face === "angular" ? 22 : 24;
+    return `<svg class="avatar" viewBox="0 0 240 410" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Персонаж ${String(p.name).replace(/[<>"&]/g, "")} в полный рост"><defs><linearGradient id="${id}cloth" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${color}"/><stop offset="1" stop-color="#295260"/></linearGradient><linearGradient id="${id}skin" x1="0" y1="0" x2="1" y2="0"><stop stop-color="${skin}"/><stop offset="1" stop-color="${skin}" stop-opacity=".78"/></linearGradient><linearGradient id="${id}pants"><stop stop-color="#333d59"/><stop offset="1" stop-color="#20283c"/></linearGradient></defs>
 <ellipse cx="120" cy="392" rx="65" ry="10" fill="#080d22" opacity=".3"/>
-${p.hairstyle==='long'?`<path d="M88 42q-12 0-14 47l-1 70q46 23 94-1l-1-72q0-48-31-52z" fill="${hair}"/>`:''}
-<path d="M${120-w+7} 237h${w-4}l-5 126-29 1-5-80-9-4zM123 237h${w-7}l-4 126h-29l-4-86-9-6z" fill="url(#${id}pants)"/>
+${p.outfit === "night" ? `<path d="M90 123q30-15 60 0l34 162q-64 24-128 0z" fill="#665b91" stroke="#a99ace" stroke-width="2"/><path d="M84 151 64 279m89-128 22 128" stroke="#8f81b4" stroke-width="3"/>` : ""}
+${p.outfit === "summit" ? `<rect x="${120 - w - 13}" y="129" width="${w * 2 + 26}" height="96" rx="18" fill="#bd9568" stroke="#e0be92" stroke-width="3"/>` : ""}
+${p.hairstyle === "long" ? `<path d="M88 42q-12 0-14 47l-1 70q46 23 94-1l-1-72q0-48-31-52z" fill="${hair}"/>` : ""}
+<path d="M${120 - w + 7} 237h${w - 4}l-5 126-29 1-5-80-9-4zM123 237h${w - 7}l-4 126h-29l-4-86-9-6z" fill="url(#${id}pants)"/>
 <path d="M83 352h32v26q-3 8-39 7l-6-4q0-12 13-15zM128 352h30v16q16 1 17 14l-4 4h-41z" fill="#182134"/><path d="M73 380h40m18 1h41" stroke="#718393" stroke-width="3" stroke-linecap="round"/><path d="M87 357h23m23 0h20" stroke="#b8b4a3" stroke-width="4"/>
-<path d="M${120-w+4} 130q-19 1-25 23l-15 82 19 7 24-76M${120+w-4} 130q19 1 25 23l15 82-19 7-24-76" fill="url(#${id}cloth)" stroke="#244654" stroke-width="1.5"/>
-<path d="M${120-w-20} 228l19 5-2 19q-3 16-15 10-8-4-5-14zM${120+w+1} 233l19-5 3 21q4 13-7 15-12 1-14-13z" fill="url(#${id}skin)"/>
-<path d="M${120-w+4} 133Q100 118 120 120q20-2 ${w-4} 13l${female?-5:2} 104q-42 15-${w*2-6} 0z" fill="url(#${id}cloth)" stroke="#365865" stroke-width="1.5"/>
+<path d="M${120 - w + 4} 130q-19 1-25 23l-15 82 19 7 24-76M${120 + w - 4} 130q19 1 25 23l15 82-19 7-24-76" fill="url(#${id}cloth)" stroke="#244654" stroke-width="1.5"/>
+<path d="M${120 - w - 20} 228l19 5-2 19q-3 16-15 10-8-4-5-14zM${120 + w + 1} 233l19-5 3 21q4 13-7 15-12 1-14-13z" fill="url(#${id}skin)"/>
+<path d="M${120 - w + 4} 133Q100 118 120 120q20-2 ${w - 4} 13l${female ? -5 : 2} 104q-42 15-${w * 2 - 6} 0z" fill="url(#${id}cloth)" stroke="#365865" stroke-width="1.5"/>
+${p.outfit === "sunset" ? `<path d="M101 118q-15-3-18 10 13 29 37 23 27 4 39-23-3-13-20-10" fill="#bf805d" stroke="#e5b98c" stroke-width="3"/><path d="M98 209q22-10 44 0l-1 15H99z" fill="#c58e6b"/><path d="M110 142v25m20-25v25" stroke="#efddbb" stroke-width="2"/>` : ""}
+${p.outfit === "summit" ? `<path d="M${130 - w} 139l11 83m${w * 2 - 42}-83-11 83" stroke="#b99672" stroke-width="8"/><path d="M${131 - w} 178h${w * 2 - 22}" stroke="#d9bb93" stroke-width="5"/>` : ""}
 <path d="M108 106h24v30l-12 12-12-12z" fill="${skin}"/><path d="m107 125 13 20-12 15-13-29m38-6-13 20 12 15 13-29" fill="${color}"/>
-<path d="M120 147v94" stroke="#d4e7d2" stroke-width="2" opacity=".65"/><path d="m${128-w} 181 21 7-3 20-19-7m${w*2-38} -20-21 7 3 20 19-7" fill="none" stroke="#d0e3d7" opacity=".4" stroke-width="2"/>
-<path d="M${123-w} 237q${w-3} 8 ${w*2-6} 0" stroke="#263143" stroke-width="10"/><rect x="112" y="234" width="16" height="10" rx="2" stroke="#e5c08a" stroke-width="3" fill="#5c4e43"/>
-<path d="m${120-w+8} 140 13 10-5 7-14-8" fill="#cfb175"/><circle cx="${120-w+14}" cy="150" r="3" fill="#fbdfaa"/>
-<ellipse cx="${120-face-2}" cy="80" rx="6" ry="10" fill="${skin}"/><ellipse cx="${120+face+2}" cy="80" rx="6" ry="10" fill="${skin}"/>
-<path d="M${120-face} 61q1-28 ${face} -29 ${face-1} 1 ${face} 29v28q-2 26-${face} 29-${face-3}-3-${face}-29z" fill="url(#${id}skin)"/>
+<path d="M120 147v94" stroke="#d4e7d2" stroke-width="2" opacity=".65"/><path d="m${128 - w} 181 21 7-3 20-19-7m${w * 2 - 38} -20-21 7 3 20 19-7" fill="none" stroke="#d0e3d7" opacity=".4" stroke-width="2"/>
+<path d="M${123 - w} 237q${w - 3} 8 ${w * 2 - 6} 0" stroke="#263143" stroke-width="10"/><rect x="112" y="234" width="16" height="10" rx="2" stroke="#e5c08a" stroke-width="3" fill="#5c4e43"/>
+<path d="m${120 - w + 8} 140 13 10-5 7-14-8" fill="#cfb175"/><circle cx="${120 - w + 14}" cy="150" r="3" fill="#fbdfaa"/>
+<ellipse cx="${120 - face - 2}" cy="80" rx="6" ry="10" fill="${skin}"/><ellipse cx="${120 + face + 2}" cy="80" rx="6" ry="10" fill="${skin}"/>
+<path d="M${120 - face} 61q1-28 ${face} -29 ${face - 1} 1 ${face} 29v28q-2 26-${face} 29-${face - 3}-3-${face}-29z" fill="url(#${id}skin)"/>
 <path d="M${106} 75q5-3 10 0m9 0q5-3 10 0" fill="none" stroke="${hair}" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="110" cy="82" rx="2.3" ry="3.1" fill="#292b36"/><ellipse cx="130" cy="82" rx="2.3" ry="3.1" fill="#292b36"/><circle cx="110.7" cy="81" r=".7" fill="white"/><circle cx="130.7" cy="81" r=".7" fill="white"/>
 <path d="m120 84-2 10h4m-9 7q7 5 14 0" fill="none" stroke="#885c50" stroke-width="1.6" stroke-linecap="round"/>
-${female?'<path d="m105 81-3-2m32 2 3-2" stroke="#292b36" stroke-width="1.4"/>':''}
-${p.hairstyle==='bald'?'':p.hairstyle==='crop'?`<path d="M94 67q-6-38 26-39 32 1 26 39l-8-17q-20-9-35 0z" fill="${hair}"/>`:p.hairstyle==='curls'?`<path d="M91 76q-11-18-2-27-1-16 12-17 8-15 21-6 14-8 23 5 16 2 13 16 10 13-6 29l-7-19q-9 3-14-6-11 9-18 0-7 10-16 7z" fill="${hair}"/>`:p.hairstyle==='long'?`<path d="M90 76q-9-44 26-49 44 0 35 55l-9-23q-18-5-19-16-1 14-27 19z" fill="${hair}"/>`:`<path d="M94 79q-15-22-3-42 9-17 27-12 20-9 34 2-8 3-4 12 10 15-4 37l-3-23q-10 3-17-7-8 16-26 13z" fill="${hair}"/>`}
-${p.accessory==='glasses'?'<g stroke="#373e51" stroke-width="2" fill="none"><rect x="99" y="77" width="17" height="12" rx="4"/><rect x="124" y="77" width="17" height="12" rx="4"/><path d="M116 81h8m-29-1h4m42 0h5"/></g>':p.accessory==='earring'?'<circle cx="149" cy="90" r="4" fill="none" stroke="#f2d69c" stroke-width="2.5"/>':p.accessory==='scarf'?'<path d="M102 117q18 12 36 0l3 15q-20 13-40 0zM128 135l12-1 5 47-14 2z" fill="#ddaa80"/>':''}
-${level>=3?'<path d="m161 148 7 10-7 10-7-10z" fill="#bba1f1" stroke="#eddbff"/>':''}
-</svg>`}
-return {icon,avatar};})();
+${female ? '<path d="m105 81-3-2m32 2 3-2" stroke="#292b36" stroke-width="1.4"/>' : ""}
+${p.hairstyle === "bald" ? "" : p.hairstyle === "crop" ? `<path d="M94 67q-6-38 26-39 32 1 26 39l-8-17q-20-9-35 0z" fill="${hair}"/>` : p.hairstyle === "curls" ? `<path d="M91 76q-11-18-2-27-1-16 12-17 8-15 21-6 14-8 23 5 16 2 13 16 10 13-6 29l-7-19q-9 3-14-6-11 9-18 0-7 10-16 7z" fill="${hair}"/>` : p.hairstyle === "long" ? `<path d="M90 76q-9-44 26-49 44 0 35 55l-9-23q-18-5-19-16-1 14-27 19z" fill="${hair}"/>` : `<path d="M94 79q-15-22-3-42 9-17 27-12 20-9 34 2-8 3-4 12 10 15-4 37l-3-23q-10 3-17-7-8 16-26 13z" fill="${hair}"/>`}
+${p.accessory === "glasses" ? '<g stroke="#373e51" stroke-width="2" fill="none"><rect x="99" y="77" width="17" height="12" rx="4"/><rect x="124" y="77" width="17" height="12" rx="4"/><path d="M116 81h8m-29-1h4m42 0h5"/></g>' : p.accessory === "earring" ? '<circle cx="149" cy="90" r="4" fill="none" stroke="#f2d69c" stroke-width="2.5"/>' : p.accessory === "scarf" ? '<path d="M102 117q18 12 36 0l3 15q-20 13-40 0zM128 135l12-1 5 47-14 2z" fill="#ddaa80"/>' : ""}
+${level >= 3 ? '<path d="m161 148 7 10-7 10-7-10z" fill="#bba1f1" stroke="#eddbff"/>' : ""}
+</svg>`;
+  }
+  return { icon, avatar };
+})();
