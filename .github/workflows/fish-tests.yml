@@ -44,7 +44,7 @@ jobs:
           mkdir -p test-output
           node tests/test_fish_input.js
           node tests/test_fish_mechanics.js
-          node --test tests/fight-reaction.test.cjs tests/strike-reaction.test.cjs tests/spots.test.cjs tests/spin-detail.test.cjs
+          node --test tests/fight-reaction.test.cjs tests/strike-reaction.test.cjs tests/spots.test.cjs tests/spin-detail.test.cjs tests/tutorial-landing.test.cjs
           python tests/validate_fish_art.py
           python tests/test_rod_art.py
           python tests/test_fish.py test-output

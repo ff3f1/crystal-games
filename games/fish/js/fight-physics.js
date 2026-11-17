@@ -201,7 +201,12 @@
     const slipping = excess > 0.01;
     const slipSpeed = slipping ? clamp(0.24 + excess / maximum * 3.2, 0, 4.2) : 0;
     if (slipping) f.T = dragLim + excess * 0.18;
-    const reelSp = rod.reel * (1 - 0.52 * clamp(fishPull / maximum, 0, 1)) * (opts.tutorial ? 1.35 : 1);
+    // Beginner landing assist: once the tutorial fish is exhausted, reeling
+    // should bring it to the net in a reasonable time. Smoothly scale only
+    // the retrieval speed; never override line tension or drag/slipping.
+    const tired = clamp((0.34 - (f.S == null ? 1 : f.S)) / 0.26, 0, 1);
+    const teachingReel = opts.tutorial ? 1.35 + 1.45 * (tired * tired * (3 - 2 * tired)) : 1;
+    const reelSp = rod.reel * (1 - 0.52 * clamp(fishPull / maximum, 0, 1)) * teachingReel;
     const intake = reeling && !slipping ? Math.max(0, reelSp) : 0;
     return { slipping, slipSpeed, intake, excess, tension: f.T };
   };
