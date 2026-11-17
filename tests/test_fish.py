@@ -44,6 +44,13 @@ with sync_playwright() as p:
         pg.wait_for_timeout(200)
 
     check("поклёвка", pg.evaluate("__game.G.rig().state") == "bite")
+    # The new reaction mechanic requires the visible, well-seated take. Merely
+    # entering the 'take' phase is deliberately too early for a reliable hook.
+    pg.wait_for_function("""() => {
+      const G=__game.G,r=G.rig(),b=r.bite;
+      return r.state==='bite' && b && b.phase==='take' &&
+        FZ.FightPhysics.strikeChance(b,G.sess().mode,G.gear(G.sess().mode).hook,G.state().tut<3).chance>=.999;
+    }""",timeout=6000)
     pg.mouse.move(195, 640); pg.mouse.down(); pg.mouse.move(195, 540); pg.mouse.up()  # свайп вверх
     pg.wait_for_timeout(200)
     check("подсечка → вываживание", pg.evaluate("__game.G.rig().state") == "fight")
