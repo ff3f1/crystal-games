@@ -20,13 +20,14 @@ try:
     tap(540,1100)    # На рыбалку
     second=shot('02-fishing')
     tap(82,82)       # Меню
+    third=shot('03-menu-return')
     tap(210,1300)    # Водоёмы
-    third=shot('03-waters')
-    assert len({first,second,third})==3,'Taps did not change the visible screen'
+    fourth=shot('04-waters')
+    assert len({first,second,third,fourth})>=3,'Taps did not change the visible screen'
     assert adb('shell','pidof','ru.crystalgames.fishing').strip()
     logs=adb('logcat','-d','-s','AndroidRuntime:E','chromium:V')
     assert 'FATAL EXCEPTION' not in logs and 'Uncaught TypeError' not in logs
-    print('PASS: Android 15, in-place upgrade from 1.0.10, taps changed screens; app network blocked')
+    print('PASS: Android 15 in-place upgrade; taps changed screens, app network blocked; inspect screenshots')
 finally:
     try:(OUT/'android35.log').write_text(adb('logcat','-d','-s','AndroidRuntime:E','chromium:V','WebViewFactory:V'))
     except Exception as exc:print('Diagnostic capture failed:',exc)
