@@ -929,8 +929,9 @@
   };
 
   // ---------- Мировые эффекты (кольца, пузыри, всплески) ----------
-  R.ring = function (X, Z, size, life) { R.rings.push({ X, Z, r: 0, size: size || 0.6, life: life || 1.6, age: 0 }); };
+  R.ring = function (X, Z, size, life) { if (FZ.WaterFX) return FZ.WaterFX.ring(X, Z, size, life); R.rings.push({ X, Z, r: 0, size: size || 0.6, life: life || 1.6, age: 0 }); };
   R.splash = function (X, Z, power, col) {
+    if (FZ.WaterFX) return FZ.WaterFX.splash(X, Z, power);
     const p = R.proj(X, Z);
     const n = Math.round(8 + power * 18);
     for (let i = 0; i < n; i++) {
@@ -940,7 +941,7 @@
     }
     R.ring(X, Z, 0.5 + power, 1.8); R.ring(X, Z, 0.25 + power * 0.6, 1.3);
   };
-  R.bubbles = function (X, Z, n) { for (let i = 0; i < n; i++) R.fx.push({ type: "bub", X: X + (Math.random() - 0.5) * 0.8, Z: Z + (Math.random() - 0.5) * 0.8, age: -Math.random() * 1.5, life: 0.7 }); };
+  R.bubbles = function (X, Z, n) { if (FZ.WaterFX) return FZ.WaterFX.bubbles(X, Z, n); for (let i = 0; i < n; i++) R.fx.push({ type: "bub", X: X + (Math.random() - 0.5) * 0.8, Z: Z + (Math.random() - 0.5) * 0.8, age: -Math.random() * 1.5, life: 0.7 }); };
   R.chips = function (x, y, n) { for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6, sp = 60 + Math.random() * 160; R.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.6 + Math.random() * 0.4, age: 0, r: 1.5 + Math.random() * 2.5, col: "rgba(240,248,255,0.95)", g: 500, floor: y + 30 }); } };
   R.distantJump = function () {
     const Z = 15 + Math.random() * (farZ * 0.7), X = (Math.random() - 0.5) * 1.6 * R.maxLat(Z);
@@ -950,6 +951,7 @@
   // Stateless signs: both renderers draw precisely the same live spots.
   // No random particle backlog can imply feeding after the bonus has expired.
   R.drawActivity = function (g, v) {
+    if (FZ.WaterFX) return FZ.WaterFX.activity(g, v, R.proj);
     if (v.ice) return;
     g.save(); g.lineWidth = 1.3;
     for (const sp of (v.spots || [])) {
@@ -1029,6 +1031,7 @@
     const lineCol = U.rgba(U.mix("#ffffff", "#8090b0", L.dark), 0.6);
     // пятна активности рыбы (пузыри / бой хищника)
     R.drawActivity(ctx, v);
+    if (FZ.WaterFX) FZ.WaterFX.draw(ctx, v, dt, R.proj);
     if (v.fedSpot && !v.ice) {
       const q = R.proj(v.fedSpot.X, v.fedSpot.Z);
       ctx.strokeStyle = "rgba(255,210,120," + (0.12 + 0.25 * v.fedSpot.level) + ")"; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.2;
@@ -1356,7 +1359,7 @@
   };
 
   R.shake = function (a) { R.shakeA = Math.max(R.shakeA, a); };
-  R.clearFx = function () { R.fx.length = 0; R.rings.length = 0; R.parts.length = 0; R.jumps.length = 0; };
+  R.clearFx = function () { if (FZ.WaterFX) FZ.WaterFX.clear(); R.fx.length = 0; R.rings.length = 0; R.parts.length = 0; R.jumps.length = 0; };
 
   // Снимок сцены (для карточки трофея)
   R.snapshot = function () { return cv; };

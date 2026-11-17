@@ -7,7 +7,7 @@
   const previous={init:R.init,resize:R.resize,setQuality:R.setQuality,render:R.render,drawAim:R.drawAim};
   let renderer,scene,camera,W=390,H=844,quality='hi',enabled=false,canvas,legacy;
   let detailCanvas,detailContext;
-  function drawDetails(v) {
+  function drawDetails(v,dt) {
     if(!detailCanvas){
       detailCanvas=document.createElement('canvas');detailContext=detailCanvas.getContext('2d');
       detailCanvas.setAttribute('aria-hidden','true');
@@ -23,6 +23,7 @@
     detailCanvas.style.visibility=contextLost?'hidden':'visible';
     if(contextLost||(FZ.UI&&FZ.UI.anyOpen()))return;
     R.drawActivity(detailContext,v);
+    if(FZ.WaterFX)FZ.WaterFX.draw(detailContext,v,dt,R.proj);
     R.drawLureInset(detailContext,v,W,H);
   }
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
@@ -388,7 +389,7 @@
     tackle(v,dt);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
     renderer.render(scene,camera);R.metrics={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio()};
-    drawDetails(v);
+    drawDetails(v,dt);
   };
   R.drawAim=function(v,a){if(!enabled)return previous.drawAim.call(R,v,a);const p=R.proj(a.X,a.Z);aimMesh.visible=true;aimMesh.position.copy(V(p.x,p.y,20));renderer.render(scene,camera);};
   const oldClear=R.clearFx;
