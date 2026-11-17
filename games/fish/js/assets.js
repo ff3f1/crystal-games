@@ -74,7 +74,14 @@
   A.setStyle = function () { A.style = "paint"; A.version++; };
   const on = () => true;
   A.get = (k) => A.img[k] || null;
-  A.backdropKey=(loc,season)=>season!=="winter" && M.images["base/"+loc]?"base/"+loc:"bg/"+loc+"_"+season;
+  // Open-water winter coasts must keep a real water-bearing panorama.
+  // Several old winter coastal photos depict buildings/dry land instead of
+  // water; sampling their lower half as a river would turn ground into waves.
+  A.backdropKey=(loc,season)=>{
+    const coast=!!(FZ.LOC && FZ.LOC[loc] && FZ.LOC[loc].style==="coast");
+    return (season!=="winter" || coast) && M.images["base/"+loc]
+      ? "base/"+loc : "bg/"+loc+"_"+season;
+  };
   A.bg=function(loc,season) {
     const key=A.backdropKey(loc,season);
     const im=A.img[key];
