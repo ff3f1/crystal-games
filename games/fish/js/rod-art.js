@@ -4,8 +4,8 @@
  "use strict";
  const C={
    float:{tipX:70,baseX:1240,axisY:145,reelX:1137,reelY:215},
-   feeder:{tipX:70,baseX:1240,axisY:145,reelX:1137,reelY:215},
-   spin:{tipX:70,baseX:1240,axisY:145,reelX:1137,reelY:215},
+   feeder:{tipX:55,baseX:818,axisY:130,reelX:562,reelY:196,hd:true},
+   spin:{tipX:57,baseX:836,axisY:132,reelX:567,reelY:208,hd:true},
    ice:{tipX:505,baseX:1240,axisY:145,reelX:1088,reelY:189}
  };
  const modes=Object.keys(C), images={};
@@ -13,7 +13,7 @@
    if(!C[mode])mode="float";
    if(images[mode])return images[mode];
    const img=new Image();images[mode]=img;
-   img.src="assets/equipment/complete/"+mode+".svg";
+   img.src=C[mode].hd?"assets/equipment/complete-hd/"+mode+".webp":"assets/equipment/complete/"+mode+".svg";
    return img;
  }
  function layout(mode,base,tip){
@@ -31,7 +31,7 @@
    ctx.translate(base.x,base.y);ctx.rotate(p.angle);ctx.scale(p.scale,p.scale);
    ctx.drawImage(im,-c.baseX,-c.axisY,1440,300);
    ctx.save();ctx.translate(c.reelX-c.baseX,c.reelY-c.axisY);
-   mechanism(ctx,mode,reelAngle||0,0);
+   if(!c.hd)mechanism(ctx,mode,reelAngle||0,0);
    ctx.restore();ctx.restore();
    return true;
  }
@@ -84,5 +84,5 @@
  }
 
  modes.forEach(load);
- FZ.RodArt={modes,info:m=>C[m]||C.float,image:load,layout,draw,mechanism,landingPose};
+ FZ.RodArt={modes,info:m=>C[m]||C.float,hd:m=>!!(C[m]&&C[m].hd),image:load,layout,draw,mechanism,landingPose};
 })(window.FZ);
