@@ -6,6 +6,25 @@
   if(!T)return;
   const previous={init:R.init,resize:R.resize,setQuality:R.setQuality,render:R.render,drawAim:R.drawAim};
   let renderer,scene,camera,W=390,H=844,quality='hi',enabled=false,canvas,legacy;
+  let detailCanvas,detailContext;
+  function drawDetails(v) {
+    if(!detailCanvas){
+      detailCanvas=document.createElement('canvas');detailContext=detailCanvas.getContext('2d');
+      detailCanvas.setAttribute('aria-hidden','true');
+      Object.assign(detailCanvas.style,{position:'fixed',left:'0',top:'0',pointerEvents:'none',zIndex:getComputedStyle(canvas).zIndex==='auto'?'0':getComputedStyle(canvas).zIndex});
+      canvas.parentNode.insertBefore(detailCanvas,canvas.nextSibling);
+    }
+    const ratio=Math.min(devicePixelRatio||1,1.5);
+    const width=Math.round(W*ratio),height=Math.round(H*ratio);
+    if(detailCanvas.width!==width||detailCanvas.height!==height){
+      detailCanvas.width=width;detailCanvas.height=height;detailCanvas.style.width=W+'px';detailCanvas.style.height=H+'px';
+    }
+    detailContext.setTransform(ratio,0,0,ratio,0,0);detailContext.clearRect(0,0,W,H);
+    detailCanvas.style.visibility=contextLost?'hidden':'visible';
+    if(contextLost||(FZ.UI&&FZ.UI.anyOpen()))return;
+    R.drawActivity(detailContext,v);
+    R.drawLureInset(detailContext,v,W,H);
+  }
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
@@ -353,7 +372,7 @@
   const oldSplash=R.splash;
   R.splash=function(X,Z,k){if(!enabled)return oldSplash.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));for(let i=0;i<3;i++)addRipple(p.x/W+(i-1)*.007,p.y/H,uniforms.clock.value+i*.09,(k||1)*(1-i*.2));R.shakeA=Math.max(R.shakeA,(k||1)*2);};
   R.render=function(v,dt){
-    if(!enabled)return previous.render.call(R,v,dt);if(contextLost)return;
+    if(!enabled)return previous.render.call(R,v,dt);if(contextLost){if(detailCanvas)detailCanvas.style.visibility='hidden';return;}
     R.fx.length=0;R.parts.length=0;R.jumps.length=0;R.rings.length=0;
     if(R.size().shoreY/H!==uniforms.shore.value)R.resize();if(v.loc.zfar!==R._glFar){R.setFar(v.loc.zfar);R._glFar=v.loc.zfar;}
     const L=R.light(v.hour,v.season);R.lastLight=L;loadBackdrop(v);
@@ -369,12 +388,13 @@
     tackle(v,dt);aimMesh.visible=false;
     if(R.shakeA>.05){camera.position.x=Math.sin(v.t*57)*R.shakeA;camera.position.y=Math.cos(v.t*49)*R.shakeA*.5;R.shakeA*=Math.pow(.015,dt);}else{camera.position.x=0;camera.position.y=0;}
     renderer.render(scene,camera);R.metrics={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,textures:renderer.info.memory.textures,geometries:renderer.info.memory.geometries,pixelRatio:renderer.getPixelRatio()};
+    drawDetails(v);
   };
   R.drawAim=function(v,a){if(!enabled)return previous.drawAim.call(R,v,a);const p=R.proj(a.X,a.Z);aimMesh.visible=true;aimMesh.position.copy(V(p.x,p.y,20));renderer.render(scene,camera);};
   const oldClear=R.clearFx;
-  R.clearFx=function(){oldClear();rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;};
+  R.clearFx=function(){oldClear();rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;if(detailContext)detailContext.clearRect(0,0,W,H);};
   const oldSnapshot=R.snapshot;
-  R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;c.getContext('2d').drawImage(canvas,0,0);return c;};
+  R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const g=c.getContext('2d');g.drawImage(canvas,0,0);if(detailCanvas&&detailCanvas.style.visibility!=='hidden')g.drawImage(detailCanvas,0,0,c.width,c.height);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
     hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value,drilling:uniforms.drillProgress.value}:null,
     reelCrankAngle:enabled&&reelCrank?(FZ.Game.rig().rod.reelAngle||0):null,landing:landingMetrics,tackle:tackleMetrics});

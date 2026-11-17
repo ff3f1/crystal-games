@@ -323,6 +323,7 @@
     rig.flyDur = (0.38 + 0.12 * Math.sqrt(a.Z)) * (sess.mode === "feeder" ? 1.10 : sess.mode === "spin" ? 0.94 : 1);
     rig.rod.jerk = 0.42;
     rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.lureDepth=null;rig.lureSpeed=0;rig.twitch=0;
+    rig.reelStreak=0;rig.wasReeling=false;rig.pauseQualified=false;rig.stepMemory=0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
     if (sess.mode === "feeder" && (st.inv.gb || 0) > 0) { st.inv.gb--; feedSpot(rig.X, rig.Z, 0.22); }
@@ -388,8 +389,79 @@
   const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1, brooktrout: 1 };
   const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1, palia: 1, nase: 1, sterlet: 1 };
   const RARF = [1, 1, 0.85, 0.6, 0.35, 0.18];
+  // Surface signs describe feeding fish, not a reward table. Bottom-only
+  // predators cannot create surface hunts; bubbles come from bottom feeding.
+  G.spotActivity = function (s, X, Z) {
+    const d = sess.loc.depth;
+    const deep = U.clamp((G.depthAt(X, Z) - d[0]) / Math.max(.1, d[1] - d[0]), 0, 1);
+    const edge = U.clamp(Math.abs(X) / Math.max(.1, FZ.Scene.maxLat(Z)), 0, 1);
+    const habitat = DEEP_FISH[s.id] ? .4 + .6 * deep : EDGE_FISH[s.id] ? .4 + .35 * (1 - deep) + .25 * edge : .8;
+    const feeding = s.depth[s.kind === "pred" ? "top" : "bottom"] || 0;
+    const current = s.kind === "peace" ? 1 / (1 + 1.5 * (sess.loc.current || 0)) : 1;
+    return Math.max(0, (s.time[sess.period] || 0) * (s.season[sess.season] || 0) *
+      (sess.wx[s.kind] == null ? 1 : sess.wx[s.kind]) * feeding * habitat * current);
+  };
+  G.spotBonus = function (s, sp, X, Z) {
+    if (sess.ice || !sp.fish || !(sp.fish[s.id] > 0) || sp.life <= 0 ||
+        (sp.type === "boil" ? "pred" : "peace") !== s.kind) return 1;
+    const distance = Math.hypot(X - sp.X, Z - sp.Z) / sp.radius;
+    if (distance >= 1) return 1;
+    // Smooth compact support: no discontinuity at the radius, no stacking.
+    const k = 1 - U.clamp(distance, 0, 1);
+    return 1 + (s.kind === "pred" ? 1.6 : 1) * sp.intensity *
+      U.clamp(sp.fish[s.id] / sp.peak, 0, 1) * k * k * (3 - 2 * k);
+  };
+  function spawnSpot() {
+    if (sess.ice || sess.spots.length >= 2) return;
+    const population = Object.entries(sess.loc.fish);
+    const total = population.reduce((sum, entry) => sum + entry[1], 0);
+    const far = Math.min(G.maxCast(), sess.loc.zfar - 8);
+    if (total <= 0 || far < 7) return;
+    const candidates = [];
+    for (let i = 0; i < 6; i++) {
+      const Z = U.rand.range(6, far), X = U.rand.range(-.65, .65) * FZ.Scene.maxLat(Z);
+      if (sess.spots.some(sp => Math.hypot(sp.X - X, sp.Z - Z) < sp.radius * 1.5)) continue;
+      for (const kind of ["peace", "pred"]) {
+        const fish = {}; let weight = 0, peak = 0;
+        for (const [id, abundance] of population) {
+          const s = FZ.SP[id];
+          if (!s || s.kind !== kind || abundance <= 0) continue;
+          const activity = G.spotActivity(s, X, Z);
+          if (activity <= 0) continue;
+          fish[id] = activity; peak = Math.max(peak, activity);
+          weight += abundance / total * activity;
+        }
+        if (weight > 0) candidates.push({ X, Z, type: kind === "pred" ? "boil" : "bubbles", fish, weight, peak });
+      }
+    }
+    const weight = candidates.reduce((sum, c) => sum + c.weight, 0);
+    if (!weight || U.rand() >= 1 - Math.exp(-weight / 6 * 2)) return;
+    let pick = U.rand() * weight;
+    const chosen = candidates.find(c => (pick -= c.weight) <= 0) || candidates[candidates.length - 1];
+    const duration = U.rand.range(28, 38);
+    sess.spots.push({ ...chosen, radius: 4.5, born: sess.t, duration, life: duration, intensity: 0 });
+  }
+  function updateSpots(dt) {
+    // Absolute simulation age avoids accumulating lifespan drift with FPS.
+    for (const sp of sess.spots) {
+      const age = sess.t - sp.born;
+      sp.life = Math.max(0, sp.duration - age);
+      let active = 0;
+      for (const id of Object.keys(sp.fish)) {
+        const s = FZ.SP[id];
+        active += (sess.loc.fish[id] || 0) * Math.min(sp.fish[id], G.spotActivity(s, sp.X, sp.Z));
+      }
+      const total = Object.values(sess.loc.fish).reduce((sum, n) => sum + n, 0);
+      const fade = Math.min(U.clamp(age / 2, 0, 1), U.clamp(sp.life / 5, 0, 1));
+      sp.intensity = fade * U.clamp(active / Math.max(.001, total * sp.weight), 0, 1);
+    }
+    sess.spots = sess.spots.filter(sp => sp.life > 0);
+    sess.nextSpot -= dt;
+    if (sess.nextSpot <= 0) { sess.nextSpot += U.rand.range(6, 14); spawnSpot(); }
+  }
   G.biteTable = function () {
     const g = G.gear(sess.mode), loc = sess.loc, wx = sess.wx;
+    if (!g.bait || g.bait.m.indexOf(sess.mode) < 0) return [];
     const bait = g.bait ? g.bait.id : null;
     const zone = zoneNow();
     const lat = FZ.Scene.maxLat(rig.Z);
@@ -415,14 +487,14 @@
         if (sess.fedSpot && Math.hypot(sess.fedSpot.X - rig.X, sess.fedSpot.Z - rig.Z) < 4) m *= 1 + sess.fedSpot.level;
         if (sess.gbUntil > sess.t) m *= 1.35;
       }
-      sess.spots.forEach(function (sp) {
-        if (Math.hypot(sp.X - rig.X, sp.Z - rig.Z) < 3) { if (sp.type === "bubbles" && s.kind === "peace") m *= 2; if (sp.type === "boil" && s.kind === "pred") m *= 2.6; }
-      });
+      let spotBonus = 1;
+      sess.spots.forEach(sp => { spotBonus = Math.max(spotBonus, G.spotBonus(s, sp, rig.X, rig.Z)); });
+      m *= spotBonus;
       if (sess.ice) {
         m *= sess.hole ? sess.hole.fish : 1;
         m *= FZ.FightPhysics.iceAttraction(s, rig.jig, rig.jigPause);
       }
-      if (sess.mode === "spin") { m *= (rig.lureAttraction || 1) * (rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1); }
+      if (sess.mode === "spin") m *= G.retrieveBonus(s);
       if (sess.mode === "float" && sess.wx.wind >= 8) m *= 0.8;
       m *= RARF[s.rar];
       // Mild activity pressure prevents long empty spells, but never forces
@@ -447,6 +519,9 @@
     const pattern = FZ.FightPhysics.bitePattern(s, sess.mode, w);
     const g = G.gear(sess.mode);
     let take = pattern.take * (g.rod ? g.rod.sens : 1) * (sess.period === "night" ? 0.97 : 1);
+    // Preserve sensitivity/night modifiers without making a touch-screen
+    // window vanish on basic gear. Lay needs time for the float to turn over.
+    take = Math.max(pattern.style === "lay" ? 1.25 : 0.95, take);
     if (st.tut < 3) take *= 2.2;
     rig.bite = {
       s, w, style: pattern.style, power: pattern.power, cadence: pattern.cadence,
@@ -475,8 +550,16 @@
       }
       if (b.touchAnim > 0) b.touchAnim -= dt;
     } else if (b.phase === "take") {
-      // A clear sustained retrieve can set the hook; avoid opaque RNG misses.
-      if (sess.mode === "spin" && rig.reeling && b.t > 0.24) { hook(b.s, b.w); emit("msg", { text: "Самозасечка на проводке!" }); return; }
+      // Sustained line pull seats a spinner's hook. Releasing resets the pull;
+      // the bite's age alone must not auto-hook on a one-frame reel tap.
+      if (sess.mode === "spin") {
+        const physics = FZ.FightPhysics;
+        const before = physics.biteSignal(b, sess.mode, Math.max(0, b.t - dt));
+        const now = physics.biteSignal(b, sess.mode);
+        b.setPull = rig.reeling ? (b.setPull || 0) + dt * (before.load + now.load) * 0.5 : 0;
+        const result = physics.strikeChance(b, sess.mode, G.gear(sess.mode).hook, st.tut < 3);
+        if (b.setPull >= 0.18 && result.chance === 1) { hook(b.s, b.w); emit("msg", { text: "Самозасечка на проводке!" }); return; }
+      }
       if (b.t > b.take) {
         // не успели
         const eaten = U.rand() < 0.5;
@@ -497,7 +580,9 @@
     FZ.Platform.vibrate(30);
     if (sess.mode === "feeder") { rig.rod.ring = 1.2 + b.power; rig.rod.jerk = 0.5 + b.power * 0.4; FZ.Sound.bell(); }
     else if (sess.mode === "spin") { rig.rod.jerk = 0.65 + b.power * 0.6; FZ.Sound.strike(); FZ.Scene.shake(4); }
-    else if (sess.mode === "ice") { rig.rod.nod = b.style === "lift" ? -1 : 1; FZ.Sound.bite(); }
+    // The nod builds with biteSignal in biteAnim; an instant full bend here
+    // would visually promise a seated bite before the fish has taken it.
+    else if (sess.mode === "ice") { FZ.Sound.bite(); }
     else { FZ.Scene.ring(rig.X, rig.Z, 0.28 + b.power * 0.25, 1.2); FZ.Sound.bite(); }
   }
   // Анимация поплавка/кивка/вершинки во время поклёвки
@@ -514,18 +599,22 @@
         nod = (b.style === "lay" || b.style === "lift" ? -0.65 : 0.9) * strength * ta;
         tipBend += 0.32 * strength * ta;
       } else {
-        const k = U.clamp(b.t / Math.min(0.35, b.take * 0.3), 0, 1);
+        const signal = FZ.FightPhysics.biteSignal(b, sess.mode);
+        const k = signal.rise;
         switch (b.style) {
           case "twitch": case "dunk": sink = U.lerp(0, 1.05, k); dx = Math.sin(t * 20) * 1.5; break;
-          case "lay": sink = -0.65 * k; tilt = U.clamp((b.t - b.take * 0.25) / (b.take * 0.3), 0, 1); dx = tilt * 8; break;
-          case "slide": sink = 0.45 * k; dx = U.lerp(0, 22, U.clamp(b.t / b.take, 0, 1)); break;
-          case "drag": sink = U.lerp(0, 1.1, k); dx = U.lerp(0, 16, U.clamp(b.t / b.take, 0, 1)); break;
+          case "lay": sink = -0.65 * k; tilt = signal.lay; dx = tilt * 8; break;
+          case "slide": sink = 0.45 * k; dx = 22 * signal.progress; break;
+          case "drag": sink = U.lerp(0, 1.1, k); dx = 16 * signal.progress; break;
           case "lift": sink = -0.72 * k; break;
           case "dip": sink = 0.92 * k; break;
           case "spin": sink = 0.35 * k; break;
         }
         nod = (b.style === "lay" || b.style === "lift" ? -1.15 : 1.1) * k;
         tipBend = b.style === "lay" && sess.mode === "feeder" ? U.lerp(0.28, -0.05, k) : U.lerp(tipBend, 1, k);
+        // The fish letting go is visible before the opportunity expires.
+        sink *= signal.retention; tilt *= signal.retention; dx *= signal.retention; nod *= signal.retention;
+        tipBend = U.lerp(sess.mode === "feeder" ? 0.28 : 0, tipBend, signal.retention);
       }
     }
     if (!b && sess.ice) nod = -0.36 * (rig.jig || 0);
@@ -539,18 +628,25 @@
     if (rig.state === "bite") {
       const b = rig.bite;
       FZ.Sound.strike();
-      if (b.phase === "touch") {
+      const g = G.gear(sess.mode);
+      const result = FZ.FightPhysics.strikeChance(b, sess.mode, g.hook, st.tut < 3);
+      // One premature tutorial tap explains the cue without removing the fish
+      // or resetting its timeline. Empty nibbles still cannot become a catch.
+      if (st.tut < 3 && !b.empty && result.stage === "early" && result.chance < 1) {
+        if (!b.early) emit("msg", { text: "Рано: дождитесь уверенной потяжки и подсеките ещё раз" });
+        b.early = true; return;
+      }
+      if (b.phase === "touch" || b.empty) {
         rig.bite = null; rig.state = "wait";
         if (b.empty) { emit("msg", { text: "Мелочь балуется", bad: true }); return; }
-        if (U.rand() < 0.55) emit("msg", { text: "Рано! Рыба ушла", bad: true });
-        else { emit("msg", { text: "Рано подсекли", bad: true }); startBite(b.s, b.w); rig.bite.touches = 1; rig.bite.nextTouch = 1.4; }
+        emit("msg", { text: "Рано — рыба только пробовала наживку", bad: true });
         return;
       }
-      const g = G.gear(sess.mode);
-      const timing = 1 - Math.abs(b.t / b.take - (b.style === "lay" ? 0.6 : 0.35));
-      const p = U.clamp(0.86 * (g.hook ? g.hook.hold : 1) + 0.1 * timing + (st.tut < 3 ? 1 : 0), 0.4, 0.98);
-      if (U.rand() < p) { hook(b.s, b.w); }
-      else { rig.bite = null; rig.state = "wait"; emit("msg", { text: "Не засеклась", bad: true }); }
+      if (result.chance === 1 || result.chance > 0 && U.rand() < result.chance) { hook(b.s, b.w); }
+      else {
+        rig.bite = null; rig.state = "wait";
+        emit("msg", { text: result.stage === "late" ? "Поздно — рыба отпускает приманку" : "Рано — дождитесь уверенной потяжки", bad: true });
+      }
     } else if (rig.state === "wait" && sess.mode !== "spin") {
       FZ.Sound.strike(); rig.rod.jerk = 0.6; emit("msg", { text: "Пустая подсечка" });
     }
@@ -564,7 +660,8 @@
     rig.bite = null;
     rig.fish = {
       s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
-      vx: 0, vz: 0, turn: 1, S: 1, effort: 0.9, phase: "run", phaseT: U.rand.range(0.8, 1.6), T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
+      vx: 0, vz: 0, turn: 1, S: 1, effort: 0.45, phase: "rest", phaseT: 0.65, nextDecision: 0, T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
+      firstRunDuration: U.rand.range(0.8, 1.6),
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
     };
     rig.fish.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
@@ -587,25 +684,35 @@
     const character = FZ.FightPhysics.character(s);
     if (FZ.FightPhysics.secondWind(s, f, f.Z, sess.ice)) {
       f.phase = "rest"; f.phaseT = 0.85; f.nextDecision = 0; f.effort = 0.12;
+      f.nextRun = null; f.runWarning = null;
       emit("msg", { text: "Карп собирается с силами — ждите новый рывок!" });
     }
     // смена поведения
     f.phaseT -= dt;
+    if (f.jump && f.jump.k >= 1) {
+      f.jump = null; f.phaseT = 0;
+      if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5));
+      FZ.Sound.splash(0.8);
+    }
     const runChance = FZ.FightPhysics.runChance(s, f, f.Z, sess.ice);
-    // A readable tell before a burst gives the player time to release the reel.
-    if (f.phaseT <= .45 && f.nextDecision == null) f.nextDecision = U.rand();
-    f.telegraph = f.phaseT > 0 && f.phaseT < .45 && f.nextDecision < runChance && f.S > .25;
-    if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
-      if (f.jump && f.jump.k >= 1) { f.jump = null; if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5)); FZ.Sound.splash(0.8); }
+    if (FZ.FightPhysics.runTell(f, runChance, U.rand, dt)) {
+      emit("msg", { text: "Сейчас рывок — отпустите подмотку!" });
+      FZ.Platform.vibrate([15, 45, 15]);
+    }
+    if (f.phaseT <= 0 && !f.telegraph) {
       const r = f.nextDecision == null ? U.rand() : f.nextDecision;
-      f.nextDecision = null; f.telegraph = false;
+      const willRun = f.nextRun;
+      f.nextDecision = null; f.nextRun = null; f.runWarning = null; f.telegraph = false;
       const runP = FZ.FightPhysics.runChance(s, f, f.Z, sess.ice);
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
-      else if (r < runP) {
-        f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w)) * character.duration;
-        f.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
-        if (rig.reeling) f.surge = Math.max(f.surge || 0, 0.26 * character.surge); // smoothed run load
-        if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
+      else if (willRun) {
+        const firstRun = f.firstRunDuration != null;
+        f.phase = "run"; f.effort = firstRun ? 0.9 : U.rand.range(0.85, 1);
+        f.phaseT = firstRun ? f.firstRunDuration : U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w)) * character.duration;
+        if (!firstRun) f.turn = sess.ice ? 0 : (U.rand() < 0.5 ? -1 : 1);
+        f.runAge = firstRun ? null : 0; // first pull had no extra burst penalty
+        f.firstRunDuration = null;
+        if (!firstRun && !sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
         }
@@ -623,7 +730,7 @@
     const targetEffort = Math.max(0, eff * (1 + burst));
     f.muscle = U.damp(f.muscle == null ? targetEffort : f.muscle, targetEffort, 3.2 / mass + 2, dt);
     const fishPull = f.Fmax * f.muscle;
-    f.surge = U.damp(f.surge || 0, 0, 3.5, dt);
+    FZ.FightPhysics.runSurge(f, rig.reeling, character, dt);
     // Both axes have acceleration and water damping. Steering resists runs.
     FZ.FightPhysics.swim(f, { phase: f.phase, effort: f.muscle, ice: sess.ice, tilt: rig.tilt, character }, dt);
     const lineMotion = FZ.FightPhysics.line(f, {
@@ -690,7 +797,7 @@
     f.surface = U.damp(f.surface, f.phase === "tired" ? 1 : 0.15 * (1 - f.S), 2, dt);
     // дистанция
     if (sess.ice) {
-      if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; f.phase = "run"; f.phaseT = 0; }
+      if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; if (f.phase !== "run") f.phaseT = 0; }
       f.Z = 0;
     } else {
       if (f.Z < 3.6) { if (f.S < 0.3) return startLanding(); f.Z = 3.6; if (f.phase !== "run") { f.phaseT = 0; } }
@@ -735,6 +842,7 @@
     f.muscle = 0; f.surge = 0; f.vz = 0; f.vx *= 0.3;
     f.reviveGrace = 1.2;
     f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
+    f.nextDecision = null; f.nextRun = null; f.runWarning = null; f.telegraph = false; f.runAge = 0; f.firstRunDuration = null;
     f.S = Math.min(f.S, 0.6); if (!sess.ice) f.X *= 0.6; f.Z = Math.min(f.Z, 40);
     rig.fish = f; rig.state = "fight"; rig.lost = null;
     emit("revived");
@@ -864,18 +972,7 @@
     const p = FZ.Scene.period(sess.hour, sess.season);
     if (p !== sess.period) { sess.period = p; emit("time"); }
     // пятна активности
-    sess.nextSpot -= dt;
-    if (sess.nextSpot <= 0) {
-      sess.nextSpot = U.rand.range(6, 14);
-      if (!sess.ice && sess.spots.length < 2) {
-        const hasPred = Object.keys(sess.loc.fish).some((id) => FZ.SP[id].kind === "pred" && FZ.SP[id].time[sess.period] > 0.6 && FZ.SP[id].season[sess.season] > 0.5);
-        const type = hasPred && U.rand() < (sess.mode === "spin" ? 0.55 : 0.25) ? "boil" : "bubbles";
-        const Z = U.rand.range(6, Math.min(G.maxCast(), sess.loc.zfar - 8));
-        sess.spots.push({ type, X: U.rand.range(-0.8, 0.8) * FZ.Scene.maxLat(Z), Z, life: U.rand.range(12, 22) });
-      }
-      if (!sess.ice && U.rand() < 0.5) FZ.Scene.distantJump();
-    }
-    sess.spots = sess.spots.filter((s) => (s.life -= dt) > 0);
+    updateSpots(dt);
     if (sess.fedSpot && sess.fedSpot.until < sess.t) sess.fedSpot = null;
     if (sess.fedSpot) sess.fedSpot.level = Math.max(0, sess.fedSpot.level - dt * 0.002);
 
@@ -904,13 +1001,14 @@
       if (Math.random() < dt * 10) FZ.Scene.chips(FZ.Scene.holeGeom().x + (Math.random() - 0.5) * 60, FZ.Scene.holeGeom().y, 2);
       if (r.drillT >= r.drillDur) finishDrill();
     } else if (r.state === "wait" || r.state === "bite") {
-      if (sess.mode === "spin" && r.state === "wait") spinTick(dt);
+      if (sess.mode === "spin") spinTick(dt);
       if (sess.mode === "float" && sess.loc.current) { r.X += sess.loc.current * 0.12 * dt; if (Math.abs(r.X) > FZ.Scene.maxLat(r.Z) * 1.05) { r.state = "idle"; emit("msg", { text: "Поплавок снесло течением — перезабросьте" }); } }
       if (r.state === "wait") {
         r.idleT += dt;
+        const tutorialFish = st.tut < 3 ? FZ.SP[sess.mode === "float" || sess.mode === "feeder" ? "crucian" : "perch"] : null;
         // первая рыба в обучении — быстро и гарантированно
         if (!G.gear(sess.mode).bait || G.baitLeft(G.gear(sess.mode).bait.id) <= 0) { /* без наживки не клюёт */ }
-        else if (st.tut < 3 && r.idleT > 2.5) { const sp = FZ.SP[sess.mode === "float" || sess.mode === "feeder" ? "crucian" : "perch"]; startBite(sp, U.rand.range(0.28, 0.45)); }
+        else if (tutorialFish && r.idleT > 2.5 && (!tutorialFish.baits || tutorialFish.baits[G.gear(sess.mode).bait.id] > 0)) { startBite(tutorialFish, U.rand.range(0.28, 0.45)); }
         else {
           const tbl = G.biteTable();
           let tot = 0; tbl.forEach((x) => (tot += x[1]));
@@ -938,9 +1036,35 @@
     r.rod.reelAngle+=dt*14*(r.rod.reelRate||0);
   };
   // Спиннинг: проводка
+  G.retrieveBonus = function (s) {
+    const r = rig, lure = G.gear("spin").bait;
+    const bottom = lure && lure.lure === "bottom";
+    const maximum = Math.max(.01, s.depth.top, s.depth.mid, s.depth.bottom);
+    const surface = s.depth.top / maximum, mid = s.depth.mid / maximum, deep = s.depth.bottom / maximum;
+    if (r.reeling) return 1 + .12 * surface + (bottom ? .18 * deep * (r.stepMemory || 0) : 0);
+    const pause = r.spinPause || 0;
+    if (pause > 2.3) return U.lerp(.88, bottom ? .75 : .25, U.smooth(U.clamp((pause - 2.3) / 1.2, 0, 1)));
+    const pauseWindow = r.pauseQualified ? U.smooth(U.clamp((pause - .25) / .25, 0, 1)) *
+      (1 - U.smooth(U.clamp((pause - 1.3) / 1, 0, 1))) : 0;
+    // Surface hunters favour steady travel, mid-water fish short stops,
+    // bottom feeders a jig's lift/fall. No universally optimal pause bonus.
+    return Math.min(1.3, .88 + pauseWindow * (bottom ? .30 * deep + .16 * deep * (r.stepMemory || 0) : .38 * mid));
+  };
   function spinTick(dt) {
     const r=rig,g=G.gear(sess.mode);
-    const speed=FZ.FightPhysics.lure(r,{zone:g.bait&&g.bait.lure,speed:g.rod.reel,depth:G.depthAt(r.X,r.Z)},dt);
+    if(!r.reeling && r.wasReeling)r.pauseQualified=(r.reelStreak||0)>=.35;
+    r.reelStreak=r.reeling?(r.reelStreak||0)+dt:0;r.wasReeling=r.reeling;
+    r.stepMemory=Math.max((r.stepMemory||0)*Math.exp(-2*dt),r.twitch||0);
+    if(!r.reeling && r.stepMemory>.25)r.pauseQualified=true;
+    const depth=G.depthAt(r.X,r.Z),zone=g.bait&&g.bait.lure;
+    const speed=FZ.FightPhysics.lure(r,{zone,speed:g.rod.reel,depth},dt);
+    // Mid-water lures used to sink even while winding (.22 - .20 m/s).
+    if(r.reeling && zone==="mid")r.lureDepth=U.clamp(r.lureDepth-.16*dt,.08,depth);
+    if(r.stepMemory>.25 && zone==="bottom")r.retrieveStyle="Ступенька";
+    else if(!r.reeling && r.pauseQualified && r.spinPause<=2.3)r.retrieveStyle="Stop & Go";
+    // The engaged fish fixes the contact point; still animate actual depth.
+    // Do not finish a retrieve or discard its bite near the bank.
+    if(r.state==="bite") { r.rod.reelRate=r.reeling?speed/Math.max(.1,g.rod.reel):0; return; }
     r.Z-=speed*dt;
     r.X+=((r.tilt||0)*speed*.18-r.X*.12)*dt;
     r.rod.reelRate=r.reeling?speed/Math.max(.1,g.rod.reel):0;
@@ -962,6 +1086,14 @@
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };
+    if(sess.mode==="spin" && r.lureDepth!=null && (r.state==="wait" || r.state==="bite")) {
+      const bait=G.gear("spin").bait;
+      v.lure={ kind: bait&&bait.lure, depth:r.lureDepth==null?0:r.lureDepth,
+        waterDepth:G.depthAt(r.X,r.Z), speed:r.lureSpeed||0, twitch:r.twitch||0,
+        reeling:r.reeling, style:r.retrieveStyle||"Пауза",
+        approach:r.bite&&!r.bite.empty?{phase:r.bite.phase,
+          progress:r.bite.phase==="take"?.65+.35*U.clamp(r.bite.t/r.bite.take,0,1):.2+.4*(1-Math.exp(-r.bite.t))}:null };
+    }
     if (sess.ice && r.state === "nohole") v.ice.noHole = true;
     if (sess.ice && r.state === "drill") v.ice.drill = r.drillT / r.drillDur;
     if (r.landing && !v.fish && r.fish) v.fish = r.fish;

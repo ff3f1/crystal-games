@@ -37,6 +37,35 @@
     return true;
   };
 
+  // Commit the run when its tell starts. Fatigue/distance must not reroll it
+  // halfway through the warning. Early phase endings still get the full tell.
+  P.runTell = function (f, chance, random, dt) {
+    const warning = 0.65;
+    const due = f.phaseT <= warning || (f.jump && f.jump.k >= 1);
+    if (f.nextDecision == null && due) f.nextDecision = random();
+    if (f.nextRun == null && f.nextDecision != null) {
+      f.nextRun = f.S >= 0.16 && f.nextDecision < chance;
+    }
+    const started = f.nextRun === true && f.runWarning == null;
+    if (started) f.runWarning = warning;
+    else if (f.runWarning != null) f.runWarning = Math.max(0, f.runWarning - dt);
+    f.telegraph = f.nextRun === true && f.runWarning > 0;
+    return started;
+  };
+
+  // Keep the original held-reel burst envelope, but release its extra load
+  // promptly when the player lets go. Re-engaging during the burst loads it
+  // again: avoiding one particular transition frame is not a free pass.
+  P.runSurge = function (f, reeling, character, dt) {
+    if (f.phase !== "run") f.runAge = null;
+    else if (f.runAge != null) f.runAge += dt;
+    f.surge = (f.surge || 0) * Math.exp(-(reeling ? 3.5 : 14) * dt);
+    if (f.phase === "run" && f.runAge != null && reeling) {
+      f.surge = Math.max(f.surge, 0.26 * character.surge * Math.exp(-3.5 * f.runAge));
+    }
+    return f.surge;
+  };
+
   // Species and fishing methods share one readable strike timeline while
   // differing in rhythm, strength and signal direction. No save-format fields.
   P.bitePattern = function (species, mode, weight) {
@@ -61,6 +90,41 @@
       take: takeTimes[style] || 1.2,
       cadence, power: mode === "spin" ? Math.max(0.65, power) : power
     };
+  };
+
+  // One signal drives both the visible tackle and hook seating. A lifting
+  // float must turn over; a feeder's unloading tip already shows the take.
+  // These are dimensionless bite/load proxies, not a new fight simulation.
+  P.biteSignal = function (b, mode, time) {
+    const t = time == null ? b.t : time;
+    const take = Math.max(0.01, b.take);
+    const progress = clamp(t / take, 0, 1);
+    const rise = clamp(t / Math.min(0.35, take * 0.3), 0, 1);
+    const lay = clamp((progress - 0.25) / 0.3, 0, 1);
+    const travel = clamp(progress / 0.28, 0, 1);
+    const release = clamp((progress - 0.8) / 0.2, 0, 1);
+    const retention = 1 - release * release * (3 - 2 * release);
+    let mouth = rise, load = rise;
+    if (b.style === "lay" && mode !== "feeder") {
+      mouth = 0.35 * rise + 0.65 * lay; load = lay;
+    } else if (b.style === "lift" || b.style === "lay") load = 0.55 * rise;
+    else if (b.style === "slide") load = travel;
+    else if (b.style === "drag") load = 0.6 * rise + 0.4 * travel;
+    return { progress, rise, lay, retention, mouth, load };
+  };
+
+  P.strikeChance = function (b, mode, hook, tutorial) {
+    const signal = P.biteSignal(b, mode);
+    if (b.phase !== "take" || b.empty || b.t < 0 || b.t >= b.take) {
+      return { chance: 0, stage: b.t >= b.take && b.phase === "take" ? "late" : "early" };
+    }
+    // Hold widens the shoulders, never vetoes a fully seated, timely strike.
+    // Hook size already controls fish selection/empty bites in game.js.
+    const hold = hook && Number.isFinite(hook.hold) ? hook.hold : 1;
+    const seating = 0.85 + 0.15 * clamp((hold - 0.7) / 0.5, 0, 1);
+    const quality = signal.mouth * (0.72 + 0.28 * signal.load) * signal.retention * seating;
+    const q = clamp((quality - (tutorial ? 0.10 : 0.20)) / (tutorial ? 0.30 : 0.40), 0, 1);
+    return { chance: q * q * (3 - 2 * q), stage: signal.retention < 1 ? "late" : "early" };
   };
   // Fish respond to little lifts and short pauses, not to endless tapping.
   P.iceAttraction = function (species, jig, pause) {
@@ -126,10 +190,12 @@
     target += Math.max(0, f.vz || 0) * maximum * 0.12 + Math.abs(f.vx || 0) * maximum * 0.025;
     if (opts.phase === "toward") target = reeling ? 0.14 * maximum + 0.08 * rod.power : 0.02 * maximum;
     if (opts.phase === "tired") target = reeling ? 0.22 * maximum + 0.06 * rod.power : 0.08 * maximum;
+    // A jump increases the physical load, not the previous frame's tension.
+    // Multiplying f.T every frame compounded the force at higher frame rates.
+    if (opts.jumping) target *= 1 + 0.3 * Math.sin(clamp(opts.jumpProgress, 0, 1) * Math.PI);
     const spring = clamp(rod.power / maximum, 0.35, 2.2);
     const rate = (3.2 + rod.sens * 2) * spring;
     f.T = Math.max(0, (f.T || 0) + (target - (f.T || 0)) * (1 - Math.exp(-rate * dt)));
-    if (opts.jumping) f.T *= 1 + 0.3 * Math.sin(opts.jumpProgress * Math.PI);
     const dragLim = clamp(opts.drag, 0.3, 1) * opts.lineTest;
     const excess = Math.max(0, f.T - dragLim);
     const slipping = excess > 0.01;

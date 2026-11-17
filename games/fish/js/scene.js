@@ -492,6 +492,7 @@
     R.drawTackle(v, L, t);
     R.drawWeather(v, L, t, dt, wx);
     R.drawScreenFx(dt);
+    R.drawLureInset(ctx, v, W, H);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   };
 
@@ -946,13 +947,88 @@
     R.jumps.push({ X, Z, age: 0, dir: Math.random() < 0.5 ? -1 : 1 });
   };
 
+  // Stateless signs: both renderers draw precisely the same live spots.
+  // No random particle backlog can imply feeding after the bonus has expired.
+  R.drawActivity = function (g, v) {
+    if (v.ice) return;
+    g.save(); g.lineWidth = 1.3;
+    for (const sp of (v.spots || [])) {
+      if (!(sp.life > 0 && sp.intensity > 0)) continue;
+      const age = sp.duration - sp.life;
+      g.globalAlpha = sp.intensity * .8;
+      g.strokeStyle = sp.type === "boil" ? "#e1eef1" : "#b9d5d7";
+      for (let i = 0; i < (sp.type === "boil" ? 3 : 5); i++) {
+        const phase = (age / (sp.type === "boil" ? 1.5 : 2) + i * .31) % 1;
+        const a = i * 2.4 + (sp.type === "boil" ? age * .45 : 0);
+        const p = R.proj(sp.X + Math.sin(a) * sp.radius * .23, sp.Z + Math.cos(a) * sp.radius * .23);
+        const radius = Math.max(1.4, p.s * (sp.type === "boil" ? .18 + phase * .45 : .035 + phase * .055));
+        g.globalAlpha = sp.intensity * (.3 + .5 * (1 - phase));
+        g.beginPath(); g.ellipse(p.x, p.y, radius, radius * .32, 0, 0, Math.PI * 2); g.stroke();
+        if (sp.type === "boil") {
+          g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x + radius * .25, p.y - Math.sin(phase * Math.PI) * radius * .8); g.stroke();
+        }
+      }
+    }
+    g.restore();
+  };
+
+  // A small non-interactive close-up, sharing the existing 2D render path.
+  // Prefer free upper water/sky space; hide it if controls occupy all slots.
+  R.lureInsetRect = function (w, h, blocks) {
+    if(w<280 || h<360)return null;
+    const width=Math.min(164,w*.43),height=112;
+    for(const y of [Math.round(h*.19),Math.round(h*.36)])for(const x of [w-width-12,12]){
+      const box={x,y,w:width,h:height};
+      if(y+height>h*.63)continue;
+      if(!blocks.some(b=>x<b.right+6&&x+width>b.left-6&&y<b.bottom+6&&y+height>b.top-6))return box;
+    }
+    return null;
+  };
+  let insetLayout=null,insetLayoutAt=-Infinity,insetSize="";
+  R.drawLureInset = function (g,v,w,h) {
+    if(v.mode!=="spin"||!v.lure||v.ice||(FZ.UI&&FZ.UI.anyOpen()))return;
+    const key=w+"x"+h;
+    if(key!==insetSize||v.t<insetLayoutAt||v.t-insetLayoutAt>.5){
+      const blocks=typeof document==="undefined"?[]:Array.from(document.querySelectorAll('button,input,select,[role="button"],#bAct'))
+        .map(el=>el.getBoundingClientRect()).filter(b=>b.width>0&&b.height>0);
+      insetLayout=R.lureInsetRect(w,h,blocks);insetSize=key;insetLayoutAt=v.t;
+    }
+    const box=insetLayout;if(!box)return;
+    const l=v.lure,x=box.x,y=box.y;
+    const lx=x+box.w*.44,ly=y+30+U.clamp(l.depth/Math.max(.5,l.waterDepth),0,1)*54;
+    g.save();g.beginPath();g.rect(x,y,box.w,box.h);g.clip();
+    g.fillStyle="rgba(9,29,37,.91)";g.fillRect(x,y,box.w,box.h);
+    g.strokeStyle="rgba(146,191,199,.6)";g.lineWidth=1;g.strokeRect(x+.5,y+.5,box.w-1,box.h-1);
+    g.fillStyle="#294441";g.fillRect(x,y+88,box.w,8);
+    g.strokeStyle="rgba(191,221,225,.45)";g.beginPath();g.moveTo(lx+(l.reeling?20:0),y+22);g.lineTo(lx,ly);g.stroke();
+    // Fish exists here only because game.view supplied an actual bite.
+    if(l.approach){
+      const fx=lx+13+(1-l.approach.progress)*(box.w*.8),fy=ly+Math.sin(v.t*5)*2;
+      g.fillStyle="#718e86";g.beginPath();g.ellipse(fx,fy,17,6,0,0,Math.PI*2);g.fill();
+      g.beginPath();g.moveTo(fx+13,fy);g.lineTo(fx+24,fy-7+Math.sin(v.t*12)*2);
+      g.lineTo(fx+24,fy+7+Math.sin(v.t*12)*2);g.closePath();g.fill();
+      g.fillStyle="#152f35";g.beginPath();g.arc(fx-11,fy-1,1.5,0,Math.PI*2);g.fill();
+    }
+    g.save();g.translate(lx,ly);
+    g.rotate(Math.sin(v.t*(3+l.speed*8))*(l.reeling?.4:.18)+(l.twitch||0)*.5);
+    if(l.kind==="bottom"){
+      g.fillStyle="#c1d0ce";g.beginPath();g.arc(-5,0,3,0,Math.PI*2);g.fill();
+      g.strokeStyle="#b3aa6f";g.lineWidth=4;g.beginPath();g.moveTo(-2,0);
+      g.quadraticCurveTo(7,Math.sin(v.t*9)*3,14,Math.sin(v.t*7)*5);g.stroke();
+    }else{
+      g.fillStyle="#c2d4d5";g.beginPath();g.ellipse(0,0,10,3.5+Math.sin(v.t*(3+l.speed*10)),.15,0,Math.PI*2);g.fill();
+      g.strokeStyle="#ad8e4f";g.lineWidth=1.5;g.beginPath();g.moveTo(-6,1);g.lineTo(7,1);g.stroke();
+    }
+    g.strokeStyle="#879b9b";g.lineWidth=1;g.beginPath();g.arc(12,3,3,0,Math.PI);g.stroke();g.restore();
+    g.font="11px sans-serif";g.fillStyle="#d3e6e5";g.textAlign="left";
+    g.fillText("Приманка · "+l.depth.toFixed(1)+" м",x+8,y+16);
+    g.fillStyle="#b5ccca";g.fillText(l.style,x+8,y+105);g.restore();
+  };
+
   R.drawWorldFx = function (v, L, dt) {
     const lineCol = U.rgba(U.mix("#ffffff", "#8090b0", L.dark), 0.6);
     // пятна активности рыбы (пузыри / бой хищника)
-    if (v.spots) for (const s of v.spots) {
-      if (s.type === "bubbles" && Math.random() < dt * 4) R.bubbles(s.X, s.Z, 1);
-      if (s.type === "boil" && Math.random() < dt * 1.3) { R.splash(s.X + (Math.random() - 0.5) * 2, s.Z + (Math.random() - 0.5) * 2, 0.35); }
-    }
+    R.drawActivity(ctx, v);
     if (v.fedSpot && !v.ice) {
       const q = R.proj(v.fedSpot.X, v.fedSpot.Z);
       ctx.strokeStyle = "rgba(255,210,120," + (0.12 + 0.25 * v.fedSpot.level) + ")"; ctx.setLineDash([4, 5]); ctx.lineWidth = 1.2;

@@ -25,6 +25,7 @@ jobs:
           node tests/test_fish_physics.js
           node tests/test_fish_input.js
           node tests/test_fish_mechanics.js
+          node --test tests/fight-reaction.test.cjs tests/strike-reaction.test.cjs tests/spots.test.cjs tests/spin-detail.test.cjs
       - name: Browser regression gate
         run: |
           pip install playwright
