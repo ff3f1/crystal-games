@@ -100,10 +100,10 @@ function chooseCastTime(){
 
 function refresh(){const map=M(),mode=G.mode;
  label('location',map.name+'  /  '+map.season);label('coins','✦ '+save.coins);label('baitTitle',B[G.bait][0]);
- const title={ready:map.ice?'Выбери место для лунки':'Найди перспективное место',fly:'Заброс…',drill:'Бурим лунку…',wait:map.ice?'Играй мормышкой':'Смотри на поплавок',nibble:'Осторожно, рыба пробует…',take:'ПОКЛЁВКА!',fight:'РЫБА НА КРЮЧКЕ!',caught:'Отличный улов!'}[mode];
- const explain={ready:'Рябь, камни и глубина подсказывают, куда бросать.',fly:'Снасть летит в выбранную точку.',drill:'Зимняя рыба живёт на разных глубинах.',wait:(G.spot?G.spot[0]+' · ':'')+(map.ice?'Коротко нажимай кнопку «Играть»':'Не торопись: сначала рыба осторожно трогает приманку.'),nibble:'Не подсекай на первом движении. Дождись настоящей потяжки.',take:'Время подсечь! Нажми кнопку или смахни вверх.',fight:'Удерживай подмотку. При рывке отпускай, чтобы не оборвать леску.',caught:'Новая добыча и награда за терпение.'}[mode];
+ const title={ready:map.ice?'Выбери место для лунки':'Найди перспективное место',fly:'Заброс…',drill:'Бурим лунку…',wait:map.ice?'Играй мормышкой':'Смотри на поплавок',nibble:'Осторожно, рыба пробует…',take:'ПОКЛЁВКА!',fight:'РЫБА НА КРЮЧКЕ!',landing:'РЫБА У БЕРЕГА!',caught:'Отличный улов!'}[mode];
+ const explain={ready:'Рябь, камни и глубина подсказывают, куда бросать.',fly:'Снасть летит в выбранную точку.',drill:'Зимняя рыба живёт на разных глубинах.',wait:(G.spot?G.spot[0]+' · ':'')+(map.ice?'Коротко нажимай кнопку «Играть»':'Не торопись: сначала рыба осторожно трогает приманку.'),nibble:'Не подсекай на первом движении. Дождись настоящей потяжки.',take:'Время подсечь! Нажми кнопку или смахни вверх.',fight:'Удерживай подмотку. При рывке отпускай, чтобы не оборвать леску.',landing:'Последний рывок — рыбина уже поднимается!',caught:'Новая добыча и награда за терпение.'}[mode];
  label('phase',title);label('tip',explain);
- const action=$('action');label('action',{ready:map.ice?'БУРИТЬ':'ЗАБРОСИТЬ',fly:'ЛЕТИТ…',drill:'БУРЕНИЕ…',wait:map.ice?'ИГРАТЬ':'ПЕРЕЗАБРОС',nibble:'ЖДАТЬ…',take:'ПОДСЕЧЬ!',fight:'ПОДМОТКА',caught:'ЕЩЁ РАЗ'}[mode]);action.disabled=mode==='fly'||mode==='drill'||mode==='nibble'||mode==='caught';action.classList.toggle('strike',mode==='take');action.classList.toggle('reel',mode==='fight');if(mode!=='fight')action.classList.remove('warning');$('fightInfo').hidden=mode!=='fight';
+ const action=$('action');label('action',{ready:map.ice?'БУРИТЬ':'ЗАБРОСИТЬ',fly:'ЛЕТИТ…',drill:'БУРЕНИЕ…',wait:map.ice?'ИГРАТЬ':'ПЕРЕЗАБРОС',nibble:'ЖДАТЬ…',take:'ПОДСЕЧЬ!',fight:'ПОДМОТКА',landing:'ДОСТАЁМ…',caught:'ЕЩЁ РАЗ'}[mode]);action.disabled=mode==='fly'||mode==='drill'||mode==='nibble'||mode==='landing'||mode==='caught';action.classList.toggle('strike',mode==='take');action.classList.toggle('reel',mode==='fight');if(mode!=='fight')action.classList.remove('warning');$('fightInfo').hidden=mode!=='fight';
  label('instruction',mode==='fight'?'Следи за натяжением и направляй удилище.':mode==='ready'?'Коснись места на воде → забрось кнопкой':mode==='wait'?'Места с активной рябью сокращают ожидание':'Следи за рыбой, а не за таймером');
  label('warning',mode==='take'?'● ПОДСЕЧЬ СЕЙЧАС!':'');
  $('comboBox').hidden=save.streak<2||mode==='caught';
@@ -234,6 +234,10 @@ function physics(dt){now+=dt;G.shake=Math.max(0,G.shake-dt*26);G.jig=Math.max(0,
  }
  else if(G.mode==='nibble'){G.nibble+=dt;if(G.nibble>1.1+G.bite.power*.35)startTake()}
  else if(G.mode==='take'){G.take+=dt;if(G.take>1.55)lost('Рыба ушла. В следующий раз подсекай на уверенной потяжке.')}
+ else if(G.mode==='landing'){
+  G.landProgress+=dt/1.05;
+  if(G.landProgress>=1)caught();
+ }
  else if(G.mode==='fight'){
   G.runTime-=dt;
   // A visible telegraph makes runs learnable, not a random punishment.
@@ -254,7 +258,7 @@ function physics(dt){now+=dt;G.shake=Math.max(0,G.shake-dt*26);G.jig=Math.max(0,
   $('tensionNeedle').style.left=(clamp(G.tension,0,1)*100)+'%';$('stamina').style.width=((1-G.stamina)*100)+'%';label('distance',Math.ceil(G.distance)+' м');
   if(G.stress>.78+lineUpgrade*.12)lost('Обрыв! При мощном рывке отпускай подмотку.');
   else if(G.slack>1.3)lost('Сход! Леска слишком долго провисала.');
-  else if(G.distance<1.5&&G.stamina<.18)caught();
+  else if(G.distance<1.5&&G.stamina<.18){G.mode='landing';G.landProgress=0;audioCue('splash');vibrate(25);refresh()}
   if(G.mode==='fight'){
     $('action').classList.toggle('warning',running||G.runTime<.62);
     label('warning',running?'⚠ РЫВОК — ОТПУСТИ КНОПКУ!':G.runTime<.62?'⚠ РЫБА ГОТОВИТСЯ К РЫВКУ':'');
@@ -332,6 +336,11 @@ function tackle(){
    g.fillStyle='#fff0c7';g.beginPath();g.arc(target.x,target.y,3,0,TAU);g.fill();
   }
  }
+ if(phase==='landing'&&G.bite){
+  const k=clamp(G.landProgress,0,1),s=k*k*(3-2*k);
+  fishAt(lerp(p.x,W*.49,s),p.y-H*.22*s,(.5+.5*s),clamp(65+G.bite.kg*18,60,180),-s*.36);
+  if(Math.sin(k*10)> .8&&Math.random()<.045)drawRing(p.x,p.y,.5);
+ }
  if(phase==='nibble'||phase==='take'){
   const k=phase==='take'?1:clamp(G.nibble/1.45,0,1);
   const x=p.x+(1-k)*44,y=p.y+14+Math.sin(now*3)*2;
@@ -354,7 +363,7 @@ function tackle(){
  // Authentic continuous rod sprite from the original art library, scaled as
  // one unit. No segmented rods, hanging cylinder, or disconnected reel.
  const base={x:W*.92,y:H*1.045};
- const tip=map.ice?{x:W*(.60+G.rodAngle*.09),y:H*.60-G.jig*14}:{x:W*(.31+G.rodAngle*.14),y:H*.315+(phase==='fight'?G.tension*H*.06:0)-(phase==='fly'?Math.sin(G.flight*Math.PI)*H*.082:0)};
+ const tip=map.ice?{x:W*(.60+G.rodAngle*.09),y:H*.60-G.jig*14}:{x:W*(.31+G.rodAngle*.14),y:H*.315+(phase==='fight'?G.tension*H*.06:phase==='landing'?-H*.07*G.landProgress:0)-(phase==='fly'?Math.sin(G.flight*Math.PI)*H*.082:0)};
  const rodName=map.ice?'ice':G.bait==='jig'?'spin':'float';
  const specs={float:{tipX:59,baseX:1108,axisY:112,reelX:818,reelY:206},spin:{tipX:57,baseX:836,axisY:132,reelX:567,reelY:208},ice:{tipX:920,baseX:1390,axisY:53,reelX:1202,reelY:145}};
  const rod=img('assets/rods/'+rodName+'.webp'),a=specs[rodName],dx=base.x-tip.x,dy=base.y-tip.y,
