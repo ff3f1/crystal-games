@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String START_URL = "https://appassets.androidplatform.net/assets/index.html";
 
     private WebView web;
+    private boolean legacyRenderer;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     private InterstitialAdLoader interLoader;
@@ -77,6 +78,11 @@ public class MainActivity extends AppCompatActivity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
+        java.util.regex.Matcher engine = java.util.regex.Pattern.compile("Chrome/(\\d+)").matcher(s.getUserAgentString());
+        legacyRenderer = engine.find() && Integer.parseInt(engine.group(1)) < 90;
+        if (legacyRenderer) web.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
+        web.setOnLongClickListener(v -> true);
+        web.setLongClickable(false);
 
         final WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
                 .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -102,13 +108,12 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                long now = System.currentTimeMillis();
-                if (now - lastBack < 2000) {
-                    finish();
-                } else {
-                    lastBack = now;
-                    Toast.makeText(MainActivity.this, "Нажмите ещё раз для выхода", Toast.LENGTH_SHORT).show();
-                }
+                web.evaluateJavascript("Boolean(window.__handleBack&&window.__handleBack())", consumed -> {
+                    if ("true".equals(consumed) || isFinishing()) return;
+                    long now = System.currentTimeMillis();
+                    if (now - lastBack < 2000) finish();
+                    else { lastBack = now; Toast.makeText(MainActivity.this, "Нажмите ещё раз для выхода", Toast.LENGTH_SHORT).show(); }
+                });
             }
         });
 
@@ -139,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void result(int id, boolean ok) {
-        ui.post(() -> web.evaluateJavascript("window.__adResult&&window.__adResult(" + id + "," + ok + ")", null));
+        ui.post(() -> { if (web != null && !isDestroyed()) web.evaluateJavascript("window.__adResult&&window.__adResult(" + id + "," + ok + ")", null); });
     }
 
     private void showInter(int id) {
@@ -189,6 +194,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** Шаринг картинки, внешние ссылки, оценка в RuStore, вибрация. */
     private class ShareBridge {
+        @JavascriptInterface public boolean legacyRenderer() { return legacyRenderer; }
         @JavascriptInterface public void shareImage(String b64, String text) {
             ui.post(() -> {
                 try {
@@ -241,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onPause() {
         super.onPause();
-        if (web != null) { web.evaluateJavascript("window.__appPause&&window.__appPause()", null); web.onPause(); }
+        if (web != null) { web.evaluateJavascript("window.__appPause&&window.__appPause()", result -> { if(web!=null)web.onPause(); }); }
     }
 
     @Override protected void onResume() {
@@ -251,7 +257,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override protected void onDestroy() {
-        if (web != null) web.destroy();
+        ui.removeCallbacksAndMessages(null);
+        if (web != null) { web.destroy(); web = null; }
         super.onDestroy();
     }
 }

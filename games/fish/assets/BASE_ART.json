@@ -1,0 +1,203 @@
+{
+  "blacksea": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "07926d693bb7907e888965b26538d5d5073af0229261ee9500410a977029d2dc",
+    "pixel_sha256": "4596588295bf20cf64d06e839cd35665f50e901019c54aed904b542c277e8e9c",
+    "shoreline": 0.34,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art",
+    "status": "rejected: pixel-identical to baikal; keep existing Black Sea scene"
+  },
+  "katun": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "32df3bf2e46d942255ac870d513e35f466f0ede24f1991c300827d72caf0da5d",
+    "pixel_sha256": "6a4b2c62b5c539d158ab19f72061fd330ff2547cf5daa6f7b0536ad04f36ee4e",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "kola": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "cf413d08a20254dc741fecf874659875b0c2eb0d241d34ae094c46350952a394",
+    "pixel_sha256": "3c24522b773cc72f20078620eb75a03c08d5f6ceeb7470ce54b1e3c4b2ca41fa",
+    "shoreline": 0.37,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "onega": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "9fc6ff120268b7a4050bff1bbe255260c31d23b657be9c4a88f06b47dfc66794",
+    "pixel_sha256": "fd6e1f415d6b79dac73ca19bdb0905e74cb7842eddb2d35bdead964d0cceaa39",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "amur": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "290ef66ba1e953d445ccd458adb85605d86d39dbcfd2b49d83df5221b1a159df",
+    "pixel_sha256": "e89ca3a7817c168e8621b251fd7ed827d98573326725ed314d4a094bb18199d6",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "seliger": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "30968328daaf9d5082078d89ac27ff6593152e58427956aa8623d5ba9babc0bd",
+    "pixel_sha256": "1be6d75be75b40940f5468b164da88942563050a45fba5a101adcb777ae519ea",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "barents": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "d91d7834c931b00ccd921296cb3820022bdaf73dbfcd73e3495f1329c6a2057b",
+    "pixel_sha256": "50b59f12b04354a9abc34bf1643fb872116be4754b57a04b4ffaa7fbd8ece23b",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "platnik": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "7113f21dd0bd59381dcf0abc20788b74fba35da2f0ff9401a1b97e07330cb427",
+    "pixel_sha256": "24b25862de393863b5bfc7b24bf2e6bfb14ab944b7a74ef4e67dccf528b9e01f",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "volga": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "7e5fb2128434e9a7b091f1a9cf8acc42f5160a5184c18dc3bf41f81731f35d6f",
+    "pixel_sha256": "1d6cff96ac2112dd202a62f3427ddd286d42b7b5e1d9de9557df18eb83d42e0a",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "ladoga": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "f076ff50b8f6c83fbf9133505edd4bdbdd6662ced33c9ac8ed03bf76c23df3af",
+    "pixel_sha256": "a3111b8d79e75b8cbcf362f045231c92f1e8aaf85d0c131365735802f68b30fe",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "baikal": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "9f49636fd720793d0044b29c3640be753716af4fcfe609c5c3d37c4c6d9ddf4c",
+    "pixel_sha256": "4596588295bf20cf64d06e839cd35665f50e901019c54aed904b542c277e8e9c",
+    "shoreline": 0.34,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "oka": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "fc8829fa1aa2952e4bf93a08ae766be7ff22f34b2d7601301277d7a93884993c",
+    "pixel_sha256": "42bc0b11ed10c29eb59aabd7a28b47eb80694f0943d96107938c1ace8e081c49",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "akhtuba": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "f7299dedd836427a41a166dc00540b2ec8ebc452b0115adaa414876bab079e0a",
+    "pixel_sha256": "8c4b12d678b47834288cba90de12f4fc55e2b80976095befae4d6c312e4b1250",
+    "shoreline": 0.4,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "pond": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "e6b356c23fbd122ecf7195aa48032c2149965cf4a37a8dba91f4527d24c43b1d",
+    "pixel_sha256": "8881a628f874460cf8d022af6cf6711ab9cf1ef4e78f0ded34dcd92bc91700cc",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "kamchatka": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "6df5620a78c65ebf9b3f86ccb0c71aef6bdb84e9203819a43f6947af8f199bf7",
+    "pixel_sha256": "c0f7eec5fc0f6e7b02745f9e1ef83f553a5490b842ccc83860fb29d4d2a055e7",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "polar": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "dc6737b7e92f9f3e0695d4dae93102781645bfc47a4c79e9596040b67203189a",
+    "pixel_sha256": "1f921371ffa268c307107bd7ddc80c910768f6354bf6f2a31f17949afee90c06",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "northstream": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "3aadbbcac04ef5d156e306b18baa40255f935780c7d74971f939b149269f95a5",
+    "pixel_sha256": "f5f16330065896746eda39498ca5ff3ae6271e4a80a4f13be063566b21a1987c",
+    "shoreline": 0.38,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "mountainlake": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "c5515c2e5479982d797626689f0595663f860ba35b91ef03a7b3979acbf7fb24",
+    "pixel_sha256": "f65d9e9ad4a705150d1da62025af5391fdf4d1af28157a48aa904effa51afc13",
+    "shoreline": 0.39,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "taiga": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "ab99895e78c05e4b42c918fde44ef3e455bb0b1ce48acfe8dffaf04d58d1f202",
+    "pixel_sha256": "ab2d8b74255262f2ca449ef5141a4281999d0bb869a85b37e55969f2f778a26c",
+    "shoreline": 0.37,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  },
+  "don": {
+    "native_size": [
+      1122,
+      1402
+    ],
+    "source_sha256": "c2bf343e3023d3e3058fc543632db3c9d9edcd1943c69ab84077ed8590e94142",
+    "pixel_sha256": "595867c7c37c34e667b78136fe5ea45b7b13de6f272cd81f8dacdc7de67e7849",
+    "shoreline": 0.4,
+    "kind": "user-supplied base, spring/summer/autumn; winter uses existing seasonal art"
+  }
+}

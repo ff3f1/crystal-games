@@ -9,7 +9,7 @@
   // ---------- Ввод ----------
   const Input = {};
   function rigState() { const r = G.rig(); return r ? r.state : null; }
-  function blocked() { return !G.sess() || UI.anyOpen(); }
+  function blocked() { return !G.sess() || UI.anyOpen() || document.hidden || FZ.Ads.isBusy(); }
   function setAim(x, y) {
     const S = Sc.size();
     const yy = Math.max(y, S.shoreY + 2);
@@ -40,18 +40,18 @@
     const r = G.rig(); if (!r) return;
     const dt = performance.now() - P.st, dy = P.sy - P.y;
     const s = r.state;
-    if (aim) { const a = aim; aim = null; if (s === "idle") G.cast(a.X, a.Z); }
+    if (aim) { const a = aim; aim = null; if (s === "idle") {G.sess().lastAim={X:a.X,Z:a.Z};r.aimSelected=true;} }
     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
     else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
     r.reeling = false;
   }
   cv.addEventListener("pointerup", up);
-  cv.addEventListener("pointercancel", up);
+  cv.addEventListener("pointercancel",()=>{P.down=false;aim=null;Input.actionUp()});
   function tiltOf(x) { const S = Sc.size(); return U.clamp((x - S.W / 2) / (S.W * 0.38), -1, 1); }
 
   Input.actionDown = function () {
     FZ.Sound.unlock();
-    if (!G.sess()) return;
+    if (blocked()) return;
     const r = G.rig(), s = r.state, mode = G.sess().mode;
     if (s === "idle") { if (G.sess().ice) return; G.cast(); }
     else if (s === "nohole") G.drill();
@@ -76,7 +76,7 @@
     const r = G.rig();
     if (r && r.fish && r.fish.jump) dt *= 0.55; // замедление на «свечке»
     t += dt;
-    const paused = UI.anyOpen() && !document.getElementById("ovCatch").classList.contains("on");
+    const paused = UI.anyOpen() || document.hidden || FZ.Ads.isBusy() || FZ.appSuspended;
     if (!paused) G.update(dt, t);
     G.events().forEach(UI.onEvent);
     const s = G.sess();
@@ -84,7 +84,7 @@
       if (r) r.idleHint = r.state === "idle" ? (r.idleHint || 0) + dt : 0;
       const v = G.view(t);
       Sc.render(v, dt);
-      if (aim && r && r.state === "idle") Sc.drawAim(v, aim);
+      if(r&&r.state==="idle"&&(aim||r.aimSelected&&s.lastAim))Sc.drawAim(v,aim||s.lastAim);
       UI.frame(dt, t);
       ambT -= dt; if (ambT <= 0) { ambT = 3; UI.ambience(); }
     }
@@ -123,13 +123,18 @@
       G.startSession(st.loc);
       UI.buildHud();
       UI.showMenu();
+      if(st.pendingCatch&&FZ.SP[st.pendingCatch.sid]){
+        const result=Object.assign({},st.pendingCatch,{s:FZ.SP[st.pendingCatch.sid]});
+        G.rig().result=result;G.rig().state='result';UI.closeMenu();UI.showCatch(result);
+      }
       const b = document.getElementById("boot"); b.style.opacity = 0; setTimeout(() => b.remove(), 450);
       running = true; last = performance.now(); requestAnimationFrame(frame);
     });
     window.addEventListener("resize", () => Sc.resize());
-    document.addEventListener("visibilitychange", () => { if (document.hidden) { FZ.Sound.suspend(); G.save(true); } else FZ.Sound.resume(); });
-    window.__appPause = function () { FZ.Sound.suspend(); G.save(true); };
-    window.__appResume = function () { FZ.Sound.resume(); };
+    document.addEventListener("visibilitychange", () => {if(document.hidden)window.__appPause();else window.__appResume()});
+    window.__appPause = function () { FZ.appSuspended=true;P.down=false;aim=null;Input.actionUp();FZ.Sound.suspend('app');G.save(true); };
+    window.addEventListener('blur',()=>{P.down=false;Input.actionUp()});
+    window.__appResume = function () { const was=FZ.appSuspended;FZ.appSuspended=false;last=performance.now();FZ.Sound.resume("app");if(was&&G.sess()&&!UI.anyOpen()&&!FZ.Ads.isBusy())UI.showMenu(); };
     window.__game = { G, UI, Sc, FZ, aim: () => aim, setAim: (x, y) => setAim(x, y) };
   }
   if (document.fonts && document.fonts.load) Promise.all([document.fonts.load("700 16px Rubik"), document.fonts.load("700 30px Caveat")]).then(boot, boot);

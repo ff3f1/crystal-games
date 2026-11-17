@@ -101,7 +101,8 @@
     $("hIce").onpointerdown = (e) => e.stopPropagation();
     // действие
     const act = $("bAct");
-    act.onpointerdown = (e) => { e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(); };
+    act.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(); };
+    act.onlostpointercapture=()=>{act.classList.remove("held");FZ.Input.actionUp()};
     act.onpointerup = act.onpointercancel = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(); };
     ["tRod", "tBait", "tGb", "tMore", "bMenu", "hTime", "bFilm", "hDrag"].forEach((id) => { $(id).addEventListener("pointerdown", (e) => e.stopPropagation()); });
     UI.refreshTools();
@@ -582,7 +583,7 @@
     if (r.record && !r.newSpecies) badges.push(["Личный рекорд", "#8fd3e0"]);
     if (r.tier) badges.push(["Турнир дня: " + r.tier.n.toLowerCase(), r.tier.id === "gold" ? "#f2c21a" : r.tier.id === "silver" ? "#c8d0d8" : "#d8955a"]);
     else if (r.tour) badges.push(["Турнир дня", "#c8d0d8"]);
-    let doubled = false;
+    let doubled = !!r.doubled, rewarding=false;
     ov.innerHTML = '<div class="dim"></div><div class="catch">' +
       '<div class="badges">' + badges.map((b, i) => '<span class="bdg" style="background:' + b[1] + ";animation-delay:" + (0.5 + i * 0.12) + 's">' + b[0] + "</span>").join("") + "</div>" +
       '<canvas id="cFish"></canvas>' +
@@ -625,6 +626,7 @@
     loop();
     if (r.newSpecies || r.trophy) FZ.Platform.vibrate([30, 50, 30]);
     const done = function (keep) {
+      if(rewarding||G.rig().result!==r)return;
       ov.classList.remove("on"); cancelAnimationFrame(catchAnim); $("hud").classList.remove("hide");
       const res = G.resolveCatch(keep, doubled);
       if (res) { if (res.money) UI.toast("+" + U.money(res.money) + ", +" + res.xp + " опыта", "gold"); else UI.toast("Отпустили. +" + res.xp + " опыта", "gold"); }
@@ -634,16 +636,19 @@
     if ($("cKeep")) $("cKeep").onclick = () => done(true);
     $("cRel").onclick = () => { FZ.Sound.splash(0.4); done(false); };
     $("cShare").onclick = () => FZ.Share.share(r);
+    if(doubled){$("cDbl").textContent='Награда удвоена';$("cDbl").classList.add('on');if($("cKeepS"))$("cKeepS").textContent='+'+U.money(r.price*2);$("cRelS").textContent='+'+Math.round(r.xp*(r.mustRelease?2:1.5)*2)+' опыта';}
     $("cDbl").onclick = async function () {
-      if (doubled) return;
+      if (doubled||rewarding) return;
+      rewarding=true;this.disabled=true;if($("cKeep"))$("cKeep").disabled=true;$("cRel").disabled=true;
       const ok = await FZ.Ads.rewarded();
+      rewarding=false;this.disabled=false;if($("cKeep"))$("cKeep").disabled=false;$("cRel").disabled=false;
+      if(G.rig().result!==r)return;
       if (!ok) { UI.toast("Реклама сейчас недоступна", "bad"); return; }
-      doubled = true; this.classList.add("on"); this.textContent = "Награда удвоена";
+      doubled = true;r.doubled=true;if(G.state().pendingCatch)G.state().pendingCatch.doubled=true;G.save(true); this.classList.add("on"); this.textContent = "Награда удвоена";
       if ($("cKeepS")) $("cKeepS").textContent = "+" + U.money(r.price * 2);
       $("cRelS").textContent = "+" + Math.round(r.xp * (r.mustRelease ? 2 : 1.5) * 2) + " опыта";
     };
-  };
-  UI.afterCatch = async function (r) {
+  };  UI.afterCatch = async function (r) {
     const st = G.state(), s = G.sess();
     if (st.tut === 3) { st.tut = 4; G.save(true); setTimeout(() => UI.toast("Отлично! В меню «Снасти» есть фидер и спиннинг — с ними клюёт крупнее", "", 4200), 700); return; }
     // просьба оценить — после удачи
@@ -668,7 +673,7 @@
       '<button class="btn brass" id="lRev"><span class="adtag">реклама</span> Второй шанс</button><button class="btn ghost" id="lNo">Отпустить с миром</button></div>';
     ov.classList.add("on");
     $("lNo").onclick = () => { ov.classList.remove("on"); G.rig().lost = null; };
-    $("lRev").onclick = async () => { const ok = await FZ.Ads.rewarded(); ov.classList.remove("on"); if (ok) G.revive(); else UI.toast("Реклама сейчас недоступна", "bad"); };
+    $("lRev").onclick = async () => { const lost=G.rig().lost;$("lRev").disabled=true;const ok = await FZ.Ads.rewarded(); ov.classList.remove("on"); if (ok&&G.rig().lost===lost) G.revive(); else UI.toast("Реклама сейчас недоступна", "bad"); };
   };
 
   FZ.UI = UI;

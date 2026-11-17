@@ -17,7 +17,7 @@
   window.__adResult = function (id, ok) { if (pending[id]) { pending[id](!!ok); delete pending[id]; } };
 
   async function show(kind) {
-    if (busy) return false; busy = true; FZ.Sound.suspend(); let ok = false;
+    if (busy) return false; busy = true; FZ.Sound.suspend("ad"); let ok = false;
     try {
       if (platform === "vk" && bridge) { const r = await bridge.send("VKWebAppShowNativeAds", { ad_format: kind === "reward" ? "reward" : "interstitial" }); ok = !!(r && r.result); }
       else if (platform === "android") {
@@ -31,11 +31,12 @@
         await new Promise((r) => setTimeout(r, 1200)); o.classList.remove("on"); ok = true;
       }
     } catch (e) { ok = false; }
-    busy = false; FZ.Sound.resume(); return ok;
+    busy = false; FZ.Sound.resume("ad"); return ok;
   }
 
   FZ.Ads = {
     platform,
+    isBusy:()=>busy,
     init: function () {
       if (platform !== "vk") return;
       const s = document.createElement("script"); s.src = "vk-bridge.min.js";

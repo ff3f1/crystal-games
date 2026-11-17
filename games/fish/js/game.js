@@ -26,13 +26,26 @@
       active: "float", drag: 0.7,
       records: {}, caught: {}, stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
       daily: { day: "", quests: [], giftDay: "", streak: 0, tour: null, tourDay: "", tourClaim: [] },
-      settings: { sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
+      settings: { volumes: {music:.35,effects:.7,nature:.18}, sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
       tut: 0, rateAsked: 0, firstDay: U.dayKey(), lastDay: ""
     };
   }
   G.load = function () {
     try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) { st = Object.assign(fresh(), s); st.settings = Object.assign(fresh().settings, s.settings || {}); } } catch (e) { st = null; }
     if (!st) st = fresh();
+    // Upgrade in place; keep an untouched copy of the installed 1.0.10 save.
+    if(!st.renewal){try{const old=localStorage.getItem(KEY);if(old&&!localStorage.getItem('fz_save.backup.1.0.10'))localStorage.setItem('fz_save.backup.1.0.10',old)}catch(_){}st.renewal=1;st.settings.gfx='paint';st.settings.volumes={music:st.settings.music?.35:0,effects:st.settings.sound?.7:0,nature:st.settings.sound?.18:0}}
+    const defaults=fresh();st.load=st.load||{};st.inv=st.inv||{};st.lures=st.lures||{};st.records=st.records||{};st.caught=st.caught||{};
+    for(const k of ["rods","lines","hooks"])if(!Array.isArray(st[k]))st[k]=defaults[k];
+    if(!st.load[st.active]||st.active==="ice")st.active="float";
+    st.settings.volumes=Object.assign({music:.35,effects:.7,nature:.18},st.settings.volumes||{});
+    for(const m of Object.keys(defaults.load))st.load[m]=Object.assign({},defaults.load[m],st.load[m]||{});
+    st.stats=Object.assign({},defaults.stats,st.stats||{});st.daily=Object.assign({},defaults.daily,st.daily||{});
+    st.journal=Array.isArray(st.journal)?st.journal:[];
+    st.journey=st.journey||{maps:{},claimed:[]};st.journey.maps=st.journey.maps||{};st.journey.claimed=st.journey.claimed||[];
+    if(!FZ.LOC[st.loc])st.loc='pond';
+    for(const m of Object.keys(st.load)){const L=st.load[m];if(!FZ.ROD[L.rod]&&L.rod)L.rod=defaults.load[m].rod;if(!FZ.LINE[L.line])L.line='l1';if(!FZ.HOOK[L.hook])L.hook='h2';if(!FZ.BAIT[L.bait])L.bait=null}
+
     if (st.settings.qv !== 2) { st.settings.quality = "auto"; st.settings.autoQ = "hi"; st.settings.qv = 2; }
     if (st.rods.indexOf("i1") < 0) { st.rods.push("i1"); if (!st.load.ice.rod) st.load.ice.rod = "i1"; }
     autoBait();
@@ -94,7 +107,7 @@
   };
   G.baitLeft = function (id) { const b = FZ.BAIT[id]; if (!b) return 0; return b.lure ? (st.lures[id] || 0) : (st.inv[id] || 0); };
   G.availableBaits = function (mode) { return FZ.BAITS.filter((b) => b.m.indexOf(mode) >= 0 && G.baitLeft(b.id) > 0); };
-  G.setBait = function (id) { G.loadout().bait = id; G.save(); emit("gear"); };
+  G.setBait = function (id) { if(!FZ.BAIT[id]||G.baitLeft(id)<=0||FZ.BAIT[id].m.indexOf(G.mode())<0||rig&&["fight","landing","result"].includes(rig.state))return false; G.loadout().bait = id; G.save(); emit("gear"); };
   G.setDepth = function (d) { G.loadout().depth = d; G.save(); emit("gear"); };
   G.setDrag = function (v) { st.drag = U.clamp(v, 0.3, 1); G.save(); };
   G.setActive = function (mode) {
@@ -116,6 +129,7 @@
     if (kind === "rod") item = FZ.ROD[id]; else if (kind === "line") item = FZ.LINE[id]; else if (kind === "hook") item = FZ.HOOK[id];
     else if (kind === "bait") item = FZ.BAIT[id]; else if (kind === "gb") item = FZ.GROUNDBAIT; else if (kind === "extra") item = FZ.EXTRAS[id];
     if (!item) return "нет товара";
+    if(["rod","line","hook","extra"].includes(kind)&&G.owned(kind,id))return "Уже есть в снастях";
     price = item.price;
     if (st.lvl < (item.lvl || 1)) return "нужен уровень " + item.lvl;
     if (st.money < price) return "не хватает денег";
@@ -140,7 +154,7 @@
       }
     });
   }
-  G.equip = function (mode, slot, id) { st.load[mode][slot] = id; G.save(); emit("gear"); if (sess && sess.mode === mode && rig.state !== "fight") resetRig(); };
+  G.equip = function (mode, slot, id) { if(rig&&["fight","landing","result"].includes(rig.state))return false;if(!st.load[mode])return false;const dict={rod:FZ.ROD,line:FZ.LINE,hook:FZ.HOOK};if(dict[slot]&&!dict[slot][id])return false;st.load[mode][slot] = id; G.save(); emit("gear"); if (sess && sess.mode === mode && rig.state !== "fight") resetRig(); };
 
   FZ.EXTRAS = {
     echo: { id: "echo", n: "Эхолот", note: "показывает глубину и рыбу под лункой и в точке заброса", price: 3500, lvl: 5 },
@@ -151,13 +165,13 @@
   // ---------- Сессия рыбалки ----------
   G.startSession = function (locId, seasonPick) {
     if (seasonPick !== undefined) st.seasonPick = seasonPick;
-    const loc = FZ.LOC[locId || st.loc];
+    const loc = FZ.LOC[locId || st.loc]||FZ.LOC.pond;
     st.loc = loc.id;
     const season = G.season();
     const now = new Date();
     sess = {
-      loc, season, ice: season === "winter", mode: G.modeFor(season),
-      hour: now.getHours() + now.getMinutes() / 60,
+      loc, season, ice: season === "winter"&&!loc.openWinter, mode: season==="winter"&&loc.openWinter?(st.active==="ice"?"float":st.active):G.modeFor(season),
+      hour: Number.isFinite(st.lastHour)?st.lastHour:7.2,
       wx: Wd.weather(loc.id, season), spots: [], fedSpot: null, gbUntil: 0, t: 0, catches: 0,
       hole: null, nextSpot: 3, lastAim: null
     };
@@ -282,14 +296,14 @@
     const zone = zoneNow();
     const lat = FZ.Scene.maxLat(rig.Z);
     const edge = !sess.ice && Math.abs(rig.X) > lat * 0.62;
-    const deep = !sess.ice && rig.Z > loc.zfar * 0.45;
+    const deep = !sess.ice && rig.Z > G.maxCast() * 0.78;
     let sumW = 0; Object.keys(loc.fish).forEach((id) => (sumW += loc.fish[id]));
     const list = [];
     Object.keys(loc.fish).forEach(function (id) {
       const s = FZ.SP[id];
       let m = s.season[sess.season] * s.time[sess.period] * (s.kind === "pred" ? wx.pred : wx.peace);
       m *= (s.methods[sess.mode] || 0);
-      m *= bait ? (s.baits[bait] || (FZ.BAIT[bait].lure ? 0.03 : 0.06)) : 0;
+      m *= bait ? (s.baits[bait] || 0) : 0;
       m *= s.depth[zone];
       if (edge && EDGE_FISH[id]) m *= 1.35;
       if (deep && DEEP_FISH[id]) m *= 1.3;
@@ -309,7 +323,7 @@
       if (sess.mode === "spin") { m *= rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1; }
       if (sess.mode === "float" && sess.wx.wind >= 8) m *= 0.8;
       m *= RARF[s.rar];
-      if (m > 0) list.push([s, 0.1 * loc.fish[id] / sumW * m]);
+      if (m > 0) list.push([s, 0.20 * loc.fish[id] / sumW * m]);
     });
     return list;
   };
@@ -419,7 +433,7 @@
       const g = G.gear(sess.mode);
       const timing = 1 - Math.abs(b.t / b.take - (b.style === "lay" ? 0.6 : 0.35));
       const p = U.clamp(0.86 * (g.hook ? g.hook.hold : 1) + 0.1 * timing + (st.tut < 3 ? 1 : 0), 0.4, 0.98);
-      if (U.rand() < p) { hook(b.s, b.w); }
+      if (timing>.48 || U.rand() < p) { hook(b.s, b.w); }
       else { rig.bite = null; rig.state = "wait"; emit("msg", { text: "Не засеклась", bad: true }); }
     } else if (rig.state === "wait" && sess.mode !== "spin") {
       FZ.Sound.strike(); rig.rod.jerk = 0.6; emit("msg", { text: "Пустая подсечка" });
@@ -433,7 +447,7 @@
     rig.bite = null;
     rig.fish = {
       s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
-      vx: 0, vz: 0, S: 1, effort: 0.9, phase: "run", phaseT: U.rand.range(0.8, 1.6), T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
+      vx: 0, vz: 0, S: 1, effort: 0.38, phase: "rest", phaseT: 1.7, T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
     };
     rig.fish.vx = sess.ice ? 0 : U.rand.range(-1, 1) * 1.2;
@@ -443,29 +457,34 @@
   }
 
   // ---------- Вываживание ----------
+  function nextFishPhase(f){
+    if(f.S<.16)return 'tired';const r=U.rand(),runs=f.s.fight.runs*(.3+.7*f.S);
+    return r<runs?'run':r<runs+.16?'toward':r<runs+.16+f.s.fight.shake*.35?'shake':'rest';
+  }
   function fightTick(dt, t) {
     const f = rig.fish, s = f.s, g = G.gear(sess.mode);
     const rod = g.rod, line = g.line;
     const lineT = line.test, dragLim = st.drag * lineT;
     f.t += dt;
+    if(!f.nextPhase)f.nextPhase=nextFishPhase(f);
+    f.warning=f.nextPhase==="run"&&f.phaseT<.72&&f.phaseT>0;
     // смена поведения
     f.phaseT -= dt;
     if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
       if (f.jump && f.jump.k >= 1) { f.jump = null; if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5)); FZ.Sound.splash(0.8); }
-      const r = U.rand();
-      const runP = s.fight.runs * (0.3 + 0.7 * f.S);
+      const planned=f.nextPhase;f.nextPhase=null;
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
-      else if (r < runP) {
+      else if (planned === "run") {
         f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
         f.vx = U.rand.range(0.6, 2.2) * (U.rand() < 0.5 ? -1 : 1) * (sess.ice ? 0 : 1);
-        if (rig.reeling) f.T += 0.35 * f.Fmax; // рывок
+        if (rig.reeling) f.T += 0.14 * f.Fmax; // рывок
         if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
         }
         FZ.Scene.shake(2 + Math.min(6, f.Fmax)); FZ.Platform.vibrate(25);
-      } else if (r < runP + 0.16 && f.S > 0.25) { f.phase = "toward"; f.effort = -0.3; f.phaseT = U.rand.range(0.8, 1.8); }
-      else if (r < runP + 0.16 + s.fight.shake * 0.35) { f.phase = "shake"; f.effort = 0.62; f.phaseT = U.rand.range(0.6, 1.1); }
+      } else if (planned === "toward" && f.S > 0.25) { f.phase = "toward"; f.effort = -0.3; f.phaseT = U.rand.range(0.8, 1.8); }
+      else if (planned === "shake") { f.phase = "shake"; f.effort = 0.62; f.phaseT = U.rand.range(0.6, 1.1); }
       else { f.phase = "rest"; f.effort = U.rand.range(0.28, 0.45); f.phaseT = U.rand.range(1, 2.4); }
     }
     if (f.jump) f.jump.k += dt / f.jump.dur;
@@ -488,7 +507,8 @@
       f.T = dragLim + slip * 0.2;
       FZ.Sound.drag(U.clamp(slip / lineT, 0, 1));
     }
-    if (f.T > lineT) return lose("snap");
+    if(f.T>lineT)f.overload=(f.overload||0)+dt;else f.overload=Math.max(0,(f.overload||0)-dt*2);
+    if(f.overload>.36)return lose("snap");
     // подмотка
     const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1));
     if (reeling && !slipping) { if (sess.ice) f.D -= reelSp * 0.55 * dt; else f.Z -= reelSp * dt; FZ.Sound.reel(rod.reel); rig.rod.reelAngle += dt * 14; }
@@ -539,6 +559,7 @@
       if (g.bait && g.bait.lure) { st.lures[g.bait.id] = Math.max(0, (st.lures[g.bait.id] || 1) - 1); autoBait(); emit("msg", { text: "Приманка «" + g.bait.n + "» потеряна", bad: true }); }
     } else FZ.Sound.fail();
     if (g.bait && !g.bait.lure) useBait();
+    f.reviveBait=g.bait?{id:g.bait.id,lure:!!g.bait.lure}:null;
     rig.lost = { f, why, canRevive: !f.revived && why !== "spool" };
     rig.fish = null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.tension = 0;
     emit("lost", { text, why, fish: f });
@@ -547,7 +568,9 @@
   // Второй шанс после рекламы: рыба снова на крючке
   G.revive = function () {
     if (!rig.lost || !rig.lost.canRevive) return false;
-    const f = rig.lost.f; f.revived = true; f.T = f.Fmax * 0.3; f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
+    const f = rig.lost.f;
+    if(f.reviveBait){const b=f.reviveBait;if(b.lure)st.lures[b.id]=(st.lures[b.id]||0)+1;else st.inv[b.id]=(st.inv[b.id]||0)+1;st.load[sess.mode].bait=b.id;}
+    f.overload=0;f.nextPhase='rest';f.revived = true; f.T = f.Fmax * 0.3; f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
     f.S = Math.min(f.S, 0.6); if (!sess.ice) f.X *= 0.6; f.Z = Math.min(f.Z, 40);
     rig.fish = f; rig.state = "fight"; rig.lost = null;
     emit("revived");
@@ -594,6 +617,7 @@
     sess.catches++;
     FZ.Sound.flop();
     if (trophy || res.record && !res.newSpecies) FZ.Sound.trophy(); else FZ.Sound.coin();
+    st.pendingCatch=Object.assign({},res,{sid:s.id,s:undefined});G.save(true);
     emit("catch", { res });
   }
 
@@ -601,6 +625,7 @@
   G.resolveCatch = function (keep, doubled) {
     const r = rig.result; if (!r) return;
     const s = r.s;
+    delete st.pendingCatch;
     if (r.mustRelease) keep = false;
     let money = 0, xp = r.xp;
     if (keep) { money = r.price * (doubled ? 2 : 1); st.money += money; }
@@ -608,6 +633,9 @@
     st.caught[s.id] = (st.caught[s.id] || 0) + 1;
     if (r.record) st.records[s.id] = { w: r.w, len: r.len, loc: r.loc, date: r.date };
     st.stats.total++; st.stats.kg += r.w;
+    st.journal.unshift({sid:s.id,w:r.w,len:r.len,loc:r.loc,season:sess.season,mode:r.mode,kept:!!keep,date:new Date().toISOString(),trophy:r.trophy});st.journal=st.journal.slice(0,150);
+    st.journey.maps[r.loc]=(st.journey.maps[r.loc]||0)+1;
+
     if (r.trophy) st.stats.trophies++;
     if (!st.stats.best || r.w > st.stats.best.w) st.stats.best = { sid: s.id, w: r.w };
     // задания
@@ -646,7 +674,7 @@
   G.update = function (dt, t) {
     if (saveT > 0) { saveT -= dt; if (saveT <= 0) G.save(true); }
     if (!sess) return;
-    sess.t += dt;
+    sess.t += dt;st.lastHour=sess.hour;
     // время суток: 1 игровой час ≈ 75 секунд
     sess.hour = (sess.hour + dt / 75 * (rig.state === "fight" ? 0.3 : 1)) % 24;
     const p = FZ.Scene.period(sess.hour, sess.season);
@@ -695,11 +723,12 @@
         r.idleT += dt;
         // первая рыба в обучении — быстро и гарантированно
         if (!G.gear(sess.mode).bait || G.baitLeft(G.gear(sess.mode).bait.id) <= 0) { /* без наживки не клюёт */ }
-        else if (st.tut < 3 && r.idleT > 2.5) { const sp = FZ.SP[sess.mode === "float" || sess.mode === "feeder" ? "crucian" : "perch"]; startBite(sp, U.rand.range(0.28, 0.45)); }
+        else if (st.tut < 3 && r.idleT > 2.5) { const tbl=G.biteTable();if(tbl.length){const sp=tbl.slice().sort((a,b)=>b[1]-a[1])[0][0];startBite(sp,Math.min(sp.trophy*.8,Math.max(sp.min,sp.med*.8)));} }
         else {
           const tbl = G.biteTable();
           let tot = 0; tbl.forEach((x) => (tot += x[1]));
-          if (U.rand() < 1 - Math.exp(-tot * dt)) {
+          if (tot>0&&(U.rand() < 1 - Math.exp(-tot * dt)||r.idleT>Math.min(32,9+1/Math.max(.04,tot)*.7))) {
+            r.idleT=0;
             const s = U.weighted(tbl);
             const w = sampleWeight(s);
             const g = G.gear(sess.mode);

@@ -63,7 +63,7 @@
   R.setQuality = function (q) { quality = q; R.resize(); };
   R.resize = function () {
     W = window.innerWidth; H = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, { hi: 2, mid: 1.5, lo: 1 }[quality] || 1.5);
+    dpr = Math.min(window.AndroidShare&&window.AndroidShare.legacyRenderer&&window.AndroidShare.legacyRenderer()?1.25:3, window.devicePixelRatio || 1, { hi: 2, mid: 1.5, lo: 1 }[quality] || 1.5);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + "px"; cv.style.height = H + "px";
     shoreY = Math.round(H * (H / W > 1.9 ? 0.39 : 0.37));
@@ -831,6 +831,8 @@
     }
     if (v.landing) R.drawLanding(v, L, t);
 
+    // A continuous recovered rod image keeps the grip, blank and reel aligned.
+    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle))return;
     // удилище
     const bx = G.base.x, by = G.base.y;
     const mx = (bx + tip.x) / 2 - (tip.y - by) * 0.04 * bend, my = (by + tip.y) / 2 + bend * 40 + 10;

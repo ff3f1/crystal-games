@@ -365,6 +365,7 @@
   // Кэш картинок рыб для меню (canvas → dataURL)
   const cache = {};
   A.fishURL = function (s, w, sil) {
+    if(!sil&&FZ.Assets.style!=="art"&&FZ.Assets.url("fish/"+s.id))return FZ.Assets.url("fish/"+s.id);
     const key = s.id + "|" + w + "|" + (sil ? 1 : 0) + "|" + (FZ.Assets && FZ.Assets.fish(s.id) ? "img" : "pr");
     if (cache[key]) return cache[key];
     const c = document.createElement("canvas");
@@ -378,6 +379,7 @@
 
   // ---------- Иконки снастей ----------
   A.icon = function (id, size) {
+    if(FZ.Assets.style!=="art"&&FZ.Assets.url("items/"+id))return FZ.Assets.url("items/"+id);
     const key = "ic|" + id + "|" + size + "|" + (FZ.Assets ? FZ.Assets.style : "");
     if (cache[key]) return cache[key];
     const img = FZ.Assets && FZ.Assets.item(id);

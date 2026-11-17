@@ -22,7 +22,8 @@
     else if (season === "summer") sky = U.weighted([["clear", 4], ["cloudy", 3], ["overcast", 1.5], ["rain", 1.2], ["storm", 0.4]], r());
     else sky = U.weighted([["clear", 2.5], ["cloudy", 3], ["overcast", 2.5], ["rain", 2]], r());
     const tRange = { spring: [4, 17], summer: [17, 30], autumn: [1, 13], winter: [-24, -3] }[season];
-    const temp = Math.round(r.range(tRange[0], tRange[1]));
+    let temp = Math.round(r.range(tRange[0], tRange[1]));
+    if(season==='winter'&&FZ.LOC[locId]&&FZ.LOC[locId].openWinter)temp=Math.round(r.range(locId==='blacksea'?2:-8,locId==='blacksea'?12:3));
 
     // Влияние на клёв (народная мудрость + здравый смысл)
     let peace = 1, pred = 1;
