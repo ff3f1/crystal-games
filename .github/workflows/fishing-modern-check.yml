@@ -17,7 +17,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p work/candidate work/original
-          gh run download 44170583287 --repo ff3f1/crystal-games --name fishing-1.6-signed-update --dir work/candidate
+          gh run download 44173203497 --repo ff3f1/crystal-games --name fishing-1.6-signed-update --dir work/candidate
           gh api repos/ff3f1/crystal-games/actions/artifacts/14164440212/zip > work/original.zip
           unzip -j work/original.zip fish-10.apk -d work/original
       - name: Enable emulator acceleration
