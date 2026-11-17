@@ -59,9 +59,10 @@ if(v?.schema===VERSION)return validate(v);
 if(v?.v!==2)throw Error('Это не сохранение ТЫ.УРОВЕНЬ');
 const s=fresh();s.onboard=!!v.onboard;const p=v.profile||{};s.profile={...s.profile,name:text(p.name,32)||s.profile.name,gender:['male','female'].includes(p.gender)?p.gender:'neutral',body:['slim','broad'].includes(p.body)?p.body:'regular',tone:/^#[0-9a-f]{6}$/i.test(p.tone)?p.tone:s.profile.tone,hair:/^#[0-9a-f]{6}$/i.test(p.hair)?p.hair:s.profile.hair};
 s.legacy={xp:Math.max(0,Math.min(1e8,Number(v.xp)||0)),coins:Math.max(0,Math.min(1e8,Number(v.coins)||0))};s.settings.theme=v.theme==='light'?'light':'dark';
-for(const t of v.tx||[]){if(t.demo||!validDate(t.date)||!['income','expense'].includes(t.kind)||!(t.amount>0))continue;s.tx.push({id:text(t.id)||uid(),kind:t.kind,cents:Math.round(t.amount*100),category:text(t.category)||'Другое',date:t.date,note:text(t.note),...(t.billId?{billId:text(t.billId),period:t.date.slice(0,7)}:{})})}
-for(const t of v.tasks||[])if(t.name)s.tasks.push({id:text(t.id)||uid(),name:text(t.name),date:validDate(t.due)?t.due:day(),skill:'mind',done:!!t.done});
+for(const t of v.tx||[]){if(t.demo||!validDate(t.date)||!['income','expense'].includes(t.kind)||!(t.amount>0))continue;s.tx.push({id:/^[a-zA-Z0-9_-]{1,100}$/.test(String(t.id))?String(t.id):uid(),kind:t.kind,cents:Math.round(t.amount*100),category:text(t.category)||'Другое',date:t.date,note:text(t.note,100),...(t.billId?{billId:text(t.billId),period:t.date.slice(0,7)}:{})})}
+for(const t of v.tasks||[])if(t.name)s.tasks.push({id:/^[a-zA-Z0-9_-]{1,100}$/.test(String(t.id))?String(t.id):uid(),name:text(t.name,100),date:validDate(t.due)?t.due:day(),skill:'mind',done:!!t.done});
 for(const h of v.customHabits||[])if(h.id&&h.name)s.habits.push({id:text(h.id),name:text(h.name),skill:'mind',target:1,unit:'раз',active:true});
+for(const [id,name,skill] of [['food','Позаботиться о питании','care'],['finance','Проверить бюджет','wealth'],['sleep','Уделить время отдыху','care']])s.habits.push({id,name,skill,target:1,unit:'раз',active:false});
 for(const [date,ids] of Object.entries(v.logs||{}))if(validDate(date)&&Array.isArray(ids))for(const id of new Set(ids))s.entries.push({id:uid(),habitId:text(id),name:s.habits.find(h=>h.id===id)?.name||'Действие из v0.8',date,value:1,unit:'раз',skill:'mind',note:'Перенесено из v0.8'});
 for(const b of v.bills||[])if(b.name&&b.amount>0)s.bills.push({id:text(b.id)||uid(),name:text(b.name),cents:Math.round(b.amount*100),day:Math.min(31,Math.max(1,Number(b.day)||1)),category:text(b.category)||'Другое'});
 if(v.budget>0)s.budgets.push({month:day().slice(0,7),category:'Все категории',cents:Math.round(v.budget*100)});
@@ -86,6 +87,23 @@ for(const r of s.purchases)if(!safeN(r.price))throw Error('Некорректн�
 if(!s.legacy||!safeN(s.legacy.xp,1e8)||!safeN(s.legacy.coins,1e8)||coins(s)<0)throw Error('Некорректный игровой баланс');
 if(typeof s.profile.name!=='string'||s.profile.name.length>32)throw Error('Некорректное имя');
 if(!['dark','light','system'].includes(s.settings.theme)||['music','sfx'].some(k=>!Number.isFinite(s.settings[k])||s.settings[k]<0||s.settings[k]>1))throw Error('Некорректные настройки');
+const safeId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(id);
+const string=(v,max=200)=>typeof v==='string'&&v.length<=max;
+for(const k of ['habits','entries','tasks','goals','tx','bills','meals','workouts','weights','purchases']){if(s[k].some(x=>!x||!safeId(x.id))||new Set(s[k].map(x=>x.id)).size!==s[k].length)throw Error('Некорректные идентификаторы: '+k)}
+for(const h of s.habits)if(!string(h.name,65)||!string(h.unit,12)||typeof h.active!=='boolean')throw Error('Повреждена привычка');
+for(const e of s.entries)if(!safeId(e.habitId)||!validDate(e.date)||!string(e.name,120)||!Number.isFinite(e.value)||e.value<0||!string(e.unit,12)||!string(e.note,120)||!SKILLS.includes(e.skill))throw Error('Повреждена запись привычки');
+for(const t of s.tasks)if(!string(t.name,120)||typeof t.done!=='boolean'||(t.note!==undefined&&!string(t.note,120)))throw Error('Повреждено дело');
+for(const g of s.goals)if(!validDate(g.date)||g.steps.some(t=>!safeId(t.id)||!string(t.name,100)||typeof t.done!=='boolean'||(t.note!==undefined&&!string(t.note,120)))||new Set(g.steps.map(t=>t.id)).size!==g.steps.length)throw Error('Повреждена цель');
+for(const t of s.tx)if(!string(t.category,40)||!string(t.note,100)||(t.billId!==undefined&&(!safeId(t.billId)||!/^\d{4}-(0[1-9]|1[0-2])$/.test(t.period))))throw Error('Повреждена операция');
+for(const b of s.budgets)if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(b.month)||!string(b.category,40))throw Error('Повреждён бюджет');
+for(const b of s.bills)if(!string(b.name,60)||!string(b.category,40)||!Number.isInteger(b.day)||b.day<1||b.day>31)throw Error('Повреждён регулярный платёж');
+for(const m of s.meals)if(!validDate(m.date)||!string(m.name,100)||!string(m.type,30)||(m.kcal!==null&&(!Number.isFinite(m.kcal)||m.kcal<=0||m.kcal>10000)))throw Error('Повреждён приём пищи');
+for(const w of s.workouts)if(!validDate(w.date)||!string(w.type,60)||!string(w.note,120)||!Number.isFinite(w.minutes)||w.minutes<1||w.minutes>600)throw Error('Повреждена тренировка');
+for(const w of s.weights)if(!validDate(w.date)||!Number.isFinite(w.kg)||w.kg<20||w.kg>500)throw Error('Повреждена запись веса');
+for(const r of s.rewards)if(!string(r.key,250))throw Error('Повреждён ключ награды');
+for(const p of s.purchases)if(!validDate(p.date)||!OUTFITS.some(o=>o.id===p.outfit))throw Error('Повреждена покупка');
+if(!s.owned.includes('trail')||s.owned.some(id=>!OUTFITS.some(o=>o.id===id))||new Set(s.owned).size!==s.owned.length)throw Error('Повреждён гардероб');
+if(!['haven','focus','dawn'].includes(s.settings.track)||typeof s.settings.haptics!=='boolean'||typeof s.settings.motion!=='boolean'||typeof s.onboard!=='boolean')throw Error('Повреждены настройки');
 const palette=['#f3d8bb','#e7bd99','#dbac88','#bd8968','#996649','#704936','#493128'];if(!palette.includes(s.profile.tone))s.profile.tone='#dbac88';
 if(!/^#[0-9a-f]{6}$/i.test(s.profile.hair))s.profile.hair='#302b34';
 if(!OUTFITS.some(o=>o.id===s.profile.outfit)||!s.owned.includes(s.profile.outfit))s.profile.outfit='trail';

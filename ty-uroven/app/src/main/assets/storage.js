@@ -14,7 +14,7 @@ async function removePhoto(state,id){const next=structuredClone(state);next.revi
 async function backup(state){return JSON.stringify({format:'ty-uroven-backup',version:3,exported:new Date().toISOString(),state,photos:await photos()})}
 async function restore(current,raw){let pack;try{pack=JSON.parse(raw)}catch{throw Error('Не удалось прочитать JSON')}
 const s=C.migrate(pack.state||pack);const photos=pack.photos||[];if(!Array.isArray(photos)||photos.length>240)throw Error('Некорректный фотодневник');
-for(const p of photos)if(typeof p.id!=='string'||!C.validDate(p.date)||typeof p.data!=='string'||p.data.length>4000000||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data))throw Error('Повреждена фотография');
+for(const p of photos){p.note??='';if(!(/^[a-zA-Z0-9_-]{1,100}$/.test(p.id))||!C.validDate(p.date)||typeof p.note!=='string'||p.note.length>120||typeof p.data!=='string'||p.data.length>4000000||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(p.data))throw Error('Повреждена фотография');}
 if(new Set(photos.map(p=>p.id)).size!==photos.length)throw Error('Повторные фотографии');s.revision=current.revision+1;await save(s,current.revision,photos);return s}
 return {open,read,photos,mutate,putPhoto,removePhoto,backup,restore};
 })();
