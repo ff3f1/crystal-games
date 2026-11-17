@@ -31,7 +31,9 @@
     void main(){
       vec2 uv=vec2(vUv.x,1.-vUv.y);float depth=clamp((uv.y-shore)/(1.-shore),0.,1.);
       vec3 sky=mix(vec3(.40,.61,.73),vec3(.84,.86,.78),uv.y/shore);
-      vec3 landscape=hasPhoto>.5?samplePhoto(uv):sky;
+      // The underwater photo has its own UV mapping. Avoid sampling the wrong
+      // part of the panorama on every water/ice pixel (mobile GPU bandwidth).
+      vec3 landscape=(hasPhoto>.5 && uv.y<=shore)?samplePhoto(uv):sky;
       vec3 c=landscape;
       if(winter>.5 && uv.y<=shore){
         float bank=smoothstep(shore*.47,shore,uv.y);
