@@ -1,0 +1,7 @@
+.gradle/
+**/build/
+local.properties
+test-results/
+artifacts/
+device-evidence/
+__pycache__/
