@@ -84,36 +84,64 @@
       g.drawImage(c,p.x-radius*.73+off,p.y-radius*.33,radius*1.46,radius*.66);
     }
   }
+  // Real mechanical feeding/hunting areas must read clearly above photo water.
+  // The center and spatial radius are exactly the same ones used by spotBonus().
   function activity(g,v,project){
     if(!v||v.ice||!v.spots||!v.spots.length)return;
     ensureTextures();
-    g.save();g.globalCompositeOperation='screen';
+    g.save();
     for(const sp of v.spots){
       if(!(sp.life>0&&sp.intensity>0))continue;
       const age=Math.max(0,(sp.duration||sp.life)-sp.life);
-      const strength=clamp(sp.intensity,0,1),active=sp.type==='boil';
-      // Stable world-space seeds: signs persist for the lifetime of the mechanical spot.
-      const count=active?6:5;
-      for(let i=0;i<count;i++){
-        const phase=(age/(active?1.32:2.1)+i/count)%1;
-        const angle=i*2.39996+Math.sin(age*.34+i)*.22;
-        const radial=(active?.38:.22)*(sp.radius||1);
-        const X=sp.X+Math.cos(angle)*radial,Z=sp.Z+Math.sin(angle)*radial*.55;
+      const power=clamp(sp.intensity,0,1),pred=sp.type==="boil";
+      const center=project(sp.X,sp.Z);
+      const radius=clamp(center.s*(sp.radius||4.5)*.47,16,106);
+      const pulse=.78+.22*Math.sin(age*(pred?8.4:4.2));
+      // Depth/distance attenuation keeps far signs legible without massive decals.
+      const envelope=power*(.78+.22*pulse);
+      g.globalCompositeOperation="source-over";
+      const dent=g.createRadialGradient(center.x,center.y,0,center.x,center.y,radius*1.45);
+      dent.addColorStop(0,"rgba(10,33,37,"+(.16*envelope)+")");
+      dent.addColorStop(.53,"rgba(19,51,55,"+(.11*envelope)+")");
+      dent.addColorStop(1,"rgba(16,54,59,0)");
+      g.fillStyle=dent;
+      g.beginPath();g.ellipse(center.x,center.y,radius*1.45,radius*.64,0,0,TAU);g.fill();
+      g.globalCompositeOperation="screen";
+      // Irregular foam and slivers of refracted surface light.
+      // No fixed bright ring, no bullseye, no trophy beacon.
+      for(let i=0;i<(pred?9:6);i++){
+        const angle=i*2.39996+Math.sin(age*.3+i)*.2;
+        const orbit=(pred?.55:.48)*(sp.radius||4.5);
+        const X=sp.X+Math.cos(angle)*orbit;
+        const Z=sp.Z+Math.sin(angle)*orbit*.40;
         const p=project(X,Z);
-        const level=strength*(active?.5:.31)*(1-phase)*clamp(p.s/8,.45,1);
-        drawRing(g,p,phase,level,active?.40:.19,angle);
-        if(active&&i%2===0){
-          const f=clamp((Math.sin(age*9+i*2)+1)*.5,0,1);
-          const radius=clamp(p.s*(.15+f*.16),2.5,24);
-          g.globalAlpha=strength*.19*(1-phase);
-          g.drawImage(foamTex,p.x-radius,p.y-radius*.46,radius*2,radius*.92);
-        }else if(!active&&phase<.34){
-          // Surface blisters from bottom feeding, not soap-bubble outlines.
-          const r=clamp(p.s*.047,1.1,3.8);
-          g.globalAlpha=strength*.4*(1-phase/.34);
-          g.drawImage(dropTex,p.x-r,p.y-r*1.5,2*r,2*r);
+        const phase=(age/(pred?1.0:1.7)+i/(pred?9:6))%1;
+        const alpha=envelope*(pred?.84:.68)*(1-phase*.64);
+        drawRing(g,p,phase,alpha,(sp.radius||4.5)*(pred?.27:.17),angle);
+        const breath=.65+.35*Math.sin(age*(pred?8.1:4.8)+angle);
+        const rr=clamp(radius*(pred?.22:.12)*breath,3,27);
+        g.globalAlpha=envelope*(pred?.57:.37)*(1-phase*.6);
+        g.drawImage(foamTex,p.x-rr,p.y-rr*.42,rr*2,rr*.84);
+        if(!pred){
+          const pr=clamp(1.6+p.s*.065,2,5.2);
+          g.globalAlpha=envelope*.65*(1-phase*.6);
+          g.drawImage(dropTex,p.x-pr+Math.sin(age*4+i)*pr*.8,p.y-pr*.5,pr*2,pr*2);
+        }else if(i%3===0) {
+          // Quick bright broken crests mark the predator's directional boil.
+          const len=clamp(radius*(.22+.24*breath),7,38);
+          g.strokeStyle="rgba(224,242,238,"+(.4*envelope)+")";
+          g.lineWidth=clamp(p.s*.042,.8,2.4);
+          g.beginPath();g.moveTo(p.x-len*.45,p.y);
+          g.bezierCurveTo(p.x-len*.1,p.y-len*.28,p.x+len*.24,p.y-len*.10,p.x+len*.62,p.y-len*.24);g.stroke();
         }
       }
+      // A broad, persistent but gently moving patch is visible at normal zoom.
+      // It disappears only when the simulation reports no active spot.
+      g.globalAlpha=envelope*(pred?.48:.3);
+      const spread=radius*(pred?.85:.66),swirl=Math.sin(age*(pred?2.8:1.3))*.15;
+      g.save();g.translate(center.x,center.y);g.rotate(swirl);
+      g.drawImage(foamTex,-spread,-spread*.39,spread*2,spread*.78);
+      g.restore();
     }
     g.restore();
   }
