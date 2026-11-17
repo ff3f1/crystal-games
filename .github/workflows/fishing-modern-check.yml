@@ -1,0 +1,54 @@
+name: Fishing Android 35 compatibility check
+on:
+  push:
+    branches: [codex/fishing-android35-check]
+    paths: ['.github/workflows/fishing-modern-check.yml', 'tests/android_modern_smoke.py']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  android35:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get the signed candidate and the original 1.0.10
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work/candidate work/original
+          gh run download 44170583287 --repo ff3f1/crystal-games --name fishing-1.6-signed-update --dir work/candidate
+          gh api repos/ff3f1/crystal-games/actions/artifacts/14164440212/zip > work/original.zip
+          unzip -j work/original.zip fish-10.apk -d work/original
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Upgrade and exercise the game on Android 15
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb root
+            adb wait-for-device
+            adb shell settings put secure immersive_mode_confirmations confirmed
+            adb shell svc wifi disable
+            adb shell svc data disable
+            adb install work/original/fish-10.apk
+            uid=$(adb shell dumpsys package ru.crystalgames.fishing | sed -n 's/.*userId=\([0-9]*\).*/\1/p' | head -1 | tr -d '\r')
+            test -n "$uid"
+            adb shell iptables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT
+            adb shell ip6tables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT || true
+            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity
+            sleep 7
+            adb shell am force-stop ru.crystalgames.fishing
+            adb install -r work/candidate/fishing-1.6.0.apk
+            adb logcat -c
+            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity
+            sleep 12
+            python3 tests/android_modern_smoke.py
