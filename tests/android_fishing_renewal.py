@@ -40,7 +40,7 @@ try:
  tap(id='mMap');find('Выбери свой берег');tap('Зима');tap('Деревенский пруд');time.sleep(1.3)
  find('Бурить',id='bAct');shot('android-winter')
  tap(id='bAct');time.sleep(3);find('Играть',id='bAct');shot('android-hole')
- tap(id='tBait');find('Наживка');find('40 шт.');tap(id='bpAd');time.sleep(.5);find('40 шт.');back()
+ tap(id='tBait');find('Наживка');find('Червь');shot('android-bait');back()
  # Native back opens the pause/menu layer instead of abandoning the app.
  back();find(id='mGo');tap(id='mGo')
  adb('shell','input','keyevent','3');time.sleep(.8)
@@ -49,8 +49,8 @@ try:
  assert adb('shell','pidof',PKG).strip()
  logs=adb('logcat','-d','-s','AndroidRuntime:E','chromium:V')
  assert 'FATAL EXCEPTION' not in logs and 'Uncaught TypeError' not in logs
- (OUT/'ANDROID_RESULT.txt').write_text('PASS: upgrade from signed 1.0.10 with adb install -r; menu, atlas, settings, winter travel, drilling, bait, unavailable-ad no-reward path, native back and background/resume work offline on Android 29.\n')
- print('PASS Android in-place update, offline UI, winter gameplay, unavailable reward and lifecycle')
+ (OUT/'ANDROID_RESULT.txt').write_text('PASS: upgrade from signed 1.0.10 with adb install -r; menu, atlas, settings, winter travel, drilling, bait, bait chooser, native back and background/resume work offline on Android 29.\n')
+ print('PASS Android in-place update, offline UI, winter gameplay, bait chooser and lifecycle')
 finally:
  shot('android-final');snapshot('android-final')
  (OUT/'android-log.txt').write_text(adb('logcat','-d','-s','AndroidRuntime:E','chromium:V'))
