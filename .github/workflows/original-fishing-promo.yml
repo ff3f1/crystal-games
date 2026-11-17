@@ -19,8 +19,8 @@ jobs:
           fetch-depth: 0
       - name: Verify game really is original RuStore 1.0.10
         run: |
-          test "$(git rev-list --max-parents=0 HEAD | wc -l)" -ge 1
-          test "$(git rev-parse HEAD~3)" = "b77f8443f482b4de083b4b88ada2d2f99f232bc9"
+          git merge-base --is-ancestor b77f8443f482b4de083b4b88ada2d2f99f232bc9 HEAD
+          test -z "$(git diff --name-only b77f8443f482b4de083b4b88ada2d2f99f232bc9 HEAD -- games/fish)"
           grep -q 'ru.crystalgames.fishing' games/fish/js/platform.js
           test ! -e games/fish/js/renewal.js
       - name: Video and browser prerequisites
