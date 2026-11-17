@@ -66,16 +66,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: |
-            adb shell settings put global airplane_mode_on 1
-            adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true
-            cd ty-uroven && gradle connectedDebugAndroidTest --no-daemon --stacktrace
-      - name: Collect on-device screenshots and logs
-        if: always()
-        run: |
-          mkdir -p ty-uroven/device-evidence
-          timeout 20s adb pull /sdcard/Android/data/ru.uroven.adventurepreview/files/screenshots ty-uroven/device-evidence/ || true
-          timeout 20s adb logcat -d > ty-uroven/device-evidence/logcat.txt || true
+          script: bash ty-uroven/tools/test_android.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
