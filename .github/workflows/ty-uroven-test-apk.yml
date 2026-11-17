@@ -27,6 +27,7 @@ jobs:
           base64 -d ty-uroven-src.zip.b64 > /tmp/tyapp.zip
           unzip -q /tmp/tyapp.zip -d tyapp
           test -f tyapp/app/src/main/assets/index.html
+          sed -i 's/ru.uroven.onlinepreview/ru.uroven.adventurepreview/g' tyapp/app/build.gradle
       - name: Build signed test APK
         working-directory: tyapp
         run: gradle assembleRelease --no-daemon --stacktrace
