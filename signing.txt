@@ -1,0 +1,4 @@
+Signer #1 certificate DN: CN=TY UROVEN Development, O=Development only
+Signer #1 certificate SHA-256 digest: e929394b2339a1c1e1a36657bfc82968c594436dfb363f8d5370a5ec6feec191
+Signer #1 certificate SHA-1 digest: ff432029a0fb6b389a20857a2af2974d53c026d3
+Signer #1 certificate MD5 digest: 1165dd1f86f9c8b2f72894cccac7b7a4

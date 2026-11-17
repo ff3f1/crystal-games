@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "commit": "b7b7407efe7f809a83619687d367457e4c255ed2",
+  "run": 44124276923,
+  "apk_sha256": "e5fed08656203f5d2fa3806f140c8f0f67962995adfef6a84bf390fd74d5ffa8",
+  "apk_bytes": 1440506,
+  "domain_tests": 16,
+  "ui_checks": 22,
+  "android_api": 35,
+  "android_passed": true,
+  "native_screenshots": 17
+}
