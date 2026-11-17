@@ -19,7 +19,7 @@ const OUT=process.env.FISH_OUT||path.resolve('work/renewal-checks');fs.mkdirSync
  await p.click('#mAtlas');assert.equal(await p.locator('.acard').count(),62);await p.locator('[data-sp="cod"]').scrollIntoViewIfNeeded();await p.locator('[data-sp="cod"]').click();assert((await p.locator('.facts').textContent()).includes('Наживки'));await p.evaluate(()=>FZ.UI.closeSheet());
  await p.click('#mSet');await p.locator('#musicVolume').fill('21');await p.locator('#musicVolume').dispatchEvent('input');assert.equal(await p.evaluate(()=>FZ.Game.settings().volumes.music),.21);await p.evaluate(()=>FZ.UI.closeSheet());
  // The first trip must be uninterrupted. An interstitial here blocks the game.
- await p.click('#mMap');await p.click('[data-season="winter"]');await p.click('[data-travel="pond"]');
+ await p.click('#mMap');await p.click('[data-season="summer"]');await p.click('[data-biome="sea"]');assert((await p.locator('[data-travel="blacksea"]').textContent()).includes('Морская ловля'));await p.click('[data-biome="river"]');assert.equal(await p.locator('[data-travel="blacksea"]').count(),0);await p.click('[data-biome="all"]');await p.click('[data-season="winter"]');await p.click('[data-travel="pond"]');
  await p.waitForTimeout(150);
  assert.equal(await p.evaluate(()=>window.__adRequests.filter(r=>r[0]==='inter').length),0,'The first trip must not open a fullscreen ad');
  assert.equal(await p.evaluate(()=>FZ.Game.sess().season),'winter');
