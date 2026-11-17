@@ -48,7 +48,7 @@
     drawFineLine(detailContext,v);
     R.drawLureInset(detailContext,v,W,H);
   }
-  let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
+  let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks,lureSprite,lureTextures={};
   let key='',texture=null,oldTexture=null,asset=null,requested='',contextLost=false,ringCursor=0;
   const rippleData=Array.from({length:12},()=>new T.Vector4(-10,-10,-100,0));
   const uniforms={photo:{value:null},hasPhoto:{value:0},resolution:{value:new T.Vector2(W,H)},photoSize:{value:new T.Vector2(1,1)},shore:{value:.39},waterline:{value:.5},clock:{value:0},wind:{value:1},dark:{value:0},warm:{value:0},rain:{value:0},current:{value:0},cloudCover:{value:0},ice:{value:0},winter:{value:0},hole:{value:new T.Vector2(.47,.64)},holeRadius:{value:new T.Vector2(.25,.04)},holeOn:{value:0},drillProgress:{value:0},colorNear:{value:new T.Color('#193b37')},colorFar:{value:new T.Color('#6d918b')},ripples:{value:rippleData},sun:{value:new T.Vector2(.7,.2)}};
@@ -224,6 +224,17 @@
     reelPlane=new T.Mesh(new T.PlaneGeometry(210,170),new T.MeshBasicMaterial({
       map:reelTexture,transparent:true,depthTest:false,depthWrite:false,side:T.DoubleSide}));
     reelPlane.renderOrder=22;reelCrank.add(reelPlane);
+    // Surface-visible part of the real lure; deeper retrieves remain visible
+    // through the existing underwater detail inset instead of hovering on top.
+    lureSprite=new T.Sprite(new T.SpriteMaterial({color:0xffffff,transparent:true,depthTest:false,depthWrite:false}));
+    lureSprite.visible=false;scene.add(lureSprite);
+    for(const kind of ['spoon','spinner','jig','wobbler']){
+      loader.load('assets/equipment/'+kind+'.png',tx=>{
+        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=true;tx.minFilter=T.LinearMipmapLinearFilter;
+        tx.magFilter=T.LinearFilter;tx.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),4);
+        lureTextures[kind]=tx;
+      });
+    }
     float=new T.Group();scene.add(float);
     const white=material('#eee9d6',.25),red=material('#ee4f25',.24),black=material('#252c23',.4),lime=material('#e3d95c',.32);
     sphere(float,0,0,0,.63,1.15,.63,white);sphere(float,0,.62,0,.60,.62,.60,red);
@@ -303,6 +314,7 @@
     const showingLine=!menu&&v.tackle.state!=="none";
     root.visible=false;line.visible=showingLine;
     float.visible=showingLine&&!f&&!isIce&&v.mode==="float";
+    if(lureSprite)lureSprite.visible=false;
     const idleSway=Math.sin(t*.71)*2.2,mode=isIce?"ice":v.mode;
     const anchors={
       float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
@@ -349,6 +361,28 @@
     else if(v.landing&&f){const lp=FZ.RodArt.landingPose(v,W,H,R.proj);p={x:lp.fishX,y:lp.fishY,s:p.s};}
     const pos=V(p.x+(v.tackle.dx||0),p.y+(v.tackle.sink||0)*9,8);
     if(v.tackle.state==='fly')pos.y+=Math.sin(U.clamp(v.tackle.flyT,0,1)*Math.PI)*H*.22;
+    // A spoon, jig, spinner or wobbler follows the SAME world contact point
+    // used by the bite simulation and the smooth fishing line.
+    const lure=v.lure;
+    if(lureSprite&&showingLine&&!f&&!isIce&&v.mode==='spin'&&lure&&
+       (v.tackle.state==='water'||v.tackle.state==='fight')){
+      const key=(lure.baitId||'').toLowerCase();
+      const kind=/wobbl/.test(key)?'wobbler':/spinner|salmon_spinner/.test(key)?'spinner':
+        /jig|twister|soft/.test(key)?'jig':'spoon';
+      const tx=lureTextures[kind],depth=Math.max(0,lure.depth||0);
+      if(tx&&depth<1.55){
+        const speed=U.clamp(lure.speed||0,0,7);
+        const stroke=U.clamp(lure.twitch||0,0,1);
+        const wobble=Math.sin(t*(5.5+speed*2.5))*U.clamp(.13+speed*.06+stroke*.26,.10,.65);
+        const size=U.clamp(p.s*.38,7,28);
+        lureSprite.visible=true;lureSprite.material.map=tx;lureSprite.material.needsUpdate=true;
+        lureSprite.material.opacity=U.clamp(1-depth/1.75,.12,.94)*
+          (1-U.clamp(uniforms.dark.value,0,.6)*.40);
+        lureSprite.material.rotation=wobble;
+        lureSprite.position.copy(V(p.x,p.y+depth*Math.min(4,p.s*.12)+Math.sin(t*7)*stroke*2,26));
+        lureSprite.scale.set(size,size*.53,1);
+      }
+    }
     float.position.copy(pos);float.rotation.z=-(v.tackle.tilt||0)*.65+Math.sin(t*1.8)*.045;
     const floatScale=U.clamp(p.s*.15,2.4,8);float.scale.setScalar(floatScale);if(v.mode!=='float'&&!isIce)float.scale.setScalar(floatScale*.25);
     const linePos=line.geometry.attributes.position;
@@ -380,7 +414,23 @@
     if(f&&!isIce&&(f.surface>.15||f.jump||v.landing)){
       if(fishId!==f.s.id){if(fishModel){scene.remove(fishModel);FZ.Fish3D.dispose(fishModel);}fishModel=FZ.Fish3D.create(f.s);if(fishModel){scene.add(fishModel);fishId=f.s.id;}}
       if(!fishModel)return;fishModel.visible=true;const fp=R.proj(f.X,Math.max(3.6,f.Z));const jump=f.jump?Math.sin(Math.PI*U.clamp(f.jump.k,0,1))*Math.min(120,fp.s*2):0;
-      fishModel.position.copy(V(fp.x,fp.y-jump,20));fishModel.scale.setScalar(Math.min(85,Math.max(7,fp.s*(f.lenM||.4)/3.5)));fishModel.rotation.set(.4,f.vx>0?Math.PI:0,f.jump?Math.sin(f.jump.k*6)*.35:0);FZ.Fish3D.animate(fishModel,t*7,.08);
+      // Swimming effort, acceleration and direction come from the same
+      // physics velocities used for the fight: no fixed-speed paper-fish slide.
+      const swim=Math.hypot(f.vx||0,f.vz||0);
+      const facingTarget=(f.vx||0)>.12?1:(f.vx||0)<-.12?-1:(fishModel.userData.facing||1);
+      const facing=U.damp(fishModel.userData.facing==null?facingTarget:fishModel.userData.facing,facingTarget,3.4,dt);
+      fishModel.userData.facing=facing;
+      const shake=f.phase==='shake'?Math.sin(t*24)*.12:0;
+      const roll=U.clamp(-(f.vz||0)*.06,-.18,.18)+shake+
+        (f.jump?Math.sin(f.jump.k*6)*.28:0);
+      fishModel.position.copy(V(fp.x,fp.y-jump,20));
+      fishModel.scale.setScalar(Math.min(85,Math.max(7,fp.s*(f.lenM||.4)/3.5)));
+      fishModel.rotation.set(.18+Math.min(.24,swim*.07),(.5-.5*facing)*Math.PI,roll);
+      FZ.Fish3D.animate(fishModel,t*(5.2+Math.min(7,swim*2.3)),
+        .023+Math.min(.13,swim*.035)+(f.phase==='shake'?.035:0));
+      if(!landing&&(f.surface||0)>.33&&swim>.65&&t-lastFishWake>.9){
+        lastFishWake=t;R.ring(f.X,f.Z,.18+Math.min(.78,swim*.14),1.2);
+      }
       if(landing){
         fishModel.position.copy(V(landing.fishX,landing.fishY,86));
         fishModel.scale.setScalar(landing.length/4);
@@ -390,7 +440,7 @@
     // Float disturbance is physically anchored to the projected contact point.
     if(!menu&&v.tackle.state==='water'&&t-lastFloatRing>.65){lastFloatRing=t;addRipple(p.x/W,p.y/H,t,(v.tackle.sink||0)>.3?.8:.3);}
   }
-  let lastFloatRing=-100;
+  let lastFloatRing=-100,lastFishWake=-100;
   function addRipple(x,y,time,power){rippleData[ringCursor++%12].set(x,y,time,U.clamp(power,.15,2));}
   const oldRing=R.ring;
   R.ring=function(X,Z,r,life){if(!enabled)return oldRing.apply(R,arguments);const p=R.proj(X,Math.max(3.6,Z));addRipple(p.x/W,p.y/H,uniforms.clock.value,Math.max(.4,r||1));if(FZ.WaterFX)FZ.WaterFX.ring(X,Z,r,life);};
@@ -417,7 +467,7 @@
   };
   R.drawAim=function(v,a){if(!enabled)return previous.drawAim.call(R,v,a);const p=R.proj(a.X,a.Z);aimMesh.visible=true;aimMesh.position.copy(V(p.x,p.y,20));renderer.render(scene,camera);};
   const oldClear=R.clearFx;
-  R.clearFx=function(){oldClear();lineVisual=null;rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;if(detailContext)detailContext.clearRect(0,0,W,H);};
+  R.clearFx=function(){oldClear();lineVisual=null;rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;lastFishWake=-100;if(detailContext)detailContext.clearRect(0,0,W,H);};
   const oldSnapshot=R.snapshot;
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const g=c.getContext('2d');g.drawImage(canvas,0,0);if(detailCanvas&&detailCanvas.style.visibility!=='hidden')g.drawImage(detailCanvas,0,0,c.width,c.height);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
