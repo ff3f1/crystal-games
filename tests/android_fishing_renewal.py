@@ -41,7 +41,7 @@ try:
  tap(id='mSet');find('Музыка');find('Дальние птицы');shot('android-settings');back()
  tap(id='mMap');find('Выбери свой берег');tap('Зима');tap('Деревенский пруд');time.sleep(1.3)
  find('Бурить',id='bAct');shot('android-winter')
- tap(id='bAct');time.sleep(3);find('Играть',id='bAct');shot('android-hole')
+ tap(id='bAct');time.sleep(3);find('Новая лунка');shot('android-hole')
  tap(id='tBait');find('Наживка');find('Червь');shot('android-bait');back()
  # Native back opens the pause/menu layer instead of abandoning the app.
  back();find(id='mGo');tap(id='mGo')
