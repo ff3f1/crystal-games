@@ -35,7 +35,7 @@
       Object.assign(detailCanvas.style,{position:'fixed',left:'0',top:'0',pointerEvents:'none',zIndex:getComputedStyle(canvas).zIndex==='auto'?'0':getComputedStyle(canvas).zIndex});
       canvas.parentNode.insertBefore(detailCanvas,canvas.nextSibling);
     }
-    const ratio=Math.min(devicePixelRatio||1,quality==="lo"?1.25:quality==="mid"?1.5:2);
+    const ratio=Math.min(devicePixelRatio||1,typeof quality==="undefined"?1.5:quality==="lo"?1.25:quality==="mid"?1.5:2);
     const width=Math.round(W*ratio),height=Math.round(H*ratio);
     if(detailCanvas.width!==width||detailCanvas.height!==height){
       detailCanvas.width=width;detailCanvas.height=height;detailCanvas.style.width=W+'px';detailCanvas.style.height=H+'px';
