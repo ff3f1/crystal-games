@@ -1,16 +1,29 @@
 /* Capture actual unmodified Fishing 1.0.10 gameplay with Playwright. No fake fish or CGI footage. */
-const fs=require('fs'),path=require('path'),{chromium}=require('playwright');
+const fs=require('fs'),path=require('path'),{execFileSync}=require('child_process'),{chromium}=require('playwright');
 const out=path.resolve(process.env.PROMO_OUT||'promo-output');
 fs.mkdirSync(out,{recursive:true});
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required','--disable-dev-shm-usage']});
- const context=await browser.newContext({viewport:{width:540,height:960},deviceScaleFactor:1,isMobile:true,hasTouch:true,recordVideo:{dir:out,size:{width:540,height:960}}});
+ const context=await browser.newContext({viewport:{width:540,height:960},deviceScaleFactor:1,isMobile:true,hasTouch:true});
  const page=await context.newPage(),t0=Date.now(),marks={},states=[],errors=[];
  const mark=s=>{marks[s]=(Date.now()-t0)/1000;};
  page.on('pageerror',e=>errors.push(String(e)));
  page.on('response',r=>{if(r.status()>=400 && r.url().startsWith('http://127.0.0.1'))errors.push(r.status()+' '+r.url())});
  const state=()=>page.evaluate(()=>({state:FZ.Game.rig().state,phase:FZ.Game.rig().bite&&FZ.Game.rig().bite.phase,fish:FZ.Game.rig().fish&&FZ.Game.rig().fish.s.n,season:FZ.Game.sess().season,map:FZ.Game.sess().loc.id}));
+ const frames=path.join(out,'frames');
+ fs.mkdirSync(frames,{recursive:true});
+ const cdp=await context.newCDPSession(page);
+ let frameCount=0,firstFrame=null,lastFrame=null;
+ cdp.on('Page.screencastFrame',ev=>{
+  const at=(Date.now()-t0)/1000;
+  if(firstFrame===null)firstFrame=at;
+  lastFrame=at;
+  fs.writeFileSync(path.join(frames,String(frameCount).padStart(6,'0')+'.jpg'),Buffer.from(ev.data,'base64'));
+  frameCount++;
+  cdp.send('Page.screencastFrameAck',{sessionId:ev.sessionId}).catch(()=>{});
+ });
+ await cdp.send('Page.startScreencast',{format:'jpeg',quality:82,maxWidth:540,maxHeight:960,everyNthFrame:1});
  async function tickUntil(kind,max=1500) {
   return page.evaluate(({kind,max})=>{
    const G=FZ.Game,UI=FZ.UI;
@@ -112,13 +125,19 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  await pause(3700);
  mark('end');
  states.push(await state());
- const video=page.video();
+ await pause(350);
+ await cdp.send('Page.stopScreencast');
  await context.close();
  await browser.close();
- const file=await video.path();
- const dest=path.join(out,'real-1.0.10-footage.webm');
- if(path.resolve(file)!==path.resolve(dest))fs.copyFileSync(file,dest);
+ if(frameCount<150)throw Error('Too few real screencast frames: '+frameCount);
+ const fps=(frameCount-1)/Math.max(.01,lastFrame-firstFrame);
+ if(fps<6)throw Error('Screencast frame rate too low: '+fps);
+ for(const key of Object.keys(marks))marks[key]=+(marks[key]-firstFrame).toFixed(3);
+ const dest=path.join(out,'real-1.0.10-footage.mp4');
+ execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-framerate',fps.toFixed(5),
+   '-i',path.join(frames,'%06d.jpg'),'-c:v','libx264','-preset','ultrafast',
+   '-crf','26','-pix_fmt','yuv420p','-movflags','+faststart',dest],{stdio:'inherit'});
  if(errors.length)throw Error('Game errors: '+errors.join(' | '));
- fs.writeFileSync(path.join(out,'timeline.json'),JSON.stringify({marks,states,source:'Original Fishing 1.0.10',baseCommit:'b77f8443f482b4de083b4b88ada2d2f99f232bc9',footage:path.basename(dest)},null,2));
- console.log('CAPTURE SUCCESS '+JSON.stringify({marks,states,file:dest,bytes:fs.statSync(dest).size}));
+ fs.writeFileSync(path.join(out,'timeline.json'),JSON.stringify({marks,states,source:'Original Fishing 1.0.10',baseCommit:'b77f8443f482b4de083b4b88ada2d2f99f232bc9',footage:path.basename(dest),captureFPS:fps,frameCount},null,2));
+ console.log('CAPTURE SUCCESS '+JSON.stringify({marks,states,file:dest,bytes:fs.statSync(dest).size,frameCount,fps}));
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
