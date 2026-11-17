@@ -94,13 +94,17 @@
           float grain=noise(uv*vec2(175.,295.))*.07+noise(uv*vec2(33.,52.))*.065;
           float frost=noise(uv*vec2(65.,92.));
           float cracks=pow(1.-abs(sin((uv.x+noise(uv*7.)*.16)*55.+uv.y*10.)),54.);
-          float bluePatch=smoothstep(.54,.77,coarse)*.21;
-          c=mix(vec3(.44,.60,.68),vec3(.77,.84,.87),clamp(depth*.54+grain+.14,0.,1.));
-          c=mix(c,vec3(.34,.53,.63),bluePatch*1.55*(1.-depth*.35));
-          // Wind-polished blue ice alternates with powdery snow, not flat plastic.
-          float snowDrift=smoothstep(.51,.77,coarse+frost*.18)*(.12+depth*.21);
-          c=mix(c,vec3(.88,.91,.93),snowDrift);
-          c+=vec3(.8,.85,.88)*(frost-.5)*.05;
+          // Layered wind-cleared blue ice, opaque frosted patches and snow
+          // streaks at different scales; never a featureless flat gray fill.
+          float drift=noise(vec2(uv.x*11.+noise(uv*vec2(5.,7.))*.8,uv.y*17.));
+          float bluePatch=smoothstep(.48,.73,coarse)*.43;
+          c=mix(vec3(.37,.56,.66),vec3(.77,.85,.89),clamp(depth*.46+grain+.11,0.,1.));
+          c=mix(c,vec3(.29,.49,.61),bluePatch*(.75-depth*.19));
+          float snowDrift=smoothstep(.39,.72,drift+frost*.12)*(.19+depth*.23);
+          c=mix(c,vec3(.91,.94,.96),snowDrift);
+          float windMarks=noise(uv*vec2(85.,240.))-.5;
+          c+=vec3(.20,.23,.24)*windMarks*.11;
+          c+=vec3(.8,.85,.88)*(frost-.5)*.065;
           c-=cracks*(.055+.045*coarse);
           float bank=1.-smoothstep(.005,.075,depth+sin(uv.x*32.)*.002);
           c=mix(c,vec3(.89,.92,.94),bank*.66);
