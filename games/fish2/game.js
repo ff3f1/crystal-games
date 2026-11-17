@@ -24,6 +24,14 @@ const B={worm:['Червь','Клюёт большинство мирных ры
 const KEY='fishing2.progress.v1';
 function getSave(){try{const x=JSON.parse(localStorage.getItem(KEY)||'null');if(x&&x.version===1)return x}catch(e){}return {version:1,coins:180,level:1,xp:0,catches:0,records:{},last:'pond_summer',sound:true}}
 const save=getSave();
+if(!save.volumes)save.volumes={music:save.sound===false?0:.38,nature:save.sound===false?0:.65,effects:save.sound===false?0:.75};
+if(!save.visited)save.visited={};
+if(!save.mapCatches)save.mapCatches={};
+if(!save.claimed)save.claimed=[];
+if(!save.baitCatches)save.baitCatches={};
+if(!save.perfect)save.perfect=0;
+FishingAudio.configure(save.volumes);
+
 // Save schema remains version 1: existing 2.0 installations keep their records.
 if(!save.gear)save.gear={rod:0,line:0};
 if(!Number.isFinite(save.streak))save.streak=0;
@@ -39,27 +47,10 @@ const G={map:MAPS[save.last]?save.last:'pond_summer',mode:'ready',spot:null,posi
 function M(){return MAPS[G.map]}
 function size(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,2);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);g.setTransform(DPR,0,0,DPR,0,0)}
 window.addEventListener('resize',size,{passive:true});size();
-function soundContext(){
- if(!save.sound)return null;
- try{
-  if(!audio){
-   const A=window.AudioContext||window.webkitAudioContext;audio=new A();bus=audio.createGain();bus.gain.value=.14;bus.connect(audio.destination);
-   // Gentle, non-looping-noise-free ambience: a long, filtered noise bed at
-   // very low volume. Separate from bites; never loud crackles or shrill music.
-   const n=Math.ceil(audio.sampleRate*3.1),buffer=audio.createBuffer(1,n,audio.sampleRate),data=buffer.getChannelData(0);
-   let smooth=0;for(let i=0;i<n;i++){smooth=smooth*.985+(Math.random()*2-1)*.015;data[i]=smooth*.8;}
-   ambient=audio.createBufferSource();ambient.buffer=buffer;ambient.loop=true;
-   const filter=audio.createBiquadFilter();filter.type='lowpass';filter.frequency.value=210;
-   ambientGain=audio.createGain();ambientGain.gain.value=.16;
-   ambient.connect(filter);filter.connect(ambientGain);ambientGain.connect(bus);ambient.start();
-  }
-  if(audio.state==='suspended')audio.resume();return audio;
- }catch(e){return null}
-}
-function beep(freq,duration,volume,end){const a=soundContext();if(!a)return;const t=a.currentTime,o=a.createOscillator(),v=a.createGain();o.type='triangle';o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(Math.max(end||freq,25),t+duration);v.gain.setValueAtTime(.0001,t);v.gain.exponentialRampToValueAtTime(volume||.2,t+.017);v.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(v);v.connect(bus);o.start(t);o.stop(t+duration+.01)}
-function hiss(duration,power){const a=soundContext();if(!a)return;const count=Math.ceil(duration*a.sampleRate),buf=a.createBuffer(1,count,a.sampleRate),v=buf.getChannelData(0);for(let i=0;i<count;i++)v[i]=(Math.random()*2-1)*Math.exp(-i/count*3);const s=a.createBufferSource(),f=a.createBiquadFilter(),gain=a.createGain();s.buffer=buf;f.type='lowpass';f.frequency.value=1100;gain.gain.value=power;s.connect(f);f.connect(gain);gain.connect(bus);s.start()}
-function audioCue(which){if(which==='cast'){hiss(.24,.28);beep(310,.12,.16,115)}if(which==='splash'){hiss(.34,.33);beep(150,.16,.15,72)}if(which==='nibble')beep(490,.07,.1,430);if(which==='take'){beep(700,.11,.17,940);setTimeout(()=>beep(920,.1,.13,1140),120)}if(which==='strike')beep(320,.2,.23,115);if(which==='lose')beep(300,.39,.16,100);if(which==='catch'){beep(515,.15,.21,750);setTimeout(()=>beep(790,.19,.18,1140),140)}}
-function vibrate(t){try{if(navigator.vibrate)navigator.vibrate(t)}catch(e){}}
+function soundContext(){FishingAudio.unlock();return true}
+function beep(){FishingAudio.cue('nibble')}
+function audioCue(which){FishingAudio.cue(which)}
+function vibrate(t){if(save.vibration===false)return;try{if(window.AndroidGame)AndroidGame.vibrate(Array.isArray(t)?t.reduce((a,b)=>a+b,0):t);else if(navigator.vibrate)navigator.vibrate(t)}catch(e){}}
 function label(id,text){if($(id).textContent!==text)$(id).textContent=text}
 function toast(text){const el=$('toast');el.textContent=text;el.hidden=false;clearTimeout(timer);timer=setTimeout(()=>el.hidden=true,2200)}
 function activity(i) {
@@ -79,7 +70,7 @@ function catchForecast(site){
  return strength>.70?'Клёв активный':strength>.49?'Рыба кормится':'Сейчас затишье';
 }
 function aimAt(x,y){
- const m=M();if(G.mode!=='ready')return;
+ const m=M();if(G.mode!=='ready'||y<H*(m.water+.06)||y>H*.85)return;
  G.aim={x:clamp(x,W*.10,W*.90),y:clamp(y,H*(m.water+.07),H*.84)};
  const site=nearest(G.aim.x,G.aim.y),qual=siteQuality(G.aim,site);
  G.spot=site;
@@ -99,7 +90,7 @@ function chooseCastTime(){
 }
 
 function refresh(){const map=M(),mode=G.mode;
- label('location',map.name+'  /  '+map.season);label('coins','✦ '+save.coins);label('baitTitle',B[G.bait][0]);
+ label('location',map.name+'  /  '+map.season);label('coins','✦ '+save.coins);label('baitTitle',B[G.bait][0]);$('baitIcon').src='assets/equipment/'+baitArt[G.bait]+'.png';
  const title={ready:map.ice?'Выбери место для лунки':'Найди перспективное место',fly:'Заброс…',drill:'Бурим лунку…',wait:map.ice?'Играй мормышкой':'Смотри на поплавок',nibble:'Осторожно, рыба пробует…',take:'ПОКЛЁВКА!',fight:'РЫБА НА КРЮЧКЕ!',landing:'РЫБА У БЕРЕГА!',caught:'Отличный улов!'}[mode];
  const explain={ready:'Рябь, камни и глубина подсказывают, куда бросать.',fly:'Снасть летит в выбранную точку.',drill:'Зимняя рыба живёт на разных глубинах.',wait:(G.spot?G.spot[0]+' · ':'')+(map.ice?'Коротко нажимай кнопку «Играть»':'Не торопись: сначала рыба осторожно трогает приманку.'),nibble:'Не подсекай на первом движении. Дождись настоящей потяжки.',take:'Время подсечь! Нажми кнопку или смахни вверх.',fight:'Удерживай подмотку. При рывке отпускай, чтобы не оборвать леску.',landing:'Последний рывок — рыбина уже поднимается!',caught:'Новая добыча и награда за терпение.'}[mode];
  label('phase',title);label('tip',explain);
@@ -115,18 +106,29 @@ function nearest(x,y){let best=M().spots[0],d=Infinity;for(const s of M().spots)
 function point(){return G.position||coords(M().spots[1])}
 function drawRing(x,y,p){G.foam.push({x,y,p:p||.55,t:0,ttl:rand(.65,1.25)});if(G.foam.length>60)G.foam.shift()}
 function splash(x,y){drawRing(x,y,.75);for(let i=0;i<15;i++)G.drops.push({x,y,vx:rand(-56,56),vy:rand(-130,-55),t:0,ttl:rand(.35,.75)});audioCue('splash')}
-function changeMap(key){if(!MAPS[key])return;G.map=key;save.last=key;persist();G.spot=null;G.position=null;G.aim=null;G.wait=0;G.bite=null;G.rodAngle=0;G.mode='ready';$('targetInfo').hidden=true;G.bait=M().sea?'shrimp':'worm';G.foam=[];G.drops=[];press=false;$('mapScreen').hidden=true;$('catchScreen').hidden=true;drawCards();refresh();toast(M().name+' · '+M().season)}
-function drawCards(){const box=$('mapList');box.innerHTML='';for(const key of Object.keys(MAPS)){const map=MAPS[key],b=document.createElement('button');b.className='map-card'+(key===G.map?' selected':'');b.type='button';const pic=document.createElement('img');pic.src='assets/scenes/'+key+'.webp';pic.alt='';b.appendChild(pic);const shade=document.createElement('span');shade.className='shade';b.appendChild(shade);const season=document.createElement('span');season.className='card-season';season.textContent=map.season==='Зима'?'❄ ЗИМА':'☀ ЛЕТО';b.appendChild(season);const inside=document.createElement('span');inside.className='card-inner';inside.innerHTML='<strong>'+map.name+'</strong><small>'+map.habitat+'</small>';b.appendChild(inside);b.onclick=()=>changeMap(key);box.appendChild(b)}}
-function mapsOpen(){press=false;$('gearScreen').hidden=true;$('mapScreen').hidden=false;drawCards()}
-function pickBait(){const options=M().sea?['shrimp','jig','worm']:['worm','corn','jig'],at=options.indexOf(G.bait);G.bait=options[(at+1)%options.length];toast(B[G.bait][0]+': '+B[G.bait][1]);refresh()}
+function changeMap(key){if(!MAPS[key])return;hideScreens();$('hud').hidden=false;FishingAudio.scene(MAPS[key].type,MAPS[key].season==='Зима');save.visited[key]=true;G.map=key;save.last=key;persist();G.spot=null;G.position=null;G.aim=null;G.wait=0;G.bite=null;G.rodAngle=0;G.mode='ready';$('targetInfo').hidden=true;G.bait=M().sea?'shrimp':'worm';G.foam=[];G.drops=[];press=false;$('mapScreen').hidden=true;$('catchScreen').hidden=true;drawCards();refresh();updateHome()}
+function drawCards(){const box=$('mapList');box.innerHTML='';for(const key of Object.keys(MAPS)){const map=MAPS[key],b=document.createElement('button');b.className='map-card'+(key===G.map?' selected':'');b.type='button';const pic=document.createElement('img');pic.src='assets/scenes/'+key+'.webp';pic.alt='';b.appendChild(pic);const shade=document.createElement('span');shade.className='shade';b.appendChild(shade);const season=document.createElement('span');season.className='card-season';season.textContent=map.season==='Зима'?'❄ ЗИМА':'☀ ЛЕТО';b.appendChild(season);const inside=document.createElement('span');inside.className='card-inner';inside.innerHTML='<strong>'+map.name+'</strong><small>'+map.habitat+'</small>';b.appendChild(inside);const meta=document.createElement('span');meta.className='map-meta';meta.textContent=[...new Set(map.spots.flatMap(s=>s[3].split(',')))].length+' видов · '+(save.mapCatches[key]||0)+' уловов';inside.appendChild(meta);if(save.visited[key]){const v=document.createElement('span');v.className='map-visit';v.textContent='ИССЛЕДОВАНО';b.appendChild(v)}b.dataset.season=map.season;b.onclick=()=>{soundContext();changeMap(key)};box.appendChild(b)}}
+function mapsOpen(){actionUp();$('gearScreen').hidden=true;$('mapScreen').hidden=false;drawCards();filterMaps('all')}
+function pickBait(){
+ if(!['ready','wait'].includes(G.mode)){toast('Смени наживку после вываживания.');return}
+ actionUp();$('baitScreen').hidden=false;const box=$('baitList');box.innerHTML='';
+ for(const id of Object.keys(B)){
+  const b=document.createElement('button');b.className='bait-option'+(id===G.bait?' selected':'');
+  const image=document.createElement('img');image.src='assets/equipment/'+baitArt[id]+'.png';image.alt='';
+  const copy=document.createElement('span'),name=document.createElement('b'),desc=document.createElement('small');name.textContent=B[id][0];
+  const local=[...new Set(M().spots.flatMap(s=>s[3].split(',')))].filter(f=>F[f][3].split(',').includes(id));
+  desc.textContent=local.length?local.map(f=>F[f][0]).join(', '):'В этом водоёме подходящей рыбы нет';
+  copy.append(name,desc);b.append(image,copy);b.onclick=()=>{if(G.mode==='wait')retry();G.bait=id;$('baitScreen').hidden=true;refresh();audioCue('click')};box.append(b);
+ }
+}
 function startCast(x,y){
  if(G.mode!=='ready')return;const m=M();
  G.aim={x:clamp(x,W*.1,W*.9),y:clamp(y,H*(m.water+.07),H*.84)};
  G.spot=nearest(G.aim.x,G.aim.y);
  G.position=m.ice?coords(G.spot):{x:G.aim.x,y:G.aim.y};
  G.biteAt=chooseCastTime();G.castCount++;G.flight=0;
- G.mode=m.ice?'drill':'fly';G.wait=0;
- audioCue('cast');refresh();
+ G.mode=m.ice?'drill':'fly';G.wait=0;G.hookQuality=0;
+ audioCue(m.ice?'drill':'cast');refresh();
 }
 function land(){G.mode='wait';G.wait=0;if(G.spot&&M().ice)G.biteAt*=.80;if(M().ice){drawRing(point().x,point().y,.55)}else splash(point().x,point().y);refresh()}
 function chooseFish(){
@@ -141,46 +143,46 @@ function chooseFish(){
 }
 function startNibble(){const id=chooseFish();if(!id){G.wait=0;G.biteAt=rand(2.4,4);toast('Здесь эта насадка не работает. Попробуй другую.');return}G.bite={id:id,name:F[id][0],kg:Math.max(.07,F[id][1]*rand(.55,1.55)),power:F[id][2]};G.mode='nibble';G.nibble=0;audioCue('nibble');refresh()}
 function startTake(){G.mode='take';G.take=0;drawRing(point().x,point().y,.45);audioCue('take');vibrate(25);refresh()}
-function strike(){if(G.mode==='nibble'){toast('Рано! Рыба только пробует наживку.');G.nibble=Math.max(0,G.nibble-.32);audioCue('strike');return}if(G.mode!=='take')return;G.mode='fight';G.stamina=1;G.tension=.39;G.distance=10+G.bite.kg*3;G.stress=0;G.slack=0;G.runTime=rand(1.3,2.7);G.run=0;G.runWarning=.65;G.fishVisualX=0;G.fishVisualY=0;G.fishFlip=1;G.landProgress=0;G.shake=5;press=false;audioCue('strike');vibrate([35,20,25]);refresh()}
-function retry(){G.mode='ready';G.bite=null;G.spot=null;G.position=null;G.aim=null;press=false;$('catchScreen').hidden=true;refresh()}
-function lost(message){save.streak=0;persist();G.mode='ready';G.bite=null;G.spot=null;G.position=null;G.aim=null;press=false;G.shake=4;audioCue('lose');toast(message);refresh()}
-function caught(){G.mode='caught';press=false;const b=G.bite,m=M(),weight=+b.kg.toFixed(2),reward=Math.floor(15+weight*17+(m.sea?12:0));const record=weight>(save.records[b.id]||0);if(record)save.records[b.id]=weight;save.streak++;save.bestStreak=Math.max(save.bestStreak,save.streak);save.totalWeight+=weight;const combo=Math.min(save.streak,5)*4;save.coins+=reward+combo;save.catches++;save.xp+=Math.round(weight*12+6);save.level=1+Math.floor(save.xp/120);persist();label('catchSpecies',b.name);label('catchWeight',weight.toFixed(2).replace('.',',')+' кг');label('catchReward','+'+(reward+combo)+' ✦  ·  Серия x'+save.streak+'  ·  '+m.name);label('catchRecord',record?'★ НОВЫЙ ЛИЧНЫЙ РЕКОРД':'Улов № '+save.catches);$('catchFish').src='assets/fish/'+b.id+'.webp';$('catchScreen').hidden=false;audioCue('catch');vibrate([45,20,40]);refresh()}
+function strike(){if(G.mode==='nibble'){toast('Рано! Рыба только пробует наживку.');G.nibble=Math.max(0,G.nibble-.32);audioCue('strike');return}if(G.mode!=='take')return;G.hookQuality=G.take>.12&&G.take<.85?1:0;if(G.hookQuality)toast('Точная подсечка!');label('fishName','Рыба на крючке');G.mode='fight';G.stamina=1;G.tension=.39;G.distance=10+G.bite.kg*3;G.stress=0;G.slack=0;G.runTime=rand(1.3,2.7);G.run=0;G.runWarning=.65;G.fishVisualX=0;G.fishVisualY=0;G.fishFlip=1;G.landProgress=0;G.shake=5;press=false;audioCue('strike');vibrate([35,20,25]);refresh()}
+function retry(){actionUp();G.mode='ready';G.bite=null;G.spot=null;G.position=null;G.aim=null;press=false;$('catchScreen').hidden=true;refresh()}
+function lost(message){actionUp();save.streak=0;persist();G.mode='ready';G.bite=null;G.spot=null;G.position=null;G.aim=null;press=false;G.shake=4;audioCue('lose');toast(message);refresh()}
+function caught(){actionUp();G.mode='caught';press=false;const b=G.bite,m=M(),weight=+b.kg.toFixed(2),reward=Math.floor(15+weight*17+(m.sea?12:0));const record=weight>(save.records[b.id]||0);if(record)save.records[b.id]=weight;save.streak++;save.bestStreak=Math.max(save.bestStreak,save.streak);save.totalWeight+=weight;const combo=Math.min(save.streak,5)*4;save.coins+=reward+combo;save.catches++;save.mapCatches[G.map]=(save.mapCatches[G.map]||0)+1;save.baitCatches[G.bait]=(save.baitCatches[G.bait]||0)+1;if(G.hookQuality)save.perfect++;save.xp+=Math.round(weight*12+6);save.level=1+Math.floor(save.xp/120);persist();label('catchSpecies',b.name);label('catchWeight',weight.toFixed(2).replace('.',',')+' кг');label('catchReward','+'+(reward+combo)+' ✦  ·  Серия x'+save.streak+'  ·  '+m.name);label('catchRecord',record?'★ НОВЫЙ ЛИЧНЫЙ РЕКОРД':'Улов № '+save.catches);$('catchFish').src='assets/fish/'+b.id+'.webp';$('catchQuest').textContent=questsReady()?'В дневнике доступна награда за задание!':G.hookQuality?'Точная подсечка · Уверенное вываживание':'';$('catchScreen').hidden=false;audioCue('catch');vibrate([45,20,40]);refresh()}
 function tab(name){
- const gear=name==='gear',collection=name==='collection',help=name==='help';
+ const gear=name==='gear',collection=name==='collection',help=name==='help';label('baseTitle',gear?'Снасти для большого улова':collection?'Альбом рыбака':'Искусство рыбалки');label('baseBalance','✦ '+save.coins+' монет · Уровень '+save.level);
  $('gearGrid').hidden=!gear;$('collection').hidden=!collection;$('caughtStats').hidden=!collection;$('helpBlock').hidden=!help;
  $('tabGear').classList.toggle('active',gear);
  $('tabCollection').classList.toggle('active',collection);
  $('tabHelp').classList.toggle('active',help);
  if(gear)drawGear();if(collection)drawCollection();if(help)drawHelp();
 }
-function openGear(){press=false;$('gearScreen').hidden=false;tab('gear')}
-function closeGear(){$('gearScreen').hidden=true;refresh()}
+function openGear(){actionUp();$('gearScreen').hidden=false;tab('gear')}
+function closeGear(){$('gearScreen').hidden=true;refresh();updateHome()}
 function drawGear(){
  const box=$('gearGrid');box.innerHTML='';
  const list=[{id:'rod',title:'Удобная катушка',icon:'◉',desc:'Быстрее подмотка и уверенное вываживание.'},{id:'line',title:'Крепкая леска',icon:'〰',desc:'Больше запас прочности во время рывков.'}];
  for(const item of list){const lvl=save.gear[item.id]||0,cost=item.id==='rod'?110+lvl*120:140+lvl*125;
   const el=document.createElement('div');el.className='gear-item';
-  const icon=document.createElement('div');icon.className='gear-art';icon.textContent=item.icon;
+  const icon=document.createElement('div');icon.className='gear-art';const art=document.createElement('img');art.src='assets/equipment/'+(item.id==='rod'?'reel':'line')+'.png';art.alt='';icon.append(art);
   const content=document.createElement('div');content.className='gear-desc';
   const name=document.createElement('strong');name.textContent=item.title;
   const desc=document.createElement('p');desc.textContent=item.desc;
   const lv=document.createElement('div');lv.className='gear-lvl';lv.textContent='Уровень '+lvl+' / 3';
   content.append(name,desc,lv);el.append(icon,content);
-  const b=document.createElement('button');b.className='gear-buy';b.textContent=lvl>=3?'МАКС':cost+' ✦';
+  const b=document.createElement('button');b.className='gear-buy';b.dataset.gear=item.id;b.textContent=lvl>=3?'МАКС':cost+' ✦';
   b.disabled=lvl>=3||save.coins<cost;
   b.onclick=()=>{if(save.gear[item.id]>=3||save.coins<cost)return;
-   save.coins-=cost;save.gear[item.id]=lvl+1;persist();refresh();drawGear();audioCue('catch');toast(item.title+': уровень '+(lvl+1));};
+   save.coins-=cost;save.gear[item.id]=lvl+1;persist();refresh();drawGear();label('baseBalance','✦ '+save.coins+' монет · Уровень '+save.level);audioCue('catch');toast(item.title+': уровень '+(lvl+1));};
   el.append(b);box.append(el);
  }
 }
 function drawCollection(){
  const box=$('collection');box.innerHTML='';
  for(const id of Object.keys(F)){
-  const known=save.records[id]>0,el=document.createElement('div');el.className='fish-tile'+(known?'':' locked');
+  const known=save.records[id]>0,el=document.createElement('button');el.type='button';el.className='fish-tile'+(known?'':' locked');
   const pic=document.createElement('img');pic.src='assets/fish/'+id+'.webp';pic.alt='';
-  const name=document.createElement('span');name.textContent=known?F[id][0]:'???';
+  const name=document.createElement('span');name.textContent=F[id][0];
   const weight=document.createElement('small');weight.textContent=known?save.records[id].toFixed(2)+' кг':'Не поймана';
-  el.append(pic,name,weight);box.append(el);
+  el.append(pic,name,weight);el.onclick=()=>fishDetails(id);box.append(el);
  }
  label('caughtStats','Поймано: '+save.catches+' · Рекордов: '+Object.keys(save.records).length+' / '+Object.keys(F).length+' · Лучшая серия: '+save.bestStreak);
 }
@@ -196,25 +198,26 @@ function drawHelp(){
 function actionDown(){soundContext();const m=M();if(G.mode==='ready'){const p=G.aim||coords(M().spots[1]);startCast(p.x,p.y)}
  else if(G.mode==='wait'){if(m.ice){G.jig=1;G.wait+=.3;drawRing(point().x,point().y,.1);beep(230,.1,.1,300)}else retry()}
  else if(G.mode==='take'||G.mode==='nibble')strike();
- else if(G.mode==='fight'){press=true;$('action').classList.add('held')}
+ else if(G.mode==='fight'){press=true;FishingAudio.setReel(true);$('action').classList.add('held')}
  else if(G.mode==='caught')retry()}
-function actionUp(){press=false;$('action').classList.remove('held')}
+function actionUp(){press=false;FishingAudio.setReel(false);$('action').classList.remove('held')}
 $('action').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();try{$('action').setPointerCapture(e.pointerId)}catch(_){ }actionDown()});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('action').addEventListener(ev,actionUp));
-$('bait').onclick=pickBait;$('mapsTop').onclick=mapsOpen;$('mapsBottom').onclick=mapsOpen;$('closeMaps').onclick=()=>$('mapScreen').hidden=true;
+$('bait').onclick=pickBait;$('mapsBottom').onclick=mapsOpen;$('closeMaps').onclick=()=>$('mapScreen').hidden=true;
 $('again').onclick=retry;$('changeMap').onclick=()=>{retry();mapsOpen()};
-$('sound').onclick=()=>{save.sound=!save.sound;persist();if(bus)bus.gain.setTargetAtTime(save.sound?.14:0,audio.currentTime,.045);label('sound',save.sound?'♫':'×');toast(save.sound?'Звук включён':'Звук выключен')};label('sound',save.sound?'♫':'×');
+$('sound').onclick=openSettings;
 $('coins').onclick=openGear;
 $('closeGear').onclick=closeGear;
 $('tabGear').onclick=()=>tab('gear');
 $('tabCollection').onclick=()=>tab('collection');
 $('tabHelp').onclick=()=>tab('help');
 
-cv.addEventListener('pointerdown',e=>{if(!$('mapScreen').hidden||!$('catchScreen').hidden||!$('gearScreen').hidden)return;e.preventDefault();soundContext();touchStart=e.clientY;touchX=e.clientX;surfaceTouch=true;if(G.mode==='ready')aimAt(e.clientX,e.clientY)});
+cv.addEventListener('pointerdown',e=>{if(isBlocked())return;e.preventDefault();soundContext();touchStart=e.clientY;touchX=e.clientX;surfaceTouch=true;if(G.mode==='ready')aimAt(e.clientX,e.clientY)});
 cv.addEventListener('pointermove',e=>{if(!surfaceTouch)return;if(G.mode==='fight')G.rodTarget=clamp((e.clientX-touchX)/(W*.32),-1,1);else if(G.mode==='ready')aimAt(e.clientX,e.clientY)});
 cv.addEventListener('pointerup',e=>{if(!surfaceTouch)return;surfaceTouch=false;if((G.mode==='take'||G.mode==='nibble')&&touchStart-e.clientY>25)strike();G.rodTarget=0});
 cv.addEventListener('pointercancel',()=>{surfaceTouch=false;G.rodTarget=0});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){press=false;last=performance.now()}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)appPause();else appResume()});
+window.addEventListener('blur',actionUp);
 // Disable Android WebView selection handles, contextual menus and draggable
 // text/images in gameplay; actual accessibility button names remain intact.
 document.addEventListener('contextmenu',e=>e.preventDefault());
@@ -222,7 +225,7 @@ document.addEventListener('dragstart',e=>e.preventDefault());
 document.addEventListener('selectstart',e=>e.preventDefault());
 for(const button of document.querySelectorAll('button'))button.setAttribute('draggable','false');
 
-function physics(dt){now+=dt;G.shake=Math.max(0,G.shake-dt*26);G.jig=Math.max(0,G.jig-dt*1.7);
+function physics(dt){now+=dt;FishingAudio.setReel(press&&G.mode==='fight'&&G.run<=.08);G.shake=Math.max(0,G.shake-dt*26);G.jig=Math.max(0,G.jig-dt*1.7);
  G.rodSpeed+=(G.rodTarget-G.rodAngle)*dt*35;G.rodSpeed*=Math.exp(-dt*10);G.rodAngle+=G.rodSpeed*dt;
  for(const p of G.foam)p.t+=dt;G.foam=G.foam.filter(p=>p.t<p.ttl);
  for(const p of G.drops){p.t+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=210*dt}G.drops=G.drops.filter(p=>p.t<p.ttl);
@@ -380,9 +383,93 @@ function tackle(){
   g.strokeStyle='rgba(238,251,240,.8)';g.lineWidth=.68;g.stroke();g.restore();
  }
 }
-function render(){g.save();if(G.shake>0)g.translate(rand(-G.shake,G.shake),rand(-G.shake,G.shake));background();drawSites();drawEffects();tackle();g.restore()}
-function loop(ms){const dt=clamp((ms-last)/1000,0,.06);last=ms;if($('mapScreen').hidden&&$('catchScreen').hidden&&$('gearScreen').hidden)physics(dt);else now+=Math.min(dt,.015);render();requestAnimationFrame(loop)}
+function atmosphere(){
+ if(M().season==='Зима'){
+  g.save();g.fillStyle='#effbff';
+  for(let i=0;i<35;i++){const x=(i*113.73+Math.sin(now*.31+i)*28+now*6)%W,y=(i*79.1+now*(12+i%6*3))%H;g.globalAlpha=.18+(i%4)*.1;g.beginPath();g.arc(x,y,.7+i%3*.45,0,TAU);g.fill()}
+  g.restore();
+ }else if(M().type==='pond'){
+  g.save();g.fillStyle='#fff6c2';for(let i=0;i<9;i++){g.globalAlpha=.12+.2*(.5+.5*Math.sin(now*2+i));const x=(i*137+Math.sin(now*.6+i)*23)%W,y=H*(.45+(i%5)*.08)+Math.cos(now*.8+i)*16;g.beginPath();g.arc(x,y,1,0,TAU);g.fill()}g.restore();
+ }
+}
+function render(){g.save();if(G.shake>0)g.translate(rand(-G.shake,G.shake),rand(-G.shake,G.shake));background();drawSites();drawEffects();tackle();atmosphere();g.restore()}
+const baitArt={worm:'worm',corn:'corn',jig:'spoon',shrimp:'shrimp'};
+const screens=['homeScreen','mapScreen','gearScreen','catchScreen','settingsScreen','pauseScreen','journalScreen','baitScreen','fishScreen'];
+const QUESTS=[
+ ['first','Первая история','Поймай свою первую рыбу.',()=>save.catches,1,60],
+ ['five','Хороший клёв','Поймай 5 рыб любого вида.',()=>save.catches,5,130],
+ ['species','Начало коллекции','Открой 5 видов рыб.',()=>Object.keys(save.records).length,5,180],
+ ['pond','Знакомый берег','Поймай 5 рыб на летнем пруду.',()=>save.mapCatches.pond_summer||0,5,170],
+ ['ice','Первый лёд','Поймай 3 рыбы на зимнем пруду.',()=>save.mapCatches.pond_winter||0,3,190],
+ ['river','На течении','Поймай 4 рыбы на реке в любом сезоне.',()=>(save.mapCatches.river_summer||0)+(save.mapCatches.river_winter||0),4,190],
+ ['sea','Морская душа','Поймай 4 рыбы в море в любом сезоне.',()=>(save.mapCatches.sea_summer||0)+(save.mapCatches.sea_winter||0),4,200],
+ ['explore','Шесть берегов','Поймай хотя бы одну рыбу на каждой карте.',()=>Object.values(save.mapCatches).filter(n=>n>0).length,6,320],
+ ['strike','Лёгкая рука','Выполни 10 точных подсечек: сразу после потяжки.',()=>save.perfect,10,220],
+ ['streak','Не упустить ни одной','Поймай 5 рыб подряд без схода.',()=>save.bestStreak,5,200],
+ ['weight','Весомый результат','Доведи общий вес улова до 20 кг.',()=>Math.floor(save.totalWeight),20,260],
+ ['ten','Знаток водоёмов','Открой 12 видов рыб.',()=>Object.keys(save.records).length,12,350],
+ ['lures','Любая наживка','Поймай рыбу на каждый из 4 видов наживки.',()=>Object.keys(save.baitCatches).length,4,250],
+ ['master','Мастер рыбалки','Собери все 22 вида рыб.',()=>Object.keys(save.records).length,22,1000]
+];
+function questsReady(){return QUESTS.filter(q=>q[3]()>=q[4]&&!save.claimed.includes(q[0])).length}
+function hideScreens(){screens.forEach(id=>$(id).hidden=true)}
+function isBlocked(){return screens.some(id=>!$(id).hidden)}
+function updateHome(){
+ const ranks=['Начинающий рыбак','Любитель тихих зорь','Опытный рыболов','Знаток водоёмов','Охотник за трофеями','Мастер рыбалки'];
+ $('profile').innerHTML='<div class="level-seal">'+save.level+'</div><div class="profile-copy">'+ranks[Math.min(ranks.length-1,Math.floor((save.level-1)/3))]+'<small>'+save.catches+' уловов · '+Object.keys(save.records).length+'/22 вида</small><div class="xp-track"><i style="width:'+((save.xp%120)/120*100)+'%"></i></div></div><div class="profile-money">✦ '+save.coins+'</div>';
+ $('questBadge').hidden=!questsReady();
+ $('continueGame').innerHTML=(G.mode==='ready'?'НА РЫБАЛКУ':'ПРОДОЛЖИТЬ РЫБАЛКУ')+'<svg width=22 height=22 viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>';
+}
+function openHome(){actionUp();hideScreens();$('homeScreen').hidden=false;$('hud').hidden=true;updateHome()}
+function continueGame(){soundContext();hideScreens();$('hud').hidden=false;if(!save.tutorialSeen){save.tutorialSeen=true;persist();toast('Начни с пруда: коснись ряби на воде и нажми «Забросить».')}refresh()}
+function openSettings(){actionUp();$('settingsScreen').hidden=false;for(const key of ['music','nature','effects']){$(key+'Volume').value=Math.round(save.volumes[key]*100);label(key+'Value',Math.round(save.volumes[key]*100)+'%')}$('vibrationToggle').checked=save.vibration!==false}
+function pauseGame(){if(!$('homeScreen').hidden)return;actionUp();$('pauseScreen').hidden=false}
+function appPause(){actionUp();FishingAudio.pause();if($('homeScreen').hidden&&$('catchScreen').hidden)$('pauseScreen').hidden=false;last=performance.now()}
+function appResume(){last=performance.now();FishingAudio.resume()}
+window.__appPause=appPause;window.__appResume=appResume;
+window.gameBack=()=>{
+ for(const id of ['fishScreen','settingsScreen','baitScreen','journalScreen','gearScreen','mapScreen','catchScreen','pauseScreen']){
+  if(!$(id).hidden){if(id==='catchScreen'){retry();openHome()}else $(id).hidden=true;return}
+ }
+ if($('homeScreen').hidden)pauseGame();else if(window.AndroidGame)AndroidGame.exit();
+};
+function openJournal(){actionUp();$('journalScreen').hidden=false;drawJournal()}
+function drawJournal(){
+ const box=$('journalList');box.innerHTML='';
+ const sorted=[...QUESTS].sort((a,b)=>Number(save.claimed.includes(a[0]))-Number(save.claimed.includes(b[0])));
+ for(const q of sorted){
+  const [id,name,desc,progress,target,reward]=q,value=Math.min(target,progress()),claimed=save.claimed.includes(id);
+  const el=document.createElement('div');el.className='quest'+(claimed?' done':'');
+  const head=document.createElement('div');head.className='quest-head';const title=document.createElement('b');title.textContent=name;const coin=document.createElement('span');coin.textContent='+'+reward+' ✦';head.append(title,coin);
+  const p=document.createElement('p');p.textContent=desc;
+  const track=document.createElement('div');track.className='quest-progress';track.innerHTML='<div class="xp-track"><i style="width:'+value/target*100+'%"></i></div><small>'+value+' / '+target+'</small>';
+  el.append(head,p,track);
+  if(value>=target||claimed){const button=document.createElement('button');button.textContent=claimed?'НАГРАДА ПОЛУЧЕНА':'ЗАБРАТЬ НАГРАДУ';button.disabled=claimed;button.dataset.quest=id;
+   button.onclick=()=>{if(save.claimed.includes(id)||progress()<target)return;save.claimed.push(id);save.coins+=reward;persist();drawJournal();updateHome();refresh();audioCue('catch');toast('Награда: +'+reward+' монет')};el.append(button)}box.append(el);
+ }
+}
+function fishDetails(id){
+ $('fishScreen').hidden=false;$('detailImage').src='assets/fish/'+id+'.webp';label('detailName',F[id][0]);label('detailStatus',save.records[id]?'В ТВОЕЙ КОЛЛЕКЦИИ':'ЕЩЁ ПРЕДСТОИТ ПОЙМАТЬ');
+ const locations=Object.values(MAPS).filter(m=>m.spots.some(s=>s[3].split(',').includes(id))).map(m=>m.name+' · '+m.season.toLowerCase());
+ label('detailHabitat','Где искать: '+locations.join('; '));label('detailBait','Наживка: '+F[id][3].split(',').map(k=>B[k][0].toLowerCase()).join(', '));
+ label('detailRecord',save.records[id]?'Личный рекорд: '+save.records[id].toFixed(2)+' кг':'Средний вес: около '+F[id][1]+' кг');
+}
+function filterMaps(season){for(const card of $('mapList').children)card.hidden=season!=='all'&&card.dataset.season!==season;for(const b of $('seasonTabs').children)b.classList.toggle('active',b.dataset.season===season)}
+$('continueGame').onclick=continueGame;$('homeMaps').onclick=mapsOpen;$('homeGear').onclick=openGear;
+$('homeCollection').onclick=()=>{openGear();tab('collection')};$('homeHelp').onclick=()=>{openGear();tab('help')};
+$('homeSettings').onclick=openSettings;$('homeJournal').onclick=openJournal;$('closeJournal').onclick=()=>{$('journalScreen').hidden=true;updateHome()};
+$('closeSettings').onclick=()=>{$('settingsScreen').hidden=true};$('closeBait').onclick=()=>{$('baitScreen').hidden=true};$('closeFish').onclick=()=>{$('fishScreen').hidden=true};
+$('pause').onclick=pauseGame;$('resumeGame').onclick=()=>{$('pauseScreen').hidden=true;soundContext()};$('pauseSettings').onclick=openSettings;$('toHome').onclick=openHome;$('catchHome').onclick=()=>{retry();openHome()};
+for(const key of ['music','nature','effects'])$(key+'Volume').oninput=()=>{save.volumes[key]=Number($(key+'Volume').value)/100;label(key+'Value',$(key+'Volume').value+'%');FishingAudio.configure(save.volumes);soundContext();persist()};
+$('vibrationToggle').onchange=()=>{save.vibration=$('vibrationToggle').checked;persist()};
+for(const b of $('seasonTabs').children)b.onclick=()=>filterMaps(b.dataset.season);
+$('action').addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();actionDown()}});
+$('action').addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter')actionUp()});
+addEventListener('keydown',e=>{if(e.key==='Escape')window.gameBack()});
+document.addEventListener('pointerdown',e=>{if(e.target.closest('button')){soundContext();if(e.target.id!=='action')audioCue('click')}},{passive:true});
+
+function loop(ms){const dt=clamp((ms-last)/1000,0,.06);last=ms;if(!isBlocked()&&!document.hidden)physics(dt);else now+=Math.min(dt,.015);render();requestAnimationFrame(loop)}
 window.Fishing2={maps:MAPS,fish:F,game:G,save,changeMap,startCast,strike,caught,lost,physics,nearest,retry,activity,aimAt,chooseFish,chooseCastTime,tab};
 Object.keys(MAPS).forEach(k=>img('assets/scenes/'+k+'.webp'));img('assets/equipment/float_round.png');['float','ice','spin'].forEach(mode=>img('assets/rods/'+mode+'.webp'));
-changeMap(G.map);$('mapScreen').hidden=false;drawCards();requestAnimationFrame(loop);
+changeMap(G.map);openHome();drawCards();requestAnimationFrame(loop);
 })();
