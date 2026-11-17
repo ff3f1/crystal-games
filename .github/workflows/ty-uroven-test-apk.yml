@@ -1,8 +1,8 @@
-name: TY UROVEN test APK
+name: TY UROVEN v0.8 complete test APK
 on:
   push:
     branches:
-      - demo/ty-uroven-android-v03
+      - demo/ty-uroven-v08
     paths:
       - ty-uroven-src.zip.b64
       - .github/workflows/ty-uroven-test-apk.yml
@@ -27,8 +27,6 @@ jobs:
           base64 -d ty-uroven-src.zip.b64 > /tmp/tyapp.zip
           unzip -q /tmp/tyapp.zip -d tyapp
           test -f tyapp/app/src/main/assets/index.html
-          cp ty-uroven-v06-index.html tyapp/app/src/main/assets/index.html
-          sed -i "s/versionCode 3/versionCode 6/; s/versionCode 4/versionCode 6/; s/versionCode 5/versionCode 6/" tyapp/app/build.gradle
       - name: Build signed test APK
         working-directory: tyapp
         run: gradle assembleRelease --no-daemon --stacktrace
@@ -36,21 +34,21 @@ jobs:
         run: |
           ls -lah tyapp/app/build/outputs/apk/release
           mkdir -p out
-          cp tyapp/app/build/outputs/apk/release/app-release.apk out/ty-uroven-v0.3-test.apk
-          test $(stat -c%s out/ty-uroven-v0.3-test.apk) -gt 15000
+          cp tyapp/app/build/outputs/apk/release/app-release.apk out/ty-uroven-v0.8-adventure.apk
+          test $(stat -c%s out/ty-uroven-v0.8-adventure.apk) -gt 15000
       - uses: actions/upload-artifact@v4
         with:
-          name: ty-uroven-apk
-          path: out/ty-uroven-v0.3-test.apk
+          name: ty-uroven-v08-apk
+          path: out/ty-uroven-v0.8-adventure.apk
       - name: Publish test APK to isolated download branch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p /tmp/ty-download
-          cp out/ty-uroven-v0.3-test.apk /tmp/ty-download/
+          cp out/ty-uroven-v0.8-adventure.apk /tmp/ty-download/
           cd /tmp/ty-download
-          git init -q -b ty-uroven-builds
+          git init -q -b ty-uroven-v08-builds
           git config user.name github-actions
           git config user.email actions@github.com
-          git add -A && git commit -qm "TY UROVEN v0.3 test APK"
-          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ty-uroven-builds
+          git add -A && git commit -qm "TY UROVEN v0.8 APK"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ty-uroven-v08-builds
