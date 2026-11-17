@@ -370,13 +370,14 @@
     if(lureSprite)lureSprite.visible=false;
     const idleSway=Math.sin(t*.71)*2.2,mode=isIce?"ice":v.mode;
     const anchors={
-      float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
+      // The grip comes from OUTSIDE the first-person frame, not mid-air.
+      float:[.89,1.035,.29,.29],feeder:[.73,.80,.30,.37],
       spin:[.74,.82,.40,.36],ice:[.74,.79,.58,.61]
     };
     const a=anchors[mode]||anchors.float;
     const base=V(W*a[0],H*a[1]+idleSway,40);
     const tip=V(W*(a[2]+tilt*(isIce?.055:.12)),H*a[3]+idleSway-(v.rod.lift||0)*H*.05,30);
-    if(v.tackle.state==="fly")tip.y+=Math.sin(v.tackle.flyT*Math.PI*2)*H*.14;
+    if(v.tackle.state==="fly")tip.y+=Math.sin(U.clamp(v.tackle.flyT,0,1)*Math.PI)*H*.115;
     const c=FZ.RodArt.info(mode),len=base.distanceTo(tip);
     const angle=Math.atan2(base.y-tip.y,base.x-tip.x),zAxis=new T.Vector3(0,0,1);
     const factor=len/(c.baseX-c.tipX),width=1440*factor,height=300*factor;

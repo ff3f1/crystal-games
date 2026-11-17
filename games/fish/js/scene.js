@@ -1073,12 +1073,13 @@
     // Screen anchors match the WebGL camera and keep handles inside phone viewports.
     const m=v.ice?"ice":v.mode,rod=v.rod||{};
     const anchors={
-      float:[.70,.79,.34,.29],feeder:[.73,.80,.30,.37],
+      // Match WebGL's first-person composition in Canvas fallback.
+      float:[.89,1.035,.29,.29],feeder:[.73,.80,.30,.37],
       spin:[.74,.82,.40,.36],ice:[.74,.79,.58,.61]
     };
     const a=anchors[m]||anchors.float;
     const base={x:W*a[0],y:H*a[1]},tip={x:W*(a[2]+(rod.tilt||0)*(m==="ice"?.055:.12)),y:H*a[3]+(rod.lift||0)*H*.05};
-    if(v.tackle&&v.tackle.state==="fly")tip.y-=Math.sin((v.tackle.flyT||0)*Math.PI*2)*H*.14;
+    if(v.tackle&&v.tackle.state==="fly")tip.y-=Math.sin(U.clamp(v.tackle.flyT||0,0,1)*Math.PI)*H*.115;
     return {base,tip};
   }
   R.rodTip = function (v) { const g = rodGeom(v); return g.tip; };
