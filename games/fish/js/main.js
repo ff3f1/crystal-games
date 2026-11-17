@@ -4,7 +4,7 @@
   const U = FZ.U, G = FZ.Game, UI = FZ.UI, Sc = FZ.Scene;
   const cv = document.getElementById("cv");
   let t = 0, last = 0, aim = null, ambT = 0, running = false;
-  const P = { down: false, x: 0, y: 0, sx: 0, sy: 0, st: 0, id: null, moved: 0 };
+  const P = { down: false, x: 0, y: 0, sx: 0, sy: 0, st: 0, id: null, moved: 0, canvasReeling: false };
 
   // ---------- Ввод ----------
   const Input = {};
@@ -20,12 +20,14 @@
   cv.addEventListener("pointerdown", function (e) {
     FZ.Sound.unlock();
     if (blocked()) return;
-    P.down = true; P.id = e.pointerId; P.x = P.sx = e.clientX; P.y = P.sy = e.clientY; P.st = performance.now(); P.moved = 0;
+    P.down = true; P.id = e.pointerId; P.x = P.sx = e.clientX; P.y = P.sy = e.clientY; P.st = performance.now(); P.moved = 0; P.canvasReeling = false;
     try { cv.setPointerCapture(e.pointerId); } catch (er) {}
     const s = rigState(), r = G.rig(), mode = G.sess().mode;
     if (s === "idle" && !G.sess().ice) setAim(e.clientX, e.clientY);
-    if (s === "fight") { r.reeling = true; r.tilt = tiltOf(e.clientX); }
-    if ((s === "wait" || s === "bite") && mode === "spin") r.reeling = true;
+    // Steering and reeling are independent: touching the water during a run
+    // must not start the reel the player was just told to release.
+    if (s === "fight") r.tilt = tiltOf(e.clientX);
+    if ((s === "wait" || s === "bite") && mode === "spin") { r.reeling = true; P.canvasReeling = true; }
   });
   cv.addEventListener("pointermove", function (e) {
     if (!P.down || e.pointerId !== P.id) return;
@@ -43,10 +45,12 @@
     if (aim) { const a = aim; aim = null; if (s === "idle") {G.sess().lastAim={X:a.X,Z:a.Z};r.aimSelected=true;} }
     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
     else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
-    r.reeling = false;
+    if(P.canvasReeling)r.reeling = false;
+    if(s === "fight")r.tilt = 0;
+    P.canvasReeling = false;
   }
   cv.addEventListener("pointerup", up);
-  cv.addEventListener("pointercancel",()=>{P.down=false;aim=null;Input.actionUp()});
+  cv.addEventListener("pointercancel",()=>{P.down=false;aim=null;if(P.canvasReeling)Input.actionUp();P.canvasReeling=false;if(G.rig()&&G.rig().state==='fight')G.rig().tilt=0});
   function tiltOf(x) { const S = Sc.size(); return U.clamp((x - S.W / 2) / (S.W * 0.38), -1, 1); }
 
   Input.actionDown = function () {

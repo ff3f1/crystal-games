@@ -393,7 +393,7 @@
       else UI.toast("Нельзя купить: " + r, "bad");
     }));
     sh.querySelectorAll("[data-use]").forEach((b) => (b.onclick = function () {
-      const r = FZ.ROD[b.dataset.use]; G.equip(r.type, "rod", r.id); if (r.type !== "ice") G.setActive(r.type);
+      const r = FZ.ROD[b.dataset.use]; if(G.equip(r.type, "rod", r.id)===false){UI.toast("Сначала закончи вываживание", "bad");return} if (r.type !== "ice") G.setActive(r.type);
       FZ.Sound.click(); UI._shopScroll = [shopTab, sc.scrollTop]; UI.showShop(); UI.refreshTools();
     }));
   };
@@ -417,7 +417,7 @@
       '<div style="margin-top:14px"><button class="btn" id="tkShop" style="width:100%">Купить снасти</button></div></div>';
     const sh = UI.sheet(html, () => UI.refreshTools());
     const re = () => { UI.closeSheet(); UI.showTackle(); };
-    sh.querySelectorAll("#tkMode button").forEach((b) => (b.onclick = () => { G.setActive(b.dataset.m); FZ.Sound.click(); re(); }));
+    sh.querySelectorAll("#tkMode button").forEach((b) => (b.onclick = () => { if(G.setActive(b.dataset.m)===false&&["fight","landing","result"].includes(G.rig().state)){UI.toast("Сначала закончи вываживание", "bad");return} FZ.Sound.click(); re(); }));
     sh.querySelectorAll("[data-rod]").forEach((b) => (b.onclick = () => { G.equip(mode, "rod", b.dataset.rod); re(); }));
     sh.querySelectorAll("[data-line]").forEach((b) => (b.onclick = () => { G.equip(mode, "line", b.dataset.line); re(); }));
     sh.querySelectorAll("[data-hook]").forEach((b) => (b.onclick = () => { G.equip(mode, "hook", b.dataset.hook); re(); }));
@@ -577,6 +577,7 @@
   UI.showCatch = function (r) {
     const ov = $("ovCatch"), s = r.s;
     const rar = FZ.RARITY[s.rar];
+    const goal = FZ.Expeditions && FZ.Expeditions.challenge(r.loc);
     const badges = [];
     if (r.newSpecies) badges.push(["Новый вид в атласе", "#7ccf6a"]);
     if (r.trophy) badges.push(["Трофей", "#f2a71b"]);
@@ -591,6 +592,7 @@
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
       (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (s.release === "Красная книга" ? "вид из Красной книги" : "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
+      (goal && !goal.claimed ? '<div class="catch-goal"><span>ЗАДАНИЕ БЕРЕГА · '+goal.reward+' ₽</span><b>'+(goal.got===goal.need?'Задание выполнено — забери награду в экспедициях':goal.label)+'</b></div>' : '') +
       '<div class="acts">' +
         '<button class="dbl" id="cDbl"><span class="adtag">реклама</span> Удвоить награду</button>' +
         '<div class="two">' +
@@ -629,7 +631,11 @@
       if(rewarding||G.rig().result!==r)return;
       ov.classList.remove("on"); cancelAnimationFrame(catchAnim); $("hud").classList.remove("hide");
       const res = G.resolveCatch(keep, doubled);
-      if (res) { if (res.money) UI.toast("+" + U.money(res.money) + ", +" + res.xp + " опыта", "gold"); else UI.toast("Отпустили. +" + res.xp + " опыта", "gold"); }
+      if (res) {
+        const updated=FZ.Expeditions&&FZ.Expeditions.challenge(r.loc),completed=goal&&updated&&!goal.claimed&&goal.got<goal.need&&updated.got===updated.need;
+        const text=res.money?"+"+U.money(res.money)+", +"+res.xp+" опыта":"Отпустили. +"+res.xp+" опыта";
+        UI.toast(text+(completed?" · задание берега выполнено!":""),"gold",completed?3500:2200);
+      }
       UI.refreshTools();
       UI.afterCatch(r);
     };

@@ -43,7 +43,15 @@
    const p=Sc.proj(site.X,site.Z),k=(v.t*.23+site.side+3)%1;
    ctx.save();ctx.strokeStyle='rgba(237,239,209,'+(.32*(1-k))+')';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(p.x,p.y,15+k*19,5+k*4,0,0,Math.PI*2);ctx.stroke();ctx.font='500 10px Rubik,sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(7,29,32,.85)';ctx.strokeText(site.n,p.x,p.y-15);ctx.fillStyle='#e8ead4';ctx.fillText(site.n,p.x,p.y-15);ctx.restore();
   }
-  Sc.drawTackle(v,L,v.t);Sc.drawWeather(v,L,v.t,dt,v.wx);Sc.drawScreenFx(dt);
+  Sc.drawTackle(v,L,v.t);
+  // Follow the actual fish velocity; the text tells the player to steer opposite.
+  const fish=rig.fish;
+  if(!v.ice&&rig.state==='fight'&&fish&&fish.phase==='run'&&Math.abs(fish.vx)>.15){
+   const p=Sc.proj(fish.X,fish.Z),x=U.clamp(p.x,24,W-24),y=U.clamp(p.y-28,H*.40,H*.68);
+   ctx.save();ctx.fillStyle='rgba(12,43,48,.82)';ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();
+   ctx.strokeStyle='rgba(247,211,140,.9)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#f7d38c';ctx.font='bold 21px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(fish.vx>0?'→':'←',x,y);ctx.restore();
+  }
+  Sc.drawWeather(v,L,v.t,dt,v.wx);Sc.drawScreenFx(dt);
   ctx.restore();ctx.setTransform(1,0,0,1,0,0);
  };
  Sc.drawAim=function(v,a){

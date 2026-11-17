@@ -1,7 +1,11 @@
 """Exercise the actual signed update using Android's accessibility tree, offline."""
-import subprocess,time,re,xml.etree.ElementTree as ET
+import subprocess,time,re,shutil,xml.etree.ElementTree as ET
 from pathlib import Path
 OUT=Path('output');OUT.mkdir(exist_ok=True)
+STORE=OUT/'store-screenshots';STORE.mkdir(exist_ok=True)
+STORE_SHOTS={'android-menu':'01-menu','android-map':'02-waters','android-game':'03-fishing',
+             'android-atlas':'04-atlas','android-expeditions':'05-expeditions',
+             'android-winter':'06-winter','android-hole':'07-ice-fishing','android-bait':'08-bait'}
 PKG='ru.crystalgames.fishing'
 def adb(*a):return subprocess.check_output(['adb',*a],text=True,stderr=subprocess.STDOUT)
 def snapshot(name=None):
@@ -12,17 +16,13 @@ def find(text=None,id=None):
  last=None
  for attempt in range(12):
   tree=snapshot();last=tree
+  if any(n.get('text','').strip()=='AD' for n in tree.iter('node')):
+   raise AssertionError('Ad unexpectedly appeared: emulator network isolation failed')
   for n in tree.iter('node'):
    if ((id and n.get('resource-id')==id) or not id) and (not text or text in n.get('text','')+' '+n.get('content-desc','')):
     b=list(map(int,re.findall(r'\d+',n.get('bounds',''))))
     if len(b)==4 and b[2]>b[0] and b[3]>b[1]:return n
-  if any(n.get('text','').strip()=='AD' for n in tree.iter('node')):
-   # Real interstitials can appear over WebView even in offline emulator.
-   # Only use Android Back to dismiss; never click an advertisement or CTA.
-   if attempt==0:shot('android-ad-overlay')
-   adb('shell','input','keyevent','4')
-   time.sleep(1.5)
-  elif attempt<11:
+  if attempt<11:
    # UIAutomator sometimes returns a temporarily empty tree during transitions.
    # Retry instead of treating a blank screen as missing game content.
    time.sleep(.9)
@@ -32,13 +32,17 @@ def tap(text=None,id=None):
  n=find(text,id);x,y,x2,y2=map(int,re.findall(r'\d+',n.get('bounds')));adb('shell','input','tap',str((x+x2)//2),str((y+y2)//2));time.sleep(.65)
 def shot(name):
  adb('shell','screencap','-p','/sdcard/fishing.png');adb('pull','/sdcard/fishing.png',str(OUT/(name+'.png')))
+ if name in STORE_SHOTS:shutil.copyfile(OUT/(name+'.png'),STORE/(STORE_SHOTS[name]+'.png'))
 def back():adb('shell','input','keyevent','4');time.sleep(.5)
 try:
  tree=snapshot()
  if any(n.get('resource-id')=='android:id/ok' for n in tree.iter('node')):tap('GOT IT')
  find(id='mGo');find('62 вида');snapshot('android-menu');shot('android-menu')
+ tap(id='mMap');find('Выбери свой берег');time.sleep(2);shot('android-map');back()
  tap(id='mAtlas');find('Атлас рыб');find('из 62');shot('android-atlas');back()
+ tap(id='mJourney');find('Экспедиции');find('Отпусти рыбу');shot('android-expeditions');back()
  tap(id='mSet');find('Музыка');find('Дальние птицы');shot('android-settings');back()
+ tap(id='mMap');tap('Лето');tap('Деревенский пруд');time.sleep(2);find('Заброс',id='bAct');shot('android-game');back()
  tap(id='mMap');find('Выбери свой берег');tap('Зима');tap('Деревенский пруд');time.sleep(1.3)
  find('Бурить',id='bAct');shot('android-winter')
  tap(id='bAct');time.sleep(3);find('Новая лунка');shot('android-hole')

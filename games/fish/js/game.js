@@ -43,6 +43,9 @@
     st.stats=Object.assign({},defaults.stats,st.stats||{});st.daily=Object.assign({},defaults.daily,st.daily||{});
     st.journal=Array.isArray(st.journal)?st.journal:[];
     st.journey=st.journey||{maps:{},claimed:[]};st.journey.maps=st.journey.maps||{};st.journey.claimed=st.journey.claimed||[];
+    // Restore progress from the previous update's diary once; old rewards stay valid.
+    if(!st.journey.bonus){st.journey.bonus={};for(const entry of st.journal)recordExpedition(entry)}
+    st.journey.bonusClaimed=Array.isArray(st.journey.bonusClaimed)?st.journey.bonusClaimed:[];
     if(!FZ.LOC[st.loc])st.loc='pond';
     for(const m of Object.keys(st.load)){const L=st.load[m];if(!FZ.ROD[L.rod]&&L.rod)L.rod=defaults.load[m].rod;if(!FZ.LINE[L.line])L.line='l1';if(!FZ.HOOK[L.hook])L.hook='h2';if(!FZ.BAIT[L.bait])L.bait=null}
 
@@ -95,6 +98,14 @@
     G.save();
   };
   function addInv(id, n) { st.inv[id] = (st.inv[id] || 0) + n; }
+  function recordExpedition(entry) {
+    if(!entry.loc||!entry.sid)return;
+    const b=st.journey.bonus[entry.loc]||(st.journey.bonus[entry.loc]={species:{},methods:{},released:0,largest:0});
+    b.species[entry.sid]=(b.species[entry.sid]||0)+1;
+    b.methods[entry.mode]=(b.methods[entry.mode]||0)+1;
+    if(!entry.kept)b.released++;
+    b.largest=Math.max(b.largest,entry.w||0);
+  }
 
   // ---------- Снасти ----------
   G.season = function () { return st.seasonPick || U.seasonOf(); };
@@ -108,9 +119,10 @@
   G.baitLeft = function (id) { const b = FZ.BAIT[id]; if (!b) return 0; return b.lure ? (st.lures[id] || 0) : (st.inv[id] || 0); };
   G.availableBaits = function (mode) { return FZ.BAITS.filter((b) => b.m.indexOf(mode) >= 0 && G.baitLeft(b.id) > 0); };
   G.setBait = function (id) { if(!FZ.BAIT[id]||G.baitLeft(id)<=0||FZ.BAIT[id].m.indexOf(G.mode())<0||rig&&["fight","landing","result"].includes(rig.state))return false; G.loadout().bait = id; G.save(); emit("gear"); };
-  G.setDepth = function (d) { G.loadout().depth = d; G.save(); emit("gear"); };
+  G.setDepth = function (d) { if(rig&&["fight","landing","result"].includes(rig.state))return false;G.loadout().depth = d; G.save(); emit("gear"); };
   G.setDrag = function (v) { st.drag = U.clamp(v, 0.3, 1); G.save(); };
   G.setActive = function (mode) {
+    if (rig && ["fight", "landing", "result"].includes(rig.state)) return false;
     if (!st.load[mode] || !st.load[mode].rod) return false;
     if (mode === "ice") return false;
     st.active = mode; G.save();
@@ -125,6 +137,7 @@
     return false;
   };
   G.buy = function (kind, id) {
+    if (rig && ["fight", "landing", "result"].includes(rig.state)) return "сначала закончи вываживание";
     let item, price;
     if (kind === "rod") item = FZ.ROD[id]; else if (kind === "line") item = FZ.LINE[id]; else if (kind === "hook") item = FZ.HOOK[id];
     else if (kind === "bait") item = FZ.BAIT[id]; else if (kind === "gb") item = FZ.GROUNDBAIT; else if (kind === "extra") item = FZ.EXTRAS[id];
@@ -154,7 +167,7 @@
       }
     });
   }
-  G.equip = function (mode, slot, id) { if(rig&&["fight","landing","result"].includes(rig.state))return false;if(!st.load[mode])return false;const dict={rod:FZ.ROD,line:FZ.LINE,hook:FZ.HOOK};if(dict[slot]&&!dict[slot][id])return false;st.load[mode][slot] = id; G.save(); emit("gear"); if (sess && sess.mode === mode && rig.state !== "fight") resetRig(); };
+  G.equip = function (mode, slot, id) { if(rig&&["fight","landing","result"].includes(rig.state))return false;if(!st.load[mode])return false;const dict={rod:FZ.ROD,line:FZ.LINE,hook:FZ.HOOK};if(dict[slot]&&!dict[slot][id])return false;st.load[mode][slot] = id; G.save(); emit("gear"); if (sess && sess.mode === mode && rig.state !== "fight") resetRig(); return true; };
 
   FZ.EXTRAS = {
     echo: { id: "echo", n: "Эхолот", note: "показывает глубину и рыбу под лункой и в точке заброса", price: 3500, lvl: 5 },
@@ -290,13 +303,14 @@
   const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1 };
   const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1 };
   const RARF = [1, 1, 0.85, 0.6, 0.35, 0.18];
-  G.biteTable = function () {
+  G.biteTable = function (position) {
     const g = G.gear(sess.mode), loc = sess.loc, wx = sess.wx;
     const bait = g.bait ? g.bait.id : null;
     const zone = zoneNow();
-    const lat = FZ.Scene.maxLat(rig.Z);
-    const edge = !sess.ice && Math.abs(rig.X) > lat * 0.62;
-    const deep = !sess.ice && rig.Z > G.maxCast() * 0.78;
+    const X=position?position.X:rig.X, Z=position?position.Z:rig.Z;
+    const lat = FZ.Scene.maxLat(Z);
+    const edge = !sess.ice && Math.abs(X) > lat * 0.62;
+    const deep = !sess.ice && Z > G.maxCast() * 0.78;
     let sumW = 0; Object.keys(loc.fish).forEach((id) => (sumW += loc.fish[id]));
     const list = [];
     Object.keys(loc.fish).forEach(function (id) {
@@ -309,11 +323,11 @@
       if (deep && DEEP_FISH[id]) m *= 1.3;
       if (s.kind === "peace") {
         m *= 1 - 0.05 * g.line.vis;
-        if (sess.fedSpot && Math.hypot(sess.fedSpot.X - rig.X, sess.fedSpot.Z - rig.Z) < 4) m *= 1 + sess.fedSpot.level;
+        if (sess.fedSpot && Math.hypot(sess.fedSpot.X - X, sess.fedSpot.Z - Z) < 4) m *= 1 + sess.fedSpot.level;
         if (sess.gbUntil > sess.t) m *= 1.35;
       }
       sess.spots.forEach(function (sp) {
-        if (Math.hypot(sp.X - rig.X, sp.Z - rig.Z) < 3) { if (sp.type === "bubbles" && s.kind === "peace") m *= 2; if (sp.type === "boil" && s.kind === "pred") m *= 2.6; }
+        if (Math.hypot(sp.X - X, sp.Z - Z) < 3) { if (sp.type === "bubbles" && s.kind === "peace") m *= 2; if (sp.type === "boil" && s.kind === "pred") m *= 2.6; }
       });
       if (sess.ice) {
         m *= sess.hole ? sess.hole.fish : 1;
@@ -443,7 +457,7 @@
   function hook(s, w) {
     const lenCm = Math.round(Math.pow(w / s.lwA, 1 / 3));
     const Fmax = s.fight.power * (0.6 + 1.2 * Math.pow(w, 0.75));
-    rig.state = "fight";
+    rig.state = "fight";rig.lost = null;
     rig.bite = null;
     rig.fish = {
       s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
@@ -633,7 +647,8 @@
     st.caught[s.id] = (st.caught[s.id] || 0) + 1;
     if (r.record) st.records[s.id] = { w: r.w, len: r.len, loc: r.loc, date: r.date };
     st.stats.total++; st.stats.kg += r.w;
-    st.journal.unshift({sid:s.id,w:r.w,len:r.len,loc:r.loc,season:sess.season,mode:r.mode,kept:!!keep,date:new Date().toISOString(),trophy:r.trophy});st.journal=st.journal.slice(0,150);
+    const entry={sid:s.id,w:r.w,len:r.len,loc:r.loc,season:sess.season,mode:r.mode,kept:!!keep,date:new Date().toISOString(),trophy:r.trophy};
+    st.journal.unshift(entry);st.journal=st.journal.slice(0,150);recordExpedition(entry);
     st.journey.maps[r.loc]=(st.journey.maps[r.loc]||0)+1;
 
     if (r.trophy) st.stats.trophies++;
