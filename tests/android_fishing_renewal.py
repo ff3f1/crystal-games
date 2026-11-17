@@ -9,12 +9,23 @@ def snapshot(name=None):
  if name:(OUT/(name+'.xml')).write_text(xml)
  return ET.fromstring(xml)
 def find(text=None,id=None):
- tree=snapshot()
- for n in tree.iter('node'):
-  if ((id and n.get('resource-id')==id) or not id) and (not text or text in n.get('text','')+' '+n.get('content-desc','')):
-   b=list(map(int,re.findall(r'\d+',n.get('bounds',''))))
-   if len(b)==4 and b[2]>b[0] and b[3]>b[1]:return n
- raise AssertionError('Missing visible UI '+str((text,id))+'\n'+ET.tostring(tree,encoding='unicode'))
+ last=None
+ for attempt in range(12):
+  tree=snapshot();last=tree
+  for n in tree.iter('node'):
+   if ((id and n.get('resource-id')==id) or not id) and (not text or text in n.get('text','')+' '+n.get('content-desc','')):
+    b=list(map(int,re.findall(r'\d+',n.get('bounds',''))))
+    if len(b)==4 and b[2]>b[0] and b[3]>b[1]:return n
+  if id=='bAct' and any(n.get('text','').strip()=='AD' for n in tree.iter('node')):
+   # The real Yandex SDK may surface a cached fullscreen creative even offline.
+   # Dismiss it through Android Back; never click the ad, CTA, or reward button.
+   if attempt==0:shot('android-ad-overlay')
+   adb('shell','input','keyevent','4')
+   time.sleep(1.5)
+  elif id=='bAct' and attempt<11:
+   time.sleep(.9)
+  else:break
+ raise AssertionError('Missing visible UI '+str((text,id))+'\n'+ET.tostring(last,encoding='unicode')[:6000])
 def tap(text=None,id=None):
  n=find(text,id);x,y,x2,y2=map(int,re.findall(r'\d+',n.get('bounds')));adb('shell','input','tap',str((x+x2)//2),str((y+y2)//2));time.sleep(.65)
 def shot(name):

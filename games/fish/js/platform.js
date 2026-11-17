@@ -12,7 +12,9 @@
   };
 
   const platform = window.AndroidAds ? "android" : (/vk_app_id=/.test(location.search) ? "vk" : "web");
-  let bridge = null, busy = false, lastInter = Date.now() - 60e3, seq = 0;
+  // Do not interrupt the first fishing session with a fullscreen ad. Ads still
+  // become eligible after the configured cooldown; rewarded ads are unaffected.
+  let bridge = null, busy = false, lastInter = Date.now(), seq = 0;
   const pending = {};
   window.__adResult = function (id, ok) { if (pending[id]) { pending[id](!!ok); delete pending[id]; } };
 
