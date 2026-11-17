@@ -1,0 +1,1 @@
+PASS: signed APK installed; offline home, fishing scene, bait choice, native back, pause, background/resume and map menu work on Android 29.
