@@ -6,7 +6,7 @@
   const A = {};
   let mix = { ambienceVolume:.72, effectsVolume:.72, musicVolume:.32 };
   let music = null, musicKey = "", musicVol = 0.32;
-  let nextBird = 0, nextCrack = 0, nextFrog = 0, cricket = null;
+  let nextBird = 0, nextCrack = 0, nextFrog = 0, nextRainDrop = 0, cricket = null;
   let ambParams = {};
 
   S.unlock = function () {
@@ -14,10 +14,10 @@
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) return;
     ac = new C();
-    master = ac.createGain(); master.gain.value = S.on ? 0.82 : 0;
+    master = ac.createGain(); master.gain.value = S.on ? 0.69 : 0;
     const limiter = ac.createDynamicsCompressor();
-    limiter.threshold.value = -12; limiter.knee.value = 18; limiter.ratio.value = 8;
-    limiter.attack.value = 0.004; limiter.release.value = 0.18;
+    limiter.threshold.value = -17; limiter.knee.value = 16; limiter.ratio.value = 3.5;
+    limiter.attack.value = 0.012; limiter.release.value = 0.34;
     master.connect(limiter); limiter.connect(ac.destination);
     amb = ac.createGain(); amb.gain.value = mix.ambienceVolume; amb.connect(master);
     sfx = ac.createGain(); sfx.gain.value = mix.effectsVolume; sfx.connect(master);
@@ -36,10 +36,10 @@
       if(i<seam){const a=i/seam;d[i]=raw[count+i]*(1-a)+raw[i]*a;}
       else d[i]=raw[i];
     }
-    A.water = loopNoise("lowpass", 520, 0.6);
+    A.water = loopNoise("lowpass", 520, 0.45);
     A.water.lfo = lfo(0.13, 0.012, A.water.g.gain);
     A.wind = loopNoise("lowpass", 650, 0.35);
-    A.rain = loopNoise("lowpass", 1050, 0.3);
+    A.rain = loopNoise("lowpass", 1150, 0.35);
     S.updateAmbience(ambParams);
   };
 
@@ -84,70 +84,107 @@
     const t = ac.currentTime, ice = p.mode === "ice";
     const river = p.style === "river" || p.style === "taiga";
     const wind = Math.max(0, Math.min(10, Number(p.wind) || 0));
-    A.water.g.gain.setTargetAtTime(ice ? 0 : (river ? 0.17 : 0.095), t, 1.1);
+    A.water.g.gain.setTargetAtTime(ice ? 0 : (river ? 0.15 : 0.11), t, 2.1);
     A.water.f.frequency.setTargetAtTime(river ? 760 : 430, t, 1.2);
     A.wind.g.gain.setTargetAtTime(0.008 + wind * (ice ? 0.0018 : 0.0012), t, 1.5);
     A.wind.f.frequency.setTargetAtTime(380 + wind * 28, t, 1.5);
-    const rainLevel = p.sky === "rain" ? 0.045 : p.sky === "storm" ? 0.068 : 0;
+    const rainLevel = p.sky === "rain" ? 0.038 : p.sky === "storm" ? 0.064 : 0;
     A.rain.g.gain.setTargetAtTime(ice ? 0 : rainLevel, t, 1.8);
     A.rain.f.frequency.setTargetAtTime(p.sky === "storm" ? 790 : 1050, t, 2);
-    const crickets = !ice && p.period === "night" && (p.season === "summer" || p.season === "autumn");
-    if (crickets && !cricket) {
-      const o = ac.createOscillator(); o.frequency.value = 4300;
-      const g = ac.createGain(); g.gain.value = 0;
-      const pulse = ac.createOscillator(); pulse.type = "square"; pulse.frequency.value = 28;
-      const pg = ac.createGain(); pg.gain.value = 0.003;
-      pulse.connect(pg); pg.connect(g.gain);
-      const slow = ac.createOscillator(); slow.frequency.value = 0.9;
-      const sg = ac.createGain(); sg.gain.value = 0.5; slow.connect(sg); sg.connect(pulse.frequency);
-      o.connect(g); g.connect(amb); o.start(); pulse.start(); slow.start();
-      g.gain.setTargetAtTime(0.004, t, 1.2);
-      cricket = { o, pulse, slow, g };
-    } else if (!crickets && cricket) {
-      try { cricket.g.gain.setTargetAtTime(0.0001, t, 0.25); cricket.o.stop(t + 1); cricket.pulse.stop(t + 1); cricket.slow.stop(t + 1); } catch (e) {}
-      cricket = null;
+    // No continuous 4.3 kHz electronic "cricket": it was an audible alarm.
+    // Retire any voice left after a weather / season transition.
+    if(cricket){
+      try{cricket.g.gain.setTargetAtTime(0,t,.1);cricket.o.stop(t+.5);cricket.pulse.stop(t+.5);cricket.slow.stop(t+.5);}catch(_){}
+      cricket=null;
     }
   };
 
   S.tick = function () {
-    if (!ac || !S.on || ac.state !== "running") return;
-    const p = ambParams, now = ac.currentTime;
-    if ((p.period === "dawn" || p.period === "day") && p.season !== "winter" && now > nextBird) {
-      nextBird = now + 3 + Math.random() * (p.period === "dawn" ? 4 : 8);
-      const base = 2400 + Math.random() * 2200, n = 2 + Math.floor(Math.random() * 4);
-      for (let i = 0; i < n; i++) tone("sine", base * (1 + Math.random() * 0.3), base * (0.8 + Math.random() * 0.6), 0.07 + Math.random() * 0.08, 0.022, amb, i * (0.1 + Math.random() * 0.07));
+    if(!ac||!S.on||ac.state!=="running")return;
+    const p=ambParams,now=ac.currentTime;
+    // Brief broadband reed / foliage movements rather than repeating sine beeps.
+    if(p.mode!=="ice" && (p.period==="dawn"||p.period==="day") && p.season!=="winter" && now>nextBird){
+      nextBird=now+7+Math.random()*13;
+      noise(.30+Math.random()*.20,"bandpass",1100+Math.random()*650,600+Math.random()*300,.009,1.1,0,amb);
     }
-    if (p.mode === "ice" && now > nextCrack) {
-      nextCrack = now + 16 + Math.random() * 28;
-      tone("sine", 180, 38, 1.4, 0.11, amb);
-      noise(0.7, "lowpass", 650, 100, 0.07, 1, 0, amb);
+    if(p.mode==="ice"&&now>nextCrack){
+      nextCrack=now+22+Math.random()*36;
+      noise(.65,"lowpass",420,70,.027,.7,0,amb);
+      noise(.21,"bandpass",650,200,.013,.9,.07,amb);
     }
-    if (p.mode !== "ice" && (p.style === "pond" || p.style === "delta") && (p.period === "dusk" || p.period === "night") && (p.season === "summer" || p.season === "spring") && now > nextFrog) {
-      nextFrog = now + 4 + Math.random() * 7;
-      for (let i = 0; i < 3; i++) tone("triangle", 110 + Math.random() * 30, 90, 0.12, 0.022, amb, i * 0.16);
+    if(p.mode!=="ice"&&(p.style==="pond"||p.style==="delta")&&
+       (p.period==="dusk"||p.period==="night")&&now>nextFrog){
+      nextFrog=now+9+Math.random()*18;
+      // Low, woody pulse rather than a triangle-wave cartoon frog.
+      for(let i=0;i<2;i++)noise(.13,"bandpass",380,240,.011,2.4,i*.21,amb);
+    }
+    if((p.sky==="rain"||p.sky==="storm")&&p.mode!=="ice"&&now>nextRainDrop){
+      nextRainDrop=now+.19+Math.random()*.37;
+      noise(.09+Math.random()*.09,"bandpass",900+Math.random()*500,450,.011,1.1,0,amb);
     }
   };
 
-  S.click = () => tone("triangle", 900, 700, 0.05, 0.06);
-  S.cast = () => { noise(0.34, "bandpass", 700, 2200, 0.065, 1); tone("sine", 520, 1050, 0.26, 0.018); };
-  S.plop = (big) => { tone("sine", big ? 320 : 700, big ? 90 : 180, 0.18, 0.18); noise(0.25, "lowpass", 1800, 350, big ? 0.22 : 0.12); };
-  S.splash = (k) => { noise(0.5 + k * 0.4, "lowpass", 2400, 260, 0.16 + k * 0.16); tone("sine", 260, 70, 0.3, 0.1 * k); };
-  S.bite = () => tone("sine", 900, 630, 0.085, 0.029);
-  S.bell = () => { [1320, 1980, 2640].forEach((f, i) => tone("sine", f, f * 0.995, 0.6 - i * 0.15, 0.045 / (i + 1))); };
-  S.strike = () => { noise(0.18, "bandpass", 2000, 800, 0.18, 2); tone("square", 300, 120, 0.08, 0.035); };
-  S.snap = () => { noise(0.08, "highpass", 3000, 6000, 0.28); tone("square", 1900, 300, 0.12, 0.08); };
-  S.coin = () => { tone("triangle", 1568, 1568, 0.09, 0.09); tone("triangle", 2093, 2093, 0.22, 0.09, null, 0.08); };
-  S.level = () => [523, 659, 784, 1046].forEach((f, i) => tone("triangle", f, f, 0.25, 0.09, null, i * 0.1));
-  S.trophy = () => [392, 523, 659, 784, 1046, 1318].forEach((f, i) => tone("triangle", f, f, 0.35, 0.075, null, i * 0.07));
-  S.fail = () => tone("triangle", 300, 120, 0.35, 0.05);
-  S.drill = (dur) => { for (let i = 0; i < 8; i++) noise(0.22, "bandpass", 500 + Math.random() * 300, 300, 0.11, 3, i * dur / 8); };
-  S.flop = () => noise(0.08, "lowpass", 1500, 500, 0.18);
-  S.thunder = () => { noise(2.8, "lowpass", 260, 48, 0.22, 0.65); noise(1.8, "lowpass", 110, 35, 0.12, 0.7, 0.12); };
+  // Material-oriented Foley, with noise impacts and decaying resonances.
+  // Low levels leave room for the actual ambience and prevent mobile clipping.
+  S.click=()=>noise(.035,"lowpass",1050,650,.028,.7);
+  S.cast=()=>{
+    noise(.30,"bandpass",720,1700,.055,.9);
+    noise(.21,"lowpass",1800,500,.025,.65,.09);
+  };
+  S.plop=(big)=>{
+    const k=big?1:.55;
+    noise(.21,"lowpass",1250,160,.12*k,.7);
+    noise(.12,"bandpass",360,140,.061*k,1.6,.035);
+    tone("sine",big?145:220,78,.16,.031*k,null,.045);
+  };
+  S.splash=(k)=>{
+    k=Math.max(.1,Math.min(2.5,Number(k)||.6));
+    const amount=.07+Math.min(.13,k*.053);
+    noise(.46+k*.22,"lowpass",2400,320,amount,.55);
+    noise(.23+k*.15,"bandpass",850,240,amount*.48,.68,.055);
+    noise(.16,"highpass",1600,600,amount*.25,.5,.12);
+  };
+  S.bite=()=>{
+    // The float and rod provide the primary bite indication.
+    noise(.075,"bandpass",1050,430,.018,1.2);
+  };
+  S.bell=()=>{
+    // Feeder bell: weak high harmonics with a longer, natural decay.
+    [1130,1840,2570].forEach((f,i)=>tone("sine",f,f*.995,.55-i*.1,.012/(i+1),null,i*.006));
+  };
+  S.strike=()=>{noise(.21,"bandpass",1000,320,.083,.65);noise(.11,"highpass",1750,720,.031,.8,.025);};
+  S.snap=()=>{noise(.09,"highpass",2700,1050,.15,.6);noise(.17,"lowpass",770,190,.056,.7,.035);};
+  S.coin=()=>{tone("triangle",1568,1568,.09,.044);tone("triangle",2093,2093,.18,.043,null,.07);};
+  S.level=()=>[523,659,784,1046].forEach((f,i)=>tone("triangle",f,f,.22,.048,null,i*.1));
+  S.trophy=()=>[392,523,659,784,1046,1318].forEach((f,i)=>tone("triangle",f,f,.3,.042,null,i*.075));
+  S.fail=()=>tone("triangle",300,160,.26,.027);
+  S.drill=(dur)=>{
+    const n=Math.min(12,Math.max(3,Math.round(dur*4)));
+    for(let i=0;i<n;i++)noise(.17,"bandpass",570+Math.random()*190,270,.065,1.6,i*dur/n);
+  };
+  S.flop=()=>{noise(.11,"lowpass",960,240,.089,.75);noise(.13,"bandpass",460,170,.032,.8,.03);};
+  S.thunder=()=>{
+    noise(2.5,"lowpass",210,45,.105,.55);
+    noise(1.5,"lowpass",120,36,.063,.7,.15);
+  };
 
-  let lastClick = 0;
-  S.reel = function (speed) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastClick < Math.max(0.082, 0.19 / Math.max(0.5, speed))) return; lastClick = now; tone("triangle", 420, 275, 0.026, 0.015); noise(0.014, "lowpass", 880, 470, 0.014, .8); };
-  let lastDrag = 0;
-  S.drag = function (k) { if (!ac || !S.on) return; const now = ac.currentTime; if (now - lastDrag < 0.11) return; lastDrag = now; tone("triangle", 580 + k * 100, 355, 0.037, 0.019); noise(0.029, "lowpass", 980, 450, 0.019 + k * 0.008, .9); };
+  let lastClick=0;
+  S.reel=function(speed){
+    if(!ac||!S.on)return;
+    const now=ac.currentTime;
+    if(now-lastClick<Math.max(.095,.22/Math.max(.5,speed)))return;
+    lastClick=now;
+    noise(.025,"bandpass",1050,410,.018,.75);
+    noise(.038,"lowpass",470,240,.015,.8,.009);
+  };
+  let lastDrag=0;
+  S.drag=function(k){
+    if(!ac||!S.on)return;
+    const now=ac.currentTime;
+    if(now-lastDrag<.16)return;lastDrag=now;
+    noise(.075,"bandpass",710+k*170,300,.033+k*.018,.72);
+    noise(.085,"lowpass",490,175,.021,.8,.018);
+  };
 
   S.playMusic = function (key) {
     const url = FZ.Assets.audio(key) || FZ.Assets.audio("music_" + key);
@@ -177,7 +214,7 @@
     if(music)music.volume=musicVol;
   };
   S.mixInfo = function(){return Object.assign({state:ac?ac.state:'locked'},mix);};
-  S.setOn = function (v) { S.on = !!v; if (master && ac) master.gain.setTargetAtTime(S.on ? 0.82 : 0, ac.currentTime, 0.04); };
+  S.setOn = function (v) { S.on = !!v; if (master && ac) master.gain.setTargetAtTime(S.on ? 0.69 : 0, ac.currentTime, 0.04); };
   S.setMusic = function (v) { S.music = !!v; if (!S.music) S.stopMusic(); };
   S.suspend = function () { if (ac && ac.state === "running") ac.suspend().catch(function () {}); if (music) music.pause(); };
   S.resume = function () { if (ac && ac.state === "suspended") ac.resume().catch(function () {}); if (music && S.music) music.play().catch(function () {}); };
