@@ -60,14 +60,31 @@
         // Reflected vegetation stays by the shore; no long, dark mirror streaks near the angler.
         float mirror=(.015+.14*exp(-depth*7.5))*(1.-clamp(length(normal)*.35,0.,.23));
         vec3 water=mix(colorFar,colorNear,pow(depth,.65));
-        c=mix(water,reflection,mirror);
+        if(hasPhoto>.5 && ice<.5){
+          // The licensed photo ALREADY contains real river/lake/sea water.
+          // Prior code threw it away and painted a uniform opaque teal plane
+          // over the entire lower 60% of every scene.
+          // Sample the source below its calibrated shoreline, stretching that
+          // region independently to the phone's tall water viewport.
+          float fit=resolution.x/photoSize.x;
+          float photoScale=min(max(fit,resolution.y*shore/(photoSize.y*waterline)),fit*(winter>.5?1.0:1.28));
+          float imageX=photoSize.x*.5+(uv.x-.5+normal.x*.003)*resolution.x/photoScale;
+          float imageY=mix(waterline+.003, .996, pow(depth,.91));
+          imageY+=normal.y*.0018*(.25+depth);
+          vec2 waterUv=vec2(clamp(imageX/photoSize.x,.002,.998),1.-clamp(imageY,.002,.998));
+          vec3 photographedWater=texture2D(photo,waterUv).rgb;
+          // Retain 90% of real photographic detail; the palette is a gentle
+          // weather/lighting tint, not an opaque replacement layer.
+          water=mix(photographedWater,water,.10);
+        }
+        c=mix(water,reflection,ice>.5?mirror:mirror*.45);
         float spec=pow(max(0.,1.-length(normal-vec2(.045,-.015))*5.),48.);
         float lightPath=exp(-pow((uv.x-sun.x+normal.x*.2)/(.035+depth*.18),2.));
         c+=vec3(.92,.84,.63)*spec*lightPath*(1.-dark)*(.07+warm*.3)*(1.-cloudCover);
         float fine=noise(p*4.+clock*.15);c+=vec3(.16,.20,.19)*(fine-.5)*(.025+depth*.12)*strength;
         c+=ringLight;
         // Subtle shoreline haze: no bright or dark horizontal stripe.
-        c=mix(c,mix(colorFar,vec3(.70,.75,.72),.22),exp(-depth*34.)*.055);
+        c=mix(c,mix(colorFar,vec3(.70,.75,.72),.22),exp(-depth*34.)*.025);
         if(rain>.01){vec2 cell=floor(uv*vec2(55.,80.));float tt=fract(clock*1.6+hash(cell));float rr=length((fract(uv*vec2(55.,80.))-.5)*vec2(1.,2.8));c+=smoothstep(.025,0.,abs(rr-tt*.5))*(1.-tt)*rain*.07;}
         if(ice>.5){
           // Grain, clear-ice patches, cracks and near-shore snowbanks.
