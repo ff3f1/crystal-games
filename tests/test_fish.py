@@ -49,6 +49,10 @@ with sync_playwright() as p:
     check("подсечка → вываживание", pg.evaluate("__game.G.rig().state") == "fight")
     pg.screenshot(path=f"{OUT}/f_fight.png")
     pg.mouse.move(250, 650); pg.mouse.down()
+    # Hold the real action input independently of rod steering. This matches
+    # two-finger Android play; a mouse held on water is not a reel button.
+    pg.evaluate("FZ.Input.actionDown('tutorial-reel')")
+    assert pg.evaluate("__game.G.rig().reeling"), "Tutorial reel action did not engage"
     # Steering matters in the 1.2 simulation: steer against fish velocity.
     # Don't silently continue as if a lost fish had produced a catch card.
     for frame in range(330):
@@ -58,6 +62,7 @@ with sync_playwright() as p:
             vx = pg.evaluate("(__game.G.rig().fish || {}).vx || 0")
             pg.mouse.move(140 if vx > 0 else 285, 650)
         pg.wait_for_timeout(100)
+    pg.evaluate("FZ.Input.actionUp('tutorial-reel')")
     pg.mouse.up()
     pg.wait_for_timeout(1600)
     pg.screenshot(path=f"{OUT}/f_catch.png")
