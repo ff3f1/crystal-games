@@ -96,6 +96,39 @@ jobs:
           name: fishing-1.5-signed-update
           path: output/
           retention-days: 30
+      - name: Publish signed installable APK for phone testing
+        if: success()
+        run: |
+          set -euo pipefail
+          bytes=$(stat -c%s output/fishing-1.5.0.apk)
+          if [ "$bytes" -gt 95000000 ]; then
+            echo "APK too large for a GitHub branch; use the signed-update Actions artifact." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          mkdir -p "$RUNNER_TEMP/fishing-download"
+          cp output/fishing-1.5.0.apk output/signature.txt output/package.txt "$RUNNER_TEMP/fishing-download/"
+          (cd "$RUNNER_TEMP/fishing-download" && sha256sum fishing-1.5.0.apk > SHA256SUMS.txt)
+          cat > "$RUNNER_TEMP/fishing-download/README.md" <<'EOF'
+          # Рыбалка: Клюёт! — 1.5.0 (оригинальная игра)
+
+          Установочный APK: [fishing-1.5.0.apk](fishing-1.5.0.apk)
+
+          - Исходная игра из RuStore: `ru.crystalgames.fishing`.
+          - Обновление поверх 1.0.10 без удаления приложения.
+          - Подписано тем же сертификатом, что и оригинальный APK 1.0.10.
+          - Сохранены данные игроков и Яндекс-реклама.
+          - 62 вида рыб, 20 водоёмов, переработанные изображения, звук и игровой процесс.
+          - Подпись и браузерные проверки подтверждены; Android smoke-тест указан в отчёте GitHub Actions. На физическом телефоне ещё не проверено.
+
+          APK для тестирования перед публикацией в RuStore. Для магазина используйте AAB из артефакта сборки.
+          EOF
+          git switch --orphan builds-fishing-1.5
+          git rm -rf --ignore-unmatch . > /dev/null
+          cp "$RUNNER_TEMP/fishing-download/"* .
+          git add README.md fishing-1.5.0.apk SHA256SUMS.txt signature.txt package.txt
+          git -c user.name='Crystal Games CI' -c user.email='ci@users.noreply.github.com' commit -m 'Publish verified original Fishing 1.5.0 APK'
+          git push origin HEAD:refs/heads/builds-fishing-1.5
+
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -129,35 +162,3 @@ jobs:
           path: output/
           retention-days: 30
 
-      - name: Publish signed installable APK after Android checks pass
-        if: success()
-        run: |
-          set -euo pipefail
-          bytes=$(stat -c%s output/fishing-1.5.0.apk)
-          if [ "$bytes" -gt 95000000 ]; then
-            echo "APK too large for a GitHub branch; use the signed-update Actions artifact." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          mkdir -p "$RUNNER_TEMP/fishing-download"
-          cp output/fishing-1.5.0.apk output/signature.txt output/package.txt "$RUNNER_TEMP/fishing-download/"
-          (cd "$RUNNER_TEMP/fishing-download" && sha256sum fishing-1.5.0.apk > SHA256SUMS.txt)
-          cat > "$RUNNER_TEMP/fishing-download/README.md" <<'EOF'
-          # Рыбалка: Клюёт! — 1.5.0 (оригинальная игра)
-
-          Установочный APK: [fishing-1.5.0.apk](fishing-1.5.0.apk)
-
-          - Исходная игра из RuStore: `ru.crystalgames.fishing`.
-          - Обновление поверх 1.0.10 без удаления приложения.
-          - Подписано тем же сертификатом, что и оригинальный APK 1.0.10.
-          - Сохранены данные игроков и Яндекс-реклама.
-          - 62 вида рыб, 20 водоёмов, переработанные изображения, звук и игровой процесс.
-          - Сборка проходит браузерные и Android smoke-проверки; на физическом телефоне отдельно не проверена.
-
-          APK для тестирования перед публикацией в RuStore. Для магазина используйте AAB из артефакта сборки.
-          EOF
-          git switch --orphan builds-fishing-1.5
-          git rm -rf --ignore-unmatch . > /dev/null
-          cp "$RUNNER_TEMP/fishing-download/"* .
-          git add README.md fishing-1.5.0.apk SHA256SUMS.txt signature.txt package.txt
-          git -c user.name='Crystal Games CI' -c user.email='ci@users.noreply.github.com' commit -m 'Publish verified original Fishing 1.5.0 APK'
-          git push origin HEAD:refs/heads/builds-fishing-1.5

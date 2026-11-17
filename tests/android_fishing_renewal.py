@@ -16,13 +16,15 @@ def find(text=None,id=None):
    if ((id and n.get('resource-id')==id) or not id) and (not text or text in n.get('text','')+' '+n.get('content-desc','')):
     b=list(map(int,re.findall(r'\d+',n.get('bounds',''))))
     if len(b)==4 and b[2]>b[0] and b[3]>b[1]:return n
-  if id=='bAct' and any(n.get('text','').strip()=='AD' for n in tree.iter('node')):
-   # The real Yandex SDK may surface a cached fullscreen creative even offline.
-   # Dismiss it through Android Back; never click the ad, CTA, or reward button.
+  if any(n.get('text','').strip()=='AD' for n in tree.iter('node')):
+   # Real interstitials can appear over WebView even in offline emulator.
+   # Only use Android Back to dismiss; never click an advertisement or CTA.
    if attempt==0:shot('android-ad-overlay')
    adb('shell','input','keyevent','4')
    time.sleep(1.5)
-  elif id=='bAct' and attempt<11:
+  elif attempt<11:
+   # UIAutomator sometimes returns a temporarily empty tree during transitions.
+   # Retry instead of treating a blank screen as missing game content.
    time.sleep(.9)
   else:break
  raise AssertionError('Missing visible UI '+str((text,id))+'\n'+ET.tostring(last,encoding='unicode')[:6000])
