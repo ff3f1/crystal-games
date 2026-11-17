@@ -7,6 +7,27 @@
   const previous={init:R.init,resize:R.resize,setQuality:R.setQuality,render:R.render,drawAim:R.drawAim};
   let renderer,scene,camera,W=390,H=844,quality='hi',enabled=false,canvas,legacy;
   let detailCanvas,detailContext;
+  let lineVisual=null;
+  // Sub-pixel anti-aliased cubic curve instead of a jagged GPU 1px polyline.
+  // Endpoints are sampled from the actual bent rod and hooked-fish location.
+  function drawFineLine(g,v) {
+    const q=lineVisual;
+    if(!q||!v.tackle||v.tackle.state==="none")return;
+    const slack=U.clamp(1-(v.rod&&v.rod.tension||0),0,1);
+    const sag=(v.ice?2:5+slack*22)+(v.tackle.state==="fly"?-30:0);
+    const wind=(v.wx&&v.wx.wind||0)*slack*.35;
+    const dx=q.bx-q.ax,dy=q.by-q.ay;
+    const c1x=q.ax+dx*.31+wind,c2x=q.ax+dx*.72+wind;
+    const c1y=q.ay+dy*.31+sag,c2y=q.ay+dy*.72+sag;
+    g.save();g.lineCap="round";g.lineJoin="round";
+    // A dark transmission edge ensures visibility on bright reflections,
+    // while the translucent core still looks like thin monofilament.
+    g.beginPath();g.moveTo(q.ax,q.ay);
+    g.bezierCurveTo(c1x,c1y,c2x,c2y,q.bx,q.by);
+    g.strokeStyle="rgba(24,45,50,.46)";g.lineWidth=1.8;g.stroke();
+    g.strokeStyle="rgba(229,244,239,.8)";g.lineWidth=.72;g.stroke();
+    g.restore();
+  }
   function drawDetails(v,dt) {
     if(!detailCanvas){
       detailCanvas=document.createElement('canvas');detailContext=detailCanvas.getContext('2d');
@@ -14,7 +35,7 @@
       Object.assign(detailCanvas.style,{position:'fixed',left:'0',top:'0',pointerEvents:'none',zIndex:getComputedStyle(canvas).zIndex==='auto'?'0':getComputedStyle(canvas).zIndex});
       canvas.parentNode.insertBefore(detailCanvas,canvas.nextSibling);
     }
-    const ratio=Math.min(devicePixelRatio||1,1.5);
+    const ratio=Math.min(devicePixelRatio||1,quality==="lo"?1.25:quality==="mid"?1.5:2);
     const width=Math.round(W*ratio),height=Math.round(H*ratio);
     if(detailCanvas.width!==width||detailCanvas.height!==height){
       detailCanvas.width=width;detailCanvas.height=height;detailCanvas.style.width=W+'px';detailCanvas.style.height=H+'px';
@@ -24,6 +45,7 @@
     if(contextLost||(FZ.UI&&FZ.UI.anyOpen()))return;
     R.drawActivity(detailContext,v);
     if(FZ.WaterFX)FZ.WaterFX.draw(detailContext,v,dt,R.proj);
+    drawFineLine(detailContext,v);
     R.drawLureInset(detailContext,v,W,H);
   }
   let plane,rod,float,line,aimMesh,fishModel,fishId='',net,weather,weatherStreaks;
@@ -190,8 +212,8 @@
         side:T.DoubleSide,depthTest:false,depthWrite:false});
       const sprite=new T.Mesh(geometry,mat);sprite.renderOrder=20;sprite.visible=false;
       sprite.userData={ys,ready:false};scene.add(sprite);rodSprites[mode]=sprite;
-      loader.load("assets/equipment/complete/"+mode+".svg",tx=>{
-        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=false;tx.minFilter=T.LinearFilter;
+      loader.load(FZ.RodArt.hd(mode)?"assets/equipment/complete-hd/"+mode+".webp":"assets/equipment/complete/"+mode+".svg",tx=>{
+        tx.colorSpace=T.SRGBColorSpace;tx.generateMipmaps=false;tx.minFilter=T.LinearFilter;tx.magFilter=T.LinearFilter;tx.anisotropy=Math.min(renderer.capabilities.getMaxAnisotropy(),8);
         mat.map=tx;mat.needsUpdate=true;sprite.userData.ready=true;
       },undefined,()=>{sprite.userData.ready=false;});
     }
@@ -311,7 +333,7 @@
       attr.needsUpdate=true;
     }
     top.add(new T.Vector3(0,-flexPx,0).applyAxisAngle(zAxis,angle));
-    reelCrank.visible=!!active&&!menu;
+    reelCrank.visible=!!active&&!menu&&!FZ.RodArt.hd(mode);
     if(reelCrank.visible){
       const reelOffset=new T.Vector3((c.reelX-c.baseX)*factor,(c.axisY-c.reelY)*factor,0).applyAxisAngle(zAxis,angle);
       reelCrank.position.copy(base).add(reelOffset);reelCrank.position.z=108;
@@ -331,13 +353,15 @@
     const floatScale=U.clamp(p.s*.15,2.4,8);float.scale.setScalar(floatScale);if(v.mode!=='float'&&!isIce)float.scale.setScalar(floatScale*.25);
     const linePos=line.geometry.attributes.position;
     const target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
+    lineVisual=showingLine?{ax:top.x+W/2,ay:H/2-top.y,bx:target.x+W/2,by:H/2-target.y}:null;
+    line.visible=false;
     const sag=isIce?H*.004:(f?H*(.004+.038*(1-U.clamp(f.tension||0,0,1))):H*.075);
     for(let i=0;i<65;i++){const u=i/64,point=top.clone().lerp(target,u);point.y-=Math.sin(u*Math.PI)*sag;linePos.setXYZ(i,point.x,point.y,point.z);}
     linePos.needsUpdate=true;
     tackleMetrics={winter:isIce,rodLength:len,blankLength:len*(isIce?.65:.78),
       assetMode:mode,assetReady:!!(active&&active.userData.ready),
       tipScreenY:H/2-top.y,holeScreenY:R.holeGeom().y,
-      reelVisible:reelCrank.visible&&!isIce,iceDrumVisible:reelCrank.visible&&isIce,
+      reelVisible:!!active&&!menu&&!isIce,iceDrumVisible:reelCrank.visible&&isIce,
       reelRate:v.rod.reelRate||0};
     const landing=v.landing&&f&&!isIce?FZ.RodArt.landingPose(v,W,H,R.proj):null;
     net.visible=!!landing&&f.w>=.35&&!menu;netDrops.visible=net.visible&&landing.lift>0;
@@ -393,7 +417,7 @@
   };
   R.drawAim=function(v,a){if(!enabled)return previous.drawAim.call(R,v,a);const p=R.proj(a.X,a.Z);aimMesh.visible=true;aimMesh.position.copy(V(p.x,p.y,20));renderer.render(scene,camera);};
   const oldClear=R.clearFx;
-  R.clearFx=function(){oldClear();rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;if(detailContext)detailContext.clearRect(0,0,W,H);};
+  R.clearFx=function(){oldClear();lineVisual=null;rippleData.forEach(r=>r.set(-10,-10,-100,0));lastFloatRing=-100;if(detailContext)detailContext.clearRect(0,0,W,H);};
   const oldSnapshot=R.snapshot;
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const g=c.getContext('2d');g.drawImage(canvas,0,0);if(detailCanvas&&detailCanvas.style.visibility!=='hidden')g.drawImage(detailCanvas,0,0,c.width,c.height);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
