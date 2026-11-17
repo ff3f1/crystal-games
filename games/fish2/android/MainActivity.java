@@ -17,6 +17,7 @@ import java.util.Locale;
 /** Local, offline game shell. Same HTTPS origin preserves existing fishing2 saves. */
 public class MainActivity extends Activity {
     private WebView web;
+    private boolean legacyRenderer;
     private final String host = "appassets.androidplatform.net";
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override public void onCreate(Bundle state) {
@@ -30,6 +31,11 @@ public class MainActivity extends Activity {
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(false);
         web.getSettings().setSupportZoom(false);
+        // Very old bundled WebViews have GPU font serialization crashes. Updated
+        // engines retain acceleration; the compatibility path uses software tiles.
+        java.util.regex.Matcher engine = java.util.regex.Pattern.compile("Chrome/(\\d+)").matcher(web.getSettings().getUserAgentString());
+        legacyRenderer = engine.find() && Integer.parseInt(engine.group(1)) < 90;
+        if (legacyRenderer) web.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         web.setHapticFeedbackEnabled(false);
         web.setLongClickable(false);
         web.setOnLongClickListener(v -> true);
@@ -68,6 +74,7 @@ public class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
     }
     public class GameBridge {
+        @JavascriptInterface public boolean legacyRenderer() { return legacyRenderer; }
         @JavascriptInterface public void exit() { runOnUiThread(() -> finish()); }
         @JavascriptInterface public void vibrate(int ms) {
             if (ms <= 0) return;

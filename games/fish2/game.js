@@ -45,7 +45,7 @@ function img(path){if(!imgs[path]){const image=new Image();image.src=path;imgs[p
 function cover(image){if(!image||!image.complete||!image.naturalWidth)return false;const scale=Math.max(W/image.width,H/image.height);g.drawImage(image,(W-image.width*scale)*.5,(H-image.height*scale)*.5,image.width*scale,image.height*scale);return true}
 const G={map:MAPS[save.last]?save.last:'pond_summer',mode:'ready',spot:null,position:null,bait:'worm',flight:0,wait:0,biteAt:4,bite:null,nibble:0,take:0,tension:.42,stress:0,slack:0,stamina:1,distance:13,fishPhase:0,runTime:2,run:0,rodAngle:0,rodSpeed:0,rodTarget:0,shake:0,jig:0,foam:[],drops:[],startClock:0,aim:null,castQuality:0,active:0,spotIdx:1,fishVisualX:0,fishVisualY:0,castCount:0,lastReel:0,fishFlip:1,landProgress:0,escapeWarnings:0};
 function M(){return MAPS[G.map]}
-function size(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,2);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);g.setTransform(DPR,0,0,DPR,0,0)}
+function size(){W=innerWidth;H=innerHeight;DPR=Math.min(devicePixelRatio||1,window.AndroidGame&&AndroidGame.legacyRenderer()?1.25:2);cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);g.setTransform(DPR,0,0,DPR,0,0)}
 window.addEventListener('resize',size,{passive:true});size();
 function soundContext(){FishingAudio.unlock();return true}
 function beep(){FishingAudio.cue('nibble')}
