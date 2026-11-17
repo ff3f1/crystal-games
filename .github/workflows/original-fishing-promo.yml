@@ -1,0 +1,92 @@
+name: Record original Fishing 1.0.10 vertical gameplay ad
+on:
+  push:
+    branches: [codex/fishing-1.0.10-promo]
+    paths:
+      - 'tools/record_original_1010_promo.cjs'
+      - 'tools/finish_original_1010_promo.py'
+      - '.github/workflows/original-fishing-promo.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify game really is original RuStore 1.0.10
+        run: |
+          test "$(git rev-list --max-parents=0 HEAD | wc -l)" -ge 1
+          test "$(git rev-parse HEAD~3)" = "b77f8443f482b4de083b4b88ada2d2f99f232bc9"
+          grep -q 'ru.crystalgames.fishing' games/fish/js/platform.js
+          test ! -e games/fish/js/renewal.js
+      - name: Video and browser prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core
+          npm install --prefix "$RUNNER_TEMP/promo-npm" playwright@1.56.1 --no-audit --no-fund
+          test -x /usr/bin/google-chrome
+          ffmpeg -hide_banner -filters 2>/dev/null | grep -q ' ass '
+          ffmpeg -hide_banner -encoders 2>/dev/null | grep -q 'libx264'
+          node --check tools/record_original_1010_promo.cjs
+          python3 -m py_compile tools/finish_original_1010_promo.py
+      - name: Record genuine 1.0.10 scenes in mobile Chromium
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+          FISH_URL: http://127.0.0.1:8080/
+          PROMO_OUT: promo-output
+        run: |
+          python3 -m http.server 8080 --directory games/fish > /tmp/original-fishing-http.log 2>&1 &
+          sleep 1
+          NODE_PATH="$RUNNER_TEMP/promo-npm/node_modules" node tools/record_original_1010_promo.cjs
+      - name: Render subtitles, original music and final H264/AAC promo
+        env:
+          PROMO_OUT: promo-output
+        run: |
+          python3 tools/finish_original_1010_promo.py
+          test -s promo-output/Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4
+      - name: Upload MP4, captions, script and proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fishing-1010-authentic-shorts
+          path: |
+            promo-output/Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4
+            promo-output/subtitles.srt
+            promo-output/tekst-dlya-ozvuchki.txt
+            promo-output/preview.png
+            promo-output/video-verification.json
+            promo-output/timeline.json
+            promo-output/source-*.png
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Publish directly downloadable promo files
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$(stat -c%s promo-output/Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4)" -lt 95000000
+          tmp="$RUNNER_TEMP/promo-share"
+          mkdir -p "$tmp"
+          cp promo-output/Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4 "$tmp/"
+          cp promo-output/subtitles.srt promo-output/tekst-dlya-ozvuchki.txt "$tmp/"
+          cp promo-output/preview.png promo-output/video-verification.json "$tmp/"
+          cat > "$tmp/README.md" <<'EOF'
+          # Рекламный геймплей «Рыбалка: Клюёт!» 1.0.10
+
+          [Готовое вертикальное видео 9:16, 1080×1920](Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4)
+
+          [Субтитры SRT](subtitles.srt) · [Текст озвучки](tekst-dlya-ozvuchki.txt)
+
+          Записано из оригинального игрового кода версии 1.0.10 (коммит b77f844), без подмены новой игрой.
+          Реальная анимация игрового движка, монтаж и замедление отдельных кадров.
+          В видео встроены субтитры и оригинальный тихий музыкальный фон без голоса.
+          Голос можно добавить отдельно. Старое приложение и RuStore-пакет не изменены.
+          EOF
+          git fetch origin refs/heads/builds-fishing-1010-promo:refs/remotes/origin/builds-fishing-1010-promo || true
+          git switch --orphan builds-fishing-1010-promo
+          git rm -rf --ignore-unmatch . >/dev/null
+          cp "$tmp"/* .
+          git add README.md Rybalka_Klyuet_1.0.10_Shorts_9x16.mp4 subtitles.srt tekst-dlya-ozvuchki.txt preview.png video-verification.json
+          git -c user.name='Crystal Games CI' -c user.email='ci@users.noreply.github.com' commit -m 'Publish authentic Fishing 1.0.10 gameplay Shorts'
+          git push --force-with-lease origin HEAD:refs/heads/builds-fishing-1010-promo
