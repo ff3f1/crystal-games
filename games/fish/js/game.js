@@ -1089,10 +1089,14 @@
     if(sess.mode==="spin" && r.lureDepth!=null && (r.state==="wait" || r.state==="bite")) {
       const bait=G.gear("spin").bait;
       v.lure={ kind: bait&&bait.lure, depth:r.lureDepth==null?0:r.lureDepth,
-        waterDepth:G.depthAt(r.X,r.Z), speed:r.lureSpeed||0, twitch:r.twitch||0,
+        waterDepth:G.depthAt(r.X,r.Z), baitId:bait&&bait.id, speed:r.lureSpeed||0, twitch:r.twitch||0,
         reeling:r.reeling, style:r.retrieveStyle||"Пауза",
-        approach:r.bite&&!r.bite.empty?{phase:r.bite.phase,
+        approach:r.bite&&!r.bite.empty?{species:r.bite.s,phase:r.bite.phase,
           progress:r.bite.phase==="take"?.65+.35*U.clamp(r.bite.t/r.bite.take,0,1):.2+.4*(1-Math.exp(-r.bite.t))}:null };
+    }
+    if (sess.mode==="float" && r.bite && !r.bite.empty && r.state==="bite") {
+      v.floatDetail={approach:{species:r.bite.s,phase:r.bite.phase,
+        progress:r.bite.phase==="take"?.65+.35*U.clamp(r.bite.t/r.bite.take,0,1):.2+.4*(1-Math.exp(-r.bite.t))}};
     }
     if (sess.ice && r.state === "nohole") v.ice.noHole = true;
     if (sess.ice && r.state === "drill") v.ice.drill = r.drillT / r.drillDur;
