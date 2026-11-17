@@ -45,8 +45,10 @@
     // Do not decode all 80 photographic backdrops at once on low-RAM phones.
     const st=FZ.Game&&FZ.Game.state&&FZ.Game.state();
     const current=(st&&st.loc)||"pond",season=(st&&st.seasonPick)||FZ.U.seasonOf();
+    const initialBackdrop=A.backdropKey(current,season);
     const keys=Object.keys(M.images||{}).filter(function(k){
-      return k.indexOf("base/")!==0 && k.indexOf("fish/")!==0 && k.indexOf("fishhd/")!==0 && (k.indexOf("bg/")!==0 || k==="bg/"+current+"_"+season);
+      return k.indexOf("fish/")!==0 && k.indexOf("fishhd/")!==0 &&
+        ((k.indexOf("bg/")!==0 && k.indexOf("base/")!==0) || k===initialBackdrop);
     });
     if (!keys.length) { A.ok = true; return Promise.resolve(); }
     let done = 0;
