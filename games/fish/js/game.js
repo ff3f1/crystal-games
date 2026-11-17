@@ -180,7 +180,7 @@
       loc, season, ice: G.isFrozen(loc, season), firstIce: Wd.firstIceActive(season) && G.isFrozen(loc, season), mode: G.modeFor(season, loc),
       hour: now.getHours() + now.getMinutes() / 60,
       wx: Wd.weather(loc.id, season), spots: [], fedSpot: null, gbUntil: 0, t: 0, catches: 0,
-      hole: null, nextSpot: 3, lastAim: null
+      hole: null, nextSpot: loc.id === "pond" && !G.isFrozen(loc, season) ? 1 : 3, lastAim: null
     };
     sess.period = FZ.Scene.period(sess.hour, season);
     autoBait();
@@ -299,6 +299,17 @@
     const n = Math.sin(X * 0.4 + Z * 0.23) * 0.3 + Math.sin(Z * 0.7) * 0.15;
     return Math.max(0.5, d[0] + (d[1] - d[0]) * k + n * (d[1] - d[0]) * 0.15);
   };
+  // The first pond has four readable, persistent fishing habitats. These are
+  // places on the actual photograph, NOT scripted reward or fish-spawn markers.
+  // On other waters the existing ecology and bite weights remain untouched.
+  G.pondHabitat = function (X, Z) {
+    if (!sess || sess.loc.id !== "pond" || sess.ice) return null;
+    const edge = Math.abs(X) / Math.max(1, FZ.Scene.maxLat(Z));
+    if (X < 0 && edge > .38 && Z < 26) return { id: "reeds", name: "Камыши" };
+    if (edge > .62 && Z < 18) return { id: "lilies", name: "Кувшинки" };
+    if (Z > Math.min(25, sess.loc.zfar * .42)) return { id: "depth", name: "Свальная бровка" };
+    return { id: "water", name: "Открытая вода" };
+  };
   G.canFish = function () {
     const g = G.gear(sess.mode);
     if (!g.rod) return "Нет удочки для этого способа";
@@ -326,6 +337,11 @@
     rig.reelStreak=0;rig.wasReeling=false;rig.pauseQualified=false;rig.stepMemory=0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
+    if (sess.loc.id === "pond" && sess.mode === "float") {
+      const habitat = G.pondHabitat(rig.X, rig.Z);
+      if (habitat && habitat.id !== "water")
+        emit("msg", { text: habitat.name + ": ищите поклёвку у поплавка" });
+    }
     if (sess.mode === "feeder" && (st.inv.gb || 0) > 0) { st.inv.gb--; feedSpot(rig.X, rig.Z, 0.22); }
     return true;
   };
@@ -388,6 +404,19 @@
   }
   const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1, brooktrout: 1 };
   const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1, palia: 1, nase: 1, sterlet: 1 };
+  // An intentional cast matters even while the fish are not visibly feeding.
+  // Compatible species favour shelter or deeper water; incompatible bait
+  // stays impossible because biteTable checks it before applying this factor.
+  function pondHabitatBonus(s, X, Z) {
+    const habitat = G.pondHabitat(X, Z);
+    if (!habitat) return 1;
+    switch (habitat.id) {
+      case "reeds": return EDGE_FISH[s.id] ? 1.7 : DEEP_FISH[s.id] ? .83 : 1.14;
+      case "lilies": return EDGE_FISH[s.id] ? 1.42 : DEEP_FISH[s.id] ? .9 : 1.12;
+      case "depth": return DEEP_FISH[s.id] ? 1.55 : EDGE_FISH[s.id] ? .83 : 1.08;
+      default: return 1;
+    }
+  }
   const RARF = [1, 1, 0.85, 0.6, 0.35, 0.18];
   // Surface signs describe feeding fish, not a reward table. Bottom-only
   // predators cannot create surface hunts; bubbles come from bottom feeding.
@@ -482,6 +511,7 @@
       m *= s.depth[zone];
       if (edge && EDGE_FISH[id]) m *= 1.35;
       if (deep && DEEP_FISH[id]) m *= 1.3;
+      if (loc.id === "pond" && !sess.ice) m *= pondHabitatBonus(s, rig.X, rig.Z);
       if (s.kind === "peace") {
         m *= 1 - 0.05 * g.line.vis;
         if (sess.fedSpot && Math.hypot(sess.fedSpot.X - rig.X, sess.fedSpot.Z - rig.Z) < 4) m *= 1 + sess.fedSpot.level;

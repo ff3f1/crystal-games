@@ -194,6 +194,8 @@
       const ok = G.canFish();
       if (ok !== true) h = ok + "<small>Откройте «Снасти» в меню</small>";
       else if (st.tut === 0) h = "Коснитесь воды и отпустите — это заброс<small>Чем выше на экране, тем дальше</small>";
+      else if (s.loc.id === "pond" && s.spots && s.spots.some(sp => sp.intensity > .22) && r.idleHint > 2)
+        h = "Видите рябь на воде?<small>Там кормится рыба. Забросьте ближе к всплескам</small>";
       else if (r.idleHint > 6) h = "Коснитесь воды, чтобы забросить";
     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
     else if (r.state === "wait") {
@@ -201,7 +203,12 @@
       if (mode === "spin") h = since < 5 ? "Удерживайте «Подмотка»<small>Другим пальцем ведите удилище по воде. Отпустите кнопку — пауза</small>" : (r.retrieveStyle || "Пауза") + "<small>Приманка: " + (r.lureDepth || 0).toFixed(1).replace(".", ",") + " м · короткий жест — рывок</small>";
       else if (!G.gear(mode).bait || !G.baitLeft(G.gear(mode).bait.id)) h = "Нет наживки<small>Купите в «Снастях» или получите за рекламу на кнопке наживки</small>";
       else if (mode === "ice") h = since < 9 ? "Короткие подёргивания мормышкой<small>Сделайте паузу после серии движений — рыба берёт на остановке</small>" : "";
-      else if (since < 5) h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" : (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Ждём поклёвку");
+      else if (since < 5) {
+        const habitat = mode === "float" ? G.pondHabitat(r.X, r.Z) : null;
+        h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" :
+          habitat && habitat.id !== "water" ? habitat.name + "<small>Следите за антенной поплавка. Подсекайте на уверенной потяжке</small>" :
+          (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Следите за поплавком");
+      }
     } else if (r.state === "bite" && r.bite.phase === "touch") {
       h = mode === "feeder" ? "Вершинка ожила — ждите уверенной потяжки" :
         mode === "spin" ? "Хищник пробует приманку — продолжайте проводку" :

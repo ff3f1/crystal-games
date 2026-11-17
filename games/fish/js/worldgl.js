@@ -28,6 +28,56 @@
     g.strokeStyle="rgba(229,244,239,.8)";g.lineWidth=.72;g.stroke();
     g.restore();
   }
+  // Main-world photorealistic float, not a permanently exposed 3D stick.
+  // The intersection with the water is the real simulated hook position.
+  function drawWaterlineFloat(g,v) {
+    const tk=v.tackle||{};
+    if(v.ice||v.mode!=="float"||v.fish||tk.state!=="water")return;
+    const p=R.proj(tk.X,Math.max(3.6,tk.Z));
+    const height=U.clamp(p.s*.93,24,54);
+    const wind=U.clamp((v.wx&&v.wx.wind||0)/12,0,1);
+    const surface=p.y+Math.sin(v.t*(1.5+wind))*((.6+wind*.9))+Math.sin(v.t*2.3)*.3;
+    const x=p.x+(tk.dx||0),sink=U.clamp(tk.sink||0,-1,1.1);
+    const immersion=Math.max(0,sink)*height*.95;
+    const lift=Math.max(0,-sink)*height*.19;
+    const tilt=-(tk.tilt||0)*.75+Math.sin(v.t*.87)*(.012+wind*.018);
+    const bob=FZ.Assets&&FZ.Assets.item('float');
+    const width=height*(bob&&bob.width&&bob.height?bob.width/bob.height:.29);
+    const bodyY=surface-height*.77+immersion-lift;
+    g.save();
+    // Subtle contact shadow and optical reflection are drawn BELOW water.
+    const shadow=g.createRadialGradient(x,surface,1,x,surface,height*.52);
+    shadow.addColorStop(0,'rgba(7,30,31,.24)');
+    shadow.addColorStop(1,'rgba(7,30,31,0)');
+    g.fillStyle=shadow;g.beginPath();g.ellipse(x,surface,height*.55,height*.16,0,0,Math.PI*2);g.fill();
+    if(sink<.65) {
+      g.save();g.beginPath();g.rect(x-height,surface+.8,height*2,height*.6);g.clip();
+      g.translate(x,surface+3);g.scale(1,-.36);
+      g.globalAlpha=.14*(1-Math.max(0,sink));
+      if(bob)g.drawImage(bob,-width*.5,-height*.77,width,height);
+      g.restore();
+    }
+    // The surface masks the antenna and lacquer body as the float sinks.
+    g.beginPath();g.rect(x-height*1.1,surface-height*1.7,height*2.2,height*1.7);g.clip();
+    g.translate(x,bodyY);g.rotate(tilt);
+    if(bob){
+      g.drawImage(bob,-width*.5,0,width,height);
+    }else{
+      const lacquer=g.createLinearGradient(-width*.5,0,width*.5,0);
+      lacquer.addColorStop(0,'#922b22');lacquer.addColorStop(.45,'#f7eee1');lacquer.addColorStop(1,'#b24b36');
+      g.fillStyle=lacquer;g.beginPath();g.ellipse(0,height*.57,width*.52,height*.38,0,0,Math.PI*2);g.fill();
+      g.fillStyle='#e84c2e';g.fillRect(-width*.22,0,width*.44,height*.5);
+    }
+    g.restore();
+    // Actual nibbles move the real float. Highlight the disturbance, never
+    // fabricate an independent strike cue or a fake active fish.
+    const disturbance=U.clamp(Math.abs(tk.sink||0)+Math.abs(tk.dx||0)/22,0,1);
+    if(disturbance>.05){
+      g.save();g.globalAlpha=disturbance*.42;
+      g.strokeStyle='#e5eeec';g.lineWidth=1.1;
+      g.beginPath();g.ellipse(x,surface,8+disturbance*12,2.4+disturbance*2.6,0,0,Math.PI*2);g.stroke();g.restore();
+    }
+  }
   function drawDetails(v,dt) {
     if(!detailCanvas){
       detailCanvas=document.createElement('canvas');detailContext=detailCanvas.getContext('2d');
@@ -45,6 +95,7 @@
     if(contextLost||(FZ.UI&&FZ.UI.anyOpen()))return;
     R.drawActivity(detailContext,v);
     if(FZ.WaterFX)FZ.WaterFX.draw(detailContext,v,dt,R.proj);
+    drawWaterlineFloat(detailContext,v);
     drawFineLine(detailContext,v);
     R.drawLureInset(detailContext,v,W,H);
   }
@@ -313,7 +364,9 @@
     const menu=document.getElementById("ovMenu").classList.contains("on");
     const showingLine=!menu&&v.tackle.state!=="none";
     root.visible=false;line.visible=showingLine;
-    float.visible=showingLine&&!f&&!isIce&&v.mode==="float";
+    // The airborne cast keeps its volumetric sprite; the settled float is
+    // clipped to the actual 2D waterline by drawWaterlineFloat().
+    float.visible=showingLine&&!f&&!isIce&&v.mode==="float"&&v.tackle.state==="fly";
     if(lureSprite)lureSprite.visible=false;
     const idleSway=Math.sin(t*.71)*2.2,mode=isIce?"ice":v.mode;
     const anchors={
@@ -388,6 +441,11 @@
     const linePos=line.geometry.attributes.position;
     const target=pos.clone().add(new T.Vector3(0,isIce?0:floatScale*4,0));
     lineVisual=showingLine?{ax:top.x+W/2,ay:H/2-top.y,bx:target.x+W/2,by:H/2-target.y}:null;
+    if(lineVisual&&v.mode==="float"&&!isIce&&!f&&v.tackle.state==="water"){
+      const h=U.clamp(p.s*.93,24,54),sink=U.clamp(v.tackle.sink||0,-1,1.1);
+      lineVisual.bx=p.x+(v.tackle.dx||0);
+      lineVisual.by=p.y-h*.74+Math.max(0,sink)*h*.95-Math.max(0,-sink)*h*.19;
+    }
     line.visible=false;
     const sag=isIce?H*.004:(f?H*(.004+.038*(1-U.clamp(f.tension||0,0,1))):H*.075);
     for(let i=0;i<65;i++){const u=i/64,point=top.clone().lerp(target,u);point.y-=Math.sin(u*Math.PI)*sag;linePos.setXYZ(i,point.x,point.y,point.z);}
