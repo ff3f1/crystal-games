@@ -124,10 +124,7 @@ jobs:
             adb install work/original/fish-10.apk
             # Block network for this app UID before first launch. This prevents
             # production ad impressions during automated device tests.
-            uid=$(adb shell dumpsys package ru.crystalgames.fishing | sed -n 's/.*userId=\([0-9]*\).*/\1/p' | head -1 | tr -d '\r')
-            test -n "$uid"
-            adb shell iptables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT
-            adb shell ip6tables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT || true
+            uid=$(adb shell dumpsys package ru.crystalgames.fishing | sed -n 's/.*userId=\([0-9]*\).*/\1/p' | head -1 | tr -d '\r') && test -n "$uid" && adb shell iptables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT && (adb shell ip6tables -I OUTPUT -m owner --uid-owner "$uid" -j REJECT || true)
             adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity
             sleep 8
             adb shell am force-stop ru.crystalgames.fishing
