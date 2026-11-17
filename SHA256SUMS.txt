@@ -1,0 +1,2 @@
+ed5bd295896f6e3c7acd425ccf57bf5613ba23f4a0e23cfde75d0c67f1581a5c  fishing-1.6.0.apk
+82d0782c58e8a2f67468f80e56683e8be7df2a34b9917b002700b5b78b330000  fishing-1.6-rustore-screenshots.zip
