@@ -52,3 +52,5 @@ button:focus{outline:0}button:focus-visible{outline:2px solid #f4d693;outline-of
 /* Stable sizing on older Android WebViews as well as current Chrome. */
 #game{height:100vh;height:100dvh}.map-wrap{width:100%;max-width:640px;max-height:100vh;max-height:100dvh}.home-shell{width:100%;max-width:480px}.panel{width:90%;max-width:430px;max-height:92vh;max-height:92dvh}.catch{width:89%;max-width:410px}#fightInfo{width:86%;max-width:345px}#gearScreen .map-wrap{width:100%;max-width:560px}.home-title{margin-top:50px;margin-top:clamp(27px,8vh,90px)}.home-title h1{font-size:76px;font-size:clamp(65px,20vw,100px)}
 @media(max-height:720px){.home-title{margin-top:22px}.home-title h1{font-size:68px}}
+/* Android 10's bundled WebView predates CSS inset; provide explicit edges. */
+.overlay,#hud{top:0;right:0;bottom:0;left:0}.map-card img,.map-card .shade{top:0;right:0;bottom:0;left:0}.catch-rays{top:-100px;left:-100px;right:-100px}
