@@ -1,0 +1,38 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'ru.uroven.demo'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.uroven.adventurepreview'
+        minSdk 26
+        targetSdk 35
+        versionCode 100
+        versionName '1.0.0'
+        testInstrumentationRunner 'ru.uroven.demo.SmokeInstrumentation'
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        development {
+            storeFile file('../signing/development.jks')
+            storePassword 'development-only'
+            keyAlias 'ty-uroven-dev'
+            keyPassword 'development-only'
+        }
+        production {
+            if (System.getenv('KEYSTORE_PATH')) {
+                storeFile file(System.getenv('KEYSTORE_PATH'))
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { signingConfig signingConfigs.development }
+        release {
+            minifyEnabled false
+            signingConfig System.getenv('KEYSTORE_PATH') ? signingConfigs.production : signingConfigs.development
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
