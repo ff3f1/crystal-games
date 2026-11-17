@@ -127,7 +127,12 @@ jobs:
           cp "$RUNNER_TEMP/fishing-download/"* .
           git add README.md fishing-1.5.0.apk SHA256SUMS.txt signature.txt package.txt
           git -c user.name='Crystal Games CI' -c user.email='ci@users.noreply.github.com' commit -m 'Publish verified original Fishing 1.5.0 APK'
-          git push origin HEAD:refs/heads/builds-fishing-1.5
+          # This is a generated binary-only branch. Refresh it with a lease,
+          # then restore the game sources before the Android emulator test.
+          git fetch origin refs/heads/builds-fishing-1.5:refs/remotes/origin/builds-fishing-1.5 || true
+          git push --force-with-lease origin HEAD:refs/heads/builds-fishing-1.5
+          git checkout -f "$GITHUB_SHA"
+          test -f tests/android_fishing_renewal.py
 
       - name: Enable emulator acceleration
         run: |
