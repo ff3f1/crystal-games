@@ -1,0 +1,72 @@
+name: TY UROVEN v0.7 online APK and server
+on:
+  push:
+    branches:
+      - feature/ty-uroven-online-v07
+    paths:
+      - ty-uroven-v07-package.zip.b64
+      - .github/workflows/ty-uroven-online-v07.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Unpack v0.7 sources and assets
+        run: |
+          mkdir -p ty-v07
+          base64 -d ty-uroven-v07-package.zip.b64 > /tmp/ty-v07.zip
+          unzip -q /tmp/ty-v07.zip -d ty-v07
+          test -f ty-v07/server/server.mjs
+          test -f ty-v07/android/app/src/main/assets/assets/avatar-7.webp
+          test -f ty-v07/android/app/src/main/assets/assets/level.wav
+      - name: Backend tests
+        working-directory: ty-v07/server
+        run: node --test test.mjs
+      - name: Android APK build
+        working-directory: ty-v07/android
+        run: gradle assembleRelease --no-daemon
+      - name: Verify APK
+        run: |
+          ls -lh ty-v07/android/app/build/outputs/apk/release
+          test $(stat -c%s ty-v07/android/app/build/outputs/apk/release/app-release.apk) -gt 200000
+          mkdir -p out
+          cp ty-v07/android/app/build/outputs/apk/release/app-release.apk out/TY_UROVEN_v0.7_ONLINE_TEST.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ty-uroven-v07-apk
+          path: out/TY_UROVEN_v0.7_ONLINE_TEST.apk
+      - name: Publish browsable source to isolated branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp -a ty-v07 /tmp/ty-v07-source
+          rm -rf /tmp/ty-v07-source/android/app/build /tmp/ty-v07-source/android/.gradle
+          cd /tmp/ty-v07-source
+          git init -q -b ty-uroven-v07-source
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A && git commit -qm "TY.UROVEN v0.7 client, server and assets"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ty-uroven-v07-source
+      - name: Publish APK to isolated branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd out
+          git init -q -b ty-uroven-v07-builds
+          git config user.name github-actions
+          git config user.email actions@github.com
+          git add -A && git commit -qm "TY.UROVEN v0.7 Android test APK"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/ty-uroven-v07-builds
