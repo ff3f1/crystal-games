@@ -1646,3 +1646,5 @@ h3,
 strong {
   overflow-wrap: anywhere;
 }
+/* Keep the hero copy clear of XP on Android's wider Roboto glyphs. */
+.adventure h2{font-size:clamp(25px,7vw,32px);line-height:1.12;overflow-wrap:normal;word-break:normal}

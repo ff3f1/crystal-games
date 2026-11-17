@@ -64,6 +64,7 @@ with sync_playwright() as pw:
    for target in ['home','quests','money','hero','more']:
     go(target)
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),f'Horizontal overflow {width}/{theme}/{target}'
+   go('home');assert page.evaluate("document.querySelector('.hero-copy .tag').getBoundingClientRect().bottom+4<=document.querySelector('.hero-progress').getBoundingClientRect().top"),f'Hero text overlaps XP at {width}/{theme}'
    go('hero');click('editor');assert page.locator('.editor .avatar').is_visible();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');click('close')
   check(f'Responsive phone/tablet layout {width}x{height}, both themes')
  # Reject a storage failure atomically, with no uncaught error.
