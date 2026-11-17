@@ -71,8 +71,8 @@ jobs:
         if: always()
         run: |
           mkdir -p ty-uroven/device-evidence
-          adb pull /sdcard/Android/data/ru.uroven.adventurepreview/files/screenshots ty-uroven/device-evidence/ || true
-          adb logcat -d > ty-uroven/device-evidence/logcat.txt || true
+          timeout 20s adb pull /sdcard/Android/data/ru.uroven.adventurepreview/files/screenshots ty-uroven/device-evidence/ || true
+          timeout 20s adb logcat -d > ty-uroven/device-evidence/logcat.txt || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:

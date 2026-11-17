@@ -21,7 +21,7 @@ with sync_playwright() as pw:
   if page.locator('.reward-panel').count():click('close')
  def go(target):page.locator(f'[data-action=go][data-page="{target}"]').first.click()
  def shot(name):
-  page.wait_for_timeout(200);page.evaluate("document.getElementById('toast').classList.remove('show')")
+  page.wait_for_timeout(200);page.evaluate("document.getElementById('toast').classList.remove('show')");page.wait_for_timeout(250)
   page.screenshot(path=str(OUT/(name+'.png')),full_page=True)
  def state():return page.evaluate('LevelStore.read()')
  page.goto(URL);page.wait_for_selector('#modal:not([hidden])');shot('01-onboarding')
@@ -50,7 +50,7 @@ with sync_playwright() as pw:
  go('settings');page.locator('[data-setting=theme]').select_option('light');page.wait_for_function("()=>document.body.classList.contains('light')");shot('15-settings-light');check('Light theme and settings persist')
  page.locator('[data-setting=theme]').select_option('dark');page.wait_for_function("()=>!document.body.classList.contains('light')");shot('16-settings-dark')
  # Storage conflict and corrupt import must not overwrite state.
- result=page.evaluate("""async()=>{const s=await LevelStore.read();const copy=structuredClone(s);copy.revision++;await LevelStore.save?.(copy);const next=await LevelStore.mutate(s,'settings',{motion:false});try{await LevelStore.mutate(s,'settings',{motion:true});return false}catch{return (await LevelStore.read()).revision===next.revision}}""")
+ result=page.evaluate("""async()=>{const s=await LevelStore.read();const next=await LevelStore.mutate(s,'settings',{motion:false});try{await LevelStore.mutate(s,'settings',{motion:true});return false}catch{return (await LevelStore.read()).revision===next.revision}}""")
  assert result;check('Concurrent stale write rejected')
  page.reload();page.wait_for_selector('[data-action=go][data-page=more]');assert len(state()['tx'])==3;assert page.evaluate('(async()=> (await LevelStore.photos()).length)()')==2;check('Reload retains records and photos')
  backup=page.evaluate('LevelStore.backup().catch(()=>null)') if False else page.evaluate('(async()=>LevelStore.backup(await LevelStore.read()))()')
@@ -66,13 +66,17 @@ with sync_playwright() as pw:
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),f'Horizontal overflow {width}/{theme}/{target}'
    go('hero');click('editor');assert page.locator('.editor .avatar').is_visible();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');click('close')
   check(f'Responsive phone/tablet layout {width}x{height}, both themes')
- # Native-equivalent offline UI must perform no external network requests.
+ # Reject a storage failure atomically, with no uncaught error.
+ result=page.evaluate("""async()=>{const s=await LevelStore.read(),original=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(value,key){if(key==='state')throw new DOMException('Full','QuotaExceededError');return original.apply(this,arguments)};try{await LevelStore.mutate(s,'settings',{music:.5});return false}catch{return (await LevelStore.read()).revision===s.revision}finally{IDBObjectStore.prototype.put=original}}""")
+ assert result;check('Storage quota failure leaves last saved state intact')
  assert not errors,errors
  check('No uncaught browser errors')
  context.close()
- # Legacy migration includes actual IndexedDB photo store from v0.8.
- ctx=browser.new_context();p=ctx.new_page();p.goto(URL);p.wait_for_selector('.content')
- p.evaluate("""async()=>{await new Promise((ok,no)=>{const r=indexedDB.open('ty-photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('shots',{keyPath:'id'});r.onsuccess=()=>{const db=r.result;const t=db.transaction('shots','readwrite');t.objectStore('shots').put({id:'old-photo',date:'2026-11-17',data:'data:image/jpeg;base64,/9j/2Q=='});t.oncomplete=()=>{db.close();ok()}}});localStorage.setItem('ty-level-v2',JSON.stringify({v:2,onboard:true,profile:{name:'Из v0.8'},xp:123,coins:45,tx:[],logs:{}}));await new Promise((ok,no)=>{const r=indexedDB.deleteDatabase('ty-uroven-release');r.onsuccess=ok;r.onblocked=()=>{location.href='about:blank';ok()}})}""") if False else None
- # Seed legacy data before the first app script runs in a fresh isolated origin.
+ # Exact v0.8 database name and store, before the new app is loaded.
+ ctx=browser.new_context();p=ctx.new_page();p.goto(URL+'/seed-legacy')
+ p.evaluate("""async()=>{await new Promise((ok,no)=>{const r=indexedDB.open('ty-photos',1);r.onupgradeneeded=()=>r.result.createObjectStore('shots',{keyPath:'id'});r.onsuccess=()=>{const db=r.result;const t=db.transaction('shots','readwrite');t.objectStore('shots').put({id:'old-photo',date:'2026-11-17',data:'data:image/jpeg;base64,/9j/2Q=='});t.oncomplete=()=>{db.close();ok()}}});localStorage.setItem('ty-level-v2',JSON.stringify({v:2,onboard:true,profile:{name:'Из v0.8'},xp:123,coins:45,tx:[],logs:{}}))}""")
+ p.goto(URL);p.wait_for_selector('.content');old=p.evaluate('LevelStore.read()');assert old['profile']['name']=='Из v0.8' and old['legacy']['xp']==123
+ assert p.evaluate('(async()=> (await LevelStore.photos()).length)()')==1
+ check('v0.8 localStorage and original ty-photos/shots migrate together')
  ctx.close();browser.close()
 server.shutdown();(OUT/'test-results.json').write_text(json.dumps({'passed':checks,'page_errors':errors,'screenshots':'Test data only; financial/photo fixtures are not shipped in app'},ensure_ascii=False,indent=2));print(f'{len(checks)} checks passed; screenshots: {OUT}')
