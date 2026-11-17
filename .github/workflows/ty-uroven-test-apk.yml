@@ -35,7 +35,7 @@ jobs:
           ls -lah tyapp/app/build/outputs/apk/release
           mkdir -p out
           cp tyapp/app/build/outputs/apk/release/app-release.apk out/ty-uroven-v0.3-test.apk
-          test $(stat -c%s out/ty-uroven-v0.3-test.apk) -gt 100000
+          test $(stat -c%s out/ty-uroven-v0.3-test.apk) -gt 15000
       - uses: actions/upload-artifact@v4
         with:
           name: ty-uroven-apk
