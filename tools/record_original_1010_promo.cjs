@@ -14,16 +14,24 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const frames=path.join(out,'frames');
  fs.mkdirSync(frames,{recursive:true});
  const cdp=await context.newCDPSession(page);
- let frameCount=0,firstFrame=null,lastFrame=null;
- cdp.on('Page.screencastFrame',ev=>{
-  const at=(Date.now()-t0)/1000;
-  if(firstFrame===null)firstFrame=at;
-  lastFrame=at;
-  fs.writeFileSync(path.join(frames,String(frameCount).padStart(6,'0')+'.jpg'),Buffer.from(ev.data,'base64'));
-  frameCount++;
-  cdp.send('Page.screencastFrameAck',{sessionId:ev.sessionId}).catch(()=>{});
- });
- await cdp.send('Page.startScreencast',{format:'jpeg',quality:82,maxWidth:540,maxHeight:960,everyNthFrame:1});
+ let frameCount=0,firstFrame=null,lastFrame=null,recording=true,shotError=null;
+ // CDP screencast only captures Chrome's host surface (wrong mobile aspect).
+ // Capture the actual 540x960 emulated viewport, with all DOM/CSS/canvas layers.
+ const captureLoop=(async()=>{
+  while(recording){
+   try{
+    const shot=await cdp.send('Page.captureScreenshot',{format:'jpeg',quality:76,
+      captureBeyondViewport:false,fromSurface:true});
+    const at=(Date.now()-t0)/1000;
+    if(firstFrame===null)firstFrame=at;
+    lastFrame=at;
+    fs.writeFileSync(path.join(frames,String(frameCount).padStart(6,'0')+'.jpg'),
+      Buffer.from(shot.data,'base64'));
+    frameCount++;
+   }catch(e){if(recording){shotError=String(e);recording=false;}}
+   await pause(25);
+  }
+ })();
  async function tickUntil(kind,max=1500) {
   return page.evaluate(({kind,max})=>{
    const G=FZ.Game,UI=FZ.UI;
@@ -125,8 +133,10 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  await pause(3700);
  mark('end');
  states.push(await state());
- await pause(350);
- await cdp.send('Page.stopScreencast');
+ await pause(300);
+ recording=false;
+ await captureLoop;
+ if(shotError)throw Error('Viewport screen capture failed: '+shotError);
  await context.close();
  await browser.close();
  if(frameCount<150)throw Error('Too few real screencast frames: '+frameCount);
@@ -136,7 +146,7 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  const dest=path.join(out,'real-1.0.10-footage.mp4');
  execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-framerate',fps.toFixed(5),
    '-i',path.join(frames,'%06d.jpg'),'-c:v','libx264','-preset','ultrafast',
-   '-crf','26','-pix_fmt','yuv420p','-movflags','+faststart',dest],{stdio:'inherit'});
+   '-crf','26','-vf','scale=540:960:flags=lanczos','-pix_fmt','yuv420p','-movflags','+faststart',dest],{stdio:'inherit'});
  if(errors.length)throw Error('Game errors: '+errors.join(' | '));
  fs.writeFileSync(path.join(out,'timeline.json'),JSON.stringify({marks,states,source:'Original Fishing 1.0.10',baseCommit:'b77f8443f482b4de083b4b88ada2d2f99f232bc9',footage:path.basename(dest),captureFPS:fps,frameCount},null,2));
  console.log('CAPTURE SUCCESS '+JSON.stringify({marks,states,file:dest,bytes:fs.statSync(dest).size,frameCount,fps}));
