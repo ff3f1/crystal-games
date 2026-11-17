@@ -27,6 +27,8 @@ jobs:
           base64 -d ty-uroven-src.zip.b64 > /tmp/tyapp.zip
           unzip -q /tmp/tyapp.zip -d tyapp
           test -f tyapp/app/src/main/assets/index.html
+          cp ty-uroven-v06-index.html tyapp/app/src/main/assets/index.html
+          sed -i "s/versionCode 3/versionCode 6/; s/versionCode 4/versionCode 6/; s/versionCode 5/versionCode 6/" tyapp/app/build.gradle
       - name: Build signed test APK
         working-directory: tyapp
         run: gradle assembleRelease --no-daemon --stacktrace
