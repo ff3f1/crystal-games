@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'ru.uroven.demo'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.uroven.onlinepreview'
+        minSdk 26
+        targetSdk 34
+        versionCode 7
+        versionName '0.7-online-preview'
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

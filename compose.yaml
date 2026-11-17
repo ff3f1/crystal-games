@@ -1,0 +1,12 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "8787:8787"
+    volumes:
+      - level-data:/data
+    restart: unless-stopped
+volumes:
+  level-data:
