@@ -65,7 +65,7 @@ jobs:
         run: |
           mkdir -p output
           cp android/app/build/outputs/apk/release/*.apk output/fishing-2.0.1.apk
-          APK=output/fishing-2.0.apk
+          APK=output/fishing-2.0.1.apk
           TOOLS_DIR="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
           "$TOOLS_DIR" verify --print-certs "$APK" > output/signature.txt
           "$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)" dump badging "$APK" > output/package.txt
