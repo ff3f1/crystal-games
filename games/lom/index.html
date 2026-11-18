@@ -51,10 +51,21 @@
 /* V3: bold workbench-grade typography, no stock mobile UI. */
 #menu::after{content:"REBUILT / PHYSICS 3.0";position:absolute;right:19px;top:calc(61px + env(safe-area-inset-top));font:700 9px ui-monospace,monospace;letter-spacing:1.8px;color:#efbb8e;transform:rotate(90deg) translateX(100%);transform-origin:right top;opacity:.8;pointer-events:none}
 #hud .hud-panel{border-left:3px solid #fc7542;background:linear-gradient(110deg,#111717ef,#141a19a0)}
+
+/* V3.2 — platform-aware controls and compact sound settings */
+#pcKeys{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:19px;z-index:7;pointer-events:none;font:700 11px/1.6 ui-monospace,monospace;letter-spacing:.8px;color:#f0c194;text-shadow:0 2px 8px #000;padding:9px 13px;border-left:2px solid #f56b37;background:#0b0e0cb8;display:none}
+#pcKeys b{color:#fff0cf;font-weight:950}
+.sound-options{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 0}
+.sound-options button{font-size:12px;padding:11px 6px;min-height:40px}
+.sound-range{display:flex;align-items:center;gap:10px;color:#d0cbb9;font:800 11px ui-monospace,monospace;padding:6px 1px}
+.sound-range input{min-width:0;flex:1;accent-color:#ed7544;height:24px}
+@media(pointer:fine){#hud:not(.hidden) ~ #pcKeys{display:block}#hud .joystick-hint{display:none}#joy{opacity:.76}}
+@media(pointer:coarse){#hud .pullbutton{right:calc(15px + env(safe-area-inset-right));bottom:calc(22px + env(safe-area-inset-bottom));min-width:94px;min-height:94px;touch-action:none}#hud .hud-bottom{pointer-events:none}#joy{pointer-events:none}}
+@media(max-height:680px){.pause-stack .garage-title{font-size:43px}.sound-options button{padding:7px 3px;min-height:35px}.pause-stack .secondarybtn{padding:9px}}
 </style></head>
 <body><canvas id="game"></canvas><div id="overlayGrain"></div>
-<section class="screen" id="menu"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">ВЕРСИЯ // 3.0</div></div><div class="menu-center"><div class="eyebrow">ФИЗИКА ПРОТИВ БРОНИ</div><h1>ЛОМ<br><span>ЦЕПЬ</span></h1><div class="desc">ПОДЧИНИ СТАЛЬ ИНЕРЦИИ.<br>РАЗНОСИ, СБИРАЙ, ПЕРЕСОБИРАЙ.</div><div class="rule"></div><div class="feature-row"><div><b>ФИЗИКА</b>Каждый удар твой</div><div><b>СБОРКА</b>3 типа оружия</div><div><b>АРЕНЫ</b>Смертельный лом</div></div><div class="career-strip"><div><span>ЛОМ</span><b id="menuMetal">0</b></div><div><span>РЕКОРД</span><b id="menuRecord">0</b></div></div><button class="cta" id="startBtn"><span>НАЧАТЬ РАЗНОС</span><small>↗</small></button><div class="menu-actions"><button id="garageBtn" class="menu-action"><span>⚙</span> ГАРАЖ / МОДЕРНИЗАЦИЯ</button><button id="helpBtn" class="menu-action">? ПРАВИЛА</button></div><div class="bottom-copy"><span>ДВИЖЕНИЕ // ПАЛЬЦЕМ</span><span>СТАЛЬ. МАССА. УДАР.</span></div></div><div class="menu-bottom"></div></section>
-<div id="hud" class="hidden"><div class="hudtop"><div class="hud-panel"><div class="topsub">АРЕНА / <span id="waveLabel">01</span></div><div class="waveval"><span id="hpText">100</span><span style="font-size:12px;color:#aaa"> HP</span></div><div class="healthbar"><div id="healthFill"></div></div></div><div class="hud-right"><div class="topsub">СЧЁТ // <span id="comboLabel">×1</span></div><div class="scoreval" id="scoreText">000000</div><div class="topsub" style="margin-top:7px">ОСТАЛОСЬ <span id="enemiesText">0</span></div></div></div><div class="hud-center"><div class="unitline"><span id="arenaTheme">СТАЛЕЛИТЕЙНЫЙ ЦЕХ</span> · <span id="headHUD">КУВАЛДА</span></div><div id="kineticText">УДАРНАЯ ЭНЕРГИЯ 000</div><div class="heat-caption"><span>ПЕРЕГРЕВ · <span id="heatValue">0%</span></span><span id="weaponMomentum">0 м/с</span></div><div id="heatBar"><i id="heatFill"></i></div></div><button id="pauseBtn" class="pause-hud" aria-label="Пауза">Ⅱ</button><div class="hud-bottom"><div class="joystick-hint">ВОДИ ДУГОЙ — РАСКРУЧИВАЙ<br>КНОПКА — СТЯНУТЬ / ОТПУСТИТЬ</div></div><button id="pullBtn" class="pullbutton"><span>РЫВОК</span><small id="pullLabel">ГОТОВ</small></button></div><div id="joy" class="joybase"><div id="joyKnob" class="joyknob"></div></div><div id="alert"></div>
+<section class="screen" id="menu"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">ВЕРСИЯ // 3.2</div></div><div class="menu-center"><div class="eyebrow">ФИЗИКА ПРОТИВ БРОНИ</div><h1>ЛОМ<br><span>ЦЕПЬ</span></h1><div class="desc">ПОДЧИНИ СТАЛЬ ИНЕРЦИИ.<br>РАЗНОСИ, СБИРАЙ, ПЕРЕСОБИРАЙ.</div><div class="rule"></div><div class="feature-row"><div><b>ФИЗИКА</b>Каждый удар твой</div><div><b>СБОРКА</b>3 типа оружия</div><div><b>АРЕНЫ</b>Смертельный лом</div></div><div class="career-strip"><div><span>ЛОМ</span><b id="menuMetal">0</b></div><div><span>РЕКОРД</span><b id="menuRecord">0</b></div></div><button class="cta" id="startBtn"><span>НАЧАТЬ РАЗНОС</span><small>↗</small></button><div class="menu-actions"><button id="garageBtn" class="menu-action"><span>⚙</span> ГАРАЖ / МОДЕРНИЗАЦИЯ</button><button id="helpBtn" class="menu-action">? ПРАВИЛА</button></div><div class="bottom-copy"><span>ПК: WASD + ПРОБЕЛ / ТЕЛЕФОН: СТИК</span><span>СТАЛЬ. МАССА. УДАР.</span></div></div><div class="menu-bottom"></div></section>
+<div id="hud" class="hidden"><div class="hudtop"><div class="hud-panel"><div class="topsub">АРЕНА / <span id="waveLabel">01</span></div><div class="waveval"><span id="hpText">100</span><span style="font-size:12px;color:#aaa"> HP</span></div><div class="healthbar"><div id="healthFill"></div></div></div><div class="hud-right"><div class="topsub">СЧЁТ // <span id="comboLabel">×1</span></div><div class="scoreval" id="scoreText">000000</div><div class="topsub" style="margin-top:7px">ОСТАЛОСЬ <span id="enemiesText">0</span></div></div></div><div class="hud-center"><div class="unitline"><span id="arenaTheme">СТАЛЕЛИТЕЙНЫЙ ЦЕХ</span> · <span id="headHUD">КУВАЛДА</span></div><div id="kineticText">УДАРНАЯ ЭНЕРГИЯ 000</div><div class="heat-caption"><span>ПЕРЕГРЕВ · <span id="heatValue">0%</span></span><span id="weaponMomentum">0 м/с</span></div><div id="heatBar"><i id="heatFill"></i></div></div><button id="pauseBtn" class="pause-hud" aria-label="Пауза">Ⅱ</button><div class="hud-bottom"><div class="joystick-hint">ВОДИ ДУГОЙ — РАСКРУЧИВАЙ<br>КНОПКА — СТЯНУТЬ / ОТПУСТИТЬ</div></div><button id="pullBtn" class="pullbutton"><span>РЫВОК</span><small id="pullLabel">ГОТОВ</small></button></div><div id="pcKeys">ДВИЖЕНИЕ <b>WASD / ← ↑ → ↓</b><br>ЦЕПЬ <b>ПРОБЕЛ / ПРАВАЯ МЫШЬ</b><br>ПАУЗА <b>ESC</b> · УЛУЧШЕНИЯ <b>1–3</b></div><div id="joy" class="joybase"><div id="joyKnob" class="joyknob"></div></div><div id="alert"></div>
 <section class="screen hidden" id="upgrade"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">ЗОНА ОЧИЩЕНА</div></div><div style="margin:auto 0"><div class="eyebrow">ИЗЪЯТЬ ТЕХНОЛОГИЮ</div><div class="upgrade-title">ТВОЙ <em>ВЫБОР</em></div><div class="upgrade-sub">Каждая деталь меняет физику оружия. Выбери один модуль перед следующей волной.</div><div class="upgrade-list" id="upgradeCards"></div></div></section>
 <section class="screen hidden" id="over"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">БОЕВОЙ ПРОТОКОЛ ЗАКРЫТ</div></div><div style="margin:auto 0;max-width:520px;width:100%"><div class="eyebrow">СИСТЕМА ОСТАНОВЛЕНА</div><div class="death-title">МАШИНА<br>РАЗБИТА.</div><div class="upgrade-sub">Но сколько стали ты успел превратить в пыль?</div><div class="result-grid"><div>ВОЛНА<b id="resultWave">01</b></div><div>ОЧКИ<b id="resultScore">0</b></div><div>РАЗБИТО<b id="resultKills">0</b></div><div>РЕКОРД<b id="resultBest">0</b></div><div>ПИК УДАРА<b id="resultPeak">0</b></div><div>ШТОРМЫ<b id="resultHeat">0</b></div></div><div class="result-salvage">ЗАБРАНО В ГАРАЖ <b>+<span id="metalEarned">0</span> ⬡</b></div><div class="ad-shelf"><div class="ad-title">РЕКЛАМНОЕ МЕСТО <span>РСЯ · ANDROID</span></div><div class="ad-placeholder">БЕЗ РЕКЛАМЫ ВО ВРЕМЯ БОЯ <small>РСЯ</small></div><button id="rewardAd" class="ad-reward" disabled>ВИДЕО ЗА ×2 ЛОМ</button><div class="ad-notice" id="adDisclaimer">В браузере реклама недоступна; в APK работает РСЯ.</div></div><button class="cta" id="retryBtn"><span>ЕЩЁ ОДИН РАЗНОС</span><small>↗</small></button><button class="secondarybtn" id="shareBtn">ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ</button><button class="secondarybtn" id="posterBtn">СОХРАНИТЬ КАРТОЧКУ БОЯ</button><button class="secondarybtn" id="homeBtn">В ГЛАВНОЕ МЕНЮ</button></div></section>
 
@@ -62,8 +73,8 @@
 <div class="garage-top"><div class="eyebrow">НЕ СТРЕЛЯЙ. РАЗБИВАЙ.</div><div class="garage-title">ГАРАЖ<span>.</span></div><p>Постоянные улучшения сохраняются между забегами. Здесь настраивается физика машины.</p><div class="garage-salvage">ПОСТАВКИ МЕТАЛЛА <strong><span id="garageMetal">0</span> ⬡</strong></div></div>
 <div class="garage-tabs"><button class="garage-tab active" data-tab="machines">ПЛАТФОРМА</button><button class="garage-tab" data-tab="heads">БОЕВЫЕ ГОЛОВЫ</button></div>
 <div id="garageItems" class="garage-items"></div><div class="garage-controls"><button id="garageStart" class="cta smallcta">В БОЙ <span>↗</span></button><button id="garageClose" class="secondarybtn">НАЗАД В МЕНЮ</button></div></section>
-<section class="screen hidden" id="pause"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">ПРИОСТАНОВЛЕНО</div></div><div class="pause-stack"><div class="eyebrow">НЕ ОТПУСКАЙ КОНТРОЛЬ</div><div class="garage-title">ПАУЗА<span>.</span></div><button id="resumeBtn" class="cta smallcta">ПРОДОЛЖИТЬ <span>▶</span></button><button id="vibrationToggle" class="secondarybtn">ВИБРАЦИЯ</button><button id="lowFXToggle" class="secondarybtn">ЭФФЕКТЫ</button><button id="quitBtn" class="secondarybtn">ВЫЙТИ В МЕНЮ (БЕЗ НАГРАДЫ)</button></div></section>
-<section class="screen hidden" id="instructions"><div class="cap"><div class="sigil"><i></i>ИНСТРУКТАЖ</div><div class="version">БОЕВОЙ ПРОТОКОЛ</div></div><div class="instruction-stack"><div class="eyebrow">ЗАПОМНИ ТРИ ВЕЩИ</div><div class="garage-title">ИГРАЙ<br>ТЕЛОМ<span>.</span></div><div class="instruction-item"><b>01 · ДВИЖЕНИЕ</b><p>Води пальцем по полю: тягач едет туда, куда направлен палец. Двигайся по дуге — шар разгоняется из-за инерции.</p></div><div class="instruction-item"><b>02 · ПЕРЕГРУЗ</b><p>Зажми правую кнопку, чтобы подтянуть цепь. Отпусти — ядро рванёт вперёд. Лучшие удары происходят на высокой скорости.</p></div><div class="instruction-item"><b>03 · НАГРАДА</b><p>Осколки прилипают к шару и увеличивают массу. Заряди перегрев на 100% — получишь ударную волну. После поражения металл идёт на постоянные улучшения.</p></div><button id="helpClose" class="cta smallcta">ПОНЯТНО <span>↗</span></button></div></section>
+<section class="screen hidden" id="pause"><div class="cap"><div class="sigil"><i></i>ЛОМ / ЦЕПЬ</div><div class="version">ПРИОСТАНОВЛЕНО</div></div><div class="pause-stack"><div class="eyebrow">НЕ ОТПУСКАЙ КОНТРОЛЬ</div><div class="garage-title">ПАУЗА<span>.</span></div><button id="resumeBtn" class="cta smallcta">ПРОДОЛЖИТЬ <span>▶</span></button><button id="vibrationToggle" class="secondarybtn">ВИБРАЦИЯ</button><button id="lowFXToggle" class="secondarybtn">ГРАФИКА</button><div class="sound-options"><button id="musicToggle" class="secondarybtn">♫ МУЗЫКА</button><button id="sfxToggle" class="secondarybtn">✹ ЗВУКИ</button></div><label class="sound-range">ГРОМКОСТЬ <input id="soundVolume" type="range" min="10" max="100" value="70" step="5"><span id="soundVolumeText">70%</span></label><button id="quitBtn" class="secondarybtn">ВЫЙТИ В МЕНЮ (БЕЗ НАГРАДЫ)</button></div></section>
+<section class="screen hidden" id="instructions"><div class="cap"><div class="sigil"><i></i>ИНСТРУКТАЖ</div><div class="version">БОЕВОЙ ПРОТОКОЛ</div></div><div class="instruction-stack"><div class="eyebrow">ЗАПОМНИ ТРИ ВЕЩИ</div><div class="garage-title">ИГРАЙ<br>ТЕЛОМ<span>.</span></div><div class="instruction-item"><b>01 · ДВИЖЕНИЕ</b><p>Телефон: левым пальцем веди тягач, правым удерживай кнопку цепи. ПК: WASD или стрелки; удерживай левую кнопку мыши и веди курсор как джойстик.</p></div><div class="instruction-item"><b>02 · ПЕРЕГРУЗ</b><p>Телефон: правая кнопка «РЫВОК». ПК: зажми пробел или правую кнопку мыши, отпусти для мощного удара. Escape/P — пауза; 1–3 — выбор улучшений.</p></div><div class="instruction-item"><b>03 · НАГРАДА</b><p>Осколки прилипают к шару и увеличивают массу. Заряди перегрев на 100% — получишь ударную волну. После поражения металл идёт на постоянные улучшения.</p></div><button id="helpClose" class="cta smallcta">ПОНЯТНО <span>↗</span></button></div></section>
 <button id="mute" class="mute">ЗВУК ON</button>
 <script>
 (()=>{'use strict';
@@ -800,5 +811,262 @@ window.__lom31={version:'3.1',adsNative:!!window.AndroidAds,topdown:true,tracks:
 setupV2();
 
 $('startBtn').onclick=startGame;$('retryBtn').onclick=startGame;$('homeBtn').onclick=()=>{scene='menu';$('over').classList.add('hidden');$('upgrade').classList.add('hidden');$('hud').classList.add('hidden');$('menu').classList.remove('hidden')};$('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'ЗВУК OFF':'ЗВУК ON';if(!muted)audioInit()};document.addEventListener('touchmove',e=>{if(e.target===canvas)e.preventDefault()},{passive:false});document.addEventListener('contextmenu',e=>e.preventDefault());window.__lom={getState:()=>({scene,waves,kills,score,hp:player?.hp,foes:foes.length,ballSpeed:ball&&Math.hypot(ball.vx,ball.vy),pullCD}),start:startGame,killWave:()=>{if(scene==='playing'){foes.forEach(e=>e.dead=true);foes=[]}},hurt:(n)=>{if(player&&scene==='playing')hurtPlayer(n,1,0)},getUpgrades:()=>$('upgradeCards').children.length};
+// =============== LOM / CEP 3.2: INPUT, AUDIO & READABILITY ===============
+// This code is inside the existing game's IIFE: controls share the physics state.
+career.settings.music = career.settings.music !== false;
+career.settings.sfx = career.settings.sfx !== false;
+career.settings.volume = Number.isFinite(Number(career.settings.volume)) ? clamp(Number(career.settings.volume), .1, 1) : .7;
+const lom32MusicBtn=$('musicToggle'),lom32SfxBtn=$('sfxToggle'),lom32Volume=$('soundVolume');
+function lom32SyncSoundUi(){
+ lom32MusicBtn.textContent=`♫ МУЗЫКА ${career.settings.music?'ВКЛ':'ВЫКЛ'}`;
+ lom32SfxBtn.textContent=`✹ ЗВУКИ ${career.settings.sfx?'ВКЛ':'ВЫКЛ'}`;
+ lom32Volume.value=Math.round(career.settings.volume*100);
+ $('soundVolumeText').textContent=Math.round(career.settings.volume*100)+'%';
+ $('mute').textContent=muted?'ЗВУК ВЫКЛ':'ЗВУК ВКЛ';
+}
+lom32MusicBtn.onclick=()=>{career.settings.music=!career.settings.music;saveCareer();lom32SyncSoundUi()};
+lom32SfxBtn.onclick=()=>{career.settings.sfx=!career.settings.sfx;saveCareer();lom32SyncSoundUi()};
+lom32Volume.oninput=()=>{career.settings.volume=clamp(+lom32Volume.value/100,.1,1);saveCareer();lom32SyncSoundUi()};
+const lom32OriginalMute=$('mute').onclick;
+$('mute').onclick=()=>{lom32OriginalMute();lom32SyncSoundUi()};
+lom32SyncSoundUi();
+
+// Desktop: WASD / arrows to move, Space or right mouse button to wind/release.
+// Left mouse drag is an alternative analog steering control. Esc/P = pause.
+// Mobile: left-side analog touch zone + independent right-side multi-touch action.
+let lom32RightPull=false;
+canvas.addEventListener('pointerdown',ev=>{
+ if(ev.pointerType==='mouse'&&ev.button===2){ev.preventDefault();ev.stopImmediatePropagation();if(scene==='playing'){audioInit();pressPull();lom32RightPull=true}return;}
+ if(ev.pointerType!=='mouse'&&ev.clientX>innerWidth*.73){ev.stopImmediatePropagation();return;}
+},true);
+const lom32ReleaseRight=ev=>{if(lom32RightPull&&(ev.type==='blur'||ev.button===2||ev.buttons===0)){lom32RightPull=false;releasePull()}};
+window.addEventListener('pointerup',lom32ReleaseRight,true);
+window.addEventListener('blur',()=>{lom32ReleaseRight({type:'blur'});Object.keys(keys).forEach(k=>keys[k]=false);if(scene==='playing')pauseGame();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&scene==='playing')pauseGame()});
+window.addEventListener('keydown',e=>{
+ const focus=e.target&&['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName);
+ if(focus)return;
+ if(['Escape','KeyP','KeyM','Enter','Digit1','Digit2','Digit3','KeyH'].includes(e.code))e.preventDefault();
+ if(e.repeat)return;
+ if(e.code==='Escape'||e.code==='KeyP'){
+  if(scene==='playing')pauseGame();else if(scene==='paused')resumeGame();else if(scene==='instructions')$('helpClose').click();
+  else if(scene==='garage')closeGarage();
+ }else if(e.code==='KeyM')$('mute').click();
+ else if(e.code==='Enter'){
+  if(scene==='menu')startGame();else if(scene==='over')startGame();else if(scene==='paused')resumeGame();
+ }else if(e.code==='KeyH'&&scene==='menu')$('helpBtn').click();
+ else if(scene==='upgrade'&&['Digit1','Digit2','Digit3'].includes(e.code)){
+  let i=Number(e.code.slice(-1))-1;let b=$('upgradeCards').children[i];if(b&&!b.disabled)b.click();
+ }
+});
+const lom32OriginalVibrate=vibrant;
+vibrant=function(n){
+ if(!career.settings.vibration)return;
+ if(window.AndroidShare&&typeof window.AndroidShare.vibrate==='function'){
+  if(performance.now()-vibeAt<130)return;vibeAt=performance.now();
+  try{window.AndroidShare.vibrate(Math.round(Math.min(48,Math.max(8,n))))}catch(e){}
+ }else lom32OriginalVibrate(n);
+};
+
+// Realtime original audio score; no loops from third-party tracks, no downloaded
+// audio and no effects that auto-play before the first user interaction.
+let lom32AudioReady=false,lom32Compressor=null,lom32EngineOsc=null,lom32EngineGain=null,
+    lom32EngineFilter=null,lom32RattleGain=null,lom32RattleFilter=null,
+    lom32ChainGain=null,lom32ChainFilter=null,lom32MusicBus=null,
+    lom32Noise=null,lom32MusicNext=0,lom32Beat=0,lom32LastNoise=0;
+const lom32OriginalAudioInit=audioInit;
+function lom32NoiseSource(){const s=actx.createBufferSource();s.buffer=lom32Noise;return s}
+function lom32SlideOsc(f0,f1,dur,volume,wave='sine',bus=master,lowpass=0,startAt=null){
+ if(!actx||!bus)return;
+ const t=startAt??actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+ o.type=wave;o.frequency.setValueAtTime(Math.max(20,f0),t);
+ o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);
+ let node=o;
+ if(lowpass){const f=actx.createBiquadFilter();f.type='lowpass';f.frequency.value=lowpass;o.connect(f);node=f}
+ node.connect(g);g.connect(bus);g.gain.setValueAtTime(.0001,t);
+ g.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),t+.008);
+ g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+ o.start(t);o.stop(t+dur+.025);
+}
+function lom32NoiseHit(vol,dur,cut,band=false,bus=master,startAt=null){
+ if(!actx||!lom32Noise)return;
+ const t=startAt??actx.currentTime,n=lom32NoiseSource(),f=actx.createBiquadFilter(),g=actx.createGain();
+ f.type=band?'bandpass':'highpass';f.frequency.value=cut;f.Q.value=band?1.2:.65;
+ n.connect(f);f.connect(g);g.connect(bus);g.gain.setValueAtTime(Math.max(.0001,vol),t);
+ g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+ n.start(t,Math.random()*.1);n.stop(t+dur+.01);
+}
+function lom32InstallAudio(){
+ if(lom32AudioReady||!actx||!master)return;
+ lom32AudioReady=true;
+ lom32Compressor=actx.createDynamicsCompressor();
+ lom32Compressor.threshold.value=-19;lom32Compressor.knee.value=13;
+ lom32Compressor.ratio.value=5;lom32Compressor.attack.value=.004;
+ lom32Compressor.release.value=.22;
+ master.disconnect();master.connect(lom32Compressor);lom32Compressor.connect(actx.destination);
+ master.gain.value=.24*career.settings.volume;
+ lom32Noise=actx.createBuffer(1,Math.ceil(actx.sampleRate*.52),actx.sampleRate);
+ const a=lom32Noise.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*.72;
+ lom32EngineOsc=actx.createOscillator();lom32EngineOsc.type='sawtooth';
+ lom32EngineFilter=actx.createBiquadFilter();lom32EngineFilter.type='lowpass';lom32EngineFilter.frequency.value=135;
+ lom32EngineGain=actx.createGain();lom32EngineGain.gain.value=0;
+ lom32EngineOsc.connect(lom32EngineFilter);lom32EngineFilter.connect(lom32EngineGain);lom32EngineGain.connect(master);
+ lom32EngineOsc.frequency.value=43;lom32EngineOsc.start();
+ // Two separate continuous noises: muffled tread rattle and bright chain friction.
+ const r=lom32NoiseSource();r.loop=true;lom32RattleFilter=actx.createBiquadFilter();
+ lom32RattleFilter.type='bandpass';lom32RattleFilter.frequency.value=190;lom32RattleFilter.Q.value=.8;
+ lom32RattleGain=actx.createGain();lom32RattleGain.gain.value=0;
+ r.connect(lom32RattleFilter);lom32RattleFilter.connect(lom32RattleGain);lom32RattleGain.connect(master);r.start();
+ const c=lom32NoiseSource();c.loop=true;lom32ChainFilter=actx.createBiquadFilter();
+ lom32ChainFilter.type='highpass';lom32ChainFilter.frequency.value=1100;
+ lom32ChainGain=actx.createGain();lom32ChainGain.gain.value=0;
+ c.connect(lom32ChainFilter);lom32ChainFilter.connect(lom32ChainGain);lom32ChainGain.connect(master);c.start();
+ lom32MusicBus=actx.createGain();lom32MusicBus.gain.value=0;lom32MusicBus.connect(master);
+ lom32MusicNext=actx.currentTime+.1;
+}
+audioInit=function(){if(muted)return;lom32OriginalAudioInit();lom32InstallAudio()};
+// Make the first menu press capable of unlocking sound, without requiring a run.
+document.addEventListener('pointerdown',()=>audioInit(),{once:true,passive:true});
+const lom32SoundCooldown=Object.create(null);
+function lom32PlaySound(type,power=1){
+ if(!actx||muted||!career.settings.sfx||!lom32AudioReady)return;
+ const now=actx.currentTime;
+ const cd={hit:.058,break:.065,collect:.11,pull:.15,release:.1,upgrade:.08,hurt:.16,death:.4,shot:.14,blast:.12,shock:.2}[type]||.1;
+ if(now-(lom32SoundCooldown[type]||-5)<cd)return;lom32SoundCooldown[type]=now;
+ let p=clamp(power,.16,1.8);
+ switch(type){
+ case 'hit':
+  lom32SlideOsc(115+65*p,38,.17,.23*p,'sine');
+  lom32SlideOsc(1170+270*p,470,.14,.055*p,'triangle',master,2200);
+  lom32NoiseHit(.11*p,.115,490,true);break;
+ case 'break':
+  lom32SlideOsc(210,38,.33,.32*p,'sine');
+  lom32NoiseHit(.22*p,.32,500,true);
+  lom32NoiseHit(.08*p,.55,1100);break;
+ case 'hurt':
+  lom32SlideOsc(94,43,.26,.19,'sawtooth',master,500);
+  lom32NoiseHit(.14,.18,900,true);break;
+ case 'pull':
+  lom32SlideOsc(100,226,.24,.043,'sawtooth',master,850);break;
+ case 'release':
+  lom32SlideOsc(380,64,.35,.18*p,'sawtooth',master,1400);
+  lom32NoiseHit(.095*p,.2,1400);lom32SlideOsc(93,49,.29,.14*p);break;
+ case 'upgrade':
+  lom32SlideOsc(330,550,.26,.06,'triangle');
+  lom32SlideOsc(660,870,.39,.04,'sine');break;
+ case 'death':
+  lom32SlideOsc(180,26,.92,.21,'sawtooth',master,520);
+  lom32NoiseHit(.16,.67,340,true);break;
+ case 'collect':
+  lom32SlideOsc(610,840,.08,.025,'sine');break;
+ case 'shot':
+  lom32SlideOsc(240,112,.12,.065*p,'triangle');break;
+ case 'blast':
+  lom32SlideOsc(105,28,.48,.27*p,'sine');
+  lom32NoiseHit(.19*p,.38,260,true);break;
+ case 'shock':
+  lom32SlideOsc(165,53,.32,.19*p,'sine');
+  lom32NoiseHit(.095*p,.22,1500,true);break;
+ }
+}
+tone=function(type,power=1){
+ if(type==='release'&&scene==='playing'&&ball)v3Burst(ball.x,ball.y,'slash_trail',125+pullCharge*130,.24,Math.atan2(ball.vy,ball.vx));
+ if(type==='release')vibrant(12);
+ if(type==='death')vibrant(40);
+ lom32PlaySound(type,power);
+};
+function lom32SongNote(midi,vol=.04,len=.14,wave='triangle'){
+ if(!actx||!lom32MusicBus)return;
+ const f=440*Math.pow(2,(midi-69)/12);
+ lom32SlideOsc(f,f*.998,len,vol,wave,lom32MusicBus,wave==='sawtooth'?480:1600,lom32MusicNext);
+}
+function lom32MusicBeat(b){
+ if(!actx||!lom32MusicBus)return;
+ const bar=Math.floor(b/16),slot=b%16;
+ const root=[38,36,41,33][Math.floor(bar/2)%4];
+ const volume=scene==='playing'?1:.46;
+ if(slot%4===0)lom32SongNote(root,.08*volume,.28,'sawtooth');
+ if(scene==='playing'&&slot%4===2)lom32SongNote(root+12,.025,.09,'triangle');
+ if(slot%2===0){lom32NoiseHit(.021*volume,.075,4100,false,lom32MusicBus,lom32MusicNext)}
+ if(slot===4||slot===12)lom32NoiseHit(.065*volume,.13,950,true,lom32MusicBus,lom32MusicNext);
+ const pattern=[0,-1,3,7,0,10,7,3,0,3,7,10,5,3,0,-1];
+ if(scene==='playing'&&(slot%2===1||waves>3))lom32SongNote(root+24+pattern[slot],.031*volume,.12,'triangle');
+ if(scene==='playing'&&waves>5&&slot%8===0)lom32SongNote(root-12,.078,.18,'sine');
+}
+function lom32AudioFrame(dt){
+ if(!lom32AudioReady||!actx)return;
+ let t=actx.currentTime;
+ const active=scene==='playing'&&!muted,visible=!document.hidden;
+ const speed=active&&player?Math.hypot(player.vx,player.vy):0;
+ const load=clamp(speed/Math.max(170,stats.maxSpeed||240),0,1.2);
+ const tension=active&&ball&&player?clamp((Math.hypot(ball.x-player.x,ball.y-player.y)-stats.length+35)/95,0,1):0;
+ const fx=active&&career.settings.sfx&&visible?1:0;
+ const glide=(node,target,time=.055)=>node.gain.setTargetAtTime(target,t,time);
+ master.gain.setTargetAtTime(muted||!visible?0:.25*career.settings.volume,t,.11);
+ glide(lom32EngineGain,.013*fx+load*.048*fx);
+ glide(lom32RattleGain,load*.019*fx);
+ glide(lom32ChainGain,(tension*.013+load*.004)*fx);
+ lom32EngineOsc.frequency.setTargetAtTime(46+load*49+(pullPressed?8:0),t,.07);
+ lom32EngineFilter.frequency.setTargetAtTime(160+load*330,t,.07);
+ lom32RattleFilter.frequency.setTargetAtTime(170+load*750,t,.1);
+ lom32ChainFilter.frequency.setTargetAtTime(980+tension*1850,t,.09);
+ let musicOn=!muted&&visible&&career.settings.music;
+ glide(lom32MusicBus,musicOn?(active?.35:.10):0,.23);
+ // Never allow an animation-frame delay to create a burst of old notes.
+ if(t-lom32MusicNext>1)lom32MusicNext=t+.04;
+ if(musicOn&&scene!=='paused'&&scene!=='over'&&scene!=='garage'&&scene!=='instructions'){
+  const step=60/112/2;
+  for(let i=0;lom32MusicNext<t+.11&&i<2;i++){
+   lom32MusicBeat(lom32Beat++);lom32MusicNext+=step;
+  }
+ }else lom32MusicNext=t+.04;
+}
+let lom32PadPull=false,lom32PadUsed=false;
+function lom32GamepadFrame(){
+ let pad=null;try{pad=navigator.getGamepads?.().find(p=>p&&p.connected)}catch(e){}
+ if(!pad||scene!=='playing'){
+  if(lom32PadUsed&&!joy.on){joy.ix=0;joy.iy=0}lom32PadUsed=false;
+  if(lom32PadPull){releasePull();lom32PadPull=false}return;
+ }
+ if(!joy.on){
+  const x=pad.axes?.[0]||0,y=pad.axes?.[1]||0;
+  joy.ix=Math.abs(x)>.16?x:0;joy.iy=Math.abs(y)>.16?y:0;
+  lom32PadUsed=true;
+ }
+ const fire=!!(pad.buttons?.[0]?.pressed||pad.buttons?.[7]?.pressed);
+ if(fire&&!lom32PadPull){pressPull();lom32PadPull=true}
+ if(!fire&&lom32PadPull){releasePull();lom32PadPull=false}
+}
+const lom32PrevUpdate=update;
+update=function(dt){lom32GamepadFrame();lom32PrevUpdate(dt);lom32AudioFrame(dt)};
+const lom32PrevProjectile=projectile;
+projectile=function(e,speed,dmg,spread=0){lom32PrevProjectile(e,speed,dmg,spread);if(Math.hypot(e.x-player.x,e.y-player.y)<520)lom32PlaySound('shot',.35)};
+const lom32PrevDamageProp=damageProp;
+damageProp=function(p,damage,x,y){const was=p.alive;lom32PrevDamageProp(p,damage,x,y);if(was&&!p.alive&&p.type==='tank')lom32PlaySound('blast',1.15)};
+const lom32PrevShockwave=shockwave;
+shockwave=function(x,y,r,damage,fromExplosion){lom32PrevShockwave(x,y,r,damage,fromExplosion);lom32PlaySound(fromExplosion?'blast':'shock',.9)};
+
+// Warnings are shown where impact will happen, not decorative random flashes.
+const lom32PrevDrawFoe=drawFoe;
+drawFoe=function(e){
+ if(!career.settings.reducedFX&&e.kind==='ram'&&e.windup>0){
+  ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a);
+  const p=1-clamp(e.windup/.62,0,1);ctx.globalAlpha=.30+.4*p;
+  ctx.strokeStyle=p>.7?'#ffe6a0':'#ff5b37';ctx.lineWidth=2+p*3;
+  ctx.setLineDash([12,9]);ctx.strokeRect(e.r,-e.r*.8,clamp(115+p*95,110,220),e.r*1.6);
+  ctx.restore();
+ }
+ if(e.kind==='boss'&&e.magnetWind>0){
+  ctx.save();let p=1-clamp(e.magnetWind/1.15,0,1);
+  ctx.globalAlpha=.2+.38*p;ctx.strokeStyle=p>.6?'#ffb36e':'#79d9e3';ctx.lineWidth=3;
+  ctx.setLineDash([9,6]);ctx.beginPath();ctx.arc(e.x,e.y,250-30*p,0,TAU);ctx.stroke();ctx.restore();
+ }
+ lom32PrevDrawFoe(e);
+};
+// Pause on Android background and rearm audio only after resuming through an action.
+window.__appPause=()=>{if(scene==='playing')pauseGame()};
+window.__appResume=()=>{};
+window.__lom32={version:'3.2',input:['touch','mouse','WASD','arrows','space','right-mouse','escape','gamepad'],audio:['dynamic-engine','chain-rattle','impact-metal','procedural-music'],getAudio:()=>({ready:lom32AudioReady,muted,music:career.settings.music,sfx:career.settings.sfx})};
+
 })();
 </script></body></html>

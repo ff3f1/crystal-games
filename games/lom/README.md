@@ -1,8 +1,11 @@
-# ЛОМ / ЦЕПЬ — Android 3.1
-Physics-driven HTML5 arcade. GitHub Actions builds the Android WebView wrapper already present in this repository.
+# ЛОМ / ЦЕПЬ — Android 3.2
+Physics-driven HTML5 arcade for touch-screen Android and desktop keyboard/mouse. GitHub Actions builds the Android WebView wrapper already present in this repository.
 
 ## What is implemented
 - True top-down tracked vehicle sprite, rotation in the direction of movement
+- Multitouch virtual joystick + release-to-smash trigger; desktop WASD/arrows, Space/right-mouse, Esc, 1-3 shortcuts, and gamepad support
+- Original adaptive WebAudio engine, chain friction, metallic impacts, enemy weapons, explosions and procedural score, adjustable music/SFX/volume
+- Directional warning telegraphs for ramming enemies and magnetic boss
 - Ground contact shadows and track/dust decals
 - Impulse-based flail/chain mechanics, particle hit FX, shockwave decals and camera recoil
 - Persistent garage upgrades, wave rewards and boss fights
@@ -11,7 +14,7 @@ Physics-driven HTML5 arcade. GitHub Actions builds the Android WebView wrapper a
 
 ## Package and ads
 App ID: ru.crystalgames.lomcep
-Version: 3.1.0 (1)
+Version: 3.2.0 (1)
 CI uses demo ad block IDs unless GitHub Actions repository variables LOM_AD_INTER and LOM_AD_REWARD are configured with UNIQUE IDs created for this application.
 Existing ad units for block/path/fish MUST NOT be reused.
 

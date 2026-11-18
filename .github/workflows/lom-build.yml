@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    name: LOM / CEP 3.1 APK + AAB
+    name: LOM / CEP 3.2 APK + AAB
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -51,17 +51,17 @@ jobs:
           gradle assembleDebug assembleRelease bundleRelease --no-daemon \
             -PappId=ru.crystalgames.lomcep \
             "-PappName=ЛОМ / ЦЕПЬ" \
-            -PversionCode=1 -PversionName=3.1.0 \
+            -PversionCode=2 -PversionName=3.2.0 \
             "-PadInter=${LOM_AD_INTER:-demo-interstitial-yandex}" \
             "-PadReward=${LOM_AD_REWARD:-demo-rewarded-yandex}"
       - name: Collect APKs
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/*.apk out/lom-cep-3.1-debug.apk
-          cp android/app/build/outputs/apk/release/*.apk out/lom-cep-3.1-release.apk
-          cp android/app/build/outputs/bundle/release/*.aab out/lom-cep-3.1-release.aab
+          cp android/app/build/outputs/apk/debug/*.apk out/lom-cep-3.2-debug.apk
+          cp android/app/build/outputs/apk/release/*.apk out/lom-cep-3.2-release.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/lom-cep-3.2-release.aab
       - uses: actions/upload-artifact@v4
         with:
-          name: lom-cep-3.1-android
+          name: lom-cep-3.2-android
           path: out/*
           retention-days: 30
