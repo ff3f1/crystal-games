@@ -1,0 +1,67 @@
+name: LOM CEP Android build
+
+on:
+  push:
+    branches: [feat/lom-cep-android]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: LOM / CEP 3.1 APK + AAB
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Package HTML assets and launcher icon
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp games/lom/index.html android/app/src/main/assets/index.html
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$density
+            cp store/lom/icon.png android/app/src/main/res/mipmap-$density/ic_launcher.png
+          done
+      - name: Optional RuStore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No release key set. APK is for installation/testing only."
+          fi
+      - name: Build debug APK, release APK and AAB
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          LOM_AD_INTER: ${{ vars.LOM_AD_INTER }}
+          LOM_AD_REWARD: ${{ vars.LOM_AD_REWARD }}
+        run: |
+          gradle assembleDebug assembleRelease bundleRelease --no-daemon \
+            -PappId=ru.crystalgames.lomcep \
+            "-PappName=ЛОМ / ЦЕПЬ" \
+            -PversionCode=1 -PversionName=3.1.0 \
+            "-PadInter=${LOM_AD_INTER:-demo-interstitial-yandex}" \
+            "-PadReward=${LOM_AD_REWARD:-demo-rewarded-yandex}"
+      - name: Collect APKs
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/*.apk out/lom-cep-3.1-debug.apk
+          cp android/app/build/outputs/apk/release/*.apk out/lom-cep-3.1-release.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/lom-cep-3.1-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lom-cep-3.1-android
+          path: out/*
+          retention-days: 30
