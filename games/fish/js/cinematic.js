@@ -147,7 +147,7 @@
   Sc.drawWorldFx(v,L,dt);
   ctx.restore();
   const rig=FZ.Game.rig();
-  if(!v.ice&&rig.state==='idle')for(const site of sites()){
+  if(!v.ice&&!FZ.Game.sess().duel&&rig.state==='idle')for(const site of sites()){
    const p=Sc.proj(site.X,site.Z),k=(v.t*.23+site.side+3)%1;
    if(surface&&!surface.contains(p.x,p.y))continue;
    ctx.save();ctx.strokeStyle='rgba(237,239,209,'+(.32*(1-k))+')';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(p.x,p.y,15+k*19,5+k*4,0,0,Math.PI*2);ctx.stroke();ctx.font='500 10px Rubik,sans-serif';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(7,29,32,.85)';ctx.strokeText(site.n,p.x,p.y-15);ctx.fillStyle='#e8ead4';ctx.fillText(site.n,p.x,p.y-15);ctx.restore();

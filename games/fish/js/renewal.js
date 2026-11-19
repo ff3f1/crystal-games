@@ -18,14 +18,17 @@
  const closeBack=()=>{if(UI.menuOpen)UI.showMenu()};
  UI.showMenu=function(){
   FZ.Input&&FZ.Input.actionUp();const st=G.state(),s=G.sess(),ov=$('ovMenu');
+  if(s.duel){UI.pauseDuel();return}
+  const best=FZ.Duel.best(FZ.Duel.today());
+  const duelLabel=best?'Твой рекорд · '+best.score.toLocaleString('ru-RU'):'Испытание дня';
   const tiles=[['mMap','map','Водоёмы'],['mShop','bag','Снасти'],['mAtlas','fish','Атлас рыб'],['mJourney','cup','Экспедиции'],['mJournal','book','Дневник'],['mQuests','list','Задания'],['mTour','star','Турнир дня'],['mForecast','wave','Гид по клёву'],['mSet','gear','Настройки']];
   const rewardReady=FZ.LOCATIONS.some(l=>{const q=FZ.Expeditions.challenge(l.id);return (st.journey.maps[l.id]||0)>=3&&!st.journey.claimed.includes(l.id)||q&&!q.claimed&&q.got===q.need});
   ov.style.backgroundImage='linear-gradient(180deg,#0b283b81,transparent 34%,#0d313767 52%,#102d35f7 88%),url("'+photo(s.loc.id,s.season)+'")';
-  ov.innerHTML='<div class="lodge"><div class="lodge-title"><small>РЫБАЛКА</small><h1>Клюёт<span>!</span></h1></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button></div></div></div>';
+  ov.innerHTML='<div class="lodge"><div class="lodge-title"><small>РЫБАЛКА</small><h1>Клюёт<span>!</span></h1></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><button class="duel-entry" id="mDuel">'+ic('cup')+'<span><b>Три заброса</b><small>'+duelLabel+'</small></span><i>›</i></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button></div></div></div>';
   ov.classList.add('on');$('hud').classList.add('hide');UI.menuOpen=true;
   UI.closeMenu=()=>{ov.classList.remove('on');$('hud').classList.remove('hide');UI.menuOpen=false};
   $('mGo').onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();UI.closeMenu();UI.ambience()};
-  const handlers={mMap:UI.showMap,mShop:UI.showShop,mAtlas:UI.showAtlas,mJourney:UI.showJourney,mJournal:UI.showJournal,mQuests:UI.showQuests,mTour:UI.showTour,mForecast:UI.showGuide,mSet:UI.showSettings,mHelp:UI.showHelp};
+  const handlers={mDuel:UI.showDuel,mMap:UI.showMap,mShop:UI.showShop,mAtlas:UI.showAtlas,mJourney:UI.showJourney,mJournal:UI.showJournal,mQuests:UI.showQuests,mTour:UI.showTour,mForecast:UI.showGuide,mSet:UI.showSettings,mHelp:UI.showHelp};
   for(const id of Object.keys(handlers))$(id).onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();handlers[id]()};
  };
  UI.showMap=function(seasonTab){
@@ -62,7 +65,7 @@
  UI.showSettings=function(){
   const st=G.state(),S=st.settings,v=S.volumes;
   const slider=(k,n)=>'<label class="volume-control">'+n+'<output id="'+k+'Value">'+Math.round(v[k]*100)+'%</output><input type="range" id="'+k+'Volume" data-volume="'+k+'" min="0" max="100" value="'+Math.round(v[k]*100)+'"></label>';
-  const sh=UI.sheet('<div class="eyebrow">НАСТРОЙ СВОЮ РЫБАЛКУ</div><h2>Настройки</h2><div class="scroll">'+slider('music','Музыка')+slider('effects','Эффекты')+slider('nature','Дальние птицы')+'<div class="opt"><span>Вибрация</span><button class="sw '+(S.vibro?'on':'')+'" id="vibroToggle" aria-label="Вибрация"></button></div><h3>Качество изображения</h3><div class="seg">'+[['auto','Авто'],['hi','Чётко'],['mid','Средне'],['lo','Плавно']].map(x=>'<button data-quality="'+x[0]+'" class="'+(S.quality===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div><p class="quiet-note">Настрой звук и качество изображения под себя — выбранные параметры сохраняются.</p><button id="renewalHelp" class="btn ghost">'+ic('book')+' Как играть</button><button id="renewalRate" class="btn ghost">'+ic('star')+' Оценить в RuStore</button><div class="version-note">Рыбалка: Клюёт! 1.9 Preview<br>'+st.stats.total+' уловов · '+st.stats.kg.toFixed(1)+' кг · '+st.stats.released+' отпущено</div></div>',closeBack);
+  const sh=UI.sheet('<div class="eyebrow">НАСТРОЙ СВОЮ РЫБАЛКУ</div><h2>Настройки</h2><div class="scroll">'+slider('music','Музыка')+slider('effects','Эффекты')+slider('nature','Дальние птицы')+'<div class="opt"><span>Вибрация</span><button class="sw '+(S.vibro?'on':'')+'" id="vibroToggle" aria-label="Вибрация"></button></div><h3>Качество изображения</h3><div class="seg">'+[['auto','Авто'],['hi','Чётко'],['mid','Средне'],['lo','Плавно']].map(x=>'<button data-quality="'+x[0]+'" class="'+(S.quality===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div><p class="quiet-note">Настрой звук и качество изображения под себя — выбранные параметры сохраняются.</p><button id="renewalHelp" class="btn ghost">'+ic('book')+' Как играть</button><button id="renewalRate" class="btn ghost">'+ic('star')+' Оценить в RuStore</button><div class="version-note">Рыбалка: Клюёт! 2.0 Preview<br>'+st.stats.total+' уловов · '+st.stats.kg.toFixed(1)+' кг · '+st.stats.released+' отпущено</div></div>',closeBack);
   sh.querySelectorAll('[data-volume]').forEach(el=>el.oninput=()=>{const k=el.dataset.volume;v[k]=Number(el.value)/100;$(k+'Value').value=el.value+'%';S.sound=true;S.music=v.music>0;FZ.Sound.setOn(true);FZ.Sound.setMusic(S.music);FZ.Sound.setVolumes(v);FZ.Sound.unlock();G.save(true)});
   $('vibroToggle').onclick=()=>{S.vibro=!S.vibro;$('vibroToggle').classList.toggle('on',S.vibro);G.save(true)};
   sh.querySelectorAll('[data-quality]').forEach(b=>b.onclick=()=>{S.quality=b.dataset.quality;if(S.quality==='auto')S.autoQ='hi';FZ.applyQuality();G.save(true);UI.showSettings()});$('renewalHelp').onclick=UI.showHelp;$('renewalRate').onclick=FZ.Platform.rate;
@@ -116,11 +119,12 @@
  ].map((a,i)=>'<div class="help-step"><b>'+String(i+1).padStart(2,'0')+'</b><div><h3>'+a[0]+'</h3><p>'+a[1]+'</p></div></div>').join('')+'</div>')};
  UI.hint=function(s,r,st,t){
   let html='';
-  if(r.state==='idle')html=G.canFish()!==true?G.canFish():r.aimSelected?'Точка выбрана · нажми «Заброс»':'Проведи по воде и отпусти';
+  if(s.duel&&r.state==='idle')html='Целься в золотой круг';
+  else if(r.state==='idle')html=G.canFish()!==true?G.canFish():r.aimSelected?'Точка выбрана · нажми «Заброс»':'Проведи по воде и отпусти';
   else if(r.state==='nohole')html='Пробури лунку';
   else if(r.state==='bite'){
    const bite=r.bite;
-   if(bite.phase==='take')html='Подсекай!';
+   if(bite.phase==='take')html=s.duel?'Лови момент!':'Подсекай!';
    else if(bite.t>=bite.approach)html='Пробует наживку…';
   }else if(r.state==='fight'){
    const f=r.fish,velocity=f.warning?f.runDirection:f.phase==='run'?(f.runSpeed||f.vx):f.vx;
@@ -128,6 +132,7 @@
    if(f.jump)html='Рыба в воздухе · отпусти подмотку';
    else if(f.strained||f.tension>.88)html=r.reeling?'Леска натянута · отпусти кнопку':'Дай рыбе леску';
    else if(f.warning)html='Рывок '+dir+'<small>Приготовься отпустить подмотку</small>';
+   else if(s.duel&&f.snagT>.4)html=f.X>0?'У травы · веди влево':'У травы · веди вправо';
    else if(f.slackT>.5)html='Подмотай слабину';
    else if(f.against)html='Удочка гасит рывок';
    else if(f.phase==='run')html=dir?'Рывок '+dir+'!<small>Веди удочку '+(dir==='вправо'?'влево':'вправо')+'</small>':'Рывок! · отпусти подмотку';

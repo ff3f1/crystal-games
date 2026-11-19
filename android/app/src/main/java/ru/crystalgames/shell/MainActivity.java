@@ -2,6 +2,8 @@ package ru.crystalgames.shell;
 
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -194,6 +196,35 @@ public class MainActivity extends AppCompatActivity {
 
     /** Шаринг картинки, внешние ссылки, оценка в RuStore, вибрация. */
     private class ShareBridge {
+        private final java.util.regex.Pattern challengeCode = java.util.regex.Pattern.compile(
+                "\\bTZ1-[0-9A-Z]{1,4}-[0-9A-Z]{1,3}-[0-9A-Z]{2}\\b",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+
+        @JavascriptInterface public boolean copyChallenge(String code) {
+            if (code == null || !challengeCode.matcher(code).matches()) return false;
+            try {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                clipboard.setPrimaryClip(ClipData.newPlainText("Три заброса", code));
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface public String pasteChallenge() {
+            try {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip == null || clip.getItemCount() == 0) return "";
+                CharSequence text = clip.getItemAt(0).getText();
+                if (text == null) return "";
+                java.util.regex.Matcher match = challengeCode.matcher(text.subSequence(0, Math.min(text.length(), 2000)));
+                return match.find() ? match.group() : "";
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+
         @JavascriptInterface public boolean legacyRenderer() { return legacyRenderer; }
         @JavascriptInterface public void shareImage(String b64, String text) {
             ui.post(() -> {

@@ -109,3 +109,98 @@
 .acard.unknown .c { color: #ffc1b4; }
 .acard.unknown img { opacity: .91; }
 .atlas-filters { margin-bottom: 12px; }
+
+/* A compact entry from the lodge and a separate scoreboard out on the water. */
+.duel-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  width: 100%;
+  margin-top: 9px;
+  min-height: 49px;
+  text-align: left;
+  border: 1px solid #e7c78961;
+  border-radius: 13px;
+  background: linear-gradient(108deg, #375846f0, #18383ee8);
+}
+.duel-entry .i { color: #f8d596; font-size: 23px; }
+.duel-entry span { flex: 1; }
+.duel-entry b, .duel-entry small { display: block; }
+.duel-entry b { color: #fff2d6; font-size: 13px; }
+.duel-entry small { color: #cbdfd5; margin-top: 2px; font-size: 10px; }
+.duel-entry > i { color: #f4d299; font-style: normal; font-size: 24px; }
+#hud > .duel-hud, #hud > .duel-timing { pointer-events: none; }
+.duel-hud {
+  position: absolute;
+  top: calc(92px + var(--safe-t));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #cce3d7;
+  background: #122f36e8;
+  border: 1px solid #f1cd7e70;
+}
+.duel-hud strong { color: #ffe4a5; font-size: 13px; }
+.duel-hud span:empty { display: none; }
+.duel-timing {
+  position: absolute;
+  bottom: calc(23vh + var(--safe-b));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(200px, 72%);
+  height: 8px;
+  border-radius: 7px;
+  background: #203a39;
+  border: 1px solid #f1dca4b0;
+}
+.duel-timing i { position: absolute; top: 0; bottom: 0; left: 26%; width: 40%; background: #eec777; }
+.duel-timing b { position: absolute; top: -4px; width: 4px; height: 14px; background: #fff9de; border-radius: 2px; transform: translateX(-50%); }
+.duel-hero {
+  padding: 15px 14px;
+  border-radius: 16px;
+  border: 1px solid #e9cf8f60;
+  background: radial-gradient(ellipse at 90% 10%, #55714478, transparent 74%), linear-gradient(142deg, #1d5054, #15353d);
+}
+.duel-hero p, .duel-hero span { color: #cadfd7; font-size: 12px; }
+.duel-sheet h2, .duel-step h2 { margin: 6px 0; font-size: 26px; color: #fff4dc; }
+.duel-hero strong, .duel-step strong { display: block; color: #ffdc96; font-size: 38px; line-height: 1.12; }
+.duel-hero strong small { font-size: 15px; }
+.duel-sheet, .duel-step { color: #cae0d6; font-size: 13px; line-height: 1.45; }
+.duel-hero p, .duel-step > p:first-child { margin: 0; }
+.duel-wide { width: 100%; margin-top: 8px; }
+.duel-form { margin-top: 16px; }
+.duel-form label { display: block; font-weight: 700; color: #eff6dd; margin-bottom: 6px; }
+.duel-form > div, .duel-code { display: flex; align-items: center; gap: 7px; }
+.duel-form input, .duel-code input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  background: #0b252e;
+  color: #f6edd5;
+  border: 1px solid #a4c6b661;
+  border-radius: 9px;
+  padding: 10px;
+  font: 500 15px Rubik, sans-serif;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+.duel-code { margin-top: 8px; }
+.duel-error { color: #ffc4ab; margin: 6px 0 0; }
+.duel-result ol { margin: 11px 0 5px; padding: 0; list-style: none; }
+.duel-result li { display: flex; align-items: center; gap: 9px; padding: 6px 4px; border-bottom: 1px solid #d4e9dd28; line-height: 1.25; }
+.duel-result li b { flex: 1; }
+.duel-result li strong { color: #ffdc96; }
+@media(max-height:640px) {
+  .duel-entry { min-height: 41px; padding-block: 5px; }
+  .duel-entry .i { font-size: 20px; }
+  .duel-result .duel-hero { padding: 9px 12px; }
+  .duel-result .duel-hero strong { font-size: 30px; }
+}

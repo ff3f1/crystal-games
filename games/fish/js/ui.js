@@ -70,6 +70,8 @@
         '<button class="pill" id="hTime"></button>' +
       "</div>" +
       '<div class="locname" id="hLoc"></div>' +
+      '<div id="hDuel" class="duel-hud hide"><span id="hDuelRound"></span><strong id="hDuelScore"></strong><span id="hDuelTarget"></span></div>' +
+      '<div id="hDuelTiming" class="duel-timing hide"><i></i><b id="hDuelNeedle"></b></div>' +
       '<button class="pill round film" id="bFilm" aria-label="Режим съёмки">' + ic("cam") + "</button>" +
       '<div class="echo hide" id="hEcho"></div>' +
       '<div class="hint" id="hHint"></div>' +
@@ -89,14 +91,14 @@
       "</div>";
     hudBuilt = true;
     $("bMenu").onclick = () => { FZ.Sound.click(); UI.showMenu(); };
-    $("hTime").onclick = () => UI.showTime();
+    $("hTime").onclick = () => { if (!G.sess().duel) UI.showTime(); };
     $("bFilm").onclick = () => { document.body.classList.toggle("filming"); if (document.body.classList.contains("filming")) UI.toast("Режим съёмки: интерфейс скрыт. Нажмите на камеру, чтобы вернуть"); };
     $("tRod").onclick = () => UI.showTackle();
     $("tBait").onclick = () => UI.showBait();
     $("tGb").onclick = () => { const r = G.throwGroundbait(); if (r !== true) { UI.toast(r + ". Купите в «Снастях»", "bad"); } else UI.toast("Прикормили точку"); };
     $("tMore").onclick = () => { const s = G.sess(); if (s.ice) { if (G.rig().state !== "fight") G.drill(); } else UI.showTackle(); };
-    $("dUp").onclick = () => { G.setDrag(G.state().drag + 0.05); FZ.Sound.click(); };
-    $("dDn").onclick = () => { G.setDrag(G.state().drag - 0.05); FZ.Sound.click(); };
+    $("dUp").onclick = () => { G.setDrag(G.drag() + 0.05); FZ.Sound.click(); };
+    $("dDn").onclick = () => { G.setDrag(G.drag() - 0.05); FZ.Sound.click(); };
     // глубина в лунке
     const tr = $("iceTrack");
     const setFromY = (y) => { const r = tr.getBoundingClientRect(); G.setLure(U.clamp((y - r.top) / r.height, 0.05, 1)); };
@@ -153,7 +155,18 @@
   let echoT = 0;
   UI.frame = function (dt, t) {
     const s = G.sess(); if (!s || !hudBuilt) return;
-    const st = G.state(), r = G.rig();
+    const st = G.state(), r = G.rig(), duel = s.duel;
+    setC("hDuel", "hide", !duel);
+    setC("hLvlBox", "hide", !!duel);
+    setC("hMoney", "hide", !!duel);
+    const duelTiming = duel && r.state === "bite" && r.bite.phase === "take";
+    setC("hDuelTiming", "hide", !duelTiming);
+    if (duelTiming) setS("hDuelNeedle", "left", Math.round(U.clamp(r.bite.t / r.bite.take, 0, 1) * 100) + "%");
+    if (duel) {
+      setT("hDuelRound", "Заброс " + Math.min(FZ.Duel.count, duel.rows.length + 1) + " / " + FZ.Duel.count);
+      setT("hDuelScore", duel.score.toLocaleString("ru-RU") + " очков");
+      setT("hDuelTarget", duel.target === null ? "" : "Цель " + duel.target.toLocaleString("ru-RU"));
+    }
     setT("hLvl", String(st.lvl));
     setS("hXp", "width", Math.round(st.xp / FZ.xpNeed(st.lvl) * 100) + "%");
     setT("hMoney", U.money(st.money));
@@ -179,16 +192,16 @@
     const fight = r.state === "fight" || r.state === "landing";
     setC("hTens", "hide", r.state !== "fight");
     setC("hDrag", "hide", r.state !== "fight");
-    ["tRod", "tBait", "tGb", "tMore"].forEach((id) => setC(id, "hide", fight));
+    ["tRod", "tBait", "tGb", "tMore"].forEach((id) => setC(id, "hide", fight || !!duel));
     setC("hIce", "hide", !(s.ice && s.hole && !fight && r.state !== "drill"));
     if (s.ice && s.hole) { const k = s.hole.lure; setS("iceKnob", "top", k * 100 + "%"); setT("iceTxt", (s.hole.depth * k).toFixed(1).replace(".", ",") + " м"); }
     const giveLine = r.state === "fight" && r.fish && (r.fish.warning || r.fish.strained || r.fish.phase === "run");
     setC("bAct", "give-line", !!giveLine);
     setC("hTens", "give-line", !!giveLine);
-    if (r.state === "fight" && r.fish) drawTension(r.fish, s, st.drag);
-    setT("dVal", Math.round(st.drag * 100) + "%");
+    if (r.state === "fight" && r.fish) drawTension(r.fish, s, G.drag());
+    setT("dVal", Math.round(G.drag() * 100) + "%");
     // эхолот — 4 раза в секунду
-    if (st.extras.echo && !fight) {
+    if (st.extras.echo && !fight && !duel) {
       setC("hEcho", "hide", false);
       echoT -= dt;
       if (echoT <= 0) {
@@ -242,8 +255,9 @@
     switch (e.type) {
       case "msg": UI.toast(e.text, e.bad ? "bad" : ""); break;
       case "need": UI.toast(e.what, "bad"); break;
-      case "cast": G.rig().castAt = s.t; if (G.state().tut === 0) { G.state().tut = 1; } break;
-      case "take": if (G.state().tut === 1) G.state().tut = 2; break;
+      case "duelCast": UI.duelCast(e.duel, e.row); break;
+      case "cast": G.rig().castAt = s.t; if (!s.duel && G.state().tut === 0) { G.state().tut = 1; } break;
+      case "take": if (!s.duel && G.state().tut === 1) G.state().tut = 2; break;
       case "level": FZ.Sound.level(); UI.toast("Уровень " + e.lvl + "! Бонус " + U.money(e.bonus), "gold", 3000); UI.unlocks(e.lvl); break;
       case "quest": UI.toast("Задание выполнено: " + e.q.text + ". Заберите награду в меню", "gold", 3200); break;
       case "catch": UI.showCatch(e.res); break;

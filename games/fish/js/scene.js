@@ -776,6 +776,7 @@
 
   R.drawTackle = function (v, L, t) {
     const rod = v.rod || {};
+    if (v.duelSpot) FZ.Duel.drawShoal(ctx, v.duelSpot, t, R.proj);
     const G = rodGeom(v);
     const night = L.dark > 0.35;
     const lineCol = U.rgba(U.mix("#f4f8fb", "#8aa0c8", L.dark * 0.8), 0.75);
