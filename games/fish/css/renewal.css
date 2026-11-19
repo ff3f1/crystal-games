@@ -22,3 +22,58 @@
 .sheet>.x{display:block;padding:0;line-height:1}
 .sheet>.x>svg{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:0;transform:translate(-50%,-50%);display:block}
 @media(max-height:640px){.catch{padding-top:10px;padding-bottom:11px}.catch canvas{height:125px}.catch .acts{margin-top:10px;gap:6px}.catch-goal{margin-top:8px;padding:7px 10px}.catch .note,.catch .pct{font-size:9px}.catch .acts .two .btn{height:46px}.catch .wt{font-size:32px}}
+
+/* Fishing feedback stays near the controls and leaves the water visible. */
+#hud .hint {
+  top: auto;
+  bottom: calc(25vh + var(--safe-b));
+  width: max-content;
+  max-width: calc(100% - 34px);
+  padding: 8px 13px;
+  border-radius: 12px;
+  background: #0c272be8;
+  border: 1px solid #c4e2d448;
+  color: #eff5e8;
+  font-size: 14px;
+  line-height: 1.25;
+  text-shadow: none;
+}
+#hud .hint:empty { display: none; }
+#hud .hint.strike {
+  bottom: calc(27vh + var(--safe-b));
+  background: #f0ce88;
+  color: #243123;
+  font-size: 26px;
+  animation: none;
+  box-shadow: 0 0 24px #eab76a55;
+}
+#hud .hint.warning { color: #ffddad; border-color: #eab77380; }
+#hud .hint.fighting { bottom: calc(215px + var(--safe-b)); }
+#hud .tension {
+  left: max(12px, calc(50% - 169px));
+  right: max(84px, calc(50% - 89px));
+  bottom: calc(104px + var(--safe-b));
+  transform: none;
+  width: auto;
+  padding: 9px 12px 11px;
+  border: 1px solid #c4e2d448;
+  border-radius: 15px;
+  color: #f1f5e9;
+  background: #0a282de8;
+  box-shadow: 0 6px 16px #071a2199;
+  text-align: left;
+}
+.fight-readout { display: flex; align-items: baseline; justify-content: space-between; font-size: 11px; }
+.fight-readout strong { font-size: 13px; font-variant-numeric: tabular-nums; }
+.fight-track { position: relative; height: 7px; margin: 5px 0 7px; border-radius: 6px; background: #cfe4d52e; }
+.fight-track i { display: block; height: 100%; border-radius: inherit; background: #aae6bf; }
+.fight-track b { position: absolute; width: 2px; height: 11px; top: -2px; transform: translateX(-50%); background: #f9f2de; border-radius: 2px; }
+.fight-track.stamina { height: 4px; margin-bottom: 0; }
+.fight-track.stamina i { background: #9dddde; }
+.give-line .fight-track:not(.stamina) i { background: #f3af70; }
+#hud .act.give-line { background: #554735; color: #ffdfac; }
+#hud .drag { bottom: calc(104px + var(--safe-b)); right: max(12px, calc(50% - 169px)); }
+#ovCatch .dim { background: radial-gradient(ellipse at 50% 32%, #1a4846b8, #061822ed 78%); }
+#ovCatch.trophy .dim { background: radial-gradient(ellipse at 50% 30%, #654c269c, #0d1e21f5 75%); }
+#ovCatch.trophy .catch { border-color: #deb071b3; }
+#ovCatch .wt { font-variant-numeric: tabular-nums; }

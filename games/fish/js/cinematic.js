@@ -28,8 +28,12 @@
    const key=v.loc.id+'|'+v.season+'|'+W+'|'+H+'|'+D;
    if(key!==cacheKey){cache=document.createElement('canvas');cache.width=Math.ceil(W*D);cache.height=Math.ceil(H*D);const cg=cache.getContext('2d');cg.scale(D,D);if(v.season==='autumn')cg.filter='sepia(.18) saturate(.82)';else if(v.season==='spring')cg.filter='saturate(.9) brightness(1.035)';cover(cg,im,W,H);cacheKey=key}
    ctx.drawImage(cache,0,0,cache.width,cache.height,0,0,W,H);
-   const sy=H*.39,end=H*.86;
-   for(let y=sy;y<end;y+=5){const k=(y-sy)/(end-sy),amp=(.12+k*k*.7)*(1+v.wx.wind*.08),dx=Math.sin(v.t*1.2+y*.076)*amp;ctx.drawImage(cache,0,Math.floor(y*D),cache.width,Math.min(Math.ceil(5*D),cache.height-Math.floor(y*D)),dx,y,W,5)}
+   const sy=H*.39,end=H*.86,strip=D<=1.25?14:8;
+   for(let y=sy;y<end;y+=strip){
+    const k=(y-sy)/(end-sy),edge=Math.sin(k*Math.PI);
+    const dx=Math.sin(v.t*1.35+y*.058)*edge*(.6+k*1.35)*(1+v.wx.wind*.08);
+    ctx.drawImage(cache,0,Math.floor(y*D),cache.width,Math.ceil(strip*D),dx,y,W,strip);
+   }
    // Water highlights follow the current without covering the photographic bank.
    ctx.save();ctx.beginPath();ctx.rect(W*.12,H*.43,W*.76,H*.39);ctx.clip();ctx.lineWidth=.65;
    for(let i=0;i<26;i++){const y=H*(.43+(i/26)*.38),x=((i*73+v.t*(4+v.loc.current*7))%(W+70))-30;ctx.globalAlpha=.04+(i%4)*.015;ctx.strokeStyle='#eff7e6';ctx.beginPath();ctx.ellipse(x,y,6+(i%5)*4,1.2,0,Math.PI*.12,Math.PI*.9);ctx.stroke()}ctx.restore();
@@ -46,10 +50,10 @@
   Sc.drawTackle(v,L,v.t);
   // Follow the actual fish velocity; the text tells the player to steer opposite.
   const fish=rig.fish;
-  if(!v.ice&&rig.state==='fight'&&fish&&fish.phase==='run'&&Math.abs(fish.vx)>.15){
+  if(!v.ice&&rig.state==='fight'&&fish&&(fish.warning||fish.phase==='run'&&Math.abs(fish.vx)>.15)){
    const p=Sc.proj(fish.X,fish.Z),x=U.clamp(p.x,24,W-24),y=U.clamp(p.y-28,H*.40,H*.68);
    ctx.save();ctx.fillStyle='rgba(12,43,48,.82)';ctx.beginPath();ctx.arc(x,y,16,0,Math.PI*2);ctx.fill();
-   ctx.strokeStyle='rgba(247,211,140,.9)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#f7d38c';ctx.font='bold 21px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(fish.vx>0?'→':'←',x,y);ctx.restore();
+   ctx.strokeStyle='rgba(247,211,140,.9)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#f7d38c';ctx.font='bold 21px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText((fish.warning ? fish.runDirection : fish.vx)>0?'→':'←',x,y);ctx.restore();
   }
   Sc.drawWeather(v,L,v.t,dt,v.wx);Sc.drawScreenFx(dt);
   ctx.restore();ctx.setTransform(1,0,0,1,0,0);

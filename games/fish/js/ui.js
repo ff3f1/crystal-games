@@ -73,7 +73,11 @@
       '<button class="pill round film" id="bFilm" aria-label="Режим съёмки">' + ic("cam") + "</button>" +
       '<div class="echo hide" id="hEcho"></div>' +
       '<div class="hint" id="hHint"></div>' +
-      '<div class="tension hide" id="hTens"><canvas id="tensC"></canvas><div class="dist" id="hDist"></div><div class="stam"><i id="hStam"></i></div></div>' +
+      '<div class="tension hide" id="hTens">' +
+        '<div class="fight-readout"><span>Леска</span><strong id="hDist"></strong></div>' +
+        '<div class="fight-track"><i id="hTensionFill"></i><b id="hDragMark"></b></div>' +
+        '<div class="fight-readout">Силы рыбы</div><div class="fight-track stamina"><i id="hStam"></i></div>' +
+      '</div>' +
       '<div class="drag hide" id="hDrag"><span>Фрикцион</span><button id="dUp">+</button><b id="dVal">70%</b><button id="dDn">−</button></div>' +
       '<div class="icedepth hide" id="hIce"><span>верх</span><div class="track" id="iceTrack"><div class="knob" id="iceKnob"></div></div><span id="iceTxt">дно</span></div>' +
       '<div class="tray">' +
@@ -101,9 +105,26 @@
     $("hIce").onpointerdown = (e) => e.stopPropagation();
     // действие
     const act = $("bAct");
-    act.onpointerdown = (e) => { e.preventDefault(); e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(); };
-    act.onlostpointercapture=()=>{act.classList.remove("held");FZ.Input.actionUp()};
-    act.onpointerup = act.onpointercancel = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(); };
+    let reelPointer = null, reelOrigin = 0;
+    act.onpointerdown = (e) => {
+      if (reelPointer !== null || e.button !== 0) return;
+      e.preventDefault();
+      reelPointer = e.pointerId;
+      reelOrigin = e.clientX;
+      act.setPointerCapture(e.pointerId);
+      act.classList.add("held");
+      FZ.Input.actionDown();
+    };
+    act.onpointermove = (e) => {
+      if (reelPointer === e.pointerId) FZ.Input.reelSteer(e.clientX - reelOrigin);
+    };
+    act.onpointerup = act.onpointercancel = act.onlostpointercapture = (e) => {
+      if (reelPointer !== e.pointerId) return;
+      reelPointer = null;
+      act.classList.remove("held");
+      FZ.Input.reelSteer(0);
+      FZ.Input.actionUp();
+    };
     ["tRod", "tBait", "tGb", "tMore", "bMenu", "hTime", "bFilm", "hDrag"].forEach((id) => { $(id).addEventListener("pointerdown", (e) => e.stopPropagation()); });
     UI.refreshTools();
   };
@@ -123,7 +144,7 @@
     $("hLoc").textContent = s.loc.n + (s.ice ? ", лёд" : "");
   };
 
-  let hintKey = "", tensDpr = 0;
+  let hintKey = "";
   // DOM трогаем только когда значение поменялось: лишние записи заставляют браузер пересчитывать страницу
   const setT = (id, v) => { const e = $(id); if (e._v !== v) { e._v = v; e.textContent = v; } };
   const setH = (id, v) => { const e = $(id); if (e._h !== v) { e._h = v; e.innerHTML = v; } };
@@ -145,9 +166,10 @@
       case "idle": label = "Заброс"; break;
       case "fly": case "settle": label = "…"; calm = true; break;
       case "wait": label = mode === "spin" ? "Крутить" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
-      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Клюёт…"; calm = true; } break;
-      case "fight": label = "Тянуть"; break;
-      case "landing": case "result": label = "…"; calm = true; break;
+      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Ждать"; calm = true; } break;
+      case "fight": label = "Подмотка"; break;
+      case "landing": label = "Поднимаем"; calm = true; break;
+      case "result": label = "…"; calm = true; break;
       case "nohole": label = "Бурить"; break;
       case "drill": label = "Бурю…"; calm = true; break;
     }
@@ -160,7 +182,10 @@
     ["tRod", "tBait", "tGb", "tMore"].forEach((id) => setC(id, "hide", fight));
     setC("hIce", "hide", !(s.ice && s.hole && !fight && r.state !== "drill"));
     if (s.ice && s.hole) { const k = s.hole.lure; setS("iceKnob", "top", k * 100 + "%"); setT("iceTxt", (s.hole.depth * k).toFixed(1).replace(".", ",") + " м"); }
-    if (r.state === "fight" && r.fish) UI.drawTension(r.fish, s);
+    const giveLine = r.state === "fight" && r.fish && (r.fish.warning || r.fish.strained || r.fish.phase === "run");
+    setC("bAct", "give-line", !!giveLine);
+    setC("hTens", "give-line", !!giveLine);
+    if (fight && r.fish) drawTension(r.fish, s, st.drag);
     setT("dVal", Math.round(st.drag * 100) + "%");
     // эхолот — 4 раза в секунду
     if (st.extras.echo && !fight) {
@@ -204,22 +229,12 @@
     if (key !== hintKey) { hintKey = key; const e = $("hHint"); e.innerHTML = h; e.className = "hint " + cls; }
   };
 
-  UI.drawTension = function (f, s) {
-    const c = $("tensC"); const dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (tensDpr !== dpr) { c.width = 230 * dpr; c.height = 118 * dpr; tensDpr = dpr; }
-    const g = c.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, 230, 118);
-    const cx = 115, cy = 108, R = 92, a0 = Math.PI * 1.08, a1 = Math.PI * 1.92;
-    const v = U.clamp(f.tension || 0, 0, 1.05), dm = G.state().drag;
-    g.lineCap = "round";
-    g.strokeStyle = "rgba(10,36,40,0.8)"; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
-    const col = v < 0.6 ? "#7ccf6a" : v < 0.85 ? "#f2c21a" : "#ff4416";
-    g.strokeStyle = col; g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, a0, a0 + (a1 - a0) * Math.min(1, v)); g.stroke();
-    const ad = a0 + (a1 - a0) * dm;
-    g.strokeStyle = "#eef3f1"; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 13), cy + Math.sin(ad) * (R - 13)); g.lineTo(cx + Math.cos(ad) * (R + 13), cy + Math.sin(ad) * (R + 13)); g.stroke();
-    g.fillStyle = "#eef3f1"; g.font = "700 11px Rubik,sans-serif"; g.textAlign = "center"; g.fillText("натяжение", cx, cy - 46);
-    $("hDist").textContent = s.ice ? "глубина " + Math.max(0, f.D).toFixed(1).replace(".", ",") + " м" : (f.Z - 3).toFixed(1).replace(".", ",") + " м";
-    $("hStam").style.width = Math.round(f.S * 100) + "%";
-  };
+  function drawTension(f, s, drag) {
+    setT("hDist", Math.max(0, s.ice ? f.D : f.Z - 3).toFixed(1).replace(".", ",") + " м");
+    setS("hTensionFill", "width", Math.round(U.clamp(f.tension || 0, 0, 1) * 100) + "%");
+    setS("hDragMark", "left", Math.round(drag * 100) + "%");
+    setS("hStam", "width", Math.round(f.S * 100) + "%");
+  }
 
   // ---------- События игры ----------
   UI.onEvent = function (e) {
@@ -610,21 +625,40 @@
     // Fish sprites can be half as tall as they are wide; leave room for fins
     // and the small rolling animation on short screens.
     const len = Math.min(rect.width * 0.95, rect.height * 1.72);
-    const drops = [];
-    for (let i = 0; i < 40; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 220, vy: -80 - Math.random() * 260, r: 1 + Math.random() * 3 });
+    const accent = r.trophy ? "#eac174" : "#b3e7da";
+    const centerX = rect.width / 2, centerY = rect.height * 0.49;
+    const glow = g.createRadialGradient(centerX, centerY, 8, centerX, centerY, rect.width * 0.52);
+    glow.addColorStop(0, U.rgba(accent, 0.37));
+    glow.addColorStop(1, U.rgba(accent, 0));
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    ov.classList.toggle("trophy", r.trophy);
+    let shownWeight = "";
     if (catchAnim) cancelAnimationFrame(catchAnim);
     const loop = function () {
       const t = (performance.now() - t0) / 1000;
       g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, rect.width, rect.height);
-      const k = U.clamp(t / 0.6, 0, 1);
-      const glow = g.createRadialGradient(rect.width / 2, rect.height / 2, 10, rect.width / 2, rect.height / 2, rect.width * 0.55);
-      glow.addColorStop(0, U.rgba(r.trophy ? "#f2a71b" : "#8fd3e0", 0.28 * k)); glow.addColorStop(1, "rgba(0,0,0,0)");
+      const k = reduced ? 1 : U.clamp(t / 0.69, 0, 1);
       g.fillStyle = glow; g.fillRect(0, 0, rect.width, rect.height);
-      const x = rect.width / 2 + (1 - U.easeOutBack(k)) * rect.width * 0.8;
-      FZ.Art.drawFish(g, s, x, rect.height / 2 + Math.sin(t * 2) * 4, len * 0.9, { phase: t * (t < 1.2 ? 14 : 4), amp: t < 1.2 ? 0.45 : 0.12, roll: Math.sin(t * 1.5) * 0.04 });
-      drops.forEach((d) => { if (t > 1.2) return; d.vy += 600 / 60; d.x += d.vx / 60; d.y += d.vy / 60; g.fillStyle = "rgba(220,240,250,0.8)"; g.beginPath(); g.arc(d.x, d.y, d.r, 0, Math.PI * 2); g.fill(); });
-      const kw = U.clamp((t - 0.3) / 0.9, 0, 1);
-      $("cWt").textContent = U.kg(Math.max(0.001, r.w * U.easeOut(kw)));
+      if (!reduced && t < 1.5) {
+        for (let i = 0; i < 4; i++) {
+          const wave = U.clamp((t - i * 0.12) / 1.08, 0, 1);
+          if (!wave || wave >= 1) continue;
+          const spread = 7 + U.easeOut(wave) * rect.width * 0.48;
+          g.strokeStyle = U.rgba(accent, (1 - wave) * 0.55);
+          g.lineWidth = 1.25;
+          g.beginPath();
+          g.ellipse(centerX, rect.height * 0.68, spread, spread * 0.25, 0, 0, Math.PI * 2);
+          g.stroke();
+        }
+      }
+      const lift = (1 - U.easeOut(k)) * rect.height * 0.4;
+      const sway = reduced ? 0 : Math.sin(t * 2.3) * 3;
+      FZ.Art.drawFish(g, s, centerX, centerY + lift + sway, len * (0.64 + 0.28 * U.easeOut(k)), {
+        phase: t * 10, amp: reduced ? 0 : 0.12 + (1 - k) * 0.4,
+        roll: reduced ? 0 : (1 - k) * 0.3 + Math.sin(t * 2) * 0.045
+      });
+      const weight = U.kg(Math.max(0.001, r.w * U.easeOut(k)));
+      if (weight !== shownWeight) { shownWeight = weight; $("cWt").textContent = weight; }
       if (ov.classList.contains("on")) catchAnim = requestAnimationFrame(loop);
     };
     loop();

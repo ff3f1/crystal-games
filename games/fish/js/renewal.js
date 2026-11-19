@@ -93,32 +93,37 @@
   UI.sheet('<div class="eyebrow">ЧТО КЛЮЁТ НА ТВОЮ СНАСТЬ</div><h2>Гид по клёву</h2><div class="sub">'+se.loc.n+' · '+FZ.SEASONS[se.season]+' · '+FZ.TIMES[se.period]+'</div><div class="scroll"><p class="guide-tip">'+FZ.World.tip(se.wx)+'<br><br>Сейчас: '+FZ.METHODS[se.mode].n+' · '+(gear.bait?gear.bait.n:'без наживки')+(point?' · выбранная точка':'')+'.</p>'+(rows.length?rows.map(([f])=>'<div class="guide-fish"><img loading="lazy" data-src="'+speciesImage(f)+'" alt=""><div><b>'+f.n+'</b><small>Подходит также: '+FZ.bestBaits(f).join(', ')+'</small><span>'+Object.keys(f.methods).filter(k=>f.methods[k]>=.8&&(se.ice?k==='ice':k!=='ice')).map(k=>FZ.METHODS[k].n).join(' · ')+'</span></div></div>').join(''):'<div class="empty-state"><h3>Сейчас поклёвки маловероятны</h3><p>Смени наживку, глубину или снасть и загляни в гид снова.</p></div>')+'<p class="quiet-note">Точка у травы привлекает прибрежную рыбу. Дальний заброс помогает искать донные виды. Прикормка усиливает клёв мирной рыбы рядом с точкой.</p></div>');
  };
  UI.showHelp=function(){UI.sheet('<div class="eyebrow">ОТ ПЕРВОГО ЗАБРОСА ДО ТРОФЕЯ</div><h2>Как играть</h2><div class="scroll help-steps">'+[
- ['Выбери место','Коснись воды: появится отметка дальности и глубины. Нажми «Заброс». Активные круги и места у травы помогают найти рыбу.'],
+ ['Выбери место','Проведи пальцем по воде и отпусти для заброса. Коротким касанием можно выбрать точку заранее и нажать «Заброс».'],
  ['Подбери наживку','Кнопка наживки показывает запас. В атласе и гиде указаны подходящие насадки. Поплавок, фидер, спиннинг и зимняя снасть привлекают разные виды.'],
  ['Дождись потяжки','Первые движения — рыба только пробует. Подсекай кнопкой или свайпом вверх после сигнала «Подсечь!».'],
  ['Управляй вываживанием','Держи кнопку подмотки в спокойные моменты. Перед рывком появится предупреждение: отпусти кнопку. Фрикцион ограничивает нагрузку, но слабая леска не удержит любую рыбу.'],
- ['Помогай удилищем','Веди палец по воде в сторону, противоположную рывку. Не давай рыбе уйти к самому краю берега.'],
+ ['Помогай удилищем','Веди палец по воде или сдвинь его вбок при подмотке. Если рыба рванула вправо, отведи удочку влево.'],
  ['Реши судьбу улова','Забирай рыбу за монеты или отпускай ради опыта. У охраняемых видов доступно только отпускание. Улучшай снасти и открывай новые водоёмы.'],
  ['Лови зимой и в море','На льду сначала пробури лунку, выбери глубину и короткими нажатиями играй мормышкой. На зимнем морском берегу вода остаётся открытой.']
  ].map((a,i)=>'<div class="help-step"><b>'+String(i+1).padStart(2,'0')+'</b><div><h3>'+a[0]+'</h3><p>'+a[1]+'</p></div></div>').join('')+'</div>')};
  UI.hint=function(s,r,st,t){
   let html='';
-  if(r.state==='idle')html=G.canFish()!==true?G.canFish()+'<small>Открой снасти или выбери подходящую наживку</small>':r.aimSelected?'Точка выбрана<small>Нажми «Заброс» или выбери другое место на воде</small>':'Выбери место на воде<small>Затем нажми «Заброс» · места у травы и бровки перспективнее</small>';
-  else if(r.state==='nohole')html='Начни с лунки<small>Нажми «Бурить», затем выбери глубину приманки</small>';
-  else if(r.state==='drill')html='Бурим лунку…';
-  else if(r.state==='fly')html='Точный заброс<small>Снасть летит в выбранную точку</small>';
-  else if(r.state==='settle')html='Приманка опускается<small>Подожди, пока снасть успокоится</small>';
-  else if(r.state==='bite')html=r.bite.phase==='take'?'ПОДСЕЧЬ!<small>Нажми кнопку или смахни вверх</small>':'Рыба пробует наживку<small>Не спеши: дождись уверенной потяжки</small>';
-  else if(r.state==='fight'){
-   const f=r.fish;
-   const dir=!s.ice&&Math.abs(f.vx)>.15?(f.vx>0?'вправо':'влево'):'';
-   html=f.warning?'Рыба готовится к рывку<small>Отпусти подмотку — дай леске сработать</small>':f.tension>.88?'Леска на пределе<small>Отпусти кнопку и ослабь фрикцион</small>':f.slackT>.5?'Леска провисла<small>Подмотай, чтобы рыба не сошла</small>':f.phase==='run'?(dir?'Рывок '+dir+'!<small>Отпусти подмотку и веди удочку '+(dir==='вправо'?'влево':'вправо')+'</small>':'Рывок!<small>Отпусти подмотку и следи за натяжением</small>'):f.S<.2?'Рыба устала<small>Подматывай: ещё немного до подсачека</small>':'Подтяни рыбу<small>Удерживай кнопку подмотки · перед рывком отпускай</small>';
+  if(r.state==='idle')html=G.canFish()!==true?G.canFish():r.aimSelected?'Точка выбрана · нажми «Заброс»':'Проведи по воде и отпусти';
+  else if(r.state==='nohole')html='Пробури лунку';
+  else if(r.state==='bite'){
+   const bite=r.bite;
+   if(bite.phase==='take')html='Подсекай!';
+   else if(bite.t>=bite.approach)html='Пробует наживку…';
+  }else if(r.state==='fight'){
+   const f=r.fish,velocity=f.warning?f.runDirection:f.vx;
+   const dir=!s.ice&&Math.abs(velocity)>.15?(velocity>0?'вправо':'влево'):'';
+   if(f.strained||f.tension>.88)html=r.reeling?'Леска натянута · отпусти кнопку':'Дай рыбе леску';
+   else if(f.warning)html='Рывок '+dir+'<small>Приготовься отпустить подмотку</small>';
+   else if(f.slackT>.5)html='Подмотай слабину';
+   else if(f.phase==='run')html=dir?'Рывок '+dir+'!<small>Веди удочку '+(dir==='вправо'?'влево':'вправо')+'</small>':'Рывок! · отпусти подмотку';
+   else if(f.S<.3)html='Рыба устала · подматывай';
+   else html=r.reeling?'':'Удерживай подмотку';
   }else if(r.state==='wait'){
-   if(!G.gear(s.mode).bait)html='Закончилась наживка<small>Выбери или купи новую насадку</small>';
-   else if(r.idleT>8&&G.biteTable().length===0)html='Эта наживка здесь не работает<small>Открой гид по клёву или выбери другую насадку</small>';
-   else html=s.mode==='spin'?'Веди приманку<small>Удерживай кнопку для подмотки, делай короткие паузы</small>':s.ice?'Играй мормышкой<small>Коротко нажимай кнопку, меняй глубину по шкале слева</small>':'Ждём поклёвку<small>Рыба сначала пробует наживку. Следи за поплавком или вершинкой</small>';
-  }else if(r.state==='landing')html='Рыба у берега<small>Аккуратно заводим её в подсачек</small>';
-  const el=$('hHint'),cls='hint'+(r.state==='bite'&&r.bite.phase==='take'?' strike':r.fish&&r.fish.warning?' warning':'');
+   if(!G.gear(s.mode).bait)html='Закончилась наживка';
+   else if(r.idleT>8&&G.biteTable().length===0)html='Попробуй другую наживку';
+   else html=s.mode==='spin'?'Подматывай с паузами':s.ice?'Короткими нажатиями играй мормышкой':'';
+  }
+  const el=$('hHint'),cls='hint'+(r.state==='bite'&&r.bite.phase==='take'?' strike':r.state==='fight'?' fighting':'')+(r.fish&&(r.fish.warning||r.fish.strained)?' warning':'');
   if(el.innerHTML!==html)el.innerHTML=html;if(el.className!==cls)el.className=cls;
  };
  const event=UI.onEvent;UI.onEvent=function(e){if(e.type==='hooked'&&G.rig().fish)FZ.Assets.fish(G.rig().fish.s.id);event(e)};

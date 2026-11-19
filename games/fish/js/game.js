@@ -235,14 +235,15 @@
   G.cast = function (X, Z) {
     if (rig.state !== "idle") return false;
     const ok = G.canFish(); if (ok !== true) { emit("need", { what: ok }); return false; }
-    const a = X == null ? (sess.lastAim || { X: 0, Z: G.maxCast() * 0.65 }) : G.aimClamp(X, Z);
-    const g = G.gear(sess.mode);
+    const point = X == null ? (sess.lastAim || { X: 0, Z: G.maxCast() * 0.65 }) : { X, Z };
+    const a = G.aimClamp(point.X, point.Z);
     // разброс зависит от дальности
     const sc = 0.04 * a.Z;
-    rig.X = a.X + U.rand.range(-sc, sc); rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
+    rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
+    rig.X = G.aimClamp(a.X + U.rand.range(-sc, sc), rig.Z).X;
     sess.lastAim = { X: a.X, Z: a.Z };
-    rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.45 + a.Z / 70;
-    rig.bite = null; rig.still = 0; rig.spinPause = 0;
+    rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.36 + a.Z / 72;
+    rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.idleT = 0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
     if (sess.mode === "feeder" && (st.inv.gb || 0) > 0) { st.inv.gb--; feedSpot(rig.X, rig.Z, 0.22); }
@@ -359,7 +360,13 @@
     const g = G.gear(sess.mode);
     let take = TAKE * (g.rod ? g.rod.sens : 1) * (sess.period === "night" ? 0.92 : 1);
     if (st.tut < 3) take *= 2.2;
-    rig.bite = { s, w, style, phase: "touch", t: 0, touches: empty ? U.rand.int(2, 3) : U.rand.int(TOUCH[0], TOUCH[1]), nextTouch: U.rand.range(0.1, 0.6), take, empty: !!empty, early: false };
+    const approach = sess.mode === "spin" ? 0.35 : U.rand.range(0.85, 1.5);
+    rig.bite = {
+      s, w, style, phase: "touch", t: 0,
+      approach, approachSide: U.rand() < 0.5 ? -1 : 1,
+      touches: empty ? 2 : U.rand.int(TOUCH[0], TOUCH[1]),
+      nextTouch: approach, take, empty: !!empty
+    };
     rig.state = "bite";
   }
   function biteTick(dt) {
@@ -369,7 +376,7 @@
       b.nextTouch -= dt;
       if (b.nextTouch <= 0) {
         if (b.touches > 0) {
-          b.touches--; b.nextTouch = U.rand.range(0.7, 1.9);
+          b.touches--; b.nextTouch = U.rand.range(0.42, 0.95);
           b.touchAnim = 0.35;
           touchFx(b);
         } else if (b.empty) { // мелочь поклевала и ушла
@@ -461,37 +468,54 @@
     rig.bite = null;
     rig.fish = {
       s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
-      vx: 0, vz: 0, S: 1, effort: 0.38, phase: "rest", phaseT: 1.7, T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
+      vx: 0, vz: 0, S: 1, effort: 0.38, phase: "rest", phaseT: 0.95, T: Fmax * 0.35, Fmax, slackT: 0, snagT: 0,
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
     };
-    rig.fish.vx = sess.ice ? 0 : U.rand.range(-1, 1) * 1.2;
+    rig.fish.nextPhase = U.rand() < s.fight.runs + 0.25 ? "run" : "shake";
+    rig.rod.jerk = 1;
     FZ.Scene.shake(5); FZ.Platform.vibrate(40);
     if (!sess.ice) FZ.Scene.splash(rig.X, rig.Z, 0.25 + Math.min(1, w / 5) * 0.5);
     emit("hooked", { big: Fmax > G.gear(sess.mode).line.test * 0.75 || w >= s.trophy });
   }
 
   // ---------- Вываживание ----------
-  function nextFishPhase(f){
-    if(f.S<.16)return 'tired';const r=U.rand(),runs=f.s.fight.runs*(.3+.7*f.S);
-    return r<runs?'run':r<runs+.16?'toward':r<runs+.16+f.s.fight.shake*.35?'shake':'rest';
+  function nextFishPhase(f) {
+    if (f.S < 0.16) return "tired";
+    if (f.phase === "run") return "rest";
+    const roll = U.rand(), runs = f.s.fight.runs * (0.3 + 0.7 * f.S);
+    if (roll < runs) return "run";
+    if (roll < runs + 0.16) return "toward";
+    return roll < runs + 0.16 + f.s.fight.shake * 0.35 ? "shake" : "rest";
   }
   function fightTick(dt, t) {
     const f = rig.fish, s = f.s, g = G.gear(sess.mode);
     const rod = g.rod, line = g.line;
     const lineT = line.test, dragLim = st.drag * lineT;
     f.t += dt;
-    if(!f.nextPhase)f.nextPhase=nextFishPhase(f);
-    f.warning=f.nextPhase==="run"&&f.phaseT<.72&&f.phaseT>0;
+    if (!f.nextPhase) f.nextPhase = nextFishPhase(f);
+    if (f.nextPhase === "run" && !f.runDirection) {
+      f.runDirection = Math.abs(f.X) > FZ.Scene.maxLat(Math.max(f.Z, 5)) * 0.65
+        ? -Math.sign(f.X) : U.rand() < 0.5 ? -1 : 1;
+    }
+    f.warning = f.nextPhase === "run" && f.phaseT < 0.65 && f.phaseT > 0 && f.S >= 0.16;
+    if (f.warning && !f.wasWarning) FZ.Platform.vibrate(18);
+    f.wasWarning = f.warning;
     // смена поведения
     f.phaseT -= dt;
     if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
       if (f.jump && f.jump.k >= 1) { f.jump = null; if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.6 + Math.min(1, f.w / 5)); FZ.Sound.splash(0.8); }
-      const planned=f.nextPhase;f.nextPhase=null;
+      const planned = f.nextPhase;
+      const runDirection = f.runDirection;
+      f.nextPhase = null;
+      f.runDirection = null;
+      f.warning = false;
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = U.rand.range(1.2, 2.5); f.vx *= 0.5; }
       else if (planned === "run") {
         f.phase = "run"; f.effort = U.rand.range(0.85, 1); f.phaseT = U.rand.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
-        f.vx = U.rand.range(0.6, 2.2) * (U.rand() < 0.5 ? -1 : 1) * (sess.ice ? 0 : 1);
-        if (rig.reeling) f.T += 0.14 * f.Fmax; // рывок
+        f.runSpeed = U.rand.range(1.3, 2.35) * runDirection;
+        f.vx += sess.ice ? 0 : f.runSpeed * 0.26;
+        if (rig.reeling) f.T += 0.14 * f.Fmax;
+        if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.22 + 0.24 * f.S);
         if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && U.rand() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
@@ -504,44 +528,56 @@
     if (f.jump) f.jump.k += dt / f.jump.dur;
     let eff = f.effort * (0.35 + 0.65 * f.S);
     if (f.phase === "shake") eff *= 1 + 0.45 * Math.sin(t * 28);
-    const fishPull = f.Fmax * Math.max(0, eff);
     const reeling = rig.reeling;
-    let Tt = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
-    if (f.phase === "toward") Tt = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
-    if (f.phase === "tired") Tt = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
-    const damping = 5 + rod.sens * 3;
-    f.T = U.damp(f.T, Tt, damping, dt);
-    if (f.jump && f.jump.k < 1) f.T *= 1 + 0.3 * Math.sin(f.jump.k * Math.PI);
-    // фрикцион
-    const slipping = f.T > dragLim;
-    if (slipping) {
-      const slip = f.T - dragLim;
-      const sp = Math.min(4, slip / f.Fmax * 4 + 0.5);
-      if (sess.ice) f.D = Math.min(sess.hole.depth, f.D + sp * dt * 0.5); else f.Z += sp * dt;
+    const run = f.phase === "run";
+    const against = !sess.ice && Math.abs(rig.tilt) > 0.24 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.16;
+    f.against = against;
+    const fishPull = f.Fmax * Math.max(0, eff) * (against && run ? 0.78 : 1);
+    let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
+    if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
+    if (f.phase === "tired") targetTension = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
+    if (f.jump) targetTension *= 1 + 0.48 * Math.sin(Math.PI * Math.min(1, f.jump.k));
+    f.T = U.damp(f.T, targetTension, 5 + rod.sens * 3, dt);
+
+    const slip = Math.max(0, f.T - dragLim);
+    if (slip) {
       f.T = dragLim + slip * 0.2;
       FZ.Sound.drag(U.clamp(slip / lineT, 0, 1));
     }
-    if(f.T>lineT)f.overload=(f.overload||0)+dt;else f.overload=Math.max(0,(f.overload||0)-dt*2);
-    if(f.overload>.36)return lose("snap");
-    // подмотка
-    const reelSp = rod.reel * (1 - 0.7 * U.clamp(fishPull / f.Fmax, 0, 1));
-    if (reeling && !slipping) { if (sess.ice) f.D -= reelSp * 0.55 * dt; else f.Z -= reelSp * dt; FZ.Sound.reel(rod.reel); rig.rod.reelAngle += dt * 14; }
-    if (f.phase === "toward") { if (sess.ice) f.D -= 0.3 * dt; else f.Z -= U.rand.range(0.6, 1.2) * dt; }
-    // поперёк
+    f.overload = f.T > lineT ? (f.overload || 0) + dt : Math.max(0, (f.overload || 0) - dt * 2);
+    if (f.overload > 0.36) return lose("snap");
+
+    const reelSpeed = rod.reel * (1.33 - 0.75 * U.clamp(fishPull / f.Fmax, 0, 1));
+    const takingLine = reeling && !slip;
+    const surge = run ? Math.min(1.6, f.Fmax * 0.31) * f.S * (against ? 0.28 : 1) : 0;
+    const slipSpeed = slip ? Math.min(3, slip / f.Fmax * 4 + 0.35) : 0;
+    const swim = (f.phase === "toward" ? -0.85 : surge) + slipSpeed;
+    f.vz = U.damp(f.vz, swim - (takingLine ? reelSpeed : 0), 5, dt);
+    if (sess.ice) f.D = Math.min(sess.hole.depth, f.D + f.vz * 0.56 * dt);
+    else f.Z += f.vz * dt;
+    if (takingLine) {
+      FZ.Sound.reel(reelSpeed);
+      rig.rod.reelAngle += dt * (6 + reelSpeed * 5);
+    }
+
     if (!sess.ice) {
-      f.X += f.vx * dt; f.vx *= Math.pow(0.6, dt);
-      if (f.phase === "run" && Math.abs(f.vx) < 0.4) f.vx += (U.rand() - 0.5) * 2 * dt;
+      const steer = against ? Math.abs(rig.tilt) : 0;
+      const lateral = run ? f.runSpeed * (1 - 0.92 * steer) * (0.4 + 0.6 * f.S) : 0;
+      f.vx = U.damp(f.vx, lateral, against ? 9 : 4, dt);
       const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
-      if (Math.abs(f.X) > lat) { f.snagT += dt; f.X = Math.sign(f.X) * lat; if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true }); }
-      else f.snagT = Math.max(0, f.snagT - dt * 2);
+      const centerPull = steer * Math.abs(f.X) / lat;
+      f.X += (f.vx - Math.sign(f.X) * centerPull * 1.55) * dt;
+      if (Math.abs(f.X) > lat) {
+        f.snagT += dt;
+        f.X = Math.sign(f.X) * lat;
+        if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true });
+      } else f.snagT = Math.max(0, f.snagT - dt * 2);
       if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
     }
-    const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;
-    if (against) f.vx *= Math.pow(0.25, dt);
-    f.against = against;
-    // выносливость
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
-    const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * rodF * (st.tut < 3 ? 2 : 1);
+    const drain = (0.035 + 0.14 * U.clamp(f.T / f.Fmax, 0, 1.5))
+      / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.55 : 1)
+      * rodF * (st.tut < 3 ? 2 : 1);
     f.S = Math.max(0, f.S - drain * dt);
     // провис лески — сход
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
@@ -551,17 +587,22 @@
     f.surface = U.damp(f.surface, f.phase === "tired" ? 1 : 0.15 * (1 - f.S), 2, dt);
     // дистанция
     if (sess.ice) {
-      if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; f.phase = "run"; f.phaseT = 0; }
+      if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; f.vz = Math.max(0, f.vz); }
       f.Z = 0;
     } else {
-      if (f.Z < 3.6) { if (f.S < 0.3) return startLanding(); f.Z = 3.6; if (f.phase !== "run") { f.phaseT = 0; } }
+      if (f.Z < 3.6) { if (f.S < 0.3) return startLanding(); f.Z = 3.6; f.vz = Math.max(0, f.vz); }
       if (f.Z > 100) return lose("spool");
     }
     // для отрисовки
-    rig.rod.bend = U.damp(rig.rod.bend, U.clamp(f.T / (rod.power * 1.1), 0, 1.4), 10, dt);
-    rig.rod.tension = U.clamp(f.T / lineT, 0, 1);
-    if (f.T > lineT * 0.82) FZ.Platform.vibrate(12);
-    f.tension = f.T / lineT; f.dragMark = st.drag;
+    const bend = U.clamp(f.T / (rod.power * 1.1), 0, 1.4);
+    const rodVisual = rig.rod;
+    rodVisual.bendVel = ((rodVisual.bendVel || 0) + (bend - rodVisual.bend) * 96 * dt) * Math.exp(-13 * dt);
+    rodVisual.bend = U.clamp(rodVisual.bend + rodVisual.bendVel * dt, 0, 1.48);
+    rodVisual.tension = U.clamp(f.T / lineT, 0, 1);
+    f.tension = f.T / lineT;
+    f.strained = !!slip || f.tension > 0.86;
+    if (f.strained && !f.wasStrained) FZ.Platform.vibrate(27);
+    f.wasStrained = f.strained;
   }
 
   function lose(why) {
@@ -584,7 +625,7 @@
     if (!rig.lost || !rig.lost.canRevive) return false;
     const f = rig.lost.f;
     if(f.reviveBait){const b=f.reviveBait;if(b.lure)st.lures[b.id]=(st.lures[b.id]||0)+1;else st.inv[b.id]=(st.inv[b.id]||0)+1;st.load[sess.mode].bait=b.id;}
-    f.overload=0;f.nextPhase='rest';f.revived = true; f.T = f.Fmax * 0.3; f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
+    f.overload=0;f.nextPhase='rest';f.vz=0;f.runDirection=null;f.revived = true; f.T = f.Fmax * 0.3; f.phase = "rest"; f.phaseT = 1.5; f.slackT = 0; f.snagT = 0; f.jump = null;
     f.S = Math.min(f.S, 0.6); if (!sess.ice) f.X *= 0.6; f.Z = Math.min(f.Z, 40);
     rig.fish = f; rig.state = "fight"; rig.lost = null;
     emit("revived");
@@ -738,11 +779,11 @@
         r.idleT += dt;
         // первая рыба в обучении — быстро и гарантированно
         if (!G.gear(sess.mode).bait || G.baitLeft(G.gear(sess.mode).bait.id) <= 0) { /* без наживки не клюёт */ }
-        else if (st.tut < 3 && r.idleT > 2.5) { const tbl=G.biteTable();if(tbl.length){const sp=tbl.slice().sort((a,b)=>b[1]-a[1])[0][0];startBite(sp,Math.min(sp.trophy*.8,Math.max(sp.min,sp.med*.8)));} }
+        else if (st.tut < 3 && r.idleT > 1.9) { const tbl=G.biteTable();if(tbl.length){const sp=tbl.slice().sort((a,b)=>b[1]-a[1])[0][0];startBite(sp,Math.min(sp.trophy*.8,Math.max(sp.min,sp.med*.8)));} }
         else {
           const tbl = G.biteTable();
           let tot = 0; tbl.forEach((x) => (tot += x[1]));
-          if (tot>0&&(U.rand() < 1 - Math.exp(-tot * dt)||r.idleT>Math.min(32,9+1/Math.max(.04,tot)*.7))) {
+          if (tot>0&&(U.rand() < 1 - Math.exp(-1.25 * tot * dt) || r.idleT > Math.min(24, 7 + 0.6 / Math.max(0.04, tot)))) {
             r.idleT=0;
             const s = U.weighted(tbl);
             const w = sampleWeight(s);
@@ -784,6 +825,11 @@
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };
+    const b = r.bite;
+    if (b && b.phase === "touch" && b.t < b.approach) {
+      v.approach = U.clamp(b.t / b.approach, 0, 1);
+      v.approachSide = b.approachSide;
+    }
     if (sess.ice && r.state === "nohole") v.ice.noHole = true;
     if (sess.ice && r.state === "drill") v.ice.drill = r.drillT / r.drillDur;
     if (r.landing && !v.fish && r.fish) v.fish = r.fish;

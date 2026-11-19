@@ -19,7 +19,7 @@
   }
   cv.addEventListener("pointerdown", function (e) {
     FZ.Sound.unlock();
-    if (blocked()) return;
+    if (blocked() || P.down || e.button !== 0) return;
     P.down = true; P.id = e.pointerId; P.x = P.sx = e.clientX; P.y = P.sy = e.clientY; P.st = performance.now(); P.moved = 0; P.canvasReeling = false;
     try { cv.setPointerCapture(e.pointerId); } catch (er) {}
     const s = rigState(), r = G.rig(), mode = G.sess().mode;
@@ -39,18 +39,26 @@
   function up(e) {
     if (!P.down || (e && e.pointerId !== P.id)) return;
     P.down = false;
-    const r = G.rig(); if (!r) return;
+    const selected = aim;
+    aim = null;
+    const r = G.rig();
+    if (!r) return;
+    if (P.canvasReeling) r.reeling = false;
+    P.canvasReeling = false;
+    if (r.state === "fight") r.tilt = 0;
+    if (e.type !== "pointerup" || blocked()) return;
     const dt = performance.now() - P.st, dy = P.sy - P.y;
     const s = r.state;
-    if (aim) { const a = aim; aim = null; if (s === "idle") {G.sess().lastAim={X:a.X,Z:a.Z};r.aimSelected=true;} }
+    if (selected && s === "idle") {
+      if (P.moved >= 20) G.cast(selected.X, selected.Z);
+      else { G.sess().lastAim = selected; r.aimSelected = true; }
+    }
     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
     else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
-    if(P.canvasReeling)r.reeling = false;
-    if(s === "fight")r.tilt = 0;
-    P.canvasReeling = false;
   }
   cv.addEventListener("pointerup", up);
-  cv.addEventListener("pointercancel",()=>{P.down=false;aim=null;if(P.canvasReeling)Input.actionUp();P.canvasReeling=false;if(G.rig()&&G.rig().state==='fight')G.rig().tilt=0});
+  cv.addEventListener("pointercancel", up);
+  cv.addEventListener("lostpointercapture", up);
   function tiltOf(x) { const S = Sc.size(); return U.clamp((x - S.W / 2) / (S.W * 0.38), -1, 1); }
 
   Input.actionDown = function () {
@@ -59,15 +67,22 @@
     const r = G.rig(), s = r.state, mode = G.sess().mode;
     if (s === "idle") { if (G.sess().ice) return; G.cast(); }
     else if (s === "nohole") G.drill();
-    else if (s === "bite" && r.bite.phase === "take") G.strike();
+    else if (s === "bite" && r.bite.phase === "take") {
+      G.strike();
+      if (r.state === "fight") r.reeling = true;
+    }
     else if (s === "fight") r.reeling = true;
     else if (mode === "spin" && (s === "wait" || s === "bite")) r.reeling = true;
     else if (s === "wait" && mode === "ice") G.jig();
     else if (s === "wait" || s === "settle") G.retrieve();
   };
   Input.actionUp = function () { const r = G.rig(); if (r) r.reeling = false; };
+  Input.reelSteer = function (deltaX) {
+    const r = G.rig();
+    if (!P.down && r && r.state === "fight") r.tilt = U.clamp(deltaX / 55, -1, 1);
+  };
   window.addEventListener("keydown", function (e) {
-    if (e.repeat) return;
+    if (e.repeat || blocked()) return;
     if (e.code === "Space") { e.preventDefault(); Input.actionDown(); }
     if (e.code === "ArrowUp") G.strike && G.rig() && G.strike();
   });
@@ -137,7 +152,7 @@
     window.addEventListener("resize", () => Sc.resize());
     document.addEventListener("visibilitychange", () => {if(document.hidden)window.__appPause();else window.__appResume()});
     window.__appPause = function () { FZ.appSuspended=true;P.down=false;aim=null;Input.actionUp();FZ.Sound.suspend('app');G.save(true); };
-    window.addEventListener('blur',()=>{P.down=false;Input.actionUp()});
+    window.addEventListener('blur', () => { P.down = false; P.canvasReeling = false; aim = null; Input.actionUp(); Input.reelSteer(0); });
     window.__appResume = function () { const was=FZ.appSuspended;FZ.appSuspended=false;last=performance.now();FZ.Sound.resume("app");if(was&&G.sess()&&!UI.anyOpen()&&!FZ.Ads.isBusy())UI.showMenu(); };
     window.__game = { G, UI, Sc, FZ, aim: () => aim, setAim: (x, y) => setAim(x, y) };
   }

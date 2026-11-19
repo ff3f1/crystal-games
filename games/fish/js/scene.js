@@ -822,6 +822,22 @@
       ctx.quadraticCurveTo((lineFrom.x + target.x) / 2, Math.max(lineFrom.y, target.y) + sag, target.x, target.y); ctx.stroke();
     }
 
+    if (v.approach != null && target && !target.air) {
+      const k = v.approach;
+      if (v.ice) {
+        const hole = R.holeGeom();
+        ctx.strokeStyle = U.rgba("#e1f3ec", Math.sin(k * Math.PI) * 0.4);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.ellipse(hole.x, hole.y, hole.rx * (0.35 + k * 0.45), hole.ry * (0.35 + k * 0.45), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const drift = (1 - U.smooth(k)) * 2.5;
+        const wake = R.proj(target.X + drift * v.approachSide, target.Z + drift * 0.6);
+        drawWake(wake, 0.65 + k * 0.25, -v.approachSide, 0.35, Math.sin(k * Math.PI) * 0.77, t);
+      }
+    }
+
     // поплавок / рыба / приманка
     if (!v.ice && target && !target.air) {
       if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target);
@@ -922,16 +938,35 @@
     ctx.beginPath(); ctx.ellipse(x, y + 1, w * 2.2, w * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
   };
 
+  function drawWake(p, speed, dx, dy, alpha, t) {
+    if (speed < 0.14) return;
+    const angle = Math.atan2(dy, dx);
+    const length = U.clamp(p.s * (0.55 + speed), 13, 48);
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(angle);
+    ctx.scale(1, 0.46);
+    ctx.lineCap = "round";
+    for (let i = 0; i < 3; i++) {
+      const k = (t * 3 + i / 3) % 1;
+      const offset = 2 + k * length;
+      const width = 2 + k * length * 0.58;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = U.rgba("#e8f5e3", alpha * (1 - k));
+      ctx.beginPath();
+      ctx.moveTo(-offset - width * 0.55, -width);
+      ctx.quadraticCurveTo(-offset + width * 0.36, 0, -offset - width * 0.55, width);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   R.drawFightFish = function (v, L, t, p) {
     const f = v.fish;
     const night = L.dark > 0.35;
-    // бурун и усы от движения
-    const sp = Math.min(1, Math.hypot(f.vx || 0, f.vz || 0) / 2);
+    const sp = Math.min(1, Math.hypot(f.vx, f.vz) / 2);
     const s = p.s;
-    ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#8090b0", L.dark), 0.25 + sp * 0.4); ctx.lineWidth = 1.2;
-    const dirx = -(f.vx || 0) >= 0 ? 1 : -1;
-    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + dirx * s * 0.8 * sp + s * 0.3, p.y + s * 0.12 * sp + 2); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + dirx * s * 0.8 * sp - s * 0.3, p.y + s * 0.12 * sp + 2); ctx.stroke();
-    if (Math.random() < 0.1 + sp * 0.25) R.ring(f.X, f.Z, 0.25 + f.surface * 0.5, 1);
+    if (!f.jump) drawWake(p, sp, f.vx, -f.vz, (0.35 + 0.46 * sp) * (1 - 0.45 * L.dark), t);
     // силуэт рыбы под водой рядом с берегом
     const lenPx = Math.max(26, f.lenM * s * 1.1);
     if (f.Z < 9 && !f.jump) {
