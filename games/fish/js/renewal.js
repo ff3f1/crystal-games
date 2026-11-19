@@ -20,8 +20,8 @@
   FZ.Input&&FZ.Input.actionUp();const st=G.state(),s=G.sess(),ov=$('ovMenu');
   const tiles=[['mMap','map','Водоёмы'],['mShop','bag','Снасти'],['mAtlas','fish','Атлас рыб'],['mJourney','cup','Экспедиции'],['mJournal','book','Дневник'],['mQuests','list','Задания'],['mTour','star','Турнир дня'],['mForecast','wave','Гид по клёву'],['mSet','gear','Настройки']];
   const rewardReady=FZ.LOCATIONS.some(l=>{const q=FZ.Expeditions.challenge(l.id);return (st.journey.maps[l.id]||0)>=3&&!st.journey.claimed.includes(l.id)||q&&!q.claimed&&q.got===q.need});
-  ov.style.backgroundImage='linear-gradient(180deg,rgba(5,21,25,.48),rgba(5,23,27,.04) 30%,rgba(5,23,27,.94) 85%),url("'+photo(s.loc.id,s.season)+'")';
-  ov.innerHTML='<div class="lodge"><div class="lodge-brand">CRYSTAL GAMES · БОЛЬШАЯ РЫБАЛКА</div><div class="lodge-title"><small>ТВОЯ ИСТОРИЯ НА КАЖДОМ БЕРЕГУ</small><h1>Клюёт<span>!</span></h1><p>62 вида рыб. 20 водоёмов. Один ты и природа.</p></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button><span>НОВЫЕ БЕРЕГА · НОВЫЕ ИСТОРИИ</span></div></div></div>';
+  ov.style.backgroundImage='linear-gradient(180deg,#0b283b81,transparent 34%,#0d313767 52%,#102d35f7 88%),url("'+photo(s.loc.id,s.season)+'")';
+  ov.innerHTML='<div class="lodge"><div class="lodge-title"><small>РЫБАЛКА</small><h1>Клюёт<span>!</span></h1></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button></div></div></div>';
   ov.classList.add('on');$('hud').classList.add('hide');UI.menuOpen=true;
   UI.closeMenu=()=>{ov.classList.remove('on');$('hud').classList.remove('hide');UI.menuOpen=false};
   $('mGo').onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();UI.closeMenu();UI.ambience()};
@@ -38,9 +38,22 @@
  };
  const travel=UI.travel;let travelling=false;
  UI.travel=async function(id,season){if(travelling)return;if(['fight','landing','result'].includes(G.rig().state)){UI.toast('Сначала закончи вываживание','bad');return}const loc=FZ.LOC[id];if(!loc)return;if(G.state().lvl<loc.lvl){UI.toast('Откроется с уровня '+loc.lvl);return}travelling=true;try{await travel(id,season)}finally{travelling=false}};
- UI.showAtlas=function(){
-  const st=G.state(),sh=UI.sheet('<div class="eyebrow">КОЛЛЕКЦИЯ И ПОДСКАЗКИ</div><h2>Атлас рыб</h2><div class="sub">'+Object.keys(st.caught).length+' из 62 видов · коснись рыбы, чтобы узнать, где её искать</div><div class="scroll"><div class="agrid">'+FZ.SPECIES.map(s=>'<button class="acard '+(st.caught[s.id]?'known':'unknown')+'" data-sp="'+s.id+'"><img loading="lazy" data-src="'+speciesImage(s)+'" alt=""><div class="n">'+s.n+'</div><div class="c">'+(st.records[s.id]?U.kg(st.records[s.id].w):'Ещё не поймана')+'</div></button>').join('')+'</div></div>',closeBack);
-  sh.querySelectorAll('[data-sp]').forEach(b=>b.onclick=()=>UI.showSpecies(b.dataset.sp));
+ UI.showAtlas=function() {
+  const st=G.state();
+  const filters=[['all','Все'],['unknown','Не пойманы'],['known','Пойманы']];
+  const sh=UI.sheet('<h2>Атлас рыб</h2><div class="sub">'+Object.keys(st.caught).length+' из 62 видов. Коснись рыбы, чтобы узнать, где её искать.</div><div class="seg atlas-filters">'+filters.map(([id,name])=>'<button data-atlas="'+id+'" class="'+(id==='all'?'on':'')+'">'+name+'</button>').join('')+'</div><div class="scroll"><div class="agrid">'+FZ.SPECIES.map(s=>{
+   const caught=!!st.caught[s.id],record=st.records[s.id];
+   return '<button class="acard '+(caught?'known':'unknown')+'" data-sp="'+s.id+'"><img loading="lazy" data-src="'+speciesImage(s)+'" alt=""><div class="n">'+s.n+'</div><div class="c">'+(record?U.kg(record.w):caught?'Поймана':'Не поймана')+'</div></button>';
+  }).join('')+'</div><p class="empty-state hide" id="atlasEmpty">В этой категории пока нет рыб</p></div>',closeBack);
+  const cards=[...sh.querySelectorAll('[data-sp]')],tabs=[...sh.querySelectorAll('[data-atlas]')];
+  for(const card of cards)card.onclick=()=>UI.showSpecies(card.dataset.sp);
+  for(const tab of tabs)tab.onclick=()=>{
+   const filter=tab.dataset.atlas;
+   for(const t of tabs)t.classList.toggle('on',t===tab);
+   for(const card of cards)card.classList.toggle('hide',filter!=='all'&&!card.classList.contains(filter));
+   sh.querySelector('#atlasEmpty').classList.toggle('hide',cards.some(card=>!card.classList.contains('hide')));
+   sh.querySelector('.scroll').scrollTop=0;
+  };
  };
  UI.showSpecies=function(id){
   const s=FZ.SP[id],st=G.state(),rec=st.records[id],where=FZ.whereLives(id).map(k=>FZ.LOC[k].n),times=Object.keys(s.time).sort((a,b)=>s.time[b]-s.time[a]);
@@ -49,7 +62,7 @@
  UI.showSettings=function(){
   const st=G.state(),S=st.settings,v=S.volumes;
   const slider=(k,n)=>'<label class="volume-control">'+n+'<output id="'+k+'Value">'+Math.round(v[k]*100)+'%</output><input type="range" id="'+k+'Volume" data-volume="'+k+'" min="0" max="100" value="'+Math.round(v[k]*100)+'"></label>';
-  const sh=UI.sheet('<div class="eyebrow">НАСТРОЙ СВОЮ РЫБАЛКУ</div><h2>Настройки</h2><div class="scroll">'+slider('music','Музыка')+slider('effects','Эффекты')+slider('nature','Дальние птицы')+'<div class="opt"><span>Вибрация</span><button class="sw '+(S.vibro?'on':'')+'" id="vibroToggle" aria-label="Вибрация"></button></div><h3>Качество изображения</h3><div class="seg">'+[['auto','Авто'],['hi','Чётко'],['mid','Средне'],['lo','Плавно']].map(x=>'<button data-quality="'+x[0]+'" class="'+(S.quality===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div><p class="quiet-note">Настрой звук и качество изображения под себя — выбранные параметры сохраняются.</p><button id="renewalHelp" class="btn ghost">'+ic('book')+' Как играть</button><button id="renewalRate" class="btn ghost">'+ic('star')+' Оценить в RuStore</button><div class="version-note">Рыбалка: Клюёт! 1.6.0<br>'+st.stats.total+' уловов · '+st.stats.kg.toFixed(1)+' кг · '+st.stats.released+' отпущено</div></div>',closeBack);
+  const sh=UI.sheet('<div class="eyebrow">НАСТРОЙ СВОЮ РЫБАЛКУ</div><h2>Настройки</h2><div class="scroll">'+slider('music','Музыка')+slider('effects','Эффекты')+slider('nature','Дальние птицы')+'<div class="opt"><span>Вибрация</span><button class="sw '+(S.vibro?'on':'')+'" id="vibroToggle" aria-label="Вибрация"></button></div><h3>Качество изображения</h3><div class="seg">'+[['auto','Авто'],['hi','Чётко'],['mid','Средне'],['lo','Плавно']].map(x=>'<button data-quality="'+x[0]+'" class="'+(S.quality===x[0]?'on':'')+'">'+x[1]+'</button>').join('')+'</div><p class="quiet-note">Настрой звук и качество изображения под себя — выбранные параметры сохраняются.</p><button id="renewalHelp" class="btn ghost">'+ic('book')+' Как играть</button><button id="renewalRate" class="btn ghost">'+ic('star')+' Оценить в RuStore</button><div class="version-note">Рыбалка: Клюёт! 1.8 Preview<br>'+st.stats.total+' уловов · '+st.stats.kg.toFixed(1)+' кг · '+st.stats.released+' отпущено</div></div>',closeBack);
   sh.querySelectorAll('[data-volume]').forEach(el=>el.oninput=()=>{const k=el.dataset.volume;v[k]=Number(el.value)/100;$(k+'Value').value=el.value+'%';S.sound=true;S.music=v.music>0;FZ.Sound.setOn(true);FZ.Sound.setMusic(S.music);FZ.Sound.setVolumes(v);FZ.Sound.unlock();G.save(true)});
   $('vibroToggle').onclick=()=>{S.vibro=!S.vibro;$('vibroToggle').classList.toggle('on',S.vibro);G.save(true)};
   sh.querySelectorAll('[data-quality]').forEach(b=>b.onclick=()=>{S.quality=b.dataset.quality;if(S.quality==='auto')S.autoQ='hi';FZ.applyQuality();G.save(true);UI.showSettings()});$('renewalHelp').onclick=UI.showHelp;$('renewalRate').onclick=FZ.Platform.rate;
@@ -110,11 +123,13 @@
    if(bite.phase==='take')html='Подсекай!';
    else if(bite.t>=bite.approach)html='Пробует наживку…';
   }else if(r.state==='fight'){
-   const f=r.fish,velocity=f.warning?f.runDirection:f.vx;
+   const f=r.fish,velocity=f.warning?f.runDirection:f.phase==='run'?(f.runSpeed||f.vx):f.vx;
    const dir=!s.ice&&Math.abs(velocity)>.15?(velocity>0?'вправо':'влево'):'';
-   if(f.strained||f.tension>.88)html=r.reeling?'Леска натянута · отпусти кнопку':'Дай рыбе леску';
+   if(f.jump)html='Рыба в воздухе · отпусти подмотку';
+   else if(f.strained||f.tension>.88)html=r.reeling?'Леска натянута · отпусти кнопку':'Дай рыбе леску';
    else if(f.warning)html='Рывок '+dir+'<small>Приготовься отпустить подмотку</small>';
    else if(f.slackT>.5)html='Подмотай слабину';
+   else if(f.against)html='Удочка гасит рывок';
    else if(f.phase==='run')html=dir?'Рывок '+dir+'!<small>Веди удочку '+(dir==='вправо'?'влево':'вправо')+'</small>':'Рывок! · отпусти подмотку';
    else if(f.S<.3)html='Рыба устала · подматывай';
    else html=r.reeling?'':'Удерживай подмотку';

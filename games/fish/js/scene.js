@@ -63,7 +63,7 @@
   R.setQuality = function (q) { quality = q; R.resize(); };
   R.resize = function () {
     W = window.innerWidth; H = window.innerHeight;
-    dpr = Math.min(window.AndroidShare&&window.AndroidShare.legacyRenderer&&window.AndroidShare.legacyRenderer()?1.25:3, window.devicePixelRatio || 1, { hi: 2, mid: 1.5, lo: 1 }[quality] || 1.5);
+    dpr = Math.min(window.AndroidShare&&window.AndroidShare.legacyRenderer&&window.AndroidShare.legacyRenderer()?1.25:3, window.devicePixelRatio || 1, { hi: 2.35, mid: 1.65, lo: 1.1 }[quality] || 1.5);
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     cv.style.width = W + "px"; cv.style.height = H + "px";
     shoreY = Math.round(H * (H / W > 1.9 ? 0.39 : 0.37));
@@ -763,6 +763,13 @@
     const rod = v.rod || {};
     tip.x += (rod.tilt || 0) * W * 0.24;
     tip.y += (rod.lift || 0) * H * 0.05;
+    if (v.tackle && v.tackle.state === "fly") {
+      const k = v.tackle.flyT;
+      const windup = Math.sin(Math.PI * U.clamp(k / 0.36, 0, 1));
+      const whip = Math.sin(Math.PI * U.clamp((k - 0.24) / 0.76, 0, 1));
+      tip.x += W * (0.31 * windup - 0.12 * whip);
+      tip.y += H * (0.055 * windup - 0.18 * whip);
+    }
     return { base, tip };
   }
   R.rodTip = function (v) { const g = rodGeom(v); return g.tip; };
@@ -774,6 +781,7 @@
     const lineCol = U.rgba(U.mix("#f4f8fb", "#8aa0c8", L.dark * 0.8), 0.75);
     let target = null; // точка, куда уходит леска
     const tk = v.tackle || {};
+    const landing = v.landing && v.fish ? R.landingPose(v) : null;
     if (v.ice) {
       if (v.ice.noHole || v.ice.drill != null) R.drawDrill(v, L, t);
       else {
@@ -781,19 +789,21 @@
         target = { x: h.x + (v.fish && v.fish.hooked ? Math.sin(t * 7) * h.rx * 0.2 : 0), y: h.y + h.ry * 0.35 };
       }
     } else if (tk.state === "fly") {
-      const k = tk.flyT;
+      const k = U.clamp((tk.flyT - 0.24) / 0.76, 0, 1);
       const p = R.proj(tk.X, tk.Z);
-      const x = U.lerp(G.tip.x, p.x, k), y = U.lerp(G.tip.y, p.y, k) - Math.sin(k * Math.PI) * H * 0.22;
+      const x = U.lerp(G.tip.x - 8, p.x, k), y = U.lerp(G.tip.y + 15, p.y, k) - Math.sin(k * Math.PI) * H * 0.19;
       target = { x, y, air: true };
-      ctx.fillStyle = v.mode === "float" ? "#f04a2a" : "#ddd"; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = v.mode === "float" ? "#ff7845" : "#f5e8b9";
+      ctx.beginPath(); ctx.ellipse(x, y, 2.6, 4.2 - k * 1.7, -k, 0, Math.PI * 2); ctx.fill();
     } else if (tk.state === "water" || tk.state === "fight") {
       const X = v.fish && v.fish.hooked ? v.fish.X : tk.X, Z = v.fish && v.fish.hooked ? v.fish.Z : tk.Z;
       const p = R.proj(X, Z);
       target = { x: p.x, y: p.y, s: p.s, X, Z };
     }
 
+    if (landing) target = { x: landing.fishX, y: landing.fishY };
     // натяжение изгибает удилище к цели
-    const bend = U.clamp(rod.bend || 0, 0, 1.4);
+    const bend = v.landing ? (rod.bend || 0) * (1 - v.landing.k) : U.clamp(rod.bend || 0, 0, 1.4);
     let tip = { x: G.tip.x, y: G.tip.y };
     if (target && !target.air) {
       const dx = target.x - tip.x, dy = target.y - tip.y, d = Math.hypot(dx, dy) || 1;
@@ -839,16 +849,16 @@
     }
 
     // поплавок / рыба / приманка
-    if (!v.ice && target && !target.air) {
+    if (!v.ice && !landing && target && !target.air) {
       if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target);
       else if (v.mode === "float") R.drawFloat(target, tk, L, t, night);
       else if (v.mode === "spin" && tk.reeling) { ctx.strokeStyle = U.rgba("#ffffff", 0.35); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(target.x - target.s * 0.4, target.y + 2); ctx.lineTo(target.x, target.y); ctx.lineTo(target.x + target.s * 0.4, target.y + 2); ctx.stroke(); }
       else { ctx.fillStyle = U.rgba("#ffffff", 0.3); ctx.beginPath(); ctx.ellipse(target.x, target.y, 3, 1, 0, 0, Math.PI * 2); ctx.fill(); }
     }
-    if (v.landing) R.drawLanding(v, L, t);
+    if (landing) R.drawLanding(v, L, t, landing);
 
     // A continuous recovered rod image keeps the grip, blank and reel aligned.
-    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle))return;
+    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle,bend))return;
     // удилище
     const bx = G.base.x, by = G.base.y;
     const mx = (bx + tip.x) / 2 - (tip.y - by) * 0.04 * bend, my = (by + tip.y) / 2 + bend * 40 + 10;
@@ -983,22 +993,105 @@
     if (night) { ctx.fillStyle = "rgba(160,255,140,0.6)"; }
   };
 
-  R.drawLanding = function (v, L, t) {
-    const ld = v.landing; const k = ld.k;
-    const cx = W * 0.5, cy = U.lerp(H * 0.72, H * 0.52, U.easeOut(k));
+  R.landingPose = function (v) {
+    const f = v.fish, k = U.clamp(v.landing.k, 0, 1);
+    const start = v.ice ? R.holeGeom() : R.proj(f.X, Math.max(3.6, f.Z));
+    const lift = U.smooth(U.clamp((k - 0.56) / 0.44, 0, 1));
+    const approach = U.smooth(U.clamp(k / 0.56, 0, 1));
+    const fishLength = U.lerp(v.ice ? start.rx * 1.35 : Math.max(26, f.lenM * start.s * 1.1),
+      U.clamp(f.lenM * 270, W * 0.29, W * 0.61), lift);
+    const fishX = U.lerp(start.x, W * 0.5, lift);
+    const fishY = U.lerp(start.y + 5, H * (v.ice ? 0.5 : 0.61), lift);
+    const radius = Math.max(fishLength * 0.6, W * (0.13 + lift * 0.07));
+    const x = fishX + (1 - approach) * W * 0.68 + radius * 0.11;
+    const y = fishY - radius * 0.16 + (1 - approach) * H * 0.29;
+    return { x, y, fishX, fishY, fishLength, radius, lift, approach, angle: U.lerp(0.28, -0.14, approach) + 0.22 * lift };
+  };
+
+  R.drawLanding = function (v, L, t, pose) {
     const f = v.fish;
-    const lenPx = Math.min(W * 0.8, Math.max(80, (f ? f.lenM : 0.3) * 330));
-    if (!v.ice) {
-      // подсачек
-      ctx.strokeStyle = U.mix("#3a3a3a", "#101418", L.dark); ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(W * 1.05, H * 1.05); ctx.lineTo(cx + lenPx * 0.45, cy + 22); ctx.stroke();
-      ctx.strokeStyle = U.mix("#2a2a2a", "#05080c", L.dark); ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.ellipse(cx, cy + 20, lenPx * 0.55, lenPx * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
-      ctx.strokeStyle = "rgba(40,40,40,0.5)"; ctx.lineWidth = 1;
-      for (let i = -5; i <= 5; i++) { ctx.beginPath(); ctx.moveTo(cx + i * lenPx * 0.1, cy + 20 - lenPx * 0.15 * Math.sqrt(1 - (i / 5.5) * (i / 5.5))); ctx.quadraticCurveTo(cx + i * lenPx * 0.06, cy + 70, cx, cy + 80); ctx.stroke(); }
+    const { x, y, fishX, fishY, fishLength, radius, lift, approach, angle } = pose;
+    const fish = () => FZ.Art.drawFish(ctx, f.s, fishX, fishY, fishLength, {
+      phase: t * (10 - lift * 4), amp: 0.24 * (1 - lift * 0.7),
+      alpha: 0.83 + lift * 0.17, dir: f.vx > 0.05 ? -1 : 1, roll: Math.sin(t * 5) * 0.08 * (1 - lift)
+    });
+    if (v.ice) { fish(); return; }
+
+    const depth = radius * (0.24 + lift * 0.5);
+    const width = radius * (0.32 + lift * 0.15);
+    const angleX = Math.cos(angle), angleY = Math.sin(angle);
+    function hoop(a, d) {
+      const axial = Math.cos(a);
+      const cross = Math.sin(a);
+      const taper = axial > 0 ? (1 - 0.65 * axial) * Math.sqrt(Math.abs(cross)) : 1 - axial * 0.25;
+      const nx = radius * axial * (1 - d * 0.68) - radius * 0.15 * d;
+      const ny = cross * width * taper * (1 - d * 0.75) + depth * d;
+      return { x: x + nx * angleX - ny * angleY, y: y + nx * angleY + ny * angleX };
     }
-    if (f) FZ.Art.drawFish(ctx, f.s, cx, cy, lenPx, { phase: t * 12, amp: 0.35 * (1 - k * 0.5), dir: 1, roll: Math.sin(t * 5) * 0.08 });
-    if (Math.random() < 0.5) R.parts.push({ x: cx + (Math.random() - 0.5) * lenPx, y: cy, vx: (Math.random() - 0.5) * 60, vy: -Math.random() * 80, life: 0.6, age: 0, r: 1.5 + Math.random() * 2, col: "rgba(230,242,250,0.9)", g: 500, floor: H });
+    function rim(from, to, d) {
+      for (let i = 0; i <= 24; i++) {
+        const p = hoop(U.lerp(from, to, i / 24), d);
+        if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      }
+    }
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const joint = hoop(0, 0);
+    const handle = { x: W * 1.16, y: H * 1.05 };
+    ctx.strokeStyle = "#18282b";
+    ctx.lineWidth = 10 + lift * 3;
+    ctx.beginPath(); ctx.moveTo(joint.x, joint.y); ctx.lineTo(handle.x, handle.y); ctx.stroke();
+    ctx.strokeStyle = "#556c66";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(joint.x, joint.y - 1.5); ctx.lineTo(handle.x, handle.y - 1.5); ctx.stroke();
+    ctx.strokeStyle = "#b3a170";
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(joint.x, joint.y); ctx.lineTo(U.lerp(joint.x, handle.x, 0.09), U.lerp(joint.y, handle.y, 0.09)); ctx.stroke();
+
+    ctx.beginPath();
+    rim(Math.PI, Math.PI * 2, 0);
+    for (let i = 0; i <= 24; i++) {
+      const p = hoop(Math.PI * i / 24, 1); ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "rgba(16,48,42," + (0.18 + lift * 0.24) + ")";
+    ctx.fill();
+
+    function mesh(from, to, count, alpha) {
+      ctx.strokeStyle = U.rgba("#a5ba9a", alpha * (1 - L.dark * 0.55));
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let row = 1; row <= 4; row++) rim(from, to, row / 4);
+      for (let i = 0; i <= count; i++) {
+        const a = U.lerp(from, to, i / count);
+        const p = hoop(a, 0), q = hoop(a + 0.35, 1), r = hoop(a - 0.35, 1);
+        ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+        ctx.moveTo(p.x, p.y); ctx.lineTo(r.x, r.y);
+      }
+      ctx.stroke();
+    }
+    function edge(from, to) {
+      ctx.beginPath(); rim(from, to, 0);
+      ctx.strokeStyle = "#1d3631"; ctx.lineWidth = 6; ctx.stroke();
+      ctx.strokeStyle = U.mix("#a0ac89", "#677775", L.dark);
+      ctx.lineWidth = 2.4; ctx.stroke();
+    }
+    mesh(Math.PI, Math.PI * 2, 14, 0.42);
+    edge(Math.PI, Math.PI * 2);
+    fish();
+    mesh(0, Math.PI, 14, approach * 0.58);
+    edge(0, Math.PI);
+    if (lift > 0.02 && lift < 0.96) {
+      ctx.fillStyle = "rgba(224,247,240,0.68)";
+      for (let i = 0; i < 7; i++) {
+        const p = hoop(Math.PI * (i + 1) / 8, 0.7);
+        const fall = (lift * 2.1 + i * 0.21) % 1;
+        ctx.globalAlpha = 1 - fall;
+        ctx.beginPath(); ctx.ellipse(p.x, p.y + fall * fall * H * 0.12, 1.2, 1.6 + fall * 2, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
   };
 
   // ---------- Погода ----------
@@ -1006,7 +1099,8 @@
   R.drawWeather = function (v, L, t, dt, wx) {
     const rain = wx.sky === "rain" || wx.sky === "storm", snow = wx.sky === "snow" || (v.ice && wx.sky === "overcast");
     if (!rain && !snow) { drops.length = 0; return; }
-    const n = rain ? (wx.sky === "storm" ? 140 : 80) : 70;
+    const n = Math.round((rain ? (wx.sky === "storm" ? 126 : 70) : 65) * (quality === "lo" ? 0.6 : 1));
+    if (drops.length > n) drops.length = n;
     while (drops.length < n) drops.push({ x: Math.random() * W, y: Math.random() * H, s: Math.random() });
     const wind = (wx.wind / 10) * (wx.dir.indexOf("З") >= 0 ? 1 : -1);
     ctx.strokeStyle = U.rgba(U.mix("#dfe8f2", "#7080a0", L.dark), 0.45); ctx.lineWidth = 1;
@@ -1022,7 +1116,7 @@
         }
       } else {
         d.y += (40 + d.s * 50) * dt; d.x += (Math.sin(t + d.s * 9) * 20 + wind * 60) * dt;
-        ctx.globalAlpha = 0.5 + d.s * 0.5; ctx.fillRect(d.x, d.y, 1.5 + d.s * 2, 1.5 + d.s * 2);
+        ctx.globalAlpha = 0.5 + d.s * 0.5; ctx.beginPath(); ctx.arc(d.x, d.y, 0.75 + d.s * 1.45, 0, Math.PI * 2); ctx.fill();
         if (d.y > H) { d.y = -5; d.x = Math.random() * W; }
       }
     }

@@ -77,3 +77,35 @@
 #ovCatch.trophy .dim { background: radial-gradient(ellipse at 50% 30%, #654c269c, #0d1e21f5 75%); }
 #ovCatch.trophy .catch { border-color: #deb071b3; }
 #ovCatch .wt { font-variant-numeric: tabular-nums; }
+
+#ovMenu .lodge-title {
+  padding: 11px 0 3px;
+  color: #fff9e5;
+  text-shadow: 0 2px 6px #192a37b3, 0 7px 28px #0b1920a9;
+}
+.lodge-title > small { font-size: 11px; letter-spacing: .25em; }
+.lodge-title h1 { color: #fff5da; }
+.lodge-title h1 span { color: #ffc997; }
+.lodge .go {
+  color: #1b3431;
+  background: linear-gradient(112deg, #f5dcaa, #c8e0bc 52%, #a8d9d2);
+  border: 1px solid #f4f2c888;
+  box-shadow: 0 8px 30px #061e2766, inset 0 1px 0 #fff9;
+}
+.lodge .go small { color: #304f49; }
+.lodge-grid .tile {
+  --tile-tone: #b6ddd1;
+  background: linear-gradient(150deg, #31575dc9, #16363cde);
+  border-color: #d7f3dd30;
+  color: #f9f5e8;
+}
+.lodge-grid .tile .i { color: var(--tile-tone); }
+.lodge-grid #mShop, .lodge-grid #mJourney { --tile-tone: #f9ca93; }
+.lodge-grid #mAtlas, .lodge-grid #mTour { --tile-tone: #f4b9a4; }
+.lodge-grid #mMap, .lodge-grid #mForecast { --tile-tone: #9fdcd8; }
+.lodge-grid #mJournal { --tile-tone: #c4cde8; }
+.lodge-grid #mQuests { --tile-tone: #bee0a5; }
+.lodge-footer { justify-content: center; }
+.acard.unknown .c { color: #ffc1b4; }
+.acard.unknown img { opacity: .91; }
+.atlas-filters { margin-bottom: 12px; }

@@ -177,7 +177,7 @@
     setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
     // инструменты/натяжение
     const fight = r.state === "fight" || r.state === "landing";
-    setC("hTens", "hide", !fight);
+    setC("hTens", "hide", r.state !== "fight");
     setC("hDrag", "hide", r.state !== "fight");
     ["tRod", "tBait", "tGb", "tMore"].forEach((id) => setC(id, "hide", fight));
     setC("hIce", "hide", !(s.ice && s.hole && !fight && r.state !== "drill"));
@@ -185,7 +185,7 @@
     const giveLine = r.state === "fight" && r.fish && (r.fish.warning || r.fish.strained || r.fish.phase === "run");
     setC("bAct", "give-line", !!giveLine);
     setC("hTens", "give-line", !!giveLine);
-    if (fight && r.fish) drawTension(r.fish, s, st.drag);
+    if (r.state === "fight" && r.fish) drawTension(r.fish, s, st.drag);
     setT("dVal", Math.round(st.drag * 100) + "%");
     // эхолот — 4 раза в секунду
     if (st.extras.echo && !fight) {
@@ -244,8 +244,6 @@
       case "need": UI.toast(e.what, "bad"); break;
       case "cast": G.rig().castAt = s.t; if (G.state().tut === 0) { G.state().tut = 1; } break;
       case "take": if (G.state().tut === 1) G.state().tut = 2; break;
-      case "hooked": if (e.big) UI.toast("Крупная рыба! Не перетяните", "gold"); break;
-      case "jump": UI.toast("Свечка! Ослабьте натяжение", "gold", 1400); break;
       case "level": FZ.Sound.level(); UI.toast("Уровень " + e.lvl + "! Бонус " + U.money(e.bonus), "gold", 3000); UI.unlocks(e.lvl); break;
       case "quest": UI.toast("Задание выполнено: " + e.q.text + ". Заберите награду в меню", "gold", 3200); break;
       case "catch": UI.showCatch(e.res); break;

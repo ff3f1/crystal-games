@@ -242,7 +242,7 @@
     rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
     rig.X = G.aimClamp(a.X + U.rand.range(-sc, sc), rig.Z).X;
     sess.lastAim = { X: a.X, Z: a.Z };
-    rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.36 + a.Z / 72;
+    rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.5 + a.Z / 68;
     rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.idleT = 0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
@@ -530,9 +530,15 @@
     if (f.phase === "shake") eff *= 1 + 0.45 * Math.sin(t * 28);
     const reeling = rig.reeling;
     const run = f.phase === "run";
-    const against = !sess.ice && Math.abs(rig.tilt) > 0.24 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.16;
+    const bank = sess.ice ? 0 : FZ.Scene.maxLat(Math.max(f.Z, 5));
+    const nearBank = bank > 0 && Math.abs(f.X) > bank * 0.72;
+    const awayFromBank = nearBank && Math.sign(rig.tilt) === -Math.sign(f.X);
+    const runDir = run ? Math.sign(f.runSpeed) : Math.sign(f.vx);
+    const opposeRun = runDir && Math.sign(rig.tilt) === -runDir && (run || Math.abs(f.vx) > 0.2);
+    const steer = !sess.ice && (awayFromBank || opposeRun) ? U.smooth(U.clamp((Math.abs(rig.tilt) - 0.12) / 0.72, 0, 1)) : 0;
+    const against = steer > 0.12;
     f.against = against;
-    const fishPull = f.Fmax * Math.max(0, eff) * (against && run ? 0.78 : 1);
+    const fishPull = f.Fmax * Math.max(0, eff) * (1 - (run ? 0.29 * steer : 0));
     let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") targetTension = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
@@ -549,34 +555,32 @@
 
     const reelSpeed = rod.reel * (1.33 - 0.75 * U.clamp(fishPull / f.Fmax, 0, 1));
     const takingLine = reeling && !slip;
-    const surge = run ? Math.min(1.6, f.Fmax * 0.31) * f.S * (against ? 0.28 : 1) : 0;
+    const surge = run ? Math.min(1.6, f.Fmax * 0.31) * f.S * (1 - 0.83 * steer) : 0;
     const slipSpeed = slip ? Math.min(3, slip / f.Fmax * 4 + 0.35) : 0;
     const swim = (f.phase === "toward" ? -0.85 : surge) + slipSpeed;
     f.vz = U.damp(f.vz, swim - (takingLine ? reelSpeed : 0), 5, dt);
     if (sess.ice) f.D = Math.min(sess.hole.depth, f.D + f.vz * 0.56 * dt);
     else f.Z += f.vz * dt;
-    if (takingLine) {
-      FZ.Sound.reel(reelSpeed);
-      rig.rod.reelAngle += dt * (6 + reelSpeed * 5);
-    }
+    if (takingLine) FZ.Sound.reel(reelSpeed);
+    rig.rod.reelSpeed = U.damp(rig.rod.reelSpeed || 0, takingLine ? 5 + reelSpeed * 4 : slip ? -5 - slip * 2 : 0, 11, dt);
+    rig.rod.reelAngle += rig.rod.reelSpeed * dt;
 
     if (!sess.ice) {
-      const steer = against ? Math.abs(rig.tilt) : 0;
-      const lateral = run ? f.runSpeed * (1 - 0.92 * steer) * (0.4 + 0.6 * f.S) : 0;
-      f.vx = U.damp(f.vx, lateral, against ? 9 : 4, dt);
-      const lat = FZ.Scene.maxLat(Math.max(f.Z, 5));
-      const centerPull = steer * Math.abs(f.X) / lat;
-      f.X += (f.vx - Math.sign(f.X) * centerPull * 1.55) * dt;
-      if (Math.abs(f.X) > lat) {
+      const swimSide = run ? f.runSpeed * (0.4 + 0.6 * f.S) : 0;
+      const pullSide = Math.sign(rig.tilt) * (awayFromBank ? 2.45 : 1.55);
+      const lateral = U.lerp(swimSide, pullSide, steer * (awayFromBank ? 1 : 0.88));
+      f.vx = U.damp(f.vx, lateral, against ? 11 : 4, dt);
+      f.X += f.vx * dt;
+      if (Math.abs(f.X) > bank) {
         f.snagT += dt;
-        f.X = Math.sign(f.X) * lat;
+        f.X = Math.sign(f.X) * bank;
         if (f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true });
-      } else f.snagT = Math.max(0, f.snagT - dt * 2);
+      } else f.snagT = Math.max(0, f.snagT - dt * (awayFromBank && against ? 4 : 2));
       if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
     }
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
     const drain = (0.035 + 0.14 * U.clamp(f.T / f.Fmax, 0, 1.5))
-      / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.55 : 1)
+      / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (1 + 0.65 * steer)
       * rodF * (st.tut < 3 ? 2 : 1);
     f.S = Math.max(0, f.S - drain * dt);
     // провис лески — сход
@@ -635,7 +639,7 @@
   function startLanding() {
     const f = rig.fish;
     if (sess.ice && f.w > (st.extras.auger ? 8 : 5) && !st.extras.gaff && U.rand() < 0.6) return lose("hole");
-    rig.state = "landing"; rig.landing = { k: 0 };
+    rig.state = "landing"; rig.reeling = false; rig.landing = { k: 0 };
     FZ.Sound.splash(0.7);
     if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.8); else FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y - 10, 10);
   }
@@ -798,7 +802,12 @@
     } else if (r.state === "fight") {
       fightTick(dt, t);
     } else if (r.state === "landing") {
-      r.landing.k += dt / 1.2;
+      const previous = r.landing.k;
+      r.landing.k += dt / (sess.ice ? 1.25 : 1.65);
+      if (!sess.ice && previous < 0.58 && r.landing.k >= 0.58) {
+        FZ.Scene.splash(r.fish.X, r.fish.Z, 0.48);
+        FZ.Sound.splash(0.56);
+      }
       if (r.landing.k >= 1) finishCatch();
     }
     if (r.state !== "fight") { r.rod.tension = U.damp(r.rod.tension, 0, 6, dt); }
