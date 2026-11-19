@@ -803,27 +803,21 @@
     }
 
     if (landing) target = { x: landing.fishX, y: landing.fishY };
-    // натяжение изгибает удилище к цели
-    const bend = v.landing ? (rod.bend || 0) * (1 - v.landing.k) : U.clamp(rod.bend || 0, 0, 1.4);
-    const tip = { x: G.tip.x, y: G.tip.y };
-    let flex = bend;
-    if (target && !target.air) {
-      const dx = target.x - tip.x, dy = target.y - tip.y, d = Math.hypot(dx, dy) || 1;
-      const pull = v.fish && !v.ice ? U.clamp((rod.pullSide || 0) + 0.28 * dx / d, -1, 1) : 0;
-      tip.x += (dx / d * 22 + pull * 19) * bend;
-      tip.y += (dy / d * 22 + 13) * bend;
-      if (v.fish && !v.ice) {
-        const normalX = tip.y < G.base.y ? -1 : 1;
-        flex = bend * pull * normalX;
-      }
-    }
-    if (rod.jerk) { tip.y += rod.jerk * 14; tip.x -= rod.jerk * 6; }
+    const floatOnWater = target && !target.air && !landing && !v.fish && v.mode === "float";
+    const lineEnd = floatOnWater ? floatSurface(target, tk, t) : target;
+    const load = rod.load * (landing ? 1 - v.landing.k : 1);
+    const neutral = {
+      x: G.tip.x - (rod.jerk || 0) * 6,
+      y: G.tip.y + (rod.jerk || 0) * 14
+    };
+    const beam = FZ.RodArt.solve(v.mode, G.base, neutral, lineEnd && !target.air ? lineEnd : null, load, v.rodPower);
+    const tip = beam.tip;
     // кивок у зимней удочки / квивертип у фидера
     let lineFrom = tip;
     if (v.mode === "ice") {
       const nod = rod.nod || 0; // -1 подъём, +1 вниз
       const kl = W * 0.2;
-      const kx = tip.x - kl * Math.cos(nod * 0.5), ky = tip.y + kl * Math.sin(nod * 0.5) + bend * 14;
+      const kx = tip.x - kl * Math.cos(nod * 0.5), ky = tip.y + kl * Math.sin(nod * 0.5);
       ctx.strokeStyle = U.mix("#2a2a2a", "#4a5470", L.dark); ctx.lineWidth = 2.6;
       ctx.beginPath(); ctx.moveTo(tip.x, tip.y); ctx.quadraticCurveTo(tip.x - kl * 0.5, tip.y + nod * 10, kx, ky); ctx.stroke();
       if (night) R.glow(kx, ky, 16);
@@ -832,12 +826,14 @@
       lineFrom = { x: kx, y: ky };
     }
 
-    // леска
-    if (target) {
-      const sag = (1 - U.clamp(rod.tension || 0, 0, 1)) * (target.air ? 0 : 40) + 4;
+    // Sag is measured from the chord between the actual line endpoints.
+    if (lineEnd) {
+      const sag = target.air ? 0 : FZ.RodArt.lineSag(lineFrom, lineEnd, load, H);
       ctx.strokeStyle = lineCol; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(lineFrom.x, lineFrom.y);
-      ctx.quadraticCurveTo((lineFrom.x + target.x) / 2, Math.max(lineFrom.y, target.y) + sag, target.x, target.y); ctx.stroke();
+      if (sag < 0.45) ctx.lineTo(lineEnd.x, lineEnd.y);
+      else ctx.quadraticCurveTo((lineFrom.x + lineEnd.x) / 2, (lineFrom.y + lineEnd.y) / 2 + 2 * sag, lineEnd.x, lineEnd.y);
+      ctx.stroke();
     }
 
     if (v.approach != null && target && !target.air) {
@@ -865,16 +861,11 @@
     }
     if (landing) R.drawLanding(v, L, t, landing);
 
-    // A continuous recovered rod image keeps the grip, blank and reel aligned.
-    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle,flex))return;
-    // удилище
-    const bx = G.base.x, by = G.base.y;
-    const axis = Math.hypot(bx - tip.x, by - tip.y) || 1;
-    const mx = (bx + tip.x) / 2 - (by - tip.y) / axis * flex * 31;
-    const my = (by + tip.y) / 2 + (bx - tip.x) / axis * flex * 31;
+    if (FZ.RodArt.draw(ctx, v.mode, G.base, beam, rod.reelAngle)) return;
+    const point = t => FZ.RodArt.pointAt(G.base, beam, t);
     const rodCol = { float: "#2a2420", feeder: "#22384a", spin: "#1a1a1c", ice: "#c8a46a" }[v.mode];
     if (v.mode === "feeder") { // подставка (род-под)
-      const p = qb(bx, by, mx, my, tip.x, tip.y, 0.42);
+      const p = point(0.42);
       ctx.strokeStyle = U.mix("#6a6e74", "#1a2030", L.dark * 0.8); ctx.lineWidth = 4; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(p.x - 18, H + 10); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 18, H + 10); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(p.x - 10, p.y - 4); ctx.lineTo(p.x, p.y + 4); ctx.lineTo(p.x + 10, p.y - 4); ctx.stroke();
@@ -885,7 +876,7 @@
       const n = 10, left = [], right = [];
       for (let i = 0; i <= n; i++) {
         const tt = U.lerp(a0, a1, i / n);
-        const p = qb(bx, by, mx, my, tip.x, tip.y, tt), q = qb(bx, by, mx, my, tip.x, tip.y, Math.min(1, tt + 0.01));
+        const p = point(tt), q = point(Math.min(1, tt + 0.01));
         let nx = -(q.y - p.y), ny = q.x - p.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
         const hw = U.lerp(w0, w1, tt) / 2;
         left.push([p.x + nx * hw, p.y + ny * hw]); right.push([p.x - nx * hw, p.y - ny * hw]);
@@ -904,16 +895,16 @@
     // кольца одним контуром
     ctx.strokeStyle = U.mix("#c8ccd0", "#303848", L.dark); ctx.lineWidth = 1.2;
     ctx.beginPath();
-    for (let i = 1; i < 6; i++) { const p = qb(bx, by, mx, my, tip.x, tip.y, 0.3 + i * 0.12), r2 = 2.5 - i * 0.25; ctx.moveTo(p.x + r2, p.y - 3); ctx.arc(p.x, p.y - 3, r2, 0, Math.PI * 2); }
+    for (let i = 1; i < 6; i++) { const p = point(0.3 + i * 0.12), r2 = 2.5 - i * 0.25; ctx.moveTo(p.x + r2, p.y - 3); ctx.arc(p.x, p.y - 3, r2, 0, Math.PI * 2); }
     ctx.stroke();
     // колокольчик донки
     if (v.mode === "feeder") {
-      const p = qb(bx, by, mx, my, tip.x, tip.y, 0.9);
+      const p = point(0.9);
       ctx.fillStyle = "#d8b04a"; ctx.beginPath(); ctx.arc(p.x, p.y + 6 + Math.sin(t * 30) * (rod.ring || 0) * 3, 4, 0, Math.PI); ctx.fill();
     }
     // катушка
     {
-      const p = qb(bx, by, mx, my, tip.x, tip.y, v.mode === "ice" ? 0.12 : 0.1);
+      const p = point(v.mode === "ice" ? 0.12 : 0.1);
       const rr = v.mode === "ice" ? 13 : 20;
       ctx.save(); ctx.translate(p.x - 2, p.y + rr * 0.9);
       const gg = ctx.createLinearGradient(-rr, -rr, rr, rr); gg.addColorStop(0, U.mix("#c8ccd4", "#202838", L.dark * 0.7)); gg.addColorStop(1, U.mix("#5a606a", "#05080e", L.dark * 0.7));
@@ -926,14 +917,15 @@
       ctx.restore();
     }
   };
-  function qb(x0, y0, x1, y1, x2, y2, t) { const a = (1 - t) * (1 - t), b = 2 * (1 - t) * t, c = t * t; return { x: a * x0 + b * x1 + c * x2, y: a * y0 + b * y1 + c * y2 }; }
+  function floatSurface(p, tk, t) {
+    return { x: p.x + (tk.dx || 0), y: p.y + Math.sin(t * 2.1) * 0.6 + (tk.bob || 0) };
+  }
 
   R.drawFloat = function (p, tk, L, t, night) {
     const z = tk.Z;
     const hgt = U.clamp(30 * Math.pow(10 / z, 0.65), 11, 34);
     const sink = tk.sink || 0, tilt = tk.tilt || 0;
-    const bob = Math.sin(t * 2.1) * 0.6 + (tk.bob || 0);
-    const x = p.x + (tk.dx || 0), y = p.y + bob;
+    const { x, y } = floatSurface(p, tk, t);
     const w = Math.max(2.2, hgt * 0.13);
     // отражение
     ctx.save(); ctx.globalAlpha = 0.25 * (1 - Math.abs(sink));

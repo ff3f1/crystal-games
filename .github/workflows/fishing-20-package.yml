@@ -49,21 +49,21 @@ jobs:
           gradle :app:assembleRelease --no-daemon
           -PappId=ru.crystalgames.fishing
           '-PappName=Рыбалка: Клюёт!'
-          -PversionCode=2000 -PversionName=2.0.0
+          -PversionCode=2001 -PversionName=2.0.1
           -PadInter=R-M-20269656-1 -PadReward=R-M-20269656-2
       - name: Verify update against APK 1.6
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/release/app-release.apk output/fishing-2.0.0.apk
+          cp android/app/build/outputs/apk/release/app-release.apk output/fishing-2.0.1.apk
           curl --fail --silent --show-error --location -o "$RUNNER_TEMP/fishing-1.6.0.apk" https://raw.githubusercontent.com/ff3f1/crystal-games/builds-fishing-1.6-final/fishing-1.6.0.apk
           printf 'ed5bd295896f6e3c7acd425ccf57bf5613ba23f4a0e23cfde75d0c67f1581a5c  %s/fishing-1.6.0.apk\n' "$RUNNER_TEMP" | sha256sum -c -
           kit=$(dirname "$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)")
-          "$kit/apksigner" verify --print-certs output/fishing-2.0.0.apk > output/signature.txt
+          "$kit/apksigner" verify --print-certs output/fishing-2.0.1.apk > output/signature.txt
           "$kit/apksigner" verify --print-certs "$RUNNER_TEMP/fishing-1.6.0.apk" > "$RUNNER_TEMP/fishing-1.6.signature"
           test "$(awk '/certificate SHA-256 digest:/ { print $NF }' output/signature.txt)" = "$(awk '/certificate SHA-256 digest:/ { print $NF }' "$RUNNER_TEMP/fishing-1.6.signature")"
-          "$kit/aapt" dump badging output/fishing-2.0.0.apk > output/package.txt
-          grep -F "package: name='ru.crystalgames.fishing' versionCode='2000' versionName='2.0.0'" output/package.txt
-          sha256sum output/fishing-2.0.0.apk > output/SHA256SUMS.txt
+          "$kit/aapt" dump badging output/fishing-2.0.1.apk > output/package.txt
+          grep -F "package: name='ru.crystalgames.fishing' versionCode='2001' versionName='2.0.1'" output/package.txt
+          sha256sum output/fishing-2.0.1.apk > output/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: fishing-2.0-signed-apk

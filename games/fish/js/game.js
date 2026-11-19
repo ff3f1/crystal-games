@@ -244,7 +244,7 @@
   }
 
   function resetRig() {
-    rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { bend: 0, tension: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, ring: 0 },
+    rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { load: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, ring: 0 },
       bite: null, fish: null, reeling: false, tilt: 0, still: 0, idleT: 0, landing: null, msgT: 0 };
     if (sess && sess.ice && sess.hole) { rig.state = "wait"; rig.lure = sess.hole.lure; }
   }
@@ -472,14 +472,16 @@
   // Анимация поплавка/кивка/вершинки во время поклёвки
   function biteAnim(dt, t) {
     const fa = rig.fa, b = rig.bite, rod = rig.rod;
-    let sink = 0, tilt = 0, dx = 0, nod = 0, tipBend = sess.mode === "feeder" ? 0.28 : 0;
+    let sink = 0, tilt = 0, dx = 0, nod = 0;
+    const inWater = ["settle", "wait", "bite"].includes(rig.state);
+    let load = inWater ? (sess.mode === "feeder" ? 0.18 : sess.mode === "spin" && rig.reeling ? 0.12 : 0.026) : 0;
     if (b) {
       const ta = b.touchAnim > 0 ? Math.sin((0.35 - b.touchAnim) / 0.35 * Math.PI) : 0;
       if (b.phase === "touch") {
         if (b.style === "lay") sink = -0.3 * ta; else sink = 0.25 * ta;
         dx = (b.style === "slide" ? 2 : 0) * ta;
         nod = (b.style === "lay" ? -0.3 : 0.35) * ta;
-        tipBend += 0.18 * ta;
+        load += (b.style === "lay" ? -0.018 : 0.04) * ta;
       } else {
         const k = U.clamp(b.t / Math.min(0.35, b.take * 0.3), 0, 1);
         switch (b.style) {
@@ -489,12 +491,12 @@
           case "drag": sink = U.lerp(0, 1.1, k); dx = U.lerp(0, 16, U.clamp(b.t / b.take, 0, 1)); break;
         }
         nod = b.style === "lay" ? -0.9 * k : 1 * k;
-        tipBend = b.style === "lay" && sess.mode === "feeder" ? U.lerp(0.28, -0.05, k) : U.lerp(tipBend, 1, k);
+        load = U.lerp(load, b.style === "lay" ? 0.012 : 0.24, k);
       }
     }
     fa.sink = U.damp(fa.sink, sink, 14, dt); fa.tilt = U.damp(fa.tilt, tilt, 10, dt); fa.dx = U.damp(fa.dx, dx, 8, dt);
     rod.nod = U.damp(rod.nod, nod, 16, dt);
-    if (rig.state !== "fight") rod.bend = U.damp(rod.bend, tipBend, 12, dt);
+    if (rig.state !== "fight" && rig.state !== "landing") rod.load = U.damp(rod.load, load, 17, dt);
   }
 
   // ---------- Подсечка ----------
@@ -667,12 +669,7 @@
       if (f.Z > 100) return lose("spool");
     }
     // для отрисовки
-    const bend = U.clamp(f.T / (rod.power * 1.1), 0, 1.4);
-    const rodVisual = rig.rod;
-    rodVisual.bendVel = ((rodVisual.bendVel || 0) + (bend - rodVisual.bend) * 96 * dt) * Math.exp(-13 * dt);
-    rodVisual.bend = U.clamp(rodVisual.bend + rodVisual.bendVel * dt, 0, 1.48);
-    rodVisual.tension = U.clamp(f.T / lineT, 0, 1);
-    rodVisual.pullSide = U.damp(rodVisual.pullSide || 0, U.clamp(f.vx / 0.7, -1, 1), 8, dt);
+    rig.rod.load = U.damp(rig.rod.load, f.T, 23, dt);
     f.tension = f.T / lineT;
     f.strained = !!slip || f.tension > 0.86;
     if (sess.duel && f.strained && reeling) f.duelStrain = (f.duelStrain || 0) + dt;
@@ -696,7 +693,7 @@
     if (g.bait && !g.bait.lure) useBait();
     f.reviveBait=g.bait?{id:g.bait.id,lure:!!g.bait.lure}:null;
     rig.lost = { f, why, canRevive: !f.revived && why !== "spool" };
-    rig.fish = null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.tension = 0;
+    rig.fish = null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.load = 0;
     emit("lost", { text, why, fish: f });
     G.save();
   }
@@ -906,7 +903,6 @@
       }
       if (r.landing.k >= 1) finishCatch();
     }
-    if (r.state !== "fight") { r.rod.tension = U.damp(r.rod.tension, 0, 6, dt); }
     biteAnim(dt, t);
   };
   // Спиннинг: проводка
@@ -926,7 +922,7 @@
     const v = {
       loc: sess.loc, season: sess.season, hour: sess.hour, period: sess.period, wx: sess.wx, t, ice: sess.ice ? { holeId: sess.hole ? sess.hole.id : 0 } : null,
       mode: sess.mode, spots: sess.spots, fedSpot: sess.fedSpot,
-      rod: r.rod, tackle: { state: r.state === "fly" ? "fly" : (r.state === "idle" || r.state === "nohole" || r.state === "drill" || r.state === "result") ? "none" : "water", X: r.X, Z: r.Z, flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
+      rod: r.rod, rodPower: (FZ.ROD[G.loadout().rod] || FZ.ROD.f1).power, tackle: { state: r.state === "fly" ? "fly" : (r.state === "idle" || r.state === "nohole" || r.state === "drill" || r.state === "result") ? "none" : "water", X: r.X, Z: r.Z, flyT: r.flyT, sink: r.fa.sink, tilt: r.fa.tilt, dx: r.fa.dx, bob: 0, reeling: r.reeling && sess.mode === "spin" },
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };
