@@ -805,10 +805,17 @@
     if (landing) target = { x: landing.fishX, y: landing.fishY };
     // натяжение изгибает удилище к цели
     const bend = v.landing ? (rod.bend || 0) * (1 - v.landing.k) : U.clamp(rod.bend || 0, 0, 1.4);
-    let tip = { x: G.tip.x, y: G.tip.y };
+    const tip = { x: G.tip.x, y: G.tip.y };
+    let flex = bend;
     if (target && !target.air) {
       const dx = target.x - tip.x, dy = target.y - tip.y, d = Math.hypot(dx, dy) || 1;
-      tip.x += dx / d * bend * 26; tip.y += dy / d * bend * 26 + bend * 18;
+      const pull = v.fish && !v.ice ? U.clamp((rod.pullSide || 0) + 0.28 * dx / d, -1, 1) : 0;
+      tip.x += (dx / d * 22 + pull * 19) * bend;
+      tip.y += (dy / d * 22 + 13) * bend;
+      if (v.fish && !v.ice) {
+        const normalX = tip.y < G.base.y ? -1 : 1;
+        flex = bend * pull * normalX;
+      }
     }
     if (rod.jerk) { tip.y += rod.jerk * 14; tip.x -= rod.jerk * 6; }
     // кивок у зимней удочки / квивертип у фидера
@@ -859,10 +866,12 @@
     if (landing) R.drawLanding(v, L, t, landing);
 
     // A continuous recovered rod image keeps the grip, blank and reel aligned.
-    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle,bend))return;
+    if(FZ.RodArt&&FZ.RodArt.draw(ctx,v.mode,G.base,tip,rod.reelAngle,flex))return;
     // удилище
     const bx = G.base.x, by = G.base.y;
-    const mx = (bx + tip.x) / 2 - (tip.y - by) * 0.04 * bend, my = (by + tip.y) / 2 + bend * 40 + 10;
+    const axis = Math.hypot(bx - tip.x, by - tip.y) || 1;
+    const mx = (bx + tip.x) / 2 - (by - tip.y) / axis * flex * 31;
+    const my = (by + tip.y) / 2 + (bx - tip.x) / axis * flex * 31;
     const rodCol = { float: "#2a2420", feeder: "#22384a", spin: "#1a1a1c", ice: "#c8a46a" }[v.mode];
     if (v.mode === "feeder") { // подставка (род-под)
       const p = qb(bx, by, mx, my, tip.x, tip.y, 0.42);

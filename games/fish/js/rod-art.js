@@ -31,7 +31,7 @@
    ctx.translate(base.x,base.y);ctx.rotate(p.angle);ctx.scale(p.scale,p.scale);
    const flexEnd = Math.round(c.reelX - 74);
    const flex = (bend || 0) * (mode === "ice" ? 26 : 115);
-   if (flex > 4 && flexEnd > c.tipX) {
+   if (Math.abs(flex) > 4 && flexEnd > c.tipX) {
      // Warp the blank while the grip and the reel remain aligned.
      const step = (flexEnd - c.tipX) / 14;
      for (let left = 0; left < flexEnd;) {

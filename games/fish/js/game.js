@@ -672,6 +672,7 @@
     rodVisual.bendVel = ((rodVisual.bendVel || 0) + (bend - rodVisual.bend) * 96 * dt) * Math.exp(-13 * dt);
     rodVisual.bend = U.clamp(rodVisual.bend + rodVisual.bendVel * dt, 0, 1.48);
     rodVisual.tension = U.clamp(f.T / lineT, 0, 1);
+    rodVisual.pullSide = U.damp(rodVisual.pullSide || 0, U.clamp(f.vx / 0.7, -1, 1), 8, dt);
     f.tension = f.T / lineT;
     f.strained = !!slip || f.tension > 0.86;
     if (sess.duel && f.strained && reeling) f.duelStrain = (f.duelStrain || 0) + dt;
