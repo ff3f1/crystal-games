@@ -1001,94 +1001,98 @@
     const fishLength = U.lerp(v.ice ? start.rx * 1.35 : Math.max(26, f.lenM * start.s * 1.1),
       U.clamp(f.lenM * 270, W * 0.29, W * 0.61), lift);
     const fishX = U.lerp(start.x, W * 0.5, lift);
-    const fishY = U.lerp(start.y + 5, H * (v.ice ? 0.5 : 0.61), lift);
-    const radius = Math.max(fishLength * 0.6, W * (0.13 + lift * 0.07));
-    const x = fishX + (1 - approach) * W * 0.68 + radius * 0.11;
-    const y = fishY - radius * 0.16 + (1 - approach) * H * 0.29;
-    return { x, y, fishX, fishY, fishLength, radius, lift, approach, angle: U.lerp(0.28, -0.14, approach) + 0.22 * lift };
+    const surfaceY = U.lerp(start.y + 5, H * (v.ice ? 0.5 : 0.53), lift);
+    const radius = Math.max(fishLength * 0.64, W * (0.14 + lift * 0.085));
+    const x = U.lerp(fishX, W * 0.54, 1 - approach);
+    const y = surfaceY - radius * 0.17 + (1 - approach) * H * 0.31;
+    const gripX = W * 0.54, gripY = H * (1.2 + 0.34 * (1 - approach));
+    const length = Math.hypot(gripX - x, gripY - y) || 1;
+    const axisX = (gripX - x) / length, axisY = (gripY - y) / length;
+    const opening = radius * (0.28 + lift * 0.18);
+    const jointX = x + axisX * opening, jointY = y + axisY * opening;
+    return { x, y, fishX, fishY: surfaceY + (v.ice ? 0 : radius * 0.28 * lift),
+      fishLength, radius, lift, approach, axisX, axisY, opening, jointX, jointY, gripX, gripY };
   };
 
   R.drawLanding = function (v, L, t, pose) {
     const f = v.fish;
-    const { x, y, fishX, fishY, fishLength, radius, lift, approach, angle } = pose;
-    const fish = () => FZ.Art.drawFish(ctx, f.s, fishX, fishY, fishLength, {
-      phase: t * (10 - lift * 4), amp: 0.24 * (1 - lift * 0.7),
-      alpha: 0.83 + lift * 0.17, dir: f.vx > 0.05 ? -1 : 1, roll: Math.sin(t * 5) * 0.08 * (1 - lift)
-    });
-    if (v.ice) { fish(); return; }
-
-    const depth = radius * (0.24 + lift * 0.5);
-    const width = radius * (0.32 + lift * 0.15);
-    const angleX = Math.cos(angle), angleY = Math.sin(angle);
-    function hoop(a, d) {
-      const axial = Math.cos(a);
-      const cross = Math.sin(a);
-      const taper = axial > 0 ? (1 - 0.65 * axial) * Math.sqrt(Math.abs(cross)) : 1 - axial * 0.25;
-      const nx = radius * axial * (1 - d * 0.68) - radius * 0.15 * d;
-      const ny = cross * width * taper * (1 - d * 0.75) + depth * d;
-      return { x: x + nx * angleX - ny * angleY, y: y + nx * angleY + ny * angleX };
+    const { x, y, fishX, fishY, fishLength, radius, lift, approach, axisX, axisY, opening, jointX, jointY, gripX, gripY } = pose;
+    function drawFish() {
+      FZ.Art.drawFish(ctx, f.s, fishX, fishY, fishLength, {
+        phase: t * (10 - lift * 4), amp: 0.23 * (1 - lift * 0.72),
+        alpha: 0.84 + lift * 0.16, dir: f.vx > 0.05 ? -1 : 1, roll: Math.sin(t * 5) * 0.07 * (1 - lift)
+      });
     }
-    function rim(from, to, d) {
-      for (let i = 0; i <= 24; i++) {
-        const p = hoop(U.lerp(from, to, i / 24), d);
-        if (!i) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    if (v.ice) { drawFish(); return; }
+
+    const sag = radius * (0.31 + lift * 0.88);
+    function meshPoint(a, d) {
+      const fore = Math.cos(a), side = Math.sin(a);
+      const cross = Math.sign(side) * Math.pow(Math.abs(side), 0.79);
+      const along = fore * opening * (1 - d * 0.67);
+      const across = cross * radius * (1 - fore * 0.18) * (1 - 0.38 * d * d);
+      const fold = Math.sin(a * 5 + 0.6) * d * d * radius * 0.045;
+      return [x + along * axisX + across * axisY, y + along * axisY - across * axisX + (sag + fold) * d];
+    }
+    const half = Math.PI / 2;
+    function trace(from,to,d,join) {
+      for (let i=0;i<=24;i++) {
+        const p=meshPoint(U.lerp(from,to,i/24),d);
+        if (!i && !join) ctx.moveTo(...p); else ctx.lineTo(...p);
       }
     }
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    const joint = hoop(0, 0);
-    const handle = { x: W * 1.16, y: H * 1.05 };
-    ctx.strokeStyle = "#18282b";
-    ctx.lineWidth = 10 + lift * 3;
-    ctx.beginPath(); ctx.moveTo(joint.x, joint.y); ctx.lineTo(handle.x, handle.y); ctx.stroke();
-    ctx.strokeStyle = "#556c66";
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(joint.x, joint.y - 1.5); ctx.lineTo(handle.x, handle.y - 1.5); ctx.stroke();
-    ctx.strokeStyle = "#b3a170";
-    ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(joint.x, joint.y); ctx.lineTo(U.lerp(joint.x, handle.x, 0.09), U.lerp(joint.y, handle.y, 0.09)); ctx.stroke();
-
-    ctx.beginPath();
-    rim(Math.PI, Math.PI * 2, 0);
-    for (let i = 0; i <= 24; i++) {
-      const p = hoop(Math.PI * i / 24, 1); ctx.lineTo(p.x, p.y);
-    }
-    ctx.closePath();
-    ctx.fillStyle = "rgba(16,48,42," + (0.18 + lift * 0.24) + ")";
-    ctx.fill();
-
-    function mesh(from, to, count, alpha) {
-      ctx.strokeStyle = U.rgba("#a5ba9a", alpha * (1 - L.dark * 0.55));
-      ctx.lineWidth = 0.8;
+    function handleStroke(start,end,width,color) {
       ctx.beginPath();
-      for (let row = 1; row <= 4; row++) rim(from, to, row / 4);
-      for (let i = 0; i <= count; i++) {
-        const a = U.lerp(from, to, i / count);
-        const p = hoop(a, 0), q = hoop(a + 0.35, 1), r = hoop(a - 0.35, 1);
-        ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
-        ctx.moveTo(p.x, p.y); ctx.lineTo(r.x, r.y);
+      ctx.moveTo(U.lerp(jointX,gripX,start),U.lerp(jointY,gripY,start));
+      ctx.lineTo(U.lerp(jointX,gripX,end),U.lerp(jointY,gripY,end));
+      ctx.lineWidth=width;ctx.strokeStyle=color;ctx.stroke();
+    }
+    function mesh(from,to,opacity) {
+      ctx.strokeStyle=U.rgba("#182d29",opacity*(1-L.dark*0.42));
+      ctx.lineWidth=0.67;
+      ctx.beginPath();
+      for(let i=0;i<=24;i++) {
+        const a=U.lerp(from,to,i/24);
+        for(const dir of [-1,1]) {
+          ctx.moveTo(...meshPoint(a,0));
+          for(let row=1;row<=7;row++)ctx.lineTo(...meshPoint(a+dir*row*.048,row/7));
+        }
       }
+      trace(from,to,1,false);
       ctx.stroke();
     }
-    function edge(from, to) {
-      ctx.beginPath(); rim(from, to, 0);
-      ctx.strokeStyle = "#1d3631"; ctx.lineWidth = 6; ctx.stroke();
-      ctx.strokeStyle = U.mix("#a0ac89", "#677775", L.dark);
-      ctx.lineWidth = 2.4; ctx.stroke();
+    function rim(from,to,near) {
+      ctx.beginPath();trace(from,to,0,false);
+      ctx.strokeStyle=near?"#1b2426":"#101c20";ctx.lineWidth=near?7:5;ctx.stroke();
+      ctx.strokeStyle=near?"#a16858":"#536369";ctx.lineWidth=1.35;ctx.stroke();
     }
-    mesh(Math.PI, Math.PI * 2, 14, 0.42);
-    edge(Math.PI, Math.PI * 2);
-    fish();
-    mesh(0, Math.PI, 14, approach * 0.58);
-    edge(0, Math.PI);
-    if (lift > 0.02 && lift < 0.96) {
-      ctx.fillStyle = "rgba(224,247,240,0.68)";
-      for (let i = 0; i < 7; i++) {
-        const p = hoop(Math.PI * (i + 1) / 8, 0.7);
-        const fall = (lift * 2.1 + i * 0.21) % 1;
-        ctx.globalAlpha = 1 - fall;
-        ctx.beginPath(); ctx.ellipse(p.x, p.y + fall * fall * H * 0.12, 1.2, 1.6 + fall * 2, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.save();ctx.lineCap="round";ctx.lineJoin="round";
+    handleStroke(0,1,8,"#182328");
+    handleStroke(0.04,0.74,2.1,"#697d7d");
+    handleStroke(0.5,0.54,9,"#293739");
+    handleStroke(0.78,1,11,"#20292a");
+
+    ctx.beginPath();
+    trace(half,half*3,0,false);
+    trace(half*3,half,1,true);
+    ctx.closePath();
+    ctx.fillStyle=U.rgba("#254644",0.12+lift*0.19);ctx.fill();
+    mesh(half,half*3,0.49);
+    rim(half,half*3,false);
+    drawFish();
+    mesh(-half,half,approach*0.67);
+    rim(-half,half,true);
+    handleStroke(0,0.075,9,"#263638");
+    handleStroke(0.028,0.064,2.5,"#92a1a0");
+
+    if (lift > 0.025 && lift < 0.92) {
+      ctx.fillStyle="#d9f5f1";
+      for (let i=0;i<6;i++) {
+        const p=meshPoint(half*(i-2.5)/3,0.94);
+        const fall=(lift*2+i*0.17)%1;
+        ctx.globalAlpha=0.7*(1-fall);
+        ctx.beginPath();ctx.ellipse(p[0],p[1]+fall*fall*H*.085,1,1.3+fall*2,0,0,Math.PI*2);ctx.fill();
       }
     }
     ctx.restore();
@@ -1096,7 +1100,7 @@
 
   // ---------- Погода ----------
   let drops = [];
-  R.drawWeather = function (v, L, t, dt, wx) {
+  R.drawWeather = function (v, L, t, dt, wx, containsWater) {
     const rain = wx.sky === "rain" || wx.sky === "storm", snow = wx.sky === "snow" || (v.ice && wx.sky === "overcast");
     if (!rain && !snow) { drops.length = 0; return; }
     const n = Math.round((rain ? (wx.sky === "storm" ? 126 : 70) : 65) * (quality === "lo" ? 0.6 : 1));
@@ -1111,7 +1115,7 @@
         d.y += (520 + d.s * 300) * dt; d.x += wind * 160 * dt;
         ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + wind * 6, d.y + 10 + d.s * 6);
         if (d.y > H || d.y > shoreY + (H - shoreY) * d.s && d.y > shoreY && Math.random() < dt * 3) {
-          if (d.y > shoreY && !v.ice) { const w = R.unproj(d.x, d.y); if (Math.random() < 0.35) R.ring(w.X, w.Z, 0.15, 0.5); }
+          if (d.y > shoreY && !v.ice && (!containsWater || containsWater(d.x,d.y))) { const w = R.unproj(d.x, d.y); if (Math.random() < 0.35) R.ring(w.X, w.Z, 0.15, 0.5); }
           d.y = -10; d.x = Math.random() * W;
         }
       } else {
