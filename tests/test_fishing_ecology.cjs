@@ -81,4 +81,24 @@ assert.equal(state.state,'wait','no idle time bypass on incompatible bait');
 assert.equal(state.bite,null,'zero probability must remain zero');
 assert.match(fs.readFileSync(path.join(root,'game.js'),'utf8'),/E[cC]ology\.patience|FZ\.Ecology\.patience/);
 assert(!fs.readFileSync(path.join(root,'game.js'),'utf8').includes('r.idleT > Math.min(24'), 'forced bite was removed');
-console.log('PASS 62 species, 20 waters, bait compatibility, habitat, feeding spots, presentation, trophy temperament, no forced bite');
+// Shore tactics must be species-aware and never send fish through dry land.
+assert.equal(E.chooseRunDirection(FZ.SP.pike,12,16,()=>.1),1);
+assert.equal(E.chooseRunDirection(FZ.SP.bream,12,16,()=>.1),-1);
+assert.equal(E.chooseRunDirection(FZ.SP.pike,15.8,16,()=>.1),-1);
+// Real engine regression: a trophy may make one warned final run near the bank.
+const species=FZ.SP.carp,fishWeight=10,maxPull=species.fight.power*(.6+1.2*Math.pow(fishWeight,.75));
+st.load.float.rod='f3';st.load.float.line='l7';st.load.float.hook='h4';
+state.state='fight';state.X=6;state.Z=11;
+state.fish={s:species,w:fishWeight,lenCm:80,lenM:.8,hooked:true,X:6,Z:11,D:0,vx:0,vz:0,
+  S:.25,effort:.38,phase:'rest',phaseT:.95,T:maxPull*.35,Fmax:maxPull,slackT:0,snagT:0,
+  surface:0,jump:null,chance:0,jumped:0,t:0};
+G.update(.05,96);
+assert(state.fish.finalSurge,'trophy final surge initiated');
+assert(state.fish.warning,'warning occurs before actual run');
+assert.equal(state.fish.nextPhase,'run');
+for(let i=0;i<12;i++)G.update(.05,96.05+i*.05);
+assert.equal(state.fish.phase,'run','trophy enters its final run');
+assert(state.fish.finalSurge,'final surge can trigger only once');
+assert.match(fs.readFileSync(path.join(root,'ui.js'),'utf8'),/Трофей делает последний рывок/);
+
+console.log('PASS 62 species, 20 waters, bait compatibility, habitat, feeding spots, presentation, trophy temperament, no forced bite, cover tactics and warned trophy surge');
