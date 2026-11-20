@@ -35,7 +35,11 @@
   if(entry.kind==="hook")return x.note||"Крючок для оснастки";
   if(entry.kind==="extra")return x.note||"Дополнительное снаряжение";
   if(entry.kind==="gb")return "Прикормка для мирной рыбы · 5 порций";
-  return x.lure?"Искусственная приманка для "+x.m.join(", "):"Натуральная наживка · "+x.pack+" шт. в упаковке";
+  if(x.lure){
+    const names={spin:"спиннинга",ice:"зимней рыбалки",feeder:"фидера",float:"поплавочной ловли"};
+    return "Приманка для "+x.m.map(mode=>names[mode]||"рыбалки").join(", ");
+  }
+  return "Натуральная наживка · "+x.pack+" шт. в упаковке";
  }
  function tag(entry){
   if(equipped(entry))return "На снасти";
@@ -57,6 +61,28 @@
   const selected=sh&&sh.querySelector('.tabs .tab.on');
   const section=selected&&selected.dataset.tab;
   if(!scroll||!data[section])return result;
+  // Make the hidden remaining shop categories discoverable on small phones.
+  const tabs=sh.querySelector('.tabs');
+  if(tabs){
+    const strip=document.createElement('div');strip.className='cozy-tab-strip';
+    tabs.parentNode.insertBefore(strip,tabs);strip.appendChild(tabs);
+    const arrow=document.createElement('button');arrow.type='button';arrow.className='cozy-tab-next';
+    strip.appendChild(arrow);
+    const update=()=>{
+      const overflow=tabs.scrollWidth>tabs.clientWidth+3;
+      const atEnd=tabs.scrollLeft>=tabs.scrollWidth-tabs.clientWidth-3;
+      arrow.hidden=!overflow;
+      arrow.textContent=atEnd?'‹':'›';
+      arrow.setAttribute('aria-label',atEnd?'Показать первые вкладки':'Показать остальные вкладки');
+    };
+    arrow.addEventListener('click',()=>{
+      const atEnd=tabs.scrollLeft>=tabs.scrollWidth-tabs.clientWidth-3;
+      tabs.scrollLeft+=atEnd?-Math.max(125,tabs.clientWidth*.78):Math.max(125,tabs.clientWidth*.78);
+      update();
+    });
+    tabs.addEventListener('scroll',update,{passive:true});
+    requestAnimationFrame(update);
+  }
   const list=data[section]();
   const rows=[...scroll.children].filter(e=>e.classList&&e.classList.contains('row'));
   if(rows.length!==list.length){console.warn("Cozy inventory: list mismatch",section,rows.length,list.length);return result}

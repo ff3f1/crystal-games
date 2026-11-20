@@ -60,6 +60,10 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    });
    assert(narrow.rows>=8 && narrow.clipped.length===0 && narrow.sheetWidth<=320+2,'compact shop layout '+JSON.stringify(narrow));
    assert(narrow.tabCanScroll,'shop categories must remain horizontally scrollable on narrow phones');
+   const arrow=page.locator('.cozy-tab-next');
+   assert(await arrow.isVisible(),'small-shop category arrow must be visible');
+   await arrow.click();
+   assert(await page.locator('#ovSheet .tabs').evaluate(el=>el.scrollLeft>0),'category arrow must scroll tabs');
    await page.screenshot({path:path.join(output,'05-compact-lure-shop.png')});
  }
  assert.deepEqual(errors,[]);

@@ -86,3 +86,16 @@ background:#24493e7d;border:1px solid #c6ac7a50;border-radius:9px;color:#cfe4d0}
  #ovSheet .cozy-catalog-row .body .d{font-size:10.5px}
  #ovSheet .cozy-catalog-row>.btn{min-width:43px;padding:7px 5px;font-size:9px}
 }
+
+/* Permanent, touch-size navigation control for horizontally scrolling shop categories. */
+#ovSheet .cozy-tab-strip{display:flex;align-items:center;gap:6px;min-width:0}
+#ovSheet .cozy-tab-strip .tabs{flex:1 1 auto;min-width:0}
+#ovSheet .cozy-tab-next{
+ display:grid;place-items:center;flex:0 0 32px;width:32px;height:36px;
+ border-radius:10px;border:1px solid #d6b77882;background:#25463f;
+ color:#f8dba0;font-size:24px;line-height:1;font-weight:500;
+ touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+#ovSheet .cozy-tab-next[hidden]{display:none!important}
+#ovSheet .cozy-tab-next:active{background:#396349;transform:translateY(1px)}
+#ovSheet .cozy-tab-next:focus-visible{outline:2px solid #f4d690;outline-offset:2px}
