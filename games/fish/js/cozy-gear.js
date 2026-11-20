@@ -13,11 +13,16 @@
  Art.icon=function(id,size){
    let mapped=null;
    if(id==="float")mapped="float_"+skin();
-   else if(id==="line"||/^l[1-7]$/.test(id))mapped="line_spool";
-   else if(id==="hook"||/^h[1-4]$/.test(id))mapped="hook";
-   else if(id==="spoon"||id==="spinner"||id==="icespoon")mapped="spoon";
-   else if(id==="wobbler")mapped="wobbler";
+   else if(id==="line")mapped="line_spool";
+   else if(id==="hook")mapped="hook";
    else if(id==="feeder")mapped="feeder";
+   else if(id==="swivel")mapped="swivel";
+   else if(FZ.ROD&&FZ.ROD[id])mapped="rod_"+id;
+   else if(FZ.LINE&&FZ.LINE[id])mapped="line_"+id;
+   else if(FZ.HOOK&&FZ.HOOK[id])mapped="hook_"+id;
+   else if(FZ.BAIT&&FZ.BAIT[id])mapped=(id==="spoon"||id==="wobbler"?id:"bait_"+id);
+   else if(id==="gb")mapped="bait_gb";
+   else if(FZ.EXTRAS&&FZ.EXTRAS[id])mapped="extra_"+id;
    return mapped?root+mapped+".svg":priorIcon.call(this,id,size);
  };
  const oldFloat=R.drawFloat;
@@ -73,13 +78,31 @@
    },
    drawCasting(ctx,v,x,y,k,t){
      let n="float_"+skin();if(v.mode==="feeder")n="feeder";
-     if(v.mode==="spin")n=G.loadout("spin").bait==="wobbler"?"wobbler":"spoon";
+     if(v.mode==="spin"){
+       const bait=G.loadout("spin").bait||"spinner";
+       n=bait==="spoon"||bait==="wobbler"?bait:"bait_"+bait;
+     }
      const im=img(n);if(!im)return false;
      const w=v.mode==="float"?7:14,h=v.mode==="float"?14:10;
      ctx.save();ctx.translate(x,y);ctx.rotate(-k*.7+Math.sin(t*10)*.04);
      ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();return true;
    },
    surface(ctx,v,p,tk,t){
+     // Show the equipped lure *at the existing line endpoint*. Never draw a second line.
+     // Deep jigs are underwater, so only surface-running lures are visible.
+     if(v.mode==="spin"&&tk.reeling){
+       const baitId=G.loadout("spin").bait;
+       const bait=FZ.BAIT&&FZ.BAIT[baitId];
+       const n=baitId==="spoon"||baitId==="wobbler"?baitId:"bait_"+baitId;
+       const im=bait&&bait.lure==="top"?img(n):null;
+       if(im){
+         ctx.save();ctx.globalAlpha=.78;
+         ctx.translate(p.x,p.y+1);
+         ctx.rotate(Math.sin(t*9)*.09);
+         ctx.drawImage(im,-8,-5,16,10);
+         ctx.restore();
+       }
+     }
      ctx.save();ctx.strokeStyle="rgba(230,245,226,.33)";ctx.lineWidth=.8;
      ctx.beginPath();ctx.ellipse(p.x,p.y+1,tk.reeling?7:4,tk.reeling?2.6:1.4,0,0,Math.PI*2);ctx.stroke();
      if(v.mode==="spin"&&tk.reeling){
