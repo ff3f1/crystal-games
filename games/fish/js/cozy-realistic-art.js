@@ -10,10 +10,13 @@
   const hd=id=>'assets/equipment/complete-hd/'+id+'.webp';
   const R={
     // The existing 2.0.1 art contains materially different real-world rod models.
-    f1:hd('float'),f2:hd('float'),f3:hd('float'),
-    d1:hd('feeder'),d2:hd('feeder'),d3:hd('feeder'),d4:hd('feeder'),
-    s1:hd('spin'),s2:hd('spin'),s3:hd('spin'),s4:hd('spin'),
-    i1:hd('ice'),i2:hd('ice'),i3:hd('ice'),
+    f1:equipment('rod_float_entry'), f2:equipment('rod_float_mid'),
+    f3:equipment('rod_match'), d1:equipment('rod_feeder_mid'),
+    d2:equipment('rod_feeder_heavy'), d3:equipment('rod_carp'),
+    s1:equipment('rod_spin_entry'), s2:equipment('rod_spin_mid'),
+    s3:equipment('rod_casting'), s4:equipment('rod_sea_light'),
+    d4:equipment('rod_sea_heavy'),
+    i1:equipment('rod_ice'),i2:equipment('rod_ice'),i3:equipment('rod_ice'),
     // Real spool photos, not graphic stand-ins.
     l1:equipment('line'),l2:equipment('line'),l3:equipment('line'),l4:equipment('line'),
     l5:equipment('braid'),l6:equipment('braid'),l7:equipment('braid'),l8:equipment('braid'),

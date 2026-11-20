@@ -9,3 +9,6 @@ Scope: Artwork paths and CSS readability only. No catch logic, physics, saved da
 Test: launch the real games/fish/index.html in Chromium; inspect lure, rod, line, hook, bait, tackle screens. Screenshot through tests/capture_cozy_real_art.cjs. Only browser screenshots produced from this branch; no Android build workflow here.
 
 Review correction: all 14 rods now use existing native-transparent HD complete-rod assets by category (float, feeder, spinning, ice), avoiding the unwanted rectangular source-photo background. Minor detached speck in old hammered spoon PNG is hidden in UI with CSS clipping, leaving actual lure untouched. Individual tier model renders remain a future art pass.
+
+## Rod correction after screenshot audit
+Instead of identical full-rod images per tier, preserve distinctive photos for each of the original rod models. Browser-proven SVG alpha filter removes semi-transparent square extraction residue (`feFuncA table`) without changing bitmap files. Existing detail (reels, cork handles, different rod shapes) stays intact. Applied to store cards, selection and loadout visuals.

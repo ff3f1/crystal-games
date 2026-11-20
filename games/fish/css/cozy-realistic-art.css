@@ -38,7 +38,7 @@
  #ovSheet .cozy-preview>img{width:76px;height:68px}
 }
 
-/* Extraction artifacts are removed: full assembled rods have native transparency. */
-#ovSheet img[src*="/equipment/complete-hd/"]{object-fit:contain}
+/* Clean the source alpha channel, preserving distinct photographed rod models. */
+#ovSheet img[src*="/equipment/rod_"]{filter:url(#cozy-clean-rod) drop-shadow(0 3px 3px rgba(0,0,0,.45))!important;object-fit:contain}
 /* The older spoon PNG contains a tiny disconnected silver fragment on the far right. */
 #ovSheet img[src$="/equipment/spoon.png"]{clip-path:inset(0 12% 0 0)}
