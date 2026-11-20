@@ -17,7 +17,7 @@
    if(!lodge)return out;
    ov.classList.add("cozy-concept-menu");
    // A stable, atmospheric home panorama, independent of the currently selected fishing map.
-   ov.style.backgroundImage='linear-gradient(180deg,rgba(46,35,24,.02),rgba(54,35,22,.08) 36%,rgba(6,30,26,.65) 61%,#0b2525 100%),url("assets/base/seliger.webp")';
+   ov.style.backgroundImage='linear-gradient(180deg,rgba(255,219,153,.01),rgba(255,210,128,.04) 38%,rgba(6,34,29,.26) 62%,#0b2525 100%),url("assets/base/seliger.webp")';
    const title=lodge.querySelector(".lodge-title");
    if(title){
      title.insertAdjacentHTML("beforeend",'<img class="cozy-sign-fish" alt="" src="assets/fish-hd/perch.webp">');
@@ -28,7 +28,17 @@
        '<div class="cozy-menu-reeds"></div></div>');
    }
    const go=lodge.querySelector(".go");
-   if(go)go.insertAdjacentHTML("afterbegin",'<span class="cozy-play-angler" aria-hidden="true">🎣</span>');
+   if(go){
+     go.insertAdjacentHTML("afterbegin",'<span class="cozy-play-angler" aria-hidden="true">🎣</span>');
+     // The decorative sunlit panorama is not the actual in-game weather.
+     const session=FZ.Game&&FZ.Game.sess&&FZ.Game.sess();
+     const weather=session&&session.wx&&session.wx.sky;
+     const subtitle=go.querySelector("small");
+     if(weather&&subtitle&&FZ.World&&FZ.World.skyName){
+       subtitle.textContent+=" · "+FZ.World.skyName(weather);
+       go.setAttribute("data-current-weather",weather);
+     }
+   }
    // Explicit, unobtrusive store rating action — same official route as Settings.
    const footer=lodge.querySelector(".lodge-footer");
    if(footer){

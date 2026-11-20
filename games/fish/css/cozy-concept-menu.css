@@ -63,3 +63,43 @@
 @media(prefers-reduced-motion:reduce){#ovMenu.cozy-concept-menu .cozy-mist,#ovMenu.cozy-concept-menu .cozy-sunlight{animation:none}}
 #ovMenu.cozy-concept-menu .lodge-footer button.cozy-rate-btn{color:#ffe8b1;border:1px solid #d6b07796;background:linear-gradient(135deg,#3b5a43,#284536);padding:6px 12px;font-size:11px;font-weight:700;min-height:30px;box-shadow:inset 0 1px 0 #ffe7b51d,0 2px 4px #0005}
 #ovMenu.cozy-concept-menu .lodge-footer button.cozy-rate-btn:active{transform:translateY(2px);box-shadow:none}
+
+/* Stage 9: daylight instead of perpetual grey haze, beautifully aligned mobile tiles.
+   Grid buttons preserve their existing game handlers and full Russian labels. */
+#ovMenu.cozy-concept-menu::before{
+ background:linear-gradient(180deg,rgba(255,217,145,.01) 0%,rgba(255,210,131,.09) 27%,rgba(12,49,36,.02) 45%,rgba(6,34,28,.24) 60%,rgba(4,23,24,.91) 82%,#092222)!important;
+}
+#ovMenu.cozy-concept-menu .cozy-mist{opacity:.16;filter:blur(20px)}
+#ovMenu.cozy-concept-menu .cozy-mist.mist-b{opacity:.07}
+#ovMenu.cozy-concept-menu .lodge-grid .tile{
+ display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;
+ gap:2px;height:61px;min-height:61px;padding:4px 3px;
+}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .i{width:27px;height:27px;flex:0 0 auto}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art{
+ flex:0 0 auto;width:36px;height:30px;min-height:0;
+}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art img{
+ width:34px;height:29px;object-fit:contain;
+}
+#ovMenu.cozy-concept-menu .lodge-grid .tile>span:last-child{
+ display:block;min-width:0;max-width:100%;font-size:clamp(9px,2.55vw,10.5px);
+ line-height:1.25;letter-spacing:-.1px;white-space:nowrap;
+ word-break:normal;overflow-wrap:normal;hyphens:none;
+}
+#ovMenu.cozy-concept-menu .go small{font-size:9px}
+@media(max-height:740px){
+ #ovMenu.cozy-concept-menu .lodge-grid .tile{
+   height:52px;min-height:52px;padding-block:3px;gap:1px;
+ }
+ #ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art{width:30px;height:25px}
+ #ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art img{width:29px;height:24px}
+ #ovMenu.cozy-concept-menu .lodge-grid .tile .i{width:24px;height:24px}
+}
+@media(max-width:345px){
+ #ovMenu.cozy-concept-menu .lodge-grid .tile>span:last-child{font-size:9px;letter-spacing:-.23px}
+}
+@media(prefers-reduced-motion:reduce){
+ #ovMenu.cozy-concept-menu .cozy-menu-sun,
+ #ovMenu.cozy-concept-menu .cozy-menu-horizon{animation:none}
+}
