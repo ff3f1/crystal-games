@@ -11,7 +11,7 @@
 #ovMenu.cozy-concept-menu .lodge-title h1{font-family:Georgia,'Rubik',serif;font-weight:900;font-size:clamp(39px,10.8vw,62px);line-height:1.05;letter-spacing:-1.1px;margin:4px 0;color:#ffe9bf;text-shadow:0 3px 0 #65432c,0 5px 5px #1a110b;white-space:nowrap}
 #ovMenu.cozy-concept-menu .lodge-title h1 span{color:#ffe2a5}
 #ovMenu.cozy-concept-menu .cozy-sign-fish{position:absolute;right:8px;top:18%;width:40px;height:62px;object-fit:contain;filter:sepia(1) saturate(.7) brightness(1.4) drop-shadow(0 2px 2px #0008);transform:rotate(-30deg)}
-#ovMenu.cozy-concept-menu .cozy-menu-scene{position:relative;flex:1 1 auto;min-height:74px;max-height:39dvh;pointer-events:none;isolation:isolate}
+#ovMenu.cozy-concept-menu .cozy-menu-scene{position:relative;flex:1 1 auto;min-height:74px;max-height:39dvh;pointer-events:none;isolation:isolate;overflow:hidden;clip-path:inset(0)}
 #ovMenu.cozy-concept-menu .cozy-menu-sun{position:absolute;left:33%;top:4%;width:44%;height:85%;background:radial-gradient(ellipse at 50% 33%,rgba(255,223,145,.78),rgba(250,173,85,.25) 19%,transparent 65%);mix-blend-mode:screen;filter:blur(6px)}
 #ovMenu.cozy-concept-menu .cozy-menu-horizon{position:absolute;left:-10%;top:67%;width:120%;height:25%;background:linear-gradient(180deg,transparent,rgba(255,195,109,.27) 36%,rgba(254,231,165,.08) 54%,transparent);filter:blur(5px)}
 #ovMenu.cozy-concept-menu .cozy-rod-still{position:absolute;right:-34%;bottom:-27%;height:87%;width:100%;object-fit:contain;transform:rotate(-51deg);transform-origin:center;filter:drop-shadow(2px 3px 4px #061b19a0);opacity:.9}
