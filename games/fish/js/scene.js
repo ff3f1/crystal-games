@@ -694,11 +694,11 @@
   R.ring = function (X, Z, size, life) { R.rings.push({ X, Z, r: 0, size: size || 0.6, life: life || 1.6, age: 0 }); };
   R.splash = function (X, Z, power, col) {
     const p = R.proj(X, Z);
-    const n = Math.round(8 + power * 18);
+    const n = Math.min(30, Math.round(7 + power * 15));
     for (let i = 0; i < n; i++) {
       const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
       const sp = (40 + Math.random() * 140) * (0.5 + power) * Math.min(1.6, p.s / 40 + 0.4);
-      R.parts.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp * 0.6, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.5, age: 0, r: 1 + Math.random() * 2.2 * (0.5 + power), col: col || "rgba(230,242,250,0.9)", g: 420, floor: p.y + 2 });
+      R.parts.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp * 0.6, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.5, age: 0, r: 1 + Math.random() * 2.2 * (0.5 + power), col: col || "rgba(230,242,250,0.9)", kind: "water", g: 420, floor: p.y + 2 });
     }
     R.ring(X, Z, 0.5 + power, 1.8); R.ring(X, Z, 0.25 + power * 0.6, 1.3);
   };
@@ -726,8 +726,13 @@
       if (k >= 1) { R.rings.splice(i, 1); continue; }
       if (v.ice) continue;
       const q = R.proj(r.X, r.Z); const rad = q.s * r.size * (0.2 + k * 1.4);
-      ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.55 * (1 - k)); ctx.lineWidth = 1.2;
+      // Bright leading edge and dimmer secondary disturbance for a softer water ring.
+      ctx.strokeStyle = U.rgba(U.mix("#eefcf5", "#9aa8bc", L.dark), 0.4 * (1 - k) * (1 - k)); ctx.lineWidth = Math.max(.6,1.25 - k * .45);
       ctx.beginPath(); ctx.ellipse(q.x, q.y, rad, rad * 0.28, 0, 0, Math.PI * 2); ctx.stroke();
+      if (rad > 2.5) {
+        ctx.strokeStyle = U.rgba(U.mix("#a7c7bf","#556a81",L.dark), .18 * (1-k));
+        ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(q.x,q.y+1.1,rad*.85,rad*.22,0,0,Math.PI*2);ctx.stroke();
+      }
     }
     ctx.strokeStyle = lineCol; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = R.fx.length - 1; i >= 0; i--) {
@@ -1143,8 +1148,14 @@
       if (p.age > p.life) { R.parts.splice(i, 1); continue; }
       p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
       if (p.y > p.floor && p.vy > 0) { R.parts.splice(i, 1); continue; }
-      ctx.globalAlpha = 1 - p.age / p.life; ctx.fillStyle = p.col;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = Math.max(0,1 - p.age / p.life);ctx.fillStyle = p.col;
+      ctx.beginPath();
+      if(p.kind==="water"){
+        // Velocity-aligned teardrops avoid the old floating-circle appearance.
+        const speed=Math.hypot(p.vx,p.vy);
+        ctx.ellipse(p.x,p.y,Math.max(.65,p.r*.72),Math.min(p.r*2.1,p.r*(1.15+speed/200)),Math.atan2(p.vy,p.vx)-Math.PI/2,0,Math.PI*2);
+      }else ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
     }
     ctx.globalAlpha = 1;
   };
