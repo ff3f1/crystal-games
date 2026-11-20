@@ -24,6 +24,8 @@ jobs:
           node --check games/fish/js/cozy-fight.js
           node --check games/fish/js/cozy-feedback.js
           node tests/test_cozy_real_art.cjs
+          node --check games/fish/js/cozy-motion.js
+          node tests/test_cozy_motion.cjs
           node tests/test_cozy_feedback.cjs
           node tests/test_cozy_fight.cjs
           node tests/test_fishing_ecology.cjs
