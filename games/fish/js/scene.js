@@ -729,7 +729,7 @@
       ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.55 * (1 - k)); ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.ellipse(q.x, q.y, rad, rad * 0.28, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    ctx.strokeStyle = lineCol; ctx.lineWidth = 1; ctx.beginPath();
+    ctx.strokeStyle = lineCol; ctx.lineWidth = lineVis ? lineVis.width : 1; ctx.beginPath();
     for (let i = R.fx.length - 1; i >= 0; i--) {
       const f = R.fx[i]; f.age += dt;
       if (f.age > f.life) { R.fx.splice(i, 1); if (f.type === "bub") R.ring(f.X, f.Z, 0.12, 0.6); continue; }
@@ -779,7 +779,8 @@
     if (v.duelSpot) FZ.Duel.drawShoal(ctx, v.duelSpot, t, R.proj);
     const G = rodGeom(v);
     const night = L.dark > 0.35;
-    const lineCol = U.rgba(U.mix("#f4f8fb", "#8aa0c8", L.dark * 0.8), 0.75);
+    const lineVis = FZ.CozyGear && FZ.CozyGear.lineStyle(v,L);
+    const lineCol = lineVis ? lineVis.color : U.rgba(U.mix("#f4f8fb", "#8aa0c8", L.dark * 0.8), 0.75);
     let target = null; // точка, куда уходит леска
     const tk = v.tackle || {};
     const landing = v.landing && v.fish ? R.landingPose(v) : null;
@@ -794,8 +795,10 @@
       const p = R.proj(tk.X, tk.Z);
       const x = U.lerp(G.tip.x - 8, p.x, k), y = U.lerp(G.tip.y + 15, p.y, k) - Math.sin(k * Math.PI) * H * 0.19;
       target = { x, y, air: true };
-      ctx.fillStyle = v.mode === "float" ? "#ff7845" : "#f5e8b9";
-      ctx.beginPath(); ctx.ellipse(x, y, 2.6, 4.2 - k * 1.7, -k, 0, Math.PI * 2); ctx.fill();
+      if (!(FZ.CozyGear && FZ.CozyGear.drawCasting(ctx,v,x,y,k,t))) {
+        ctx.fillStyle = v.mode === "float" ? "#ff7845" : "#f5e8b9";
+        ctx.beginPath(); ctx.ellipse(x, y, 2.6, 4.2 - k * 1.7, -k, 0, Math.PI * 2); ctx.fill();
+      }
     } else if (tk.state === "water" || tk.state === "fight") {
       const X = v.fish && v.fish.hooked ? v.fish.X : tk.X, Z = v.fish && v.fish.hooked ? v.fish.Z : tk.Z;
       const p = R.proj(X, Z);
@@ -856,6 +859,7 @@
     if (!v.ice && !landing && target && !target.air) {
       if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target);
       else if (v.mode === "float") R.drawFloat(target, tk, L, t, night);
+      else if (FZ.CozyGear && (v.mode === "spin" || v.mode === "feeder")) FZ.CozyGear.surface(ctx,v,target,tk,t);
       else if (v.mode === "spin" && tk.reeling) { ctx.strokeStyle = U.rgba("#ffffff", 0.35); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(target.x - target.s * 0.4, target.y + 2); ctx.lineTo(target.x, target.y); ctx.lineTo(target.x + target.s * 0.4, target.y + 2); ctx.stroke(); }
       else { ctx.fillStyle = U.rgba("#ffffff", 0.3); ctx.beginPath(); ctx.ellipse(target.x, target.y, 3, 1, 0, 0, Math.PI * 2); ctx.fill(); }
     }
