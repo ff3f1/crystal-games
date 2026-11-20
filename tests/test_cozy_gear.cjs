@@ -36,6 +36,15 @@ const out=process.env.FISH_OUT||"work/cozy";fs.mkdirSync(out,{recursive:true});
  assert(art.echo.includes("extra_echo.svg")&&art.corn.includes("bait_corn.svg"));
  await page.evaluate(()=>FZ.UI.showShop("rod"));
  await page.waitForSelector(".cozy-preview img");
+ const shopDiag=await page.evaluate(()=>({
+   tab:document.querySelector('#ovSheet .tabs .tab.on')?.dataset.tab,
+   rows:document.querySelector('#ovSheet .scroll')?.querySelectorAll('.row').length,
+   direct:[...(document.querySelector('#ovSheet .scroll')?.children||[])].filter(x=>x.classList.contains('row')).length,
+   decorated:document.querySelectorAll('.cozy-catalog-row').length,
+   initial:document.querySelector('#ovSheet .sheet')?.innerHTML.slice(0,400),
+   modules:{inventory:!!FZ.CozyInventory,shop:typeof FZ.UI.showShop}
+ }));
+ console.log("SHOP DEBUG",JSON.stringify(shopDiag));
  assert.equal(await page.locator(".cozy-catalog-row").count(),12,"12 rods in shop");
  const source=await page.locator(".cozy-catalog-row").first().locator(".pic img").getAttribute("src");
  assert(source.includes("rod_f1.svg"),source);
