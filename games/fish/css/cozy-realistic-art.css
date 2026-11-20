@@ -37,3 +37,8 @@
  #ovSheet .row.cozy-catalog-row .pic img{width:58px;height:54px}
  #ovSheet .cozy-preview>img{width:76px;height:68px}
 }
+
+/* Extraction artifacts are removed: full assembled rods have native transparency. */
+#ovSheet img[src*="/equipment/complete-hd/"]{object-fit:contain}
+/* The older spoon PNG contains a tiny disconnected silver fragment on the far right. */
+#ovSheet img[src$="/equipment/spoon.png"]{clip-path:inset(0 12% 0 0)}
