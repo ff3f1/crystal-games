@@ -25,9 +25,12 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/cozy8" playwright@1.56.1
           python3 -m http.server 8080 --directory games/fish >/tmp/http-cozy8.log 2>&1 &
           NODE_PATH="$RUNNER_TEMP/cozy8/node_modules" FISH_URL=http://127.0.0.1:8080 node tests/capture_cozy_stage8.cjs
+          NODE_PATH="$RUNNER_TEMP/cozy8/node_modules" FISH_URL=http://127.0.0.1:8080 node tests/capture_cozy_real_art.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cozy-stage8-actual-game-review
-          path: work/cozy-stage8-review/
+          path: |
+            work/cozy-stage8-review/
+            work/real-art-review/
           retention-days: 14
