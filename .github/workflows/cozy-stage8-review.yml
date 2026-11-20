@@ -1,0 +1,33 @@
+name: Cozy Stage 8 - concept menu screenshots only
+on:
+  push:
+    branches: [feature/cozy-concept-stage8]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  menu-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source integrity and trophy net regression
+        run: |
+          node --check games/fish/js/cozy-concept-menu.js
+          node --check games/fish/js/game.js
+          node --check games/fish/js/main.js
+          node --check tests/test_cozy_stage8.cjs
+          node tests/test_fishing_ecology.cjs
+          node tests/test_cozy_motion.cjs
+          node tests/test_cozy_stage8.cjs
+      - name: Real in-game screenshots (NO Android build)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/cozy8" playwright@1.56.1
+          python3 -m http.server 8080 --directory games/fish >/tmp/http-cozy8.log 2>&1 &
+          NODE_PATH="$RUNNER_TEMP/cozy8/node_modules" FISH_URL=http://127.0.0.1:8080 node tests/capture_cozy_stage8.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cozy-stage8-actual-game-review
+          path: work/cozy-stage8-review/
+          retention-days: 14
