@@ -89,16 +89,17 @@
      }
      const im=img(n);if(!im)return false;
      const w=v.mode==="float"?7:14,h=v.mode==="float"?14:10;
-     ctx.save();ctx.translate(x,y);ctx.rotate(-k*.7+Math.sin(t*10)*.04);
+     const pose=FZ.CozyMotion&&v.mode==="spin"
+       ?FZ.CozyMotion.castPose(G.loadout("spin").bait||"spinner",k,t)
+       :{angle:-k*.7+Math.sin(t*10)*.04,sx:1,sy:1};
+     ctx.save();ctx.translate(x,y);ctx.rotate(pose.angle);ctx.scale(pose.sx,pose.sy);
      ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();return true;
    },
    surface(ctx,v,p,tk,t){
-     // Exactly one animated surface lure at the real line endpoint.
-     if(FZ.CozyMotion)FZ.CozyMotion.drawSurface(ctx,v,p,tk,t,img);
-     ctx.save();ctx.strokeStyle="rgba(230,245,226,.33)";ctx.lineWidth=.8;
-     ctx.beginPath();ctx.ellipse(p.x,p.y+1,tk.reeling?7:4,tk.reeling?2.6:1.4,0,0,Math.PI*2);ctx.stroke();
-     // Wake is handled in FZ.CozyMotion and only on genuine retrieve.
-     ctx.restore();
+     // Feeder tackle and submerged spinners/spoons/jigs must not leave
+     // permanent surface rings. The real point of entry is still the line endpoint.
+     if(v.mode==="spin"&&FZ.CozyMotion)
+       FZ.CozyMotion.drawSurface(ctx,v,p,tk,t,img);
    }
  };
 })(window.FZ);
