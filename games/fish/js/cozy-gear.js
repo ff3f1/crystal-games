@@ -72,8 +72,8 @@
  FZ.CozyGear={
    lineStyle(v,L){
      const id=G.loadout(v.mode).line||"l1";
-     const widths={l1:.85,l2:.97,l3:1.06,l4:1.14,l5:1.17,l6:1.29,l7:1.34};
-     const braid=id==="l5"||id==="l6"||id==="l7";
+     const widths={l1:.85,l2:.97,l3:1.06,l4:1.14,l5:1.17,l6:1.29,l7:1.34,l8:1.43};
+     const braid=id==="l5"||id==="l6"||id==="l7"||id==="l8";
      return {width:widths[id]||1,color:braid?"rgba(192,202,148,.78)":"rgba(229,236,218,.73)"};
    },
    drawCasting(ctx,v,x,y,k,t){
