@@ -182,7 +182,7 @@
       case "wait": label = mode === "spin" ? "Крутить" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
       case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Ждать"; calm = true; } break;
       case "fight": label = "Подмотка"; break;
-      case "landing": label = "Поднимаем"; calm = true; break;
+      case "landing": label = r.landing&&r.landing.trophyNet ? "Подсак — держи" : "Поднимаем"; calm = !(r.landing&&r.landing.trophyNet); break;
       case "result": label = "…"; calm = true; break;
       case "nohole": label = "Бурить"; break;
       case "drill": label = "Бурю…"; calm = true; break;
@@ -240,6 +240,8 @@
         if(spotAdviceTotal<.012) h="Почти нет активности<small>Попробуйте другую глубину, наживку или точку</small>";
         else if(spotAdviceTotal<.045) h="Рыба осторожничает<small>Ищите круги на воде и активные места</small>";
       }
+    } else if (r.state === "landing" && r.landing && r.landing.trophyNet) {
+      h="Трофей у подсака!<small>Удерживайте золотую кнопку, чтобы аккуратно принять рыбу</small>";
     } else if (r.state === "bite" && r.bite.phase === "take") { h = "Подсекай!<small>смахните вверх или нажмите кнопку</small>"; cls = "strike"; }
     else if (r.state === "fight" && r.fish) {
       const f = r.fish;

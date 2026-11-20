@@ -39,7 +39,7 @@
 #ovMenu.cozy-concept-menu .lodge-grid .tile#mMap img,#ovMenu.cozy-concept-menu .lodge-grid .tile#mJourney img,#ovMenu.cozy-concept-menu .lodge-grid .tile#mForecast img{object-fit:cover;border-radius:5px}
 #ovMenu.cozy-concept-menu .lodge-grid .tile.cozy-has-art>svg{display:none}
 #ovMenu.cozy-concept-menu .lodge-grid .tile>span:last-child{min-width:0;overflow-wrap:break-word;line-height:1.12}
-#ovMenu.cozy-concept-menu .lodge-footer{display:flex;justify-content:center;margin-top:6px}
+#ovMenu.cozy-concept-menu .lodge-footer{display:flex;justify-content:space-between;gap:8px;margin-top:6px}
 #ovMenu.cozy-concept-menu .lodge-footer button{font-size:10px;min-height:23px;padding:3px 14px;border-radius:7px}
 #ovMenu.cozy-concept-menu .go.cozy-pressed,#ovMenu.cozy-concept-menu .go:active{transform:translateY(3px) scale(.991)}
 @media(max-height:740px){
@@ -61,3 +61,5 @@
 #ovMenu.cozy-concept-menu .cozy-sign-fish{width:32px}
 }
 @media(prefers-reduced-motion:reduce){#ovMenu.cozy-concept-menu .cozy-mist,#ovMenu.cozy-concept-menu .cozy-sunlight{animation:none}}
+#ovMenu.cozy-concept-menu .lodge-footer button.cozy-rate-btn{color:#ffe8b1;border:1px solid #d6b07796;background:linear-gradient(135deg,#3b5a43,#284536);padding:6px 12px;font-size:11px;font-weight:700;min-height:30px;box-shadow:inset 0 1px 0 #ffe7b51d,0 2px 4px #0005}
+#ovMenu.cozy-concept-menu .lodge-footer button.cozy-rate-btn:active{transform:translateY(2px);box-shadow:none}

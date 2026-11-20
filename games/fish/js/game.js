@@ -711,7 +711,9 @@
   function startLanding() {
     const f = rig.fish;
     if (sess.ice && f.w > (st.extras.auger ? 8 : 5) && !st.extras.gaff && U.rand() < 0.6) return lose("hole");
-    rig.state = "landing"; rig.reeling = false; rig.landing = { k: 0 };
+    rig.state = "landing"; rig.reeling = false; rig.netting = false;
+    // Trophies benefit from deliberate netting; ordinary fish land exactly as before.
+    rig.landing = { k: 0, trophyNet: !sess.ice && f.w >= f.s.trophy };
     FZ.Sound.cozy('land',.65);
     if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.8); else FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y - 10, 10);
   }
@@ -897,7 +899,10 @@
       fightTick(dt, t);
     } else if (r.state === "landing") {
       const previous = r.landing.k;
-      r.landing.k += dt / (sess.ice ? 1.25 : 1.65);
+      // Use the familiar action button to scoop a trophy; never randomly lose one
+      // after the player has already exhausted it. Waiting still lands it safely.
+      const duration=sess.ice?1.25:r.landing.trophyNet?(r.netting?1.20:3.6):1.65;
+      r.landing.k += dt / duration;
       if (!sess.ice && previous < 0.58 && r.landing.k >= 0.58) {
         FZ.Scene.splash(r.fish.X, r.fish.Z, 0.48);
         FZ.Sound.splash(0.56);

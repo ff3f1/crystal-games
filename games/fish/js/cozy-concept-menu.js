@@ -29,6 +29,19 @@
    }
    const go=lodge.querySelector(".go");
    if(go)go.insertAdjacentHTML("afterbegin",'<span class="cozy-play-angler" aria-hidden="true">🎣</span>');
+   // Explicit, unobtrusive store rating action — same official route as Settings.
+   const footer=lodge.querySelector(".lodge-footer");
+   if(footer){
+     const rating=document.createElement("button");
+     rating.id="mRate";rating.type="button";rating.className="cozy-rate-btn";
+     rating.textContent="★ Оценить игру";rating.setAttribute("aria-label","Оценить игру в RuStore");
+     footer.appendChild(rating);
+     rating.addEventListener("click",function(){
+       FZ.Sound&&FZ.Sound.unlock&&FZ.Sound.unlock();
+       FZ.Sound&&FZ.Sound.click&&FZ.Sound.click();
+       FZ.Platform.rate();
+     });
+   }
    for(const [id,src] of Object.entries(art)){
      const tile=lodge.querySelector("#"+id);if(!tile)continue;
      const frame=document.createElement("span");frame.className="cozy-tile-art";

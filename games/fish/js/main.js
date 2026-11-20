@@ -72,11 +72,12 @@
       if (r.state === "fight") r.reeling = true;
     }
     else if (s === "fight") r.reeling = true;
+    else if (s === "landing" && r.landing && r.landing.trophyNet) r.netting = true;
     else if (mode === "spin" && (s === "wait" || s === "bite")) r.reeling = true;
     else if (s === "wait" && mode === "ice") G.jig();
     else if (s === "wait" || s === "settle") G.retrieve();
   };
-  Input.actionUp = function () { const r = G.rig(); if (r) r.reeling = false; };
+  Input.actionUp = function () { const r = G.rig(); if (r) {r.reeling = false;r.netting = false;} };
   Input.reelSteer = function (deltaX) {
     const r = G.rig();
     if (!P.down && r && r.state === "fight") r.tilt = U.clamp(deltaX / 55, -1, 1);
