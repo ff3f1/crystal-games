@@ -553,9 +553,16 @@
     const lineT = line.test, dragLim = G.drag() * lineT;
     f.t += dt;
     if (!f.nextPhase) f.nextPhase = nextFishPhase(f);
+    // One telegraphed, last-ditch run for a tired trophy near the net.
+    // The player can react by easing off and steering away from cover.
+    if(!sess.ice && f.w>=s.trophy && !f.finalSurge && f.S<.33 && f.S>.17 &&
+       f.Z<Math.min(20,G.maxCast()) && f.phase!=="run" && !f.jump){
+      f.finalSurge=true;
+      f.nextPhase="run";
+      f.phaseT=Math.min(f.phaseT,.62);
+    }
     if (f.nextPhase === "run" && !f.runDirection) {
-      f.runDirection = Math.abs(f.X) > FZ.Scene.maxLat(Math.max(f.Z, 5)) * 0.65
-        ? -Math.sign(f.X) : rng() < 0.5 ? -1 : 1;
+      f.runDirection = FZ.Ecology.chooseRunDirection(s,f.X,FZ.Scene.maxLat(Math.max(f.Z,5)),rng);
     }
     f.warning = f.nextPhase === "run" && f.phaseT < 0.65 && f.phaseT > 0 && f.S >= 0.16;
     if (f.warning && !f.wasWarning) FZ.Platform.vibrate(18);

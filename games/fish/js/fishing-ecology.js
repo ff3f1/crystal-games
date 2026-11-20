@@ -30,7 +30,6 @@
     brooktrout:{run:1.14,shake:1.2,speed:1.2,duration:.92},
     grayling:{run:1.18,shake:1.15,speed:1.18,duration:.93},
     asp:{run:1.3,shake:.92,speed:1.32,duration:1.07},
-    salmon_spinner:null
   };
   E.profile=function(s,w){
     const p=FIGHTS[s.id]||{};
@@ -141,6 +140,14 @@
     const shake=clamp(f.s.fight.shake*(.25+.09*f.S)*p.shake,0,.27);
     const roll=rand();
     return roll<run?"run":roll<run+toward?"toward":roll<run+toward+shake?"shake":"rest";
+  };
+  E.chooseRunDirection=function(s,X,bank,rand){
+    if(!(bank>0)||!Number.isFinite(X))return rand()<.5?-1:1;
+    const edge=Math.abs(X)/bank,side=Math.sign(X)||1;
+    if(edge>.93)return -side; // physical limit: cannot swim through land
+    if(edge>.52&&EDGE.has(s.id)&&rand()<.56)return side; // cover-seeking fish
+    if(edge>.75)return -side;
+    return rand()<.5?-1:1;
   };
   E.isPredatorSpot=s=>FEEDING_PRED.has(s.id);
   FZ.Ecology=E;

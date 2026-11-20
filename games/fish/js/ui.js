@@ -147,6 +147,7 @@
   };
 
   let hintKey = "";
+  let spotAdviceAt=-999,spotAdviceTotal=0;
   // DOM трогаем только когда значение поменялось: лишние записи заставляют браузер пересчитывать страницу
   const setT = (id, v) => { const e = $(id); if (e._v !== v) { e._v = v; e.textContent = v; } };
   const setH = (id, v) => { const e = $(id); if (e._h !== v) { e._h = v; e.innerHTML = v; } };
@@ -225,10 +226,20 @@
     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
     else if (r.state === "wait") {
       const since = s.t - (r.castAt || 0);
-      if (mode === "spin") h = since < 5 ? "Держите палец — проводка<small>Отпустите — приманка остановится. Хищник бьёт на проводке</small>" : "";
+      if (mode === "spin") h = since < 5 ? "Держите палец — проводка<small>Отпустите — приманка остановится. Хищник бьёт на проводке</small>" :
+        r.spinPause>3.5 ? "Приманка стоит слишком долго<small>Смените скорость проводки или сделайте новый заброс</small>" : "";
       else if (!G.gear(mode).bait || !G.baitLeft(G.gear(mode).bait.id)) h = "Нет наживки<small>Купите в «Снастях» или получите за рекламу на кнопке наживки</small>";
       else if (mode === "ice") h = since < 6 ? "Тапайте по экрану — играйте мормышкой<small>Следите за кивком: опустился или поднялся — подсекайте</small>" : "";
       else if (since < 5) h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" : (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Ждём поклёвку");
+      else if (!s.duel && st.tut>=3 && r.idleT>13) {
+        if(s.t<spotAdviceAt || s.t-spotAdviceAt>3){
+          const pool=G.biteTable();
+          spotAdviceTotal=pool.reduce((sum,row)=>sum+row[1],0);
+          spotAdviceAt=s.t;
+        }
+        if(spotAdviceTotal<.012) h="Почти нет активности<small>Попробуйте другую глубину, наживку или точку</small>";
+        else if(spotAdviceTotal<.045) h="Рыба осторожничает<small>Ищите круги на воде и активные места</small>";
+      }
     } else if (r.state === "bite" && r.bite.phase === "take") { h = "Подсекай!<small>смахните вверх или нажмите кнопку</small>"; cls = "strike"; }
     else if (r.state === "fight" && r.fish) {
       const f = r.fish;
@@ -236,7 +247,8 @@
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
       else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
       else if (!s.ice && f.snagT > .35) h = "Рыба уходит в траву!<small>Уводите удилище от берега</small>";
-      else if (f.warning) h = "Готовьтесь к рывку!<small>Ослабьте подмотку, следите за фрикционом</small>";
+      else if (f.warning) h = f.finalSurge ? "Трофей делает последний рывок!<small>Перестаньте подматывать и контролируйте леску</small>" :
+        "Готовьтесь к рывку!<small>Ослабьте подмотку, следите за фрикционом</small>";
       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Рыба рвётся в сторону!<small>Дайте леске сойти и ведите удилище против рывка</small>";
       else if (f.phase === "toward") h = "Рыба идёт к вам!<small>Подматывайте, чтобы не ослабла леска</small>";
       else if (f.phase === "shake") h = "Трясёт головой!<small>Не допускайте провиса лески</small>";
