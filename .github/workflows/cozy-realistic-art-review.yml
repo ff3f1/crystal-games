@@ -1,0 +1,29 @@
+name: Cozy art review - browser screenshots only
+on:
+  push:
+    branches: [feature/cozy-realistic-art-review]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: JS syntax
+        run: |
+          node --check games/fish/js/cozy-realistic-art.js
+          node --check games/fish/js/cozy-gear.js
+          node --check tests/capture_cozy_real_art.cjs
+      - name: Capture actual game in browser (no APK)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/art" playwright@1.56.1
+          python3 -m http.server 8080 --directory games/fish >/tmp/cozy-server.log 2>&1 &
+          NODE_PATH="$RUNNER_TEMP/art/node_modules" FISH_URL=http://127.0.0.1:8080 node tests/capture_cozy_real_art.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-fishing-shop-screenshots
+          path: work/real-art-review/
+          retention-days: 14
