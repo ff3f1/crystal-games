@@ -24,5 +24,5 @@ const ordinary=r.landing.k;
 assert(ordinary>slow,'ordinary fish use original faster auto-landing');
 const source=fs.readFileSync(path.join(base,'cozy-concept-menu.js'),'utf8');
 assert.match(source,/id="mRate"/);assert.match(source,/FZ\.Platform\.rate\(\)/);
-assert.match(fs.readFileSync(path.join(base,"renewal.js"),"utf8"),/id=\\"mHelp\\"/); // tutorial remains in original menu
+assert(fs.readFileSync(path.join(base,"renewal.js"),"utf8").includes('id="mHelp"'),"original tutorial control remains");
 console.log('PASS stage8: trophy landing is skill-assisted but not mandatory; menu has official RuStore rate control');
