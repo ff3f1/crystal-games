@@ -354,8 +354,6 @@
     if (sess.mode === "ice") { const k = rig.lure || 0.8; return k > 0.75 ? "bottom" : k > 0.3 ? "mid" : "top"; }
     return g.depth || "bottom";
   }
-  const EDGE_FISH = { pike: 1, tench: 1, rudd: 1, crucian: 1, gcrucian: 1, rotan: 1, perch: 1, chub: 1 };
-  const DEEP_FISH = { bream: 1, zander: 1, catfish: 1, burbot: 1, sturgeon: 1, carp: 1, wildcarp: 1, whitefish: 1, omul: 1 };
   const RARF = [1, 1, 0.85, 0.6, 0.35, 0.18];
   G.biteTable = function (position) {
     const g = G.gear(sess.mode), loc = sess.loc, wx = sess.wx;
@@ -363,8 +361,7 @@
     const zone = zoneNow();
     const X=position?position.X:rig.X, Z=position?position.Z:rig.Z;
     const lat = FZ.Scene.maxLat(Z);
-    const edge = !sess.ice && Math.abs(X) > lat * 0.62;
-    const deep = !sess.ice && Z > G.maxCast() * 0.78;
+    const eco = FZ.Ecology;
     let sumW = 0; Object.keys(loc.fish).forEach((id) => (sumW += loc.fish[id]));
     const list = [];
     Object.keys(loc.fish).forEach(function (id) {
@@ -373,22 +370,19 @@
       m *= (s.methods[sess.mode] || 0);
       m *= bait ? (s.baits[bait] || 0) : 0;
       m *= s.depth[zone];
-      if (edge && EDGE_FISH[id]) m *= 1.35;
-      if (deep && DEEP_FISH[id]) m *= 1.3;
+      m *= sess.ice ? 1 : eco.habitat(s,loc,X,Z,G.maxCast(),lat);
+      m *= eco.presentation(s,g.bait,sess.mode,sess.period,rig);
       if (s.kind === "peace") {
         m *= 1 - 0.05 * g.line.vis;
         if (sess.fedSpot && Math.hypot(sess.fedSpot.X - X, sess.fedSpot.Z - Z) < 4) m *= 1 + sess.fedSpot.level;
         if (sess.gbUntil > sess.t) m *= 1.35;
       }
-      sess.spots.forEach(function (sp) {
-        if (Math.hypot(sp.X - X, sp.Z - Z) < 3) { if (sp.type === "bubbles" && s.kind === "peace") m *= 2; if (sp.type === "boil" && s.kind === "pred") m *= 2.6; }
-      });
+      m *= eco.spotBonus(s,sess.spots,X,Z);
       if (sess.ice) {
         m *= sess.hole ? sess.hole.fish : 1;
         if (bait && FZ.BAIT[bait].lure || s.kind === "pred" || id === "omul" || id === "smelt") m *= 0.55 + (rig.jig || 0) * 1.0;
         else m *= 0.85 + (rig.jig || 0) * 0.35;
       }
-      if (sess.mode === "spin") { m *= rig.spinPause > 2.5 ? (zone === "bottom" ? 0.8 : 0.25) : 1; }
       if (sess.mode === "float" && sess.wx.wind >= 8) m *= 0.8;
       m *= RARF[s.rar];
       if (m > 0) list.push([s, 0.20 * loc.fish[id] / sumW * m]);
@@ -401,7 +395,9 @@
     const baitBias = g.bait && g.bait.big ? g.bait.big : 1;
     const bias = Math.pow(hookBias * baitBias * (1 + Math.min(0.12, st.karma * 0.003)), 0.6);
     let w;
-    if (U.rand() < 0.004 + Math.min(0.006, st.karma * 0.0002)) w = s.trophy * U.rand.range(1.05, Math.max(1.1, s.max / s.trophy));
+    const eco=FZ.Ecology, pos={X:rig.X,Z:rig.Z};
+    const q=eco.trophyQuality(s,g.bait&&g.bait.id,sess.loc,pos,G.maxCast(),FZ.Scene.maxLat(pos.Z),sess.season,sess.period,sess.spots);
+    if (U.rand() < (0.004 + Math.min(0.006, st.karma * 0.0002))*q) w = s.trophy * U.rand.range(1.05, Math.max(1.1, s.max / s.trophy));
     else w = s.med * Math.exp(s.sigma * U.rand.normal()) * bias;
     if (sess.loc.id === "platnik" && (s.id === "carp" || s.id === "grasscarp" || s.id === "sturgeon" || s.id === "trout")) w *= 1.1;
     return U.clamp(w, s.min, s.max);
@@ -540,7 +536,7 @@
       vx: 0, vz: 0, S: 1, effort: 0.38, phase: "rest", phaseT: 0.95, T: Fmax * 0.35, Fmax, slackT: 0, snagT: 0,
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
     };
-    rig.fish.nextPhase = rng() < s.fight.runs + 0.25 ? "run" : "shake";
+    rig.fish.nextPhase = FZ.Ecology.nextPhase(rig.fish,false,rng);
     rig.rod.jerk = 1;
     FZ.Scene.shake(5); FZ.Platform.vibrate(40);
     FZ.Sound.cozy('hook',.46);
@@ -549,15 +545,7 @@
   }
 
   // ---------- Вываживание ----------
-  function nextFishPhase(f) {
-    const rng = fishingRandom();
-    if (f.S < 0.16) return "tired";
-    if (f.phase === "run") return "rest";
-    const roll = rng(), runs = f.s.fight.runs * (0.3 + 0.7 * f.S);
-    if (roll < runs) return "run";
-    if (roll < runs + 0.16) return "toward";
-    return roll < runs + 0.16 + f.s.fight.shake * 0.35 ? "shake" : "rest";
-  }
+  function nextFishPhase(f) { return FZ.Ecology.nextPhase(f,rig.reeling,fishingRandom()); }
   function fightTick(dt, t) {
     const rng = fishingRandom();
     const f = rig.fish, s = f.s, g = G.gear(sess.mode);
@@ -583,8 +571,10 @@
       f.warning = false;
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = rng.range(1.2, 2.5); f.vx *= 0.5; }
       else if (planned === "run") {
-        f.phase = "run"; f.effort = rng.range(0.85, 1); f.phaseT = rng.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w));
-        f.runSpeed = rng.range(1.3, 2.35) * runDirection;
+        const character=FZ.Ecology.profile(s,f.w);
+        f.phase = "run"; f.effort = rng.range(0.85, 1);
+        f.phaseT = rng.range(1, 2.4) * (0.8 + 0.3 * Math.log10(1 + f.w)) * character.duration;
+        f.runSpeed = rng.range(1.3, 2.35) * runDirection * character.speed;
         f.vx += sess.ice ? 0 : f.runSpeed * 0.26;
         if (rig.reeling) f.T += 0.14 * f.Fmax;
         if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.22 + 0.24 * f.S);
@@ -594,7 +584,7 @@
         }
         FZ.Scene.shake(2 + Math.min(6, f.Fmax)); FZ.Platform.vibrate(25);
       } else if (planned === "toward" && f.S > 0.25) { f.phase = "toward"; f.effort = -0.3; f.phaseT = rng.range(0.8, 1.8); }
-      else if (planned === "shake") { f.phase = "shake"; f.effort = 0.62; f.phaseT = rng.range(0.6, 1.1); }
+      else if (planned === "shake") { f.phase = "shake"; f.effort = 0.62; f.phaseT = rng.range(0.6, 1.1)*Math.min(1.25,FZ.Ecology.profile(s,f.w).duration); }
       else { f.phase = "rest"; f.effort = rng.range(0.28, 0.45); f.phaseT = rng.range(1, 2.4); }
     }
     if (f.jump) f.jump.k += dt / f.jump.dur;
@@ -610,7 +600,8 @@
     const steer = !sess.ice && (awayFromBank || opposeRun) ? U.smooth(U.clamp((Math.abs(rig.tilt) - 0.12) / 0.72, 0, 1)) : 0;
     const against = steer > 0.12;
     f.against = against;
-    const fishPull = f.Fmax * Math.max(0, eff) * (1 - (run ? 0.29 * steer : 0));
+    const fishPull = f.Fmax * Math.max(0, eff) * (1 - (run ? 0.29 * steer : 0)) *
+      (run && reeling && f.w >= s.trophy ? 1.055 : 1);
     let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") targetTension = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
@@ -825,10 +816,9 @@
       if (sess.nextSpot <= 0) {
         sess.nextSpot = U.rand.range(6, 14);
         if (!sess.ice && sess.spots.length < 2) {
-          const hasPred = Object.keys(sess.loc.fish).some((id) => FZ.SP[id].kind === "pred" && FZ.SP[id].time[sess.period] > 0.6 && FZ.SP[id].season[sess.season] > 0.5);
-          const type = hasPred && U.rand() < (sess.mode === "spin" ? 0.55 : 0.25) ? "boil" : "bubbles";
-          const Z = U.rand.range(6, Math.min(G.maxCast(), sess.loc.zfar - 8));
-          sess.spots.push({ type, X: U.rand.range(-0.8, 0.8) * FZ.Scene.maxLat(Z), Z, life: U.rand.range(12, 22) });
+          const spot=FZ.Ecology.spawnSpot(sess.loc,sess.season,sess.period,sess.wx,Math.min(G.maxCast(),sess.loc.zfar-8),
+            z=>FZ.Scene.maxLat(z),()=>U.rand());
+          if(spot)sess.spots.push(spot);
         }
         if (!sess.ice && U.rand() < 0.5) FZ.Scene.distantJump();
       }
@@ -881,7 +871,10 @@
         else {
           const tbl = G.biteTable();
           let tot = 0; tbl.forEach((x) => (tot += x[1]));
-          if (tot>0&&(U.rand() < 1 - Math.exp(-1.25 * tot * dt) || r.idleT > Math.min(24, 7 + 0.6 / Math.max(0.04, tot)))) {
+          // Bite pressure only comes from real compatible, active fish.
+          // Patience boosts *probability*, never forces a fish at a poor spot.
+          const rate=1.25*tot*FZ.Ecology.patience(tot,r.idleT);
+          if (rate>0 && U.rand() < 1-Math.exp(-rate*dt)) {
             r.idleT=0;
             const s = U.weighted(tbl);
             const w = sampleWeight(s);

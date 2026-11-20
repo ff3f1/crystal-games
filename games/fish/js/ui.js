@@ -235,7 +235,11 @@
       if (f.tension > st.drag * 0.98 || f.tension > 0.86) h = "Отпустите! Леска на пределе";
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
       else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
-      else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";
+      else if (!s.ice && f.snagT > .35) h = "Рыба уходит в траву!<small>Уводите удилище от берега</small>";
+      else if (f.warning) h = "Готовьтесь к рывку!<small>Ослабьте подмотку, следите за фрикционом</small>";
+      else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Рыба рвётся в сторону!<small>Дайте леске сойти и ведите удилище против рывка</small>";
+      else if (f.phase === "toward") h = "Рыба идёт к вам!<small>Подматывайте, чтобы не ослабла леска</small>";
+      else if (f.phase === "shake") h = "Трясёт головой!<small>Не допускайте провиса лески</small>";
       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
     }
     const key = h + cls;
