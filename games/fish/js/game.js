@@ -464,10 +464,10 @@
   }
   function takeFx(b) {
     FZ.Platform.vibrate(30);
-    if (sess.mode === "feeder") { rig.rod.ring = 1.5; FZ.Sound.bell(); setTimeout(FZ.Sound.bell, 140); }
-    else if (sess.mode === "spin") { rig.rod.jerk = 1; FZ.Sound.strike(); FZ.Scene.shake(4); }
-    else if (sess.mode === "ice") { FZ.Sound.bite(); }
-    else { FZ.Scene.ring(rig.X, rig.Z, 0.35, 1.2); FZ.Sound.bite(); }
+    if (sess.mode === "feeder") { rig.rod.ring = 1.5; FZ.Sound.bell(); FZ.Sound.cozy('take',.35); setTimeout(FZ.Sound.bell, 140); }
+    else if (sess.mode === "spin") { rig.rod.jerk = 1; FZ.Sound.cozy('take',.7); FZ.Scene.shake(4); }
+    else if (sess.mode === "ice") { FZ.Sound.cozy('take',.65); }
+    else { FZ.Scene.ring(rig.X, rig.Z, 0.35, 1.2); FZ.Sound.cozy('take',.65); }
   }
   // Анимация поплавка/кивка/вершинки во время поклёвки
   function biteAnim(dt, t) {
@@ -543,6 +543,7 @@
     rig.fish.nextPhase = rng() < s.fight.runs + 0.25 ? "run" : "shake";
     rig.rod.jerk = 1;
     FZ.Scene.shake(5); FZ.Platform.vibrate(40);
+    FZ.Sound.cozy('hook',.46);
     if (!sess.ice) FZ.Scene.splash(rig.X, rig.Z, 0.25 + Math.min(1, w / 5) * 0.5);
     emit("hooked", { big: Fmax > G.gear(sess.mode).line.test * 0.75 || w >= s.trophy });
   }
@@ -713,7 +714,7 @@
     const f = rig.fish;
     if (sess.ice && f.w > (st.extras.auger ? 8 : 5) && !st.extras.gaff && U.rand() < 0.6) return lose("hole");
     rig.state = "landing"; rig.reeling = false; rig.landing = { k: 0 };
-    FZ.Sound.splash(0.7);
+    FZ.Sound.cozy('land',.65);
     if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.8); else FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y - 10, 10);
   }
   function useBait() {

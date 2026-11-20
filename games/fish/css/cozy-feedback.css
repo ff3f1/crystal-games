@@ -1,0 +1,10 @@
+#ovCatch.on .catch{position:relative;isolation:isolate}
+#ovCatch.on .catch::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+background:radial-gradient(ellipse 45% 28% at 35% 24%,rgba(248,209,133,.19),transparent),
+radial-gradient(ellipse 36% 28% at 76% 45%,rgba(156,220,195,.12),transparent);
+animation:cozy-catch-glow 4s ease-in-out infinite alternate}
+#ovCatch.on.trophy .catch::before{background:radial-gradient(ellipse 45% 29% at 35% 24%,rgba(255,214,119,.32),transparent),
+radial-gradient(ellipse 36% 28% at 76% 45%,rgba(242,200,116,.15),transparent)}
+#ovCatch.on .catch>*{position:relative;z-index:1}
+@keyframes cozy-catch-glow{from{opacity:.6;transform:translateY(-5px)}to{opacity:1;transform:translateY(5px)}}
+@media(prefers-reduced-motion:reduce){#ovCatch.on .catch::before{animation:none}}

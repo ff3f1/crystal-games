@@ -3,7 +3,9 @@
  'use strict';
  const S={on:true,music:true};let ac=null,unlocked=false,music=null,wanted='dawn',track='',clock=0,nextBird=14;
  const gates=new Set(),cache={},voices=new Set();let params={},lastReel=-10,lastDrag=-10;
- const file=id=>'assets/audio/renewal/'+id+'.mp3';
+ const cozyFiles=new Set(['bite','take','strike','drag','hook','land','plop']);
+ const file=id=>(id.startsWith('cozy_')&&cozyFiles.has(id.slice(5))?'assets/audio/cozy/'+id.slice(5)+'.wav':
+  cozyFiles.has(id)?'assets/audio/cozy/'+id+'.wav':'assets/audio/renewal/'+id+'.mp3');
  function settings(){return FZ.Game&&FZ.Game.state()?FZ.Game.settings():{}}
  function vol(key){const v=settings().volumes||{};return v[key]==null?{music:.35,effects:.7,nature:.18}[key]:v[key]}
  function syncMusic(){
@@ -25,6 +27,7 @@
   }catch(_){}
  }
  for(const id of ['click','cast','plop','splash','bite','bell','strike','snap','coin','level','trophy','fail','drill','flop','thunder'])S[id]=(intensity=1)=>cue(id,(id==='bite'?.65:1)*Math.max(.2,Math.min(1,intensity)));
+ S.cozy=(id,gain=1)=>cozyFiles.has(id)?cue('cozy_'+id,Math.max(.15,Math.min(1,gain))):undefined;
  S.reel=function(speed){if(!ac)return;const t=ac.currentTime;if(t-lastReel<.12/Math.max(.5,speed))return;lastReel=t;cue('reel',.42)};
  S.drag=function(k){if(!ac)return;const t=ac.currentTime;if(t-lastDrag<.14)return;lastDrag=t;cue('drag',.35+k*.3)};
  S.updateAmbience=p=>{params=p||{}};
