@@ -17,6 +17,8 @@ jobs:
           node --check games/fish/js/cozy-gear.js
           node --check games/fish/js/lodge-cozy.js
           node tests/test_cozy_feedback.cjs
+          node --check games/fish/js/cozy-fight.js
+          node tests/test_cozy_fight.cjs
           python3 - <<'PY'
           import glob, xml.etree.ElementTree as ET
           for name in glob.glob("games/fish/assets/cozy/*.svg"): ET.parse(name)
