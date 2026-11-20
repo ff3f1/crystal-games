@@ -42,7 +42,7 @@ G.rig().spinPause=0;
 const surfaceImage={naturalWidth:200};
 assert.equal(M.drawSurface(ctx,{mode:"spin",fish:null},{x:45,y:110},{reeling:true},2,()=>surfaceImage),true);
 assert(actions.includes("drawImage"));
-assert(!actions.includes("moveTo")===false);
+assert(actions.includes("stroke"),"actual lure leaves a short surface wake");
 let noExtra=0;
 ctx.drawImage=()=>{noExtra++};
 st.load.spin.bait="jig";
