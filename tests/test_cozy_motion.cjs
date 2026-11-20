@@ -36,8 +36,8 @@ const actions=[];const ctx={
  drawImage(){actions.push("drawImage")},beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){actions.push("stroke")},
  set lineWidth(x){},set strokeStyle(x){},set globalAlpha(x){}
 };
-const st=G.load();st.load.spin.rod="s1";st.load.spin.bait="wobbler";st.rods.push("s1");
-G.startSession("pond","summer");G.sess().mode="spin";
+const st=G.load();st.load.spin.rod="s1";st.rods.push("s1");st.lures.wobbler=1;
+G.startSession("pond","summer");G.sess().mode="spin";G.loadout("spin").bait="wobbler";
 G.rig().spinPause=0;
 const surfaceImage={naturalWidth:200};
 assert.equal(M.drawSurface(ctx,{mode:"spin",fish:null},{x:45,y:110},{reeling:true},2,()=>surfaceImage),true);
