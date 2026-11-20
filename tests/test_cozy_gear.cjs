@@ -27,13 +27,25 @@ const out=process.env.FISH_OUT||"work/cozy";fs.mkdirSync(out,{recursive:true});
    line1:FZ.Art.icon("l1",80),line7:FZ.Art.icon("l7",80),
    hook1:FZ.Art.icon("h1",80),hook4:FZ.Art.icon("h4",80),
    worm:FZ.Art.icon("worm",80),jig:FZ.Art.icon("jig",80),
-   echo:FZ.Art.icon("echo",80),corn:FZ.Art.icon("corn",80)
+   echo:FZ.Art.icon("echo",80),corn:FZ.Art.icon("corn",80),
+   oceanRod:FZ.Art.icon("s4",80),seaLine:FZ.Art.icon("l8",80),seaHook:FZ.Art.icon("h5",80),
+   seaLure:FZ.Art.icon("sea_wobbler",80),seaJig:FZ.Art.icon("deep_jig",80)
  }));
  assert(art.rod1.includes("rod_f1.svg")&&art.rod3.includes("rod_f3.svg"));
  assert(art.line1.includes("line_l1.svg")&&art.line7.includes("line_l7.svg"));
  assert(art.hook1.includes("hook_h1.svg")&&art.hook4.includes("hook_h4.svg"));
  assert(art.worm.includes("bait_worm.svg")&&art.jig.includes("bait_jig.svg"));
  assert(art.echo.includes("extra_echo.svg")&&art.corn.includes("bait_corn.svg"));
+ assert(art.oceanRod.includes("rod_s4.svg")&&art.seaLine.includes("line_l8.svg"));
+ assert(art.seaHook.includes("hook_h5.svg")&&art.seaLure.includes("bait_sea_wobbler.svg"));
+ assert(art.seaJig.includes("bait_deep_jig.svg"));
+ // Every enumerated catalog item must map to a real SVG path.
+ const required=await page.evaluate(()=>[
+    ...FZ.RODS,...FZ.LINES,...FZ.HOOKS,...FZ.BAITS,
+    ...Object.values(FZ.EXTRAS),FZ.GROUNDBAIT
+  ].map(x=>FZ.Art.icon(x.id,80)));
+ assert.equal(required.length,14+8+5+23+3+1);
+ assert(required.every(u=>u.startsWith("assets/cozy/")&&u.endsWith(".svg")));
  await page.evaluate(()=>FZ.UI.showShop("rod"));
  await page.waitForSelector(".cozy-preview img");
  const shopDiag=await page.evaluate(()=>({
@@ -45,16 +57,22 @@ const out=process.env.FISH_OUT||"work/cozy";fs.mkdirSync(out,{recursive:true});
    modules:{inventory:!!FZ.CozyInventory,shop:typeof FZ.UI.showShop}
  }));
  console.log("SHOP DEBUG",JSON.stringify(shopDiag));
- assert.equal(await page.locator(".cozy-catalog-row").count(),12,"12 rods in shop");
+ assert.equal(await page.locator(".cozy-catalog-row").count(),14,"14 rods in full game catalog");
  const source=await page.locator(".cozy-catalog-row").first().locator(".pic img").getAttribute("src");
  assert(source.includes("rod_f1.svg"),source);
  await page.screenshot({path:path.join(out,"shop-rods.png")});
  await page.evaluate(()=>FZ.UI.showShop("line"));
- assert.equal(await page.locator(".cozy-catalog-row").count(),7,"7 line models");
+ assert.equal(await page.locator(".cozy-catalog-row").count(),8,"8 line models");
  await page.screenshot({path:path.join(out,"shop-lines.png")});
  await page.evaluate(()=>FZ.UI.showShop("lure"));
- assert.equal(await page.locator(".cozy-catalog-row").count(),8,"8 distinct lures");
+ assert.equal(await page.locator(".cozy-catalog-row").count(),11,"11 distinct lures incl sea");
  await page.screenshot({path:path.join(out,"shop-lures.png")});
+ await page.evaluate(()=>FZ.UI.showShop("hook"));
+ assert.equal(await page.locator(".cozy-catalog-row").count(),5,"5 hooks");
+ await page.screenshot({path:path.join(out,"shop-hooks.png")});
+ await page.evaluate(()=>FZ.UI.showShop("extra"));
+ assert.equal(await page.locator(".cozy-catalog-row").count(),3,"3 extra tools");
+ await page.screenshot({path:path.join(out,"shop-tools.png")});
  await page.evaluate(()=>FZ.UI.showShop("bait"));
  assert.equal(await page.locator(".cozy-catalog-row").count(),13,"12 baits and groundbait");
  await page.screenshot({path:path.join(out,"shop-bait.png")});
