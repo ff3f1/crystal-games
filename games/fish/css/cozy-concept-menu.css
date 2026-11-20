@@ -1,0 +1,63 @@
+/* ORIGINAL CONCEPT — warm waterside sunrise, dark wood, brass and tactile panels.
+   Only #ovMenu is affected; never changes the active fishing scene. */
+#ovMenu.cozy-lodge.cozy-concept-menu{background-color:#142e2d;background-position:center 38%!important;background-size:cover!important;overflow-x:hidden}
+#ovMenu.cozy-concept-menu::before{background:linear-gradient(180deg,rgba(48,30,14,.03),rgba(255,179,86,.13) 25%,rgba(21,48,37,.03) 39%,rgba(2,29,27,.28) 55%,rgba(4,23,24,.91) 79%,#092222)!important}
+#ovMenu.cozy-concept-menu .cozy-sunlight{left:-40%;top:10%;width:152%;height:46%;background:radial-gradient(ellipse at 42% 60%,rgba(255,192,87,.5),rgba(252,182,93,.18) 29%,transparent 66%)}
+#ovMenu.cozy-concept-menu .cozy-mist{top:35%;filter:blur(10px)}
+#ovMenu.cozy-concept-menu .lodge{position:relative;max-width:515px;width:100%;height:100dvh;min-height:620px;padding:calc(11px + var(--safe-t)) 13px calc(11px + var(--safe-b));display:flex;flex-direction:column;overflow:hidden}
+#ovMenu.cozy-concept-menu .lodge-title{position:relative;z-index:3;flex:0 0 auto;width:96%;margin:0 auto;padding:12px 38px 10px 20px;min-height:101px;max-height:119px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid #a77d48;border-bottom:5px solid #231812;border-radius:25px 28px 22px 19px;background:repeating-linear-gradient(176deg,transparent 0px,#110c0933 2px,transparent 4px,transparent 20px),linear-gradient(96deg,#3b291c,#694a31 24%,#37271c 56%,#62452c 82%,#2d2119);box-shadow:0 6px 0 #211910,0 14px 23px #0009,inset 0 2px 2px #f8d39c70;text-shadow:0 3px 3px #1a1009;transform:rotate(-.6deg);animation:cozy-arrive .55s ease-out backwards}
+#ovMenu.cozy-concept-menu .lodge-title::before,#ovMenu.cozy-concept-menu .lodge-title::after{top:50%;width:7px;height:7px;background:radial-gradient(circle at 30% 25%,#fff1be,#b17c44 60%,#3c250f)}
+#ovMenu.cozy-concept-menu .lodge-title>small{font-size:11px;line-height:1.05;letter-spacing:.27em;color:#e8cfaa}
+#ovMenu.cozy-concept-menu .lodge-title h1{font-family:Georgia,'Rubik',serif;font-weight:900;font-size:clamp(39px,10.8vw,62px);line-height:1.05;letter-spacing:-1.1px;margin:4px 0;color:#ffe9bf;text-shadow:0 3px 0 #65432c,0 5px 5px #1a110b;white-space:nowrap}
+#ovMenu.cozy-concept-menu .lodge-title h1 span{color:#ffe2a5}
+#ovMenu.cozy-concept-menu .cozy-sign-fish{position:absolute;right:8px;top:18%;width:40px;height:62px;object-fit:contain;filter:sepia(1) saturate(.7) brightness(1.4) drop-shadow(0 2px 2px #0008);transform:rotate(-30deg)}
+#ovMenu.cozy-concept-menu .cozy-menu-scene{position:relative;flex:1 1 auto;min-height:74px;max-height:39dvh;pointer-events:none;isolation:isolate}
+#ovMenu.cozy-concept-menu .cozy-menu-sun{position:absolute;left:33%;top:4%;width:44%;height:85%;background:radial-gradient(ellipse at 50% 33%,rgba(255,223,145,.78),rgba(250,173,85,.25) 19%,transparent 65%);mix-blend-mode:screen;filter:blur(6px)}
+#ovMenu.cozy-concept-menu .cozy-menu-horizon{position:absolute;left:-10%;top:67%;width:120%;height:25%;background:linear-gradient(180deg,transparent,rgba(255,195,109,.27) 36%,rgba(254,231,165,.08) 54%,transparent);filter:blur(5px)}
+#ovMenu.cozy-concept-menu .cozy-rod-still{position:absolute;right:-34%;bottom:-27%;height:87%;width:100%;object-fit:contain;transform:rotate(-51deg);transform-origin:center;filter:drop-shadow(2px 3px 4px #061b19a0);opacity:.9}
+#ovMenu.cozy-concept-menu .cozy-reel-still{position:absolute;right:5%;bottom:-7%;height:38%;max-height:122px;width:24%;object-fit:contain;transform:rotate(14deg);filter:drop-shadow(1px 8px 7px #061918bc)}
+#ovMenu.cozy-concept-menu .cozy-menu-reeds{position:absolute;right:-2%;bottom:-8%;width:38%;height:50%;opacity:.51;background:repeating-conic-gradient(from -3deg at 50% 100%,transparent 0deg 4deg,#3c5945 5deg 5.4deg,transparent 6deg 12deg);clip-path:polygon(0 100%,25% 12%,34% 100%,52% 20%,66% 100%,82% 7%,100% 100%)}
+#ovMenu.cozy-concept-menu .lodge-bottom{position:relative;z-index:2;flex:0 0 auto;margin-top:0;padding:9px 8px 8px;border:1px solid #d5ad67b6;border-radius:21px;background:linear-gradient(180deg,rgba(13,49,41,.96),rgba(8,37,34,.99) 45%,rgba(7,29,27,.99));box-shadow:0 -14px 40px #001b1988,inset 0 1px 1px #ffebb85b,0 6px 19px #0007}
+#ovMenu.cozy-concept-menu .lodge-profile{display:flex;align-items:center;gap:8px;padding:2px 4px 8px;margin-bottom:8px;min-height:51px;background:transparent;box-shadow:none;border:0;border-bottom:1px solid #bda66d54;border-radius:0;animation:none}
+#ovMenu.cozy-concept-menu .lodge-profile .rank{width:39px;height:39px;font-size:17px;border:2px solid #f5cc78;background:radial-gradient(circle,#71602e,#2f552e)}
+#ovMenu.cozy-concept-menu .lodge-profile b{font-size:13px;color:#ffefd0}
+#ovMenu.cozy-concept-menu .lodge-profile small{font-size:9px;margin-top:3px;color:#c7d4be}
+#ovMenu.cozy-concept-menu .lodge-profile strong{font-size:14px;color:#ffde98}
+#ovMenu.cozy-concept-menu .go{height:59px;min-height:59px;padding-left:62px;border:2px solid #ffe7aa;border-bottom:4px solid #9f6d29;border-radius:24px;background:linear-gradient(170deg,#fff0ba,#edb95a 40%,#d8922f 80%,#c27b20);color:#4d3018;text-transform:uppercase;font-size:16px;letter-spacing:.5px;text-shadow:0 1px #fff3c769;box-shadow:inset 0 2px 2px #fff6d4,0 3px 0 #785022,0 8px 16px #0008;animation:none}
+#ovMenu.cozy-concept-menu .go small{font-size:9px;letter-spacing:0;text-transform:none;color:#70502a}
+#ovMenu.cozy-concept-menu .go>svg{top:16px;right:16px}
+#ovMenu.cozy-concept-menu .cozy-play-angler{position:absolute;left:16px;top:11px;font-size:28px;line-height:32px;filter:sepia(.5) drop-shadow(0 1px 1px #886027)}
+#ovMenu.cozy-concept-menu .duel-entry{min-height:31px;height:32px;margin:6px 0 2px;padding:4px 10px;background:linear-gradient(110deg,#375941,#1c3735);border:1px solid #bda268a3;box-shadow:inset 0 1px #ffe5a32f;animation:none}
+#ovMenu.cozy-concept-menu .duel-entry>svg{width:16px;height:16px}
+#ovMenu.cozy-concept-menu .duel-entry b{font-size:11px}
+#ovMenu.cozy-concept-menu .duel-entry small{font-size:9px}
+#ovMenu.cozy-concept-menu .lodge-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;gap:4px;height:58px;min-height:58px;padding:5px 4px;border:1px solid #ccae72a3;border-bottom:3px solid #7b572d;border-radius:11px;background:linear-gradient(145deg,#1e4a3e,#0f332e 62%,#092922);box-shadow:inset 0 1px #ffebb62f,0 3px 6px #0006;font-size:10px;font-weight:650;color:#f5ebd2;animation:none}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .i{width:29px;height:29px;flex-shrink:0;stroke:#ffda91;filter:drop-shadow(0 2px 2px #000a)}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art{flex-shrink:0;width:36px;height:42px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:6px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art img{width:38px;height:39px;object-fit:contain;filter:drop-shadow(0 2px 2px #0009)}
+#ovMenu.cozy-concept-menu .lodge-grid .tile#mMap img,#ovMenu.cozy-concept-menu .lodge-grid .tile#mJourney img,#ovMenu.cozy-concept-menu .lodge-grid .tile#mForecast img{object-fit:cover;border-radius:5px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile.cozy-has-art>svg{display:none}
+#ovMenu.cozy-concept-menu .lodge-grid .tile>span:last-child{min-width:0;overflow-wrap:break-word;line-height:1.12}
+#ovMenu.cozy-concept-menu .lodge-footer{display:flex;justify-content:center;margin-top:6px}
+#ovMenu.cozy-concept-menu .lodge-footer button{font-size:10px;min-height:23px;padding:3px 14px;border-radius:7px}
+#ovMenu.cozy-concept-menu .go.cozy-pressed,#ovMenu.cozy-concept-menu .go:active{transform:translateY(3px) scale(.991)}
+@media(max-height:740px){
+#ovMenu.cozy-concept-menu .lodge{min-height:0;padding-top:calc(6px + var(--safe-t));padding-bottom:calc(6px + var(--safe-b))}
+#ovMenu.cozy-concept-menu .lodge-title{min-height:80px;max-height:86px;padding:6px 30px}
+#ovMenu.cozy-concept-menu .lodge-title h1{font-size:38px}
+#ovMenu.cozy-concept-menu .lodge-bottom{padding:7px 6px 5px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile{height:49px;min-height:49px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art{height:36px;width:30px}
+#ovMenu.cozy-concept-menu .lodge-profile{min-height:42px;margin-bottom:5px}
+#ovMenu.cozy-concept-menu .go{min-height:50px;height:50px}
+#ovMenu.cozy-concept-menu .duel-entry{height:27px;min-height:27px;margin:3px 0 0}
+}
+@media(max-width:345px){
+#ovMenu.cozy-concept-menu .lodge{padding-inline:8px}
+#ovMenu.cozy-concept-menu .lodge-grid{gap:4px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile{font-size:9px}
+#ovMenu.cozy-concept-menu .lodge-grid .tile .cozy-tile-art{width:26px}
+#ovMenu.cozy-concept-menu .cozy-sign-fish{width:32px}
+}
+@media(prefers-reduced-motion:reduce){#ovMenu.cozy-concept-menu .cozy-mist,#ovMenu.cozy-concept-menu .cozy-sunlight{animation:none}}

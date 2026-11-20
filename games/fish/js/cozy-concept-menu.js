@@ -1,0 +1,41 @@
+/* Cozy Lodge Stage 8 — approved warm dawn / timber sign / real tackle.
+   Existing nine game menu buttons and click handlers remain untouched. */
+(function(FZ){
+ "use strict";
+ if(!FZ||!FZ.UI)return;
+ const UI=FZ.UI, old=UI.showMenu,ov=document.getElementById("ovMenu");
+ if(!old||!ov)return;
+ const art={
+   mMap:"assets/base/seliger.webp",
+   mShop:"assets/equipment/reel_spinning_gold.png",
+   mAtlas:"assets/fish-hd/perch.webp",
+   mJourney:"assets/base/taiga.webp",
+   mForecast:"assets/base/akhtuba.webp"
+ };
+ UI.showMenu=function(){
+   const out=old.apply(this,arguments),lodge=ov.querySelector(".lodge");
+   if(!lodge)return out;
+   ov.classList.add("cozy-concept-menu");
+   // A stable, atmospheric home panorama, independent of the currently selected fishing map.
+   ov.style.backgroundImage='linear-gradient(180deg,rgba(46,35,24,.02),rgba(54,35,22,.08) 36%,rgba(6,30,26,.65) 61%,#0b2525 100%),url("assets/base/seliger.webp")';
+   const title=lodge.querySelector(".lodge-title");
+   if(title){
+     title.insertAdjacentHTML("beforeend",'<img class="cozy-sign-fish" alt="" src="assets/fish-hd/perch.webp">');
+     title.insertAdjacentHTML("afterend",
+       '<div class="cozy-menu-scene" aria-hidden="true"><div class="cozy-menu-sun"></div><div class="cozy-menu-horizon"></div>'+
+       '<img class="cozy-rod-still" src="assets/equipment/complete-hd/spin.webp" alt="">'+
+       '<img class="cozy-reel-still" src="assets/equipment/reel_spinning_gold.png" alt="">'+
+       '<div class="cozy-menu-reeds"></div></div>');
+   }
+   const go=lodge.querySelector(".go");
+   if(go)go.insertAdjacentHTML("afterbegin",'<span class="cozy-play-angler" aria-hidden="true">🎣</span>');
+   for(const [id,src] of Object.entries(art)){
+     const tile=lodge.querySelector("#"+id);if(!tile)continue;
+     const frame=document.createElement("span");frame.className="cozy-tile-art";
+     const img=document.createElement("img");img.src=src;img.alt="";img.decoding="async";
+     frame.appendChild(img);tile.insertBefore(frame,tile.firstChild);
+     tile.classList.add("cozy-has-art");
+   }
+   return out;
+ };
+})(window.FZ);
