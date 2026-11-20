@@ -729,7 +729,7 @@
       ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.55 * (1 - k)); ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.ellipse(q.x, q.y, rad, rad * 0.28, 0, 0, Math.PI * 2); ctx.stroke();
     }
-    ctx.strokeStyle = lineCol; ctx.lineWidth = lineVis ? lineVis.width : 1; ctx.beginPath();
+    ctx.strokeStyle = lineCol; ctx.lineWidth = 1; ctx.beginPath();
     for (let i = R.fx.length - 1; i >= 0; i--) {
       const f = R.fx[i]; f.age += dt;
       if (f.age > f.life) { R.fx.splice(i, 1); if (f.type === "bub") R.ring(f.X, f.Z, 0.12, 0.6); continue; }
@@ -832,7 +832,7 @@
     // Sag is measured from the chord between the actual line endpoints.
     if (lineEnd) {
       const sag = target.air ? 0 : FZ.RodArt.lineSag(lineFrom, lineEnd, load, H);
-      ctx.strokeStyle = lineCol; ctx.lineWidth = 1;
+      ctx.strokeStyle = lineCol; ctx.lineWidth = lineVis ? lineVis.width : 1;
       ctx.beginPath(); ctx.moveTo(lineFrom.x, lineFrom.y);
       if (sag < 0.45) ctx.lineTo(lineEnd.x, lineEnd.y);
       else ctx.quadraticCurveTo((lineFrom.x + lineEnd.x) / 2, (lineFrom.y + lineEnd.y) / 2 + 2 * sag, lineEnd.x, lineEnd.y);
