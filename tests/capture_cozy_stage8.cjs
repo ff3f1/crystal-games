@@ -29,7 +29,7 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    await page.evaluate(()=>FZ.UI.showTackle());
    await page.waitForSelector('.cozy-loadout .cozy-slot');
    await page.screenshot({path:path.join(output,'04-tackle.png')});
-   await page.evaluate(()=>FZ.UI.showMenu());
+   await page.evaluate(()=>{FZ.UI.closeSheet();FZ.UI.showMenu()});
    await page.locator('#mHelp').click();await page.waitForTimeout(200);
    assert(await page.locator('#ovSheet').evaluate(e=>e.classList.contains('on')),'tutorial button still works');
  }
