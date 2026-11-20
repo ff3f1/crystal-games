@@ -149,6 +149,7 @@
     if(edge>.75)return -side;
     return rand()<.5?-1:1;
   };
-  E.isPredatorSpot=s=>FEEDING_PRED.has(s.id);
+  E.isEdgeFish=s=>!!s&&EDGE.has(s.id);
+  E.isPredatorSpot=s=>!!s&&FEEDING_PRED.has(s.id);
   FZ.Ecology=E;
 })(window.FZ);

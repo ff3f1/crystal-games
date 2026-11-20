@@ -93,28 +93,11 @@
      ctx.drawImage(im,-w/2,-h/2,w,h);ctx.restore();return true;
    },
    surface(ctx,v,p,tk,t){
-     // Show the equipped lure *at the existing line endpoint*. Never draw a second line.
-     // Deep jigs are underwater, so only surface-running lures are visible.
-     if(v.mode==="spin"&&tk.reeling){
-       const baitId=G.loadout("spin").bait;
-       const bait=FZ.BAIT&&FZ.BAIT[baitId];
-       const n=baitId==="spoon"||baitId==="wobbler"?baitId:"bait_"+baitId;
-       const im=bait&&bait.lure==="top"?img(n):null;
-       if(im){
-         ctx.save();ctx.globalAlpha=.78;
-         ctx.translate(p.x,p.y+1);
-         ctx.rotate(Math.sin(t*9)*.09);
-         ctx.drawImage(im,-8,-5,16,10);
-         ctx.restore();
-       }
-     }
+     // Exactly one animated surface lure at the real line endpoint.
+     if(FZ.CozyMotion)FZ.CozyMotion.drawSurface(ctx,v,p,tk,t,img);
      ctx.save();ctx.strokeStyle="rgba(230,245,226,.33)";ctx.lineWidth=.8;
      ctx.beginPath();ctx.ellipse(p.x,p.y+1,tk.reeling?7:4,tk.reeling?2.6:1.4,0,0,Math.PI*2);ctx.stroke();
-     if(v.mode==="spin"&&tk.reeling){
-       ctx.strokeStyle="rgba(255,236,200,.32)";
-       ctx.beginPath();ctx.moveTo(p.x-8,p.y+2);ctx.lineTo(p.x-2,p.y);ctx.stroke();
-       if(Math.sin(t*8)>.65){ctx.fillStyle="rgba(255,220,144,.55)";ctx.beginPath();ctx.arc(p.x,p.y,1.4,0,Math.PI*2);ctx.fill()}
-     }
+     // Wake is handled in FZ.CozyMotion and only on genuine retrieve.
      ctx.restore();
    }
  };

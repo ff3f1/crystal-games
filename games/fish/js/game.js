@@ -646,7 +646,7 @@
         f.X = Math.sign(f.X) * bank;
         if (!sess.duel && f.snagT > 0.4 && f.snagT - dt <= 0.4) emit("msg", { text: "Уходит в траву! Ведите удилище в другую сторону", bad: true });
       } else f.snagT = Math.max(0, f.snagT - dt * (awayFromBank && against ? 4 : 2));
-      if (f.snagT > 2.4 && f.w >= 0.3 && (EDGE_FISH[s.id] || f.Fmax > rod.power)) return lose("snag");
+      if (f.snagT > 2.4 && f.w >= 0.3 && (FZ.Ecology.isEdgeFish(s) || f.Fmax > rod.power)) return lose("snag");
     }
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
     const drain = (0.035 + 0.14 * U.clamp(f.T / f.Fmax, 0, 1.5))
@@ -911,10 +911,15 @@
     const r = rig;
     if (r.reeling) {
       const g = G.gear(sess.mode);
-      r.Z -= g.rod.reel * 0.8 * dt; r.spinPause = 0; r.rod.reelAngle += dt * 12; FZ.Sound.reel(g.rod.reel);
+      r.Z -= g.rod.reel * 0.8 * dt; r.spinPause = 0; FZ.Sound.reel(g.rod.reel);
       r.X *= Math.pow(0.85, dt);
       if (r.Z < 4.2) { r.state = "idle"; emit("msg", { text: "Проводка закончена — бросайте снова" }); }
     } else r.spinPause += dt;
+    // Wind the existing reel handle, don't layer a second graphic.
+    // A little inertia on release gives it weight without changing retrieve speed.
+    r.rod.reelSpeed = U.damp(r.rod.reelSpeed || 0,
+      r.reeling ? 5 + Math.min(20, G.gear(sess.mode).rod.reel * 3.5) : 0, 13, dt);
+    r.rod.reelAngle += r.rod.reelSpeed * dt;
   }
 
   // Данные для отрисовки

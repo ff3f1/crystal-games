@@ -768,6 +768,11 @@
     const rod = v.rod || {};
     tip.x += (rod.tilt || 0) * W * 0.24;
     tip.y += (rod.lift || 0) * H * 0.05;
+    // Lightweight real-state feedback; never adds a second line or rod sprite.
+    if (FZ.CozyMotion) {
+      const tremor=FZ.CozyMotion.rodReaction(v,v.t||0);
+      tip.x+=tremor.x;tip.y+=tremor.y;
+    }
     if (v.tackle && v.tackle.state === "fly") {
       const k = v.tackle.flyT;
       const windup = Math.sin(Math.PI * U.clamp(k / 0.36, 0, 1));

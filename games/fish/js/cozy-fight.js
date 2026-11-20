@@ -33,29 +33,8 @@
     if (awake < .12 || !Number.isFinite(p.x) || !Number.isFinite(p.y))return;
     const scale=clamp(p.s||30,5,85);
     const alpha=(.11+awake*.24)*(1-clamp(L.dark||0,0,.9)*.28);
-    ctx.save();
-    try {
-      // The tail of the wake points opposite the fish's actual velocity.
-      const vx=f.vx||0, vz=f.vz||0;
-      const ang=Math.atan2(-vz*.31,vx||.00001);
-      ctx.translate(p.x,p.y);
-      ctx.rotate(ang);
-      ctx.scale(1,.38);
-      const length=clamp(9+scale*.33+speed*12,11,43);
-      const width=clamp(3+scale*.11+awake*5,3,15);
-      ctx.lineCap='round';
-      for(let side of [-1,1]) {
-        ctx.beginPath();
-        ctx.moveTo(-2,side*1.2);
-        ctx.quadraticCurveTo(-length*.47,side*width*.37,-length,side*width);
-        ctx.strokeStyle='rgba(228,241,219,'+alpha.toFixed(3)+')';
-        ctx.lineWidth=.95+awake*.55;
-        ctx.stroke();
-      }
-      ctx.strokeStyle='rgba(64,111,115,'+(alpha*.57).toFixed(3)+')';
-      ctx.lineWidth=2.6;
-      ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(-length*.76,0);ctx.stroke();
-    } finally {ctx.restore()}
+    // The original R.drawFightFish already renders a directional wake.
+    // Do not draw a duplicate wake on top; only add an occasional near-shore ring.
     // Surface shimmer, only above a genuinely hooked, shallow fish.
     if(surf>.35 && near>.12)poolRipple(p.x,p.y,clamp(5+scale*.20,7,20),alpha*.7,reduced?0:t);
     metrics.fighting++;
