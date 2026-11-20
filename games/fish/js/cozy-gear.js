@@ -6,7 +6,12 @@
  const root="assets/cozy/",skins=[["classic","Классика"],["forest","Лесной"],["match","Матчевый"]],cache={};
  function skin(){const s=G.state();return (s&&s.settings&&skins.some(x=>x[0]===s.settings.cozyFloatSkin))?s.settings.cozyFloatSkin:"classic"}
  function img(id){
-   if(!cache[id]){const x=new Image();x.src=root+id+".svg";cache[id]=x}
+   if(!cache[id]){
+     const x=new Image();
+     const realistic=FZ.CozyRealArt && FZ.CozyRealArt.scene(id);
+     x.src=realistic || root+id+".svg";
+     cache[id]=x;
+   }
    return cache[id].complete&&cache[id].naturalWidth?cache[id]:null;
  }
  const priorIcon=Art.icon;
