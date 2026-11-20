@@ -1,0 +1,47 @@
+/* Warm tackle-box reward styling. No extra layout height: compact Android safe. */
+#ovCatch.on .catch.cozy-wood-trophy{
+  border:1px solid rgba(209,174,113,.55);
+  background:
+    radial-gradient(ellipse at 50% 14%,rgba(119,91,51,.23),transparent 52%),
+    linear-gradient(165deg,rgba(26,57,51,.98),rgba(12,37,39,.98) 57%,rgba(37,49,43,.98));
+  box-shadow:0 20px 60px rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,224,153,.08),inset 0 3px 18px rgba(0,0,0,.2);
+  overflow:hidden;
+}
+#ovCatch.on.trophy .catch.cozy-wood-trophy{
+  border-color:rgba(242,198,111,.84);
+  box-shadow:0 20px 62px rgba(0,0,0,.72),0 0 32px rgba(234,185,104,.18),inset 0 0 0 1px rgba(255,227,165,.16);
+}
+#ovCatch .catch.cozy-wood-trophy::after{
+  content:"";position:absolute;inset:8px;z-index:0;pointer-events:none;border:1px solid rgba(211,179,113,.18);border-radius:inherit;
+}
+#ovCatch .catch.cozy-wood-trophy .cozy-trophy-seal{
+  position:absolute;top:12px;right:13px;z-index:2;
+  display:grid;place-items:center;width:28px;height:28px;border-radius:50%;
+  color:#f4d58d;font-size:17px;line-height:1;
+  background:radial-gradient(circle at 32% 22%,#9e834f,#45372c 70%);
+  border:1px solid rgba(248,211,141,.66);
+  box-shadow:0 2px 10px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,230,167,.27);
+  pointer-events:none;
+}
+#ovCatch .catch.cozy-wood-trophy[data-cozy-award="trophy"] .cozy-trophy-seal{
+  color:#ffedbc;box-shadow:0 0 18px rgba(247,209,119,.37),inset 0 1px 0 rgba(255,238,181,.45);
+}
+#ovCatch .catch.cozy-wood-trophy .cozy-catch-fish{
+  filter:drop-shadow(0 8px 12px rgba(0,0,0,.17));
+}
+#ovCatch .catch.cozy-wood-trophy .wt{color:#ffe4a8;text-shadow:0 2px 13px rgba(237,193,99,.15)}
+#ovCatch .catch.cozy-wood-trophy .nm{color:#f5eed7}
+#ovCatch .catch.cozy-wood-trophy .bdg{
+  border:1px solid rgba(250,223,164,.24);
+  box-shadow:0 2px 9px rgba(0,0,0,.19);
+}
+#ovCatch .catch.cozy-wood-trophy .acts button{
+  transition:transform .13s ease,filter .15s ease;
+}
+#ovCatch .catch.cozy-wood-trophy .acts button:active{transform:scale(.976);filter:brightness(.94)}
+@media(max-height:650px){
+  #ovCatch .catch.cozy-wood-trophy .cozy-trophy-seal{width:20px;height:20px;top:8px;right:8px;font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+  #ovCatch .catch.cozy-wood-trophy .acts button{transition:none}
+}
