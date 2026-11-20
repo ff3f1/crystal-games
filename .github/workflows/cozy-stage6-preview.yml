@@ -78,10 +78,11 @@ jobs:
           mkdir -p output
           cp android/app/build/outputs/apk/debug/*.apk output/Rybalka_Cozy_Stage6_RealArt.apk
           unzip -t output/Rybalka_Cozy_Stage6_RealArt.apk | tail -1
-          unzip -Z1 output/Rybalka_Cozy_Stage6_RealArt.apk | grep -q '^assets/js/cozy-realistic-art.js$'
-          unzip -Z1 output/Rybalka_Cozy_Stage6_RealArt.apk | grep -q '^assets/equipment/spoon.png$'
-          unzip -Z1 output/Rybalka_Cozy_Stage6_RealArt.apk | grep -q '^assets/equipment/float_waggler.png$'
-          unzip -Z1 output/Rybalka_Cozy_Stage6_RealArt.apk | grep -q '^assets/js/fishing-ecology.js$'
+          unzip -Z1 output/Rybalka_Cozy_Stage6_RealArt.apk > output/APK_CONTENTS.txt
+          grep -Fx 'assets/js/cozy-realistic-art.js' output/APK_CONTENTS.txt
+          grep -Fx 'assets/assets/equipment/spoon.png' output/APK_CONTENTS.txt
+          grep -Fx 'assets/assets/equipment/float_waggler.png' output/APK_CONTENTS.txt
+          grep -Fx 'assets/js/fishing-ecology.js' output/APK_CONTENTS.txt
           sha256sum output/*.apk > output/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
