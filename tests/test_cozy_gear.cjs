@@ -21,9 +21,42 @@ const out=process.env.FISH_OUT||"work/cozy";fs.mkdirSync(out,{recursive:true});
  });
  assert(menuStatus.visible&&Number(menuStatus.go)>.98,JSON.stringify(menuStatus));
  await page.screenshot({path:path.join(out,"menu.png")});
+ // Confirm all model-specific assets are used, not one generic icon.
+ const art=await page.evaluate(()=>({
+   rod1:FZ.Art.icon("f1",80),rod3:FZ.Art.icon("f3",80),
+   line1:FZ.Art.icon("l1",80),line7:FZ.Art.icon("l7",80),
+   hook1:FZ.Art.icon("h1",80),hook4:FZ.Art.icon("h4",80),
+   worm:FZ.Art.icon("worm",80),jig:FZ.Art.icon("jig",80),
+   echo:FZ.Art.icon("echo",80),corn:FZ.Art.icon("corn",80)
+ }));
+ assert(art.rod1.includes("rod_f1.svg")&&art.rod3.includes("rod_f3.svg"));
+ assert(art.line1.includes("line_l1.svg")&&art.line7.includes("line_l7.svg"));
+ assert(art.hook1.includes("hook_h1.svg")&&art.hook4.includes("hook_h4.svg"));
+ assert(art.worm.includes("bait_worm.svg")&&art.jig.includes("bait_jig.svg"));
+ assert(art.echo.includes("extra_echo.svg")&&art.corn.includes("bait_corn.svg"));
+ await page.evaluate(()=>FZ.UI.showShop("rod"));
+ await page.waitForSelector(".cozy-preview img");
+ assert.equal(await page.locator(".cozy-catalog-row").count(),12,"12 rods in shop");
+ const source=await page.locator(".cozy-catalog-row").first().locator(".pic img").getAttribute("src");
+ assert(source.includes("rod_f1.svg"),source);
+ await page.screenshot({path:path.join(out,"shop-rods.png")});
+ await page.evaluate(()=>FZ.UI.showShop("line"));
+ assert.equal(await page.locator(".cozy-catalog-row").count(),7,"7 line models");
+ await page.screenshot({path:path.join(out,"shop-lines.png")});
+ await page.evaluate(()=>FZ.UI.showShop("lure"));
+ assert.equal(await page.locator(".cozy-catalog-row").count(),8,"8 distinct lures");
+ await page.screenshot({path:path.join(out,"shop-lures.png")});
+ await page.evaluate(()=>FZ.UI.showShop("bait"));
+ assert.equal(await page.locator(".cozy-catalog-row").count(),13,"12 baits and groundbait");
+ await page.screenshot({path:path.join(out,"shop-bait.png")});
+ await page.evaluate(()=>FZ.UI.showBait());
+ assert(await page.locator(".cozy-bait-advice").count()>4);
+ await page.screenshot({path:path.join(out,"bait-recommendations.png")});
  await page.evaluate(()=>FZ.UI.showTackle());
  await page.waitForSelector(".cozy-skins button");
  assert.equal(await page.locator(".cozy-skins button").count(),3);
+ assert.equal(await page.locator(".cozy-loadout .cozy-slot").count(),4,"poplar float setup shows 4 selected gear slots");
+ assert(await page.locator(".cozy-equipped-row .pic img").count()>3);
  await page.screenshot({path:path.join(out,"tackle.png")});
  await page.locator('[data-cozy="forest"]').click();
  assert.equal(await page.evaluate(()=>FZ.Game.state().settings.cozyFloatSkin),"forest");
