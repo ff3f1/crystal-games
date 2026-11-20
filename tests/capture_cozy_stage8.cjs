@@ -49,6 +49,19 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    await page.locator('#mHelp').click();await page.waitForTimeout(200);
    assert(await page.locator('#ovSheet').evaluate(e=>e.classList.contains('on')),'tutorial button still works');
  }
+ if(name==='04-compact-phone'){
+   await page.evaluate(()=>FZ.UI.showShop('lure'));
+   await page.waitForSelector('.cozy-catalog-row');
+   const narrow=await page.evaluate(()=>{
+     const sheet=document.querySelector('#ovSheet .sheet'),rows=[...document.querySelectorAll('.cozy-catalog-row')];
+     const bad=rows.filter(row=>row.scrollWidth>row.clientWidth+2 || row.getBoundingClientRect().right>innerWidth+2);
+     const tabs=document.querySelector('#ovSheet .tabs');
+     return{rows:rows.length,clipped:bad.map(r=>r.textContent.trim().slice(0,20)),tabCanScroll:tabs.scrollWidth>tabs.clientWidth,screenWidth:innerWidth,sheetWidth:sheet.getBoundingClientRect().width};
+   });
+   assert(narrow.rows>=8 && narrow.clipped.length===0 && narrow.sheetWidth<=320+2,'compact shop layout '+JSON.stringify(narrow));
+   assert(narrow.tabCanScroll,'shop categories must remain horizontally scrollable on narrow phones');
+   await page.screenshot({path:path.join(output,'05-compact-lure-shop.png')});
+ }
  assert.deepEqual(errors,[]);
  await page.close();
 }
