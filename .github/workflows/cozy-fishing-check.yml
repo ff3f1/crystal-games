@@ -1,0 +1,73 @@
+name: Cozy Lodge — browser and safe test APK
+on:
+  push:
+    branches: [feature/cozy-lodge-menu]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JavaScript and vector art
+        run: |
+          node --check games/fish/js/scene.js
+          node --check games/fish/js/cozy-gear.js
+          node --check games/fish/js/lodge-cozy.js
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for name in glob.glob("games/fish/assets/cozy/*.svg"): ET.parse(name)
+          print("SVG XML validated")
+          PY
+      - name: Browser gameplay smoke test
+        run: |
+          npm install --prefix "$RUNNER_TEMP/cozy" playwright@1.56.1
+          python3 -m http.server 8080 --directory games/fish >/tmp/cozy-server.log 2>&1 &
+          mkdir -p work/cozy
+          NODE_PATH="$RUNNER_TEMP/cozy/node_modules" CHROME_PATH=/usr/bin/google-chrome FISH_URL=http://127.0.0.1:8080 FISH_OUT=work/cozy node tests/test_cozy_gear.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cozy-menu-gameplay-screenshots
+          path: work/cozy/
+          retention-days: 14
+  preview-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare game assets and original icon
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r games/fish/. android/app/src/main/assets/
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p android/app/src/main/res/mipmap-$d
+            cp store/fish/icons/ic_launcher_$d.png android/app/src/main/res/mipmap-$d/ic_launcher.png
+          done
+      - name: Assemble independent debug preview (does not replace RuStore game)
+        working-directory: android
+        run: >-
+          gradle :app:assembleDebug --no-daemon
+          -PappId=ru.crystalgames.fishing.cozy
+          '-PappName=Рыбалка Cozy Preview'
+          -PversionCode=2200 -PversionName=2.2-preview
+          -PadInter=demo-interstitial-yandex -PadReward=demo-rewarded-yandex
+      - name: Upload test APK
+        run: |
+          mkdir -p output
+          cp android/app/build/outputs/apk/debug/*.apk output/fishing-cozy-preview.apk
+          sha256sum output/*.apk > output/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fishing-cozy-preview-debug-apk
+          path: output/
+          retention-days: 14
