@@ -56,8 +56,12 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
      const sheet=document.querySelector('#ovSheet .sheet'),rows=[...document.querySelectorAll('.cozy-catalog-row')];
      const bad=rows.filter(row=>row.scrollWidth>row.clientWidth+2 || row.getBoundingClientRect().right>innerWidth+2);
      const tabs=document.querySelector('#ovSheet .tabs');
-     return{rows:rows.length,clipped:bad.map(r=>r.textContent.trim().slice(0,20)),tabCanScroll:tabs.scrollWidth>tabs.clientWidth,screenWidth:innerWidth,sheetWidth:sheet.getBoundingClientRect().width};
+     const banner=document.querySelector('#ovSheet .cozy-shelf-summary');
+     const strip=document.querySelector('#ovSheet .cozy-tab-strip');
+     const bannerBeforeTabs=!!banner&&!!strip&&banner.getBoundingClientRect().bottom<=strip.getBoundingClientRect().top+2;
+     return{bannerBeforeTabs,rows:rows.length,clipped:bad.map(r=>r.textContent.trim().slice(0,20)),tabCanScroll:tabs.scrollWidth>tabs.clientWidth,screenWidth:innerWidth,sheetWidth:sheet.getBoundingClientRect().width};
    });
+   assert(narrow.bannerBeforeTabs,'shop header must not overlap category tabs '+JSON.stringify(narrow));
    assert(narrow.rows>=8 && narrow.clipped.length===0 && narrow.sheetWidth<=320+2,'compact shop layout '+JSON.stringify(narrow));
    assert(narrow.tabCanScroll,'shop categories must remain horizontally scrollable on narrow phones');
    const arrow=page.locator('.cozy-tab-next');

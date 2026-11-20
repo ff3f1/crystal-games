@@ -89,7 +89,9 @@
   const banner=document.createElement('div');banner.className="cozy-shelf-summary";
   banner.innerHTML='<span>МОЙ РЫБОЛОВНЫЙ ЯЩИК</span><strong>'+itemCount('rod')+' удилищ · '+itemCount('line')+
     ' лесок · '+itemCount('lure')+' приманок</strong>';
-  sh.querySelector('.tabs').insertAdjacentElement('beforebegin',banner);
+  // Tabs live inside a scroll strip; the shelf summary must stay ABOVE it,
+  // not become a flex child overlapping the category buttons.
+  (sh.querySelector('.cozy-tab-strip')||sh.querySelector('.tabs')).insertAdjacentElement('beforebegin',banner);
   const preview=document.createElement('div');preview.className="cozy-preview";
   preview.setAttribute("aria-live","polite");
   scroll.insertAdjacentElement('beforebegin',preview);
