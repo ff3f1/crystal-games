@@ -21,20 +21,37 @@
    }
    return{x:0,y:0};
  };
+ // Let a surface lure settle naturally after the angler stops retrieving.
+ // spinPause comes from the actual rig, so a stationary lure cannot make a fake wake.
  M.lurePose=function(id,reeling,spinPause,t){
    const active=!!reeling;
+   const residual=active?1:Math.exp(-8*clamp(spinPause||0,0,8));
    const wave=(speed)=>Math.sin(t*speed);
    if(id==="wobbler"||id==="sea_wobbler")
-     return{visible:true,angle:active?wave(17)*.22:0,dy:active?wave(13)*1.35:Math.sin(t*1.7)*.45,roll:active?1:0,
-       wake:active?.85:.08,w:18,h:10};
+     return{visible:true,angle:wave(17)*.22*residual,dy:active?wave(13)*1.35:Math.sin(t*1.7)*.45,roll:active?1:0,
+       wake:active?.85:.10*residual,w:18,h:10};
    if(id==="mouse")
-     return{visible:true,angle:active?wave(5)*.07:0,dy:Math.sin(t*(active?8:1.7))*.62,
-       roll:0,wake:active?1:.10,w:17,h:11};
+     return{visible:true,angle:wave(5)*.07*residual,dy:Math.sin(t*(active?8:1.7))*.62,
+       roll:0,wake:active?1:.10*residual,w:17,h:11};
    if(id==="spoon"||id==="spinner"||id==="salmon_spinner")
-     return{visible:false,angle:0,dy:0,roll:0,wake:active?.32:0};
+     return{visible:false,angle:0,dy:0,roll:0,wake:0}; // submerged: no fake surface trail
    if(id==="jig"||id==="deep_jig")
      return{visible:false,angle:0,dy:0,roll:0,wake:0};
    return{visible:false,angle:0,dy:0,roll:0,wake:0};
+ };
+ // Casting pose: lure-specific flutter is visible only during the genuine flight.
+ // It does not alter cast distance, fish AI, tackle type or underwater depth.
+ M.castPose=function(id,k,t){
+   const travel=clamp(k,0,1),air=Math.sin(Math.PI*travel);
+   if(id==="spoon"||id==="icespoon")return{
+     angle:-travel*.42+Math.sin(t*17)*.27*air,
+     sx:1-.17*Math.abs(Math.sin(t*17))*air,sy:1};
+   if(id==="spinner"||id==="salmon_spinner")return{
+     angle:-travel*.35+Math.sin(t*24)*.16*air,
+     sx:1,sy:1-.13*Math.abs(Math.sin(t*24))*air};
+   if(id==="jig"||id==="deep_jig")return{angle:-travel*.35,sx:1,sy:1};
+   if(id==="mouse")return{angle:-travel*.20,sx:1,sy:1};
+   return{angle:-travel*.65+Math.sin(t*9)*.045*air,sx:1,sy:1};
  };
  M.drawSurface=function(ctx,v,p,tk,t,loadImage){
    if(!v||v.mode!=="spin"||!p||v.fish||!tk)return false;
