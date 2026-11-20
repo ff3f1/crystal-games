@@ -34,6 +34,27 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.waitForTimeout(250);await page.screenshot({path:path.join(dir,"06-tackle.png")});
  await page.evaluate(()=>{FZ.UI.closeSheet&&FZ.UI.closeSheet();FZ.UI.closeMenu&&FZ.UI.closeMenu();FZ.Game.startSession("pond","summer")});
  await page.waitForTimeout(650);await page.screenshot({path:path.join(dir,"07-game-water.png")});
+ // Real engine renders the equipped lure; set up a playable spin scene.
+ await page.evaluate(()=>{
+   const G=FZ.Game,st=G.state();
+   st.active="spin";if(!st.rods.includes("s1"))st.rods.push("s1");
+   st.load.spin.rod="s1";
+   st.lures.wobbler=1;st.load.spin.bait="wobbler";
+   G.startSession("pond","summer");
+   const r=G.rig();r.state="wait";r.X=1;r.Z=15;r.reeling=true;r.spinPause=0;
+ });
+ await page.waitForTimeout(450);
+ const moving=await page.evaluate(()=>({angle:FZ.Game.rig().rod.reelAngle,active:FZ.Game.rig().reeling,
+   lure:FZ.Game.loadout("spin").bait,spinMode:FZ.Game.sess().mode}));
+ assert(moving.active&&moving.spinMode==="spin"&&moving.lure==="wobbler",JSON.stringify(moving));
+ assert(Math.abs(moving.angle)>.1,"real spool handle rotated while retrieving");
+ await page.screenshot({path:path.join(dir,"08-wobbler-retrieve.png")});
+ await page.evaluate(()=>{FZ.Game.rig().reeling=false});
+ await page.waitForTimeout(420);
+ await page.screenshot({path:path.join(dir,"09-wobbler-paused.png")});
+ await page.evaluate(()=>{FZ.Game.state().lures.mouse=1;FZ.Game.state().load.spin.bait="mouse";FZ.Game.rig().reeling=true});
+ await page.waitForTimeout(330);
+ await page.screenshot({path:path.join(dir,"10-mouse-retrieve.png")});
  assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/6 shop tabs/real asset paths/no broken images");
  await b.close();
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
