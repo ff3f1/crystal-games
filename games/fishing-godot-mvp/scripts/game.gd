@@ -506,6 +506,9 @@ func _create_ui() -> void:
     pause_button.pressed.connect(open_pause)
     stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
 
+    stamina_label = _label(root, "", 17, 0.278, 0.775, 0.60, 0.826)
+    stamina_label.add_theme_color_override("font_color", Color(0.76, 0.89, 0.79))
+
     tension_bar = ProgressBar.new()
     tension_bar.min_value = 0
     tension_bar.max_value = 100
@@ -545,6 +548,22 @@ func _create_ui() -> void:
     brace_button = _button(root, "ДЕРЖАТЬ", 0.777, 0.845, 0.977, 0.973, Color(0.34, 0.41, 0.28))
     brace_button.button_down.connect(func() -> void: is_bracing = true)
     brace_button.button_up.connect(func() -> void: is_bracing = false)
+    drag_button = _button(root, "ФРИКЦИОН", 0.275, 0.845, 0.505, 0.973, Color(0.30, 0.32, 0.34))
+    drag_button.pressed.connect(_cycle_drag)
+
+    # The minimap follows the player, floating lure and actual hotspots.
+    minimap = (load("res://scripts/minimap.gd") as GDScript).new() as Control
+    minimap.set("game", self)
+    minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    minimap.anchor_left = 1.0
+    minimap.anchor_right = 1.0
+    minimap.anchor_top = 0.0
+    minimap.anchor_bottom = 0.0
+    minimap.offset_left = -262.0
+    minimap.offset_right = -16.0
+    minimap.offset_top = 110.0
+    minimap.offset_bottom = 300.0
+    root.add_child(minimap)
 
 func _label(parent: Control, txt: String, font_size: int, l: float, t: float, r: float, b: float) -> Label:
     var result := Label.new()
@@ -629,9 +648,11 @@ func _main_action() -> void:
             phase = Phase.FIGHT
             timer = 0.0
             tension = 22.0
-            # The player has time to learn: first fish reaches the shore in about
-            # 6-12 seconds of mindful reeling, rather than 25+ frustrating seconds.
-            fight_distance = clampf(camera.global_position.distance_to(bobber.global_position) * 0.71, 16.0, 22.0)
+            fight_sim.begin(fish_name, fish_weight, camera.global_position.distance_to(bobber.global_position) * 0.78)
+            fight_distance = fight_sim.distance
+            tension = fight_sim.tension
+            is_reeling = false
+            is_bracing = false
             sounds.call("play", "hook")
             _set_message("Рыба на крючке! Мотай. На красной шкале — отпусти.")
             _update_buttons()
@@ -644,7 +665,8 @@ func _toggle_lure() -> void:
         return
     lure_index = 1 - lure_index
     lure_button.text = "ЧЕРВЬ" if lure_index == 0 else "БЛЕСНА"
-    _set_message("Червь: карась и окунь." if lure_index == 0 else "Блесна: окунь и щука.")
+    _set_message("Червь: карась и окунь." if lure_index == 0 else "Блесна: веди приманку для окуня и щуки.")
+    _update_buttons()
 
 func _reset_to_ready() -> void:
     phase = Phase.READY
@@ -652,6 +674,8 @@ func _reset_to_ready() -> void:
     is_bracing = false
     bobber.visible = false
     fish_body.visible = false
+    bait_underwater.visible = false
+    lure_depth = 0.0
     line_mesh.clear_surfaces()
     _set_message("Выбери приманку и забрось в озеро.")
     _update_buttons()
@@ -670,68 +694,106 @@ func _cast() -> void:
     var forward := -camera.global_transform.basis.z
     forward.y = 0
     forward = forward.normalized()
-    cast_target = camera.global_position + forward * 27.0
+    cast_target = camera.global_position + forward * (31.0 if lure_index == 1 else 26.0)
     cast_target.y = 0.09
     cast_target.z = minf(1.5, cast_target.z)
+    lure_sim.begin_cast(cast_source, cast_target, lure_index)
+    lure_depth = 0.0
+    is_reeling = false
+    is_bracing = false
+    for part in float_parts:
+        part.visible = lure_index == 0
+    bait_underwater.visible = false
     bobber.visible = true
     bobber.global_position = cast_source
-    _set_message("Заброс! Следи за леской и поверхностью воды.")
+    _set_message("Заброс! Следи за поплавком и отметкой на мини-карте.")
     _update_buttons()
 
+
 func _choose_fish() -> void:
+    # Correct species distribution follows bait and actual lure location.
+    var place := "perch"
+    var best := 0.0
+    for entry in fish_spots:
+        var p: Vector3 = entry["pos"]
+        var d := Vector2(bobber.position.x - p.x, bobber.position.z - p.z).length()
+        var bonus := maxf(0.0, 1.0 - d / 27.0)
+        var kind: String = str(entry["type"])
+        if lure_index == 0 and kind == "carp":
+            bonus *= 1.7
+        elif lure_index == 1 and kind == "pike":
+            bonus *= 1.55
+        elif lure_index == 1 and kind == "carp":
+            bonus *= 0.15
+        elif lure_index == 0 and kind == "pike":
+            bonus *= 0.18
+        if bonus > best:
+            best = bonus
+            place = kind
     var roll := rng.randf()
     if lure_index == 0:
-        fish_name = "Карась" if roll < 0.60 else "Окунь"
-        fish_strength = 0.85 if fish_name == "Карась" else 1.2
-        fish_weight = rng.randf_range(0.25, 1.3) if fish_name == "Карась" else rng.randf_range(0.18, 0.8)
+        fish_name = "Карась" if (place == "carp" and roll < 0.83) or roll < 0.23 else "Окунь"
     else:
-        fish_name = "Окунь" if roll < 0.40 else "Щука"
-        fish_strength = 1.1 if fish_name == "Окунь" else 1.95
-        fish_weight = rng.randf_range(0.25, 0.95) if fish_name == "Окунь" else rng.randf_range(1.3, 4.6)
+        fish_name = "Щука" if (place == "pike" and roll < 0.68) or (place != "pike" and roll < 0.22) else "Окунь"
+    match fish_name:
+        "Карась":
+            fish_weight = rng.randf_range(0.25, 1.60)
+        "Окунь":
+            fish_weight = rng.randf_range(0.18, 1.10)
+        _:
+            fish_weight = rng.randf_range(1.20, 5.20)
+    fish_strength = 0.95 if fish_name == "Карась" else 1.20 if fish_name == "Окунь" else 1.86
     _set_fish_model(fish_name)
 
+func _cycle_drag() -> void:
+    if phase != Phase.FIGHT:
+        return
+    fight_sim.cycle_drag()
+    drag_button.text = "ФРИКЦИОН: %s" % fight_sim.drag_name()
+    sounds.call("play", "reel")
+
 func _update_fight(delta: float) -> void:
-    # The fish pulls in bursts, but the player is rewarded for timing releases.
-    var burst := maxf(0.0, sin(elapsed * (1.35 + fish_strength * 0.35)))
-    var fish_pull := 0.48 + fish_strength * 0.34 + burst * (0.36 + fish_strength * 0.13)
-    if is_reeling:
-        fight_distance -= (4.25 - fish_strength * 0.45 + (0.25 if is_bracing else 0.0)) * delta
-        tension += (11.5 + fish_strength * 3.9 + burst * 6.0 + (8.0 if is_bracing else 0.0)) * delta
-        if elapsed - last_sound_reel > 0.28:
-            last_sound_reel = elapsed
-            sounds.call("play", "reel")
-    else:
-        fight_distance += fish_pull * delta
-        tension -= 28.0 * delta
-    if is_bracing and not is_reeling:
-        fight_distance -= 0.70 * delta
-        tension += 3.8 * delta
-    tension = clampf(tension + sin(elapsed * 3.3) * fish_strength * delta * 1.5, 0.0, 110.0)
-    if tension >= 100.0:
-        _finish("Обрыв! Леска не выдержала натяжения.")
+    var result: int = fight_sim.step(delta, is_reeling, is_bracing)
+    tension = fight_sim.tension
+    fight_distance = fight_sim.distance
+    if is_reeling and elapsed - last_sound_reel > 0.27:
+        last_sound_reel = elapsed
+        sounds.call("play", "reel")
+    if tension > 78.0 and is_reeling and elapsed - last_sound_reel > 0.10:
+        sounds.call("play", "drag")
+    if result == 2:
+        _finish("Обрыв! Ослабь фрикцион или отпусти подмотку.")
         return
-    if fight_distance >= 41.0:
-        _finish("Рыба ушла слишком далеко.")
+    elif result == 3:
+        _finish("Рыба ушла далеко. Держи её ближе.")
         return
-    if fight_distance <= 2.9:
+    elif result == 4:
+        _finish("Слабина лески! Не отпускай её надолго.")
+        return
+    elif result == 1:
         phase = Phase.LANDING
         timer = 0.0
-        landing_from = bobber.global_position + Vector3.UP * 0.12
+        landing_from = fish_body.global_position
         fish_body.visible = true
-        _set_message("Подводим трофей к берегу...")
+        sounds.call("play", "splash")
+        _set_message("Подводим трофей к берегу!")
         _update_buttons()
         return
+
     var forward := -camera.global_transform.basis.z
     forward.y = 0.0
     forward = forward.normalized()
-    var fish_target := camera.global_position + forward * fight_distance
-    fish_target.y = 0.12
-    bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 3.0))
-    var show_jump := sin(elapsed * 2.5) > 0.62
-    fish_body.visible = show_jump and fight_distance < 15.0
-    fish_body.position = bobber.position + Vector3(0, 0.17 + absf(sin(elapsed * 3.8)) * 0.39, 0.42)
-    fish_body.rotation.y = sin(elapsed * 2.2) * 0.6
-    fish_body.rotation.z = sin(elapsed * 7.0) * 0.18
+    var sideways := camera.global_transform.basis.x
+    sideways.y = 0.0
+    sideways = sideways.normalized()
+    var fish_target := camera.global_position + forward * fight_distance + sideways * fight_sim.lateral
+    fish_target.y = 0.09
+    bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 5.0))
+    var show_jump := fight_sim.burst > 0.73 and fight_distance < 15.0
+    fish_body.visible = show_jump or fight_distance < 8.0
+    fish_body.position = bobber.position + Vector3(0.0, (0.22 + maxf(0.0, sin(elapsed * 9.0)) * 0.55) if show_jump else -0.18, 0.30)
+    fish_body.rotation.y = sin(elapsed * 2.6) * 0.45
+    fish_body.rotation.z = sin(elapsed * 8.0) * 0.15
     if show_jump and ripple_age > 1.3:
         _splash()
 
