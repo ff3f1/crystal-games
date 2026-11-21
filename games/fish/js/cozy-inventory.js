@@ -83,8 +83,13 @@
       const frame=tabs.getBoundingClientRect();
       const starts=[...tabs.querySelectorAll('.tab')].map(tab=>
         tab.getBoundingClientRect().left-frame.left+current);
-      const next=starts.find(x=>x>current+Math.max(40,tabs.clientWidth*.53));
-      tabs.scrollLeft=atEnd?0:Math.min(max,next==null?max:next);
+      // Never clamp to an arbitrary pixel near max: that cuts half a
+      // Cyrillic category on the left. Pick an attainable tab start.
+      const reachable=starts.filter(x=>x<=max+1&&x>current+2);
+      const threshold=current+Math.max(30,tabs.clientWidth*.38);
+      const preferred=reachable.find(x=>x>=threshold);
+      const target=preferred??reachable[reachable.length-1];
+      tabs.scrollLeft=atEnd?0:(target==null?0:Math.max(0,Math.round(target)));
       update();
     });
     tabs.addEventListener('scroll',update,{passive:true});
