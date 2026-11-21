@@ -52,6 +52,18 @@ def synth(name: str, seconds: float, kind: str) -> None:
             # Natural water plop and small float clicks, not synthetic notification.
             pulse = math.exp(-t * 12)
             value = low * 0.36 * pulse + band * 0.32 * pulse + math.sin(2 * math.pi * (55 * t + 20 * t * t)) * 0.064 * pulse
+        elif kind == "nibble":
+            # A quiet surface tap: short watery percussion rather than UI beep.
+            pulse = math.exp(-t * 17.0)
+            value = (band * 0.25 + low * 0.34) * pulse + math.sin(2 * math.pi * (67 - 27 * p) * t) * pulse * 0.028
+        elif kind == "line_break":
+            # Line pop and short returning nylon vibration.
+            snap = math.exp(-t * 62.0)
+            value = bright * 0.53 * snap + math.sin(2 * math.pi * (910 - 720 * p) * t) * 0.11 * math.exp(-t * 24.0)
+        elif kind == "rod_creak":
+            # Taut graphite blank flexing under load.
+            groan = math.sin(2 * math.pi * (81 + 11 * math.sin(t * 14)) * t)
+            value = (groan * 0.047 + band * 0.29) * (math.sin(math.pi * p) ** 1.4)
         elif kind == "hook":
             pulse = math.exp(-t * 15.0)
             value = (mid * 0.47 + math.sin(2 * math.pi * 79 * t) * 0.14) * pulse
@@ -103,6 +115,7 @@ for name, duration in {
     "cast": 0.42, "splash": 0.79, "bite": 0.35,
     "hook": 0.24, "reel": 0.28, "drag": 0.42,
     "catch": 0.93, "fail": 0.26, "footstep": 0.18,
+    "nibble": 0.24, "line_break": 0.26, "rod_creak": 0.40,
 }.items():
     synth(name, duration, name)
 
