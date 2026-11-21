@@ -9,7 +9,7 @@ permissions:
 jobs:
   candidate:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -86,7 +86,7 @@ jobs:
                           'assets/js/main.js', 'assets/js/fight-physics.js', 'assets/js/ui.js')
               missing = [x for x in required if x not in names]
               html = z.read('assets/index.html').decode('utf-8')
-              missing += ['assets/' + x for x in re.findall(r'<script\\s+src="([^"]+)"', html)
+              missing += ['assets/' + x for x in re.findall(r'<script\s+src="([^"]+)"', html)
                           if 'assets/' + x not in names]
               if missing: raise SystemExit('Missing WebView game files: ' + repr(missing))
               print('APK ZIP and embedded WebView scripts verified')
@@ -141,6 +141,7 @@ jobs:
             adb logcat -d -v brief > out/emulator-logcat.txt
             echo 'INSTALL_AND_LAUNCH=PASS' > out/emulator-result.txt
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: fishing-candidate-and-emulator-evidence
           path: out/
