@@ -275,6 +275,20 @@ func _make_scanned_shore_details() -> void:
             random.randf_range(-PI, PI)
         )
 
+    # A handful of real scanned shoreline props close enough to appear in
+    # the player's first-person camera; keep the direct casting lane clear.
+    for i in range(12):
+        var x := -2.4 - float(i % 4) * 0.46
+        var z := shore_edge(x) + 0.35 + float(i / 4) * 0.48
+        _place_asset(
+            "grass_medium_02",
+            Vector3(x, ground_height(x, z) - 0.06, z),
+            0.23 + float(i % 3) * 0.06,
+            float(i) * 1.3
+        )
+    _place_asset("rock_moss_set_02", Vector3(-3.6, -0.22, 4.0), 0.25, 1.0)
+    _place_asset("rock_09", Vector3(3.8, -0.25, 4.2), 0.20, -0.5)
+
     # Tangled scanned roots and old stumps are landmarks in the shallows.
     for i in range(8):
         var side := -1.0 if i % 2 == 0 else 1.0
