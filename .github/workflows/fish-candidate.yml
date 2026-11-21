@@ -2,7 +2,7 @@ name: Fishing candidate APK and AAB
 on:
   push:
     branches: [codex/fishing-overhaul]
-    paths: ["games/fish/**", "tests/**", ".github/workflows/fish-candidate.yml"]
+    paths: [".github/workflows/fish-candidate.yml"] # Avoid compiling on every small gameplay change
   workflow_dispatch:
 permissions:
   contents: write
@@ -24,6 +24,7 @@ jobs:
         run: |
           node tests/test_fish_physics.js
           node tests/test_fish_input.js
+          node tests/test_fish_foley.cjs
           node tests/test_fish_mechanics.js
           node --test tests/fight-reaction.test.cjs tests/strike-reaction.test.cjs tests/spots.test.cjs tests/spin-detail.test.cjs tests/tutorial-landing.test.cjs
       # The exhaustive browser regression and screenshot audit run in their
@@ -44,7 +45,7 @@ jobs:
             mkdir -p android/app/src/main/res/mipmap-$density
             cp store/fish/icons/ic_launcher_$density.png android/app/src/main/res/mipmap-$density/ic_launcher.png
           done
-          echo "CANDIDATE_CODE=2002" >> "$GITHUB_ENV"
+          echo "CANDIDATE_CODE=2003" >> "$GITHUB_ENV"
       - name: Existing release signing key
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
@@ -63,47 +64,117 @@ jobs:
           -PappId=ru.crystalgames.fishing
           '-PappName=Рыбалка: Клюёт!'
           -PversionCode=$CANDIDATE_CODE
-          -PversionName=2.0.2-test
+          -PversionName=2.0.3-test
           -PadInter=R-M-20269656-1
           -PadReward=R-M-20269656-2
       - name: Verify and package
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/release/*.apk out/fishing-2.0.2-test.apk
-          cp android/app/build/outputs/bundle/release/*.aab out/fishing-2.0.2-test.aab
+          cp android/app/build/outputs/apk/release/*.apk out/fishing-2.0.3-test.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/fishing-2.0.3-test.aab
           APK=$(find out -name '*.apk')
-          "$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)" verify --print-certs "$APK" > out/signature.txt
-          sha256sum out/*.apk out/*.aab > out/SHA256SUMS.txt
+          set -euo pipefail
+          # Reject HTML landing pages, Git LFS pointers, truncated ZIPs and missing WebView files.
+          test "$(stat -c%s "$APK")" -gt 10000000
+          unzip -tq "$APK" > out/zip-integrity.txt
+          python - "$APK" <<'PY'
+          import re, sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              names = set(z.namelist())
+              required = ('AndroidManifest.xml', 'classes.dex', 'assets/index.html',
+                          'assets/js/game.js', 'assets/js/audio.js', 'assets/js/foley-bank.js',
+                          'assets/js/main.js', 'assets/js/fight-physics.js', 'assets/js/ui.js')
+              missing = [x for x in required if x not in names]
+              html = z.read('assets/index.html').decode('utf-8')
+              missing += ['assets/' + x for x in re.findall(r'<script\\s+src="([^"]+)"', html)
+                          if 'assets/' + x not in names]
+              if missing: raise SystemExit('Missing WebView game files: ' + repr(missing))
+              print('APK ZIP and embedded WebView scripts verified')
+          PY
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)"
+          test -x "$APKSIGNER" && test -x "$AAPT"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" > out/signature.txt
+          grep -qi 'certificate SHA-256 digest: 7a5f80c0bd45b837c6b8c03886dcc1916f5ceacf9b86fbe1b4f8c2aa5ca56347' out/signature.txt
+          "$AAPT" dump badging "$APK" > out/package.txt
+          grep -q "name='ru.crystalgames.fishing' versionCode='2003'" out/package.txt
+          grep -q "launchable-activity: name='ru.crystalgames.shell.MainActivity'" out/package.txt
+          (cd out && sha256sum *.apk *.aab > SHA256SUMS.txt)
+          echo 'ZIP, assets, original release signing key, package and version verified' > out/verification.txt
+      - name: Enable hardware virtualization for Android smoke test
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch candidate on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          profile: pixel_3a
+          avd-name: fishing-smoke
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            set -euo pipefail
+            adb logcat -c || true
+            adb install -r out/fishing-2.0.3-test.apk | tee out/emulator-install.txt
+            adb shell pm path ru.crystalgames.fishing | tee out/emulator-package.txt
+            grep -q '^package:' out/emulator-package.txt
+            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity | tee out/emulator-start.txt
+            sleep 20
+            adb shell pidof ru.crystalgames.fishing | tee out/emulator-pid.txt
+            test -s out/emulator-pid.txt
+            adb exec-out screencap -p > out/emulator-game.png
+            python - <<'PY'
+            from PIL import Image, ImageStat
+            with Image.open('out/emulator-game.png') as img:
+                img.load()
+                if img.width < 300 or img.height < 500 or max(ImageStat.Stat(img.convert('RGB')).stddev) < 1.0:
+                    raise SystemExit('Emulator screenshot is blank or invalid')
+                print('Emulator screenshot:', img.size)
+            PY
+            adb shell am force-stop ru.crystalgames.fishing
+            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity | tee out/emulator-restart.txt
+            sleep 6
+            adb shell pidof ru.crystalgames.fishing
+            adb logcat -d -v brief > out/emulator-logcat.txt
+            echo 'INSTALL_AND_LAUNCH=PASS' > out/emulator-result.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: fishing-candidate
+          name: fishing-candidate-and-emulator-evidence
           path: out/
+          if-no-files-found: warn
+      # Publish only if signature validation AND emulator installation succeeded.
       - name: Make directly downloadable test APK (no RuStore publishing)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           mkdir -p site
-          cp out/fishing-2.0.2-test.apk site/
+          cp out/fishing-2.0.3-test.apk site/
           cp out/SHA256SUMS.txt site/
-          cp out/signature.txt site/
+          cp out/signature.txt out/package.txt out/verification.txt out/emulator-result.txt site/
           cat > site/README.md <<EOF
-          # Рыбалка: Клюёт! 2.0.2-test
+          # Рыбалка: Клюёт! 2.0.3-test
           
+          **Direct APK download (not a GitHub source tree page):**
+          https://raw.githubusercontent.com/${{ github.repository }}/builds-fishing-2.0.3-test/fishing-2.0.3-test.apk
+
           Test APK from branch codex/fishing-overhaul.
           Source: ${{ github.sha }}
           Package: ru.crystalgames.fishing
-          Version code: 2002
-          Signed release build. No store upload.
+          Version code: 2003
+          Signed with the original release certificate; Android emulator install/launch tested. No store upload.
           
           The sampled reel/drag/snap effects are bundled.
           New optional Wooden Docks and Still Water MP3 files are NOT
           bundled yet. Existing game music is retained.
           EOF
           cd site
-          git init -q -b builds-fishing-2.0.2-test
+          git init -q -b builds-fishing-2.0.3-test
           git config user.name github-actions
           git config user.email actions@github.com
           git add -A
           git commit -qm "Test APK from ${{ github.sha }}"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" builds-fishing-2.0.2-test
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" builds-fishing-2.0.3-test
