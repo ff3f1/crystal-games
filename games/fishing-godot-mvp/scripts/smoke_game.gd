@@ -31,6 +31,24 @@ func _run_test() -> void:
     _require(game.catches.size() > 0, "Caught fish must be in the journal")
     game.retry_cast()
     _require(not game.menu_open, "Retry should resume gameplay")
+    # Drive the real fishing state machine, not only the debug/forced trophy.
+    game._process(1.35)
+    _require(game.phase == 2, "Cast should reach WAITING")
+    game._process(7.0)
+    _require(game.phase == 3, "Waiting should trigger an actual bite")
+    game._main_action()
+    _require(game.phase == 4, "Hook action should start the fight")
+    for tick in range(850):
+        game.is_reeling = game.tension < 73.0
+        game.is_bracing = false
+        game._update_fight(0.10)
+        if game.phase == 5:
+            break
+    _require(game.phase == 5, "A sensible reel/release rhythm should land a fish")
+    game._process(1.6)
+    _require(game.phase == 6, "Natural catch should show the result screen")
+    _require(game.catches.size() >= 2, "Natural catch should save another fish")
+    game.retry_cast()
     game.open_pause()
     _require(game.overlay.screen_name == "pause", "Pause menu should open")
     game.overlay.show_settings("pause")
@@ -41,7 +59,7 @@ func _run_test() -> void:
     _require(game.overlay.screen_name == "journal", "Journal should open")
     game.exit_to_menu()
     _require(game.overlay.screen_name == "home", "Return to main menu should work")
-    print("FISHING_MVP_SMOKE_OK: menu / casting / landed trophy / journal / settings / pause")
+    print("FISHING_MVP_SMOKE_OK: menu / real cast / reel-and-release / landed trophy / journal / settings / pause")
     quit(0)
 
 func _require(ok: bool, label: String) -> void:
