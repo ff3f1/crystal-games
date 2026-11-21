@@ -21,12 +21,13 @@ func _ready() -> void:
     # The extents are derived from imported local meshes, not made-up spheres.
     var bounds := _mesh_bounds(arms)
     var max_span := maxf(bounds.size.x, maxf(bounds.size.y, bounds.size.z))
-    var model_scale := clampf(1.10 / maxf(max_span, 0.01), 0.08, 2.5)
+    var model_scale := clampf(1.48 / maxf(max_span, 0.01), 0.10, 3.1)
     arms.scale = Vector3.ONE * model_scale
     var centre := bounds.position + bounds.size * 0.5
-    arms.position = Vector3(0.29, -0.78, -0.92) - centre * model_scale
+    arms.position = Vector3(0.18, -0.24, -1.05) - centre * model_scale
+    print("FPS_ARMS_ASSET: source bounds=", bounds, ", fit=", model_scale, ", local offset=", arms.position)
     idle_position = arms.position
-    arms.rotation_degrees = Vector3(-9.0, 0.0, 9.0)
+    arms.rotation_degrees = Vector3(-6.0, -10.0, 5.0)
 
     var glove_texture := load("res://assets/textures/fps_arm_albedo.png") as Texture2D
     var cloth_texture := load("res://assets/textures/glove_weave.png") as Texture2D
@@ -49,8 +50,8 @@ func _process(delta: float) -> void:
         target.y += sin(elapsed * 13.0) * reel_factor * 0.035
         target.x += cos(elapsed * 13.0) * reel_factor * 0.019
         arms.position = arms.position.lerp(target, minf(1.0, delta * 9.0))
-        arms.rotation.z = deg_to_rad(9.0) + sin(elapsed * 13.0) * reel_factor * 0.028
-        arms.rotation.x = deg_to_rad(-9.0) + sin(elapsed * 1.5) * 0.005
+        arms.rotation.z = deg_to_rad(5.0) + sin(elapsed * 13.0) * reel_factor * 0.028
+        arms.rotation.x = deg_to_rad(-6.0) + sin(elapsed * 1.5) * 0.005
 
 func _mesh_bounds(root: Node3D) -> AABB:
     var parts: Array[MeshInstance3D] = []
