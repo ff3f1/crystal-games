@@ -14,7 +14,7 @@ func _ready() -> void:
         channel.volume_db = -2.0
         add_child(channel)
         channels.append(channel)
-    for key in ["cast", "splash", "bite", "hook", "reel", "drag", "catch", "fail", "footstep"]:
+    for key in ["cast", "splash", "bite", "nibble", "hook", "reel", "drag", "rod_creak", "line_break", "catch", "fail", "footstep"]:
         var path := "res://assets/audio/%s.wav" % key
         var stream := load(path) as AudioStream
         if stream != null:
