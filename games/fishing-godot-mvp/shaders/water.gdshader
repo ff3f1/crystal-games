@@ -1,7 +1,7 @@
 shader_type spatial;
 // A translucent, rough freshwater surface instead of metallic grey mirrors.
 // The pixel shader is intentionally inexpensive for mobile GL Compatibility.
-render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
+render_mode blend_mix, depth_prepass_alpha, cull_disabled, diffuse_burley, specular_schlick_ggx;
 
 uniform vec4 deep_water : source_color = vec4(0.030, 0.154, 0.170, 1.0);
 uniform vec4 shallow_water : source_color = vec4(0.082, 0.245, 0.217, 1.0);
@@ -49,4 +49,14 @@ void fragment() {
     // water becomes more opaque, with a proper opaque horizon at distance.
     float dist = distance(surface_world.xz, CAMERA_POSITION_WORLD.xz);
     ALPHA = clamp(transparency_near + smoothstep(10.0, 92.0, dist) * 0.285 + fresnel * 0.018, 0.64, 0.979);
+    // Viewed from below, the water is still a real sheet of water: don't
+    // render the open photographic sky and floating black foliage outlines.
+    // A separate underwater camera uses greenish distance fog as well.
+    if (!FRONT_FACING) {
+        ALBEDO = mix(vec3(0.065, 0.22, 0.205), tint, 0.28);
+        ROUGHNESS = 0.65;
+        METALLIC = 0.0;
+        SPECULAR = 0.11;
+        ALPHA = 0.87;
+    }
 }
