@@ -2,3 +2,5 @@
 build/
 *.tmp
 *.import
+assets/models/
+assets/textures/
