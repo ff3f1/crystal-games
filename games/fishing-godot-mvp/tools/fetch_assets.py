@@ -5,6 +5,7 @@ Download during development/CI before importing the Godot project.
 from __future__ import annotations
 import json
 import urllib.request
+from PIL import Image
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,5 +80,18 @@ for output, url in {
     "bark_diffuse.jpg": "bark_brown_02/bark_brown_02_diffuse_1k.jpg",
 }.items():
     fetch(poly_base + url, TEX / output)
+
+# Poly Haven CC0 panoramic real-world lakeside photo replaces the neutral sky gradient.
+# Resize the high-resolution JPEG to mobile-friendly 3K for predictable GPU memory use.
+sky_source = TEX / "lakeside-source.jpg"
+sky_target = TEX / "sky_panorama.jpg"
+fetch("https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/lakeside.jpg", sky_source)
+if not sky_target.exists():
+    with Image.open(sky_source) as sky_img:
+        sky_img = sky_img.convert("RGB")
+        sky_img = sky_img.resize((3072, 1536), Image.Resampling.LANCZOS)
+        sky_img.save(sky_target, "JPEG", quality=85, optimize=True)
+    print("Sky panorama ready", sky_target.stat().st_size, "bytes")
+sky_source.unlink(missing_ok=True)
 
 print("CC0 assets ready in", ROOT / "assets")
