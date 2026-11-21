@@ -70,6 +70,8 @@ assert(read("js/scene.js").includes("FZ.CozyMotion.rodWeather"),
  "wind sway uses the existing full rod instead of a floating ornament");
 assert(read("js/scene.js").includes("const windF = 0.24 + wx.wind / 7.4"),
  "real session wind changes water roughness, including calm");
+assert(read("js/scene.js").includes('if(FZ.Assets.style==="art")R.drawBirds(L,dt,t)'),
+ "vector V birds must not be drawn over real photographic landscape");
 assert(read("js/cozy-gear.js").includes("ctx.scale(1,-.32)"),
  "photo float uses a small inverted reflection instead of an extra ring");
 assert(read("js/rod-art.js").includes("drawRotor(ctx, mode, reelAngle)") &&
