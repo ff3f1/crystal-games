@@ -99,7 +99,7 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    });
    assert(afterReturn.menuVisible&&afterReturn.buttons.length===10&&
      afterReturn.buttons.every(b=>b.opacity>.98&&b.visible&&b.hit&&b.display!=='none')&&
-     afterReturn.background.includes('hero.webp')&&afterReturn.size==='cover',
+     afterReturn.background.includes('hero.webp')&&afterReturn.size.split(',').every(s=>s.trim()==='cover'),
      'menu re-entry must show PLAY and nine tappable cards on a full lake backdrop '+JSON.stringify(afterReturn));
    await page.screenshot({path:path.join(output,'00-return-full-lake-no-blank.png')});
    await page.waitForTimeout(80);
