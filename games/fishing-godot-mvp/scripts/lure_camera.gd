@@ -61,7 +61,7 @@ func _ready() -> void:
     add_child(image)
 
     caption = Label.new()
-    caption.text = "ПОД ВОДОЙ  •  ЖИВАЯ ПРИМАНКА"
+    caption.text = "ПОД ВОДОЙ  •  КАМЕРА"
     caption.add_theme_font_size_override("font_size", 15)
     caption.add_theme_color_override("font_color", Color(0.83, 0.94, 0.87))
     caption.position = Vector2(9, 2)
