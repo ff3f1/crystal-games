@@ -15,6 +15,13 @@ adb shell am start -W -n "$PKG/$ACTIVITY" | tee out/emulator-start.txt
 sleep 20
 adb shell pidof "$PKG" | tee out/emulator-pid.txt
 test -s out/emulator-pid.txt
+# Native process alive is not sufficient: a missing menu is also a failed launch.
+adb logcat -d -s FishBootAudit:I '*:S' > out/emulator-boot-audit.txt
+grep -q 'UI_READY true' out/emulator-boot-audit.txt || {
+  cat out/emulator-boot-audit.txt
+  echo 'WebView did not render the game menu within 20 seconds' >&2
+  exit 1
+}
 adb exec-out screencap -p > out/emulator-game.png
 python - <<'PY'
 from PIL import Image, ImageStat
