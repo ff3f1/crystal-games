@@ -63,7 +63,7 @@ assert(G.cast(0,G.maxCast(),{power:.38}),"feeder uses the same real power meter"
 const testFloat=M.floatLine({x:302,y:343},{x:219,y:412},844,4);
 assert(testFloat.contact.y>Math.max(343,412)+35,
  "float line visibly descends to near-side water before travelling to the float");
-assert(testFloat.opacity>.6&&testFloat.opacity<=1);
+assert(testFloat.opacity>.35&&testFloat.opacity<.6, "a float's surface line stays faint on water");
 assert(Number.isFinite(testFloat.water1.x)&&Number.isFinite(testFloat.water2.y),
  "one continuous surface Bezier connects the rod tip to the actual float");
 assert(read("js/scene.js").includes("ctx.bezierCurveTo(q.air.x") &&
