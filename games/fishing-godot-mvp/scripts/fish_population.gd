@@ -190,6 +190,12 @@ func simulate(
         var fish: Dictionary = agents[i]
         var mode: String = str(fish["mode"])
         var model: Node3D = fish["mesh"]
+        if not fishing and mode in ["approach", "inspect", "strike"]:
+            mode = "cruise"
+            fish["mode"] = mode
+            fish["cooldown"] = 1.8
+            if reserved_fish == i:
+                reserved_fish = -1
         if mode == "absent":
             fish["respawn"] = float(fish["respawn"]) - step
             if float(fish["respawn"]) <= 0.0:
