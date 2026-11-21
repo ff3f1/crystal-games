@@ -244,33 +244,96 @@ func _create_shore() -> void:
     shore_art.call("populate")
 
 func _create_rod() -> void:
+    # First-person carbon spinning rod, assembled as a coherent 3D rig.
+    # Separate material surfaces allow reel/handle/guide details without
+    # the broken bending/rotation of the earlier preview-model GLB.
     rod_root = Node3D.new()
     camera.add_child(rod_root)
-    rod_root.position = Vector3(0.34, -0.54, -0.51)
-    var rod_asset := load("res://assets/models/rod.glb") as PackedScene
-    if rod_asset != null:
-        var model := rod_asset.instantiate() as Node3D
-        rod_root.add_child(model)
-        model.rotation_degrees = Vector3(-78, 3, -12)
-        model.position = Vector3(0.02, -0.10, 0.02)
-        model.scale = Vector3.ONE * 1.20
-    else:
-        var rod_dark := _material(Color(0.095, 0.11, 0.12), 0.34)
-        var rod_grey := _material(Color(0.37, 0.39, 0.37), 0.30)
-        var cork := _material(Color(0.35, 0.26, 0.18), 0.79)
-        _cylinder(rod_root, Vector3(0.14, -0.16, 0.23), Vector3(0.03, -0.05, -0.75), 0.065, cork)
-        _cylinder(rod_root, Vector3(0.03, -0.05, -0.75), Vector3(-0.14, 0.18, -1.64), 0.026, rod_dark)
-        _cylinder(rod_root, Vector3(-0.14, 0.18, -1.64), Vector3(-0.29, 0.39, -2.86), 0.010, rod_dark)
-        reel_spool = _cylinder(rod_root, Vector3(-0.08, -0.30, -0.55), Vector3(0.19, -0.30, -0.55), 0.13, rod_grey)
+    rod_root.position = Vector3(0.48, -0.44, -0.70)
+
+    var carbon := _material(Color(0.075, 0.09, 0.092), 0.27)
+    carbon.metallic = 0.35
+    var carbon_edge := _material(Color(0.15, 0.18, 0.18), 0.29)
+    carbon_edge.metallic = 0.42
+    var cork := _material(Color(0.48, 0.33, 0.20), 0.94)
+    var rubber := _material(Color(0.08, 0.075, 0.07), 0.92)
+    var steel := _material(Color(0.62, 0.67, 0.66), 0.20)
+    steel.metallic = 0.89
+    var gunmetal := _material(Color(0.20, 0.23, 0.23), 0.29)
+    gunmetal.metallic = 0.83
+    var copper := _material(Color(0.57, 0.39, 0.19), 0.29)
+    copper.metallic = 0.75
+
+    var butt := Vector3(0.025, -0.31, 0.23)
+    var grip_start := Vector3(0.015, -0.18, -0.18)
+    var grip_end := Vector3(-0.02, -0.08, -0.90)
+    var joint := Vector3(-0.09, 0.015, -1.55)
+    var middle := Vector3(-0.22, 0.13, -2.65)
+    var tip := Vector3(-0.36, 0.22, -3.85)
+    _taper_rod(butt, grip_start, 0.058, 0.049, rubber)
+    _taper_rod(grip_start, grip_end, 0.047, 0.041, cork)
+    _taper_rod(grip_end, joint, 0.031, 0.020, carbon_edge)
+    _taper_rod(joint, middle, 0.020, 0.0095, carbon)
+    _taper_rod(middle, tip, 0.0095, 0.0037, carbon)
+    # Decorative hardware rings at blank joints and grip collar.
+    for p in [grip_start, grip_end, joint]:
+        _ring_guide(rod_root, p, 0.039 if p == grip_end else 0.030, copper, 0.012)
+
+    var guide_steps := [0.19, 0.42, 0.62, 0.78, 0.89, 0.99]
+    for progress in guide_steps:
+        var guide_pos := joint.lerp(tip, progress)
+        var size := lerpf(0.055, 0.023, progress)
+        var mount_end := guide_pos + Vector3(0, -size * 1.1, 0)
+        _taper_rod(guide_pos, mount_end, 0.008, 0.005, gunmetal)
+        _ring_guide(rod_root, mount_end, size, steel, 0.007)
+
+    # Spinning reel attached under the blank, with silver spool, bail arm,
+    # dark reel body, bronze spool lip and winding handle.
+    var foot := Vector3(0.0, -0.065, -0.62)
+    var reel_center := Vector3(0.08, -0.39, -0.61)
+    _taper_rod(foot, reel_center, 0.034, 0.055, gunmetal)
+    var reel_ball := SphereMesh.new()
+    _mesh(rod_root, reel_ball, reel_center, Vector3(0.13, 0.11, 0.21), gunmetal)
+    _taper_rod(reel_center, reel_center + Vector3(0.25, 0.0, 0.0), 0.078, 0.073, steel)
+    _taper_rod(reel_center + Vector3(0.19, 0.0, 0.0), reel_center + Vector3(0.32, 0.0, 0.0), 0.12, 0.114, copper)
+
+    reel_spool = _mesh(rod_root, CylinderMesh.new(), reel_center + Vector3(0.34, 0, 0), Vector3.ONE * 0.11, steel)
+    reel_spool.rotation.z = PI / 2.0
+
+    var bail := TorusMesh.new()
+    bail.inner_radius = 0.115
+    bail.outer_radius = 0.123
+    var bail_obj := _mesh(rod_root, bail, reel_center + Vector3(0.33, 0.00, 0), Vector3.ONE, steel)
+    bail_obj.rotation.z = PI * 0.5
+    var handle_end := reel_center + Vector3(-0.17, -0.19, 0.08)
+    _taper_rod(reel_center, handle_end, 0.024, 0.019, steel)
+    _taper_rod(handle_end, handle_end + Vector3(-0.04, -0.12, 0), 0.040, 0.033, rubber)
+
     rod_tip = Marker3D.new()
     rod_root.add_child(rod_tip)
-    rod_tip.position = Vector3(-0.25, 0.34, -2.6)
+    rod_tip.position = tip
 
     line_mesh = ImmediateMesh.new()
     line_node = MeshInstance3D.new()
     line_node.mesh = line_mesh
-    line_node.material_override = _material(Color(0.9, 0.93, 0.89), 0.8)
+    line_node.material_override = _material(Color(0.91, 0.92, 0.87), 0.65)
     add_child(line_node)
+
+func _taper_rod(a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
+    var shape := CylinderMesh.new()
+    shape.top_radius = radius_end
+    shape.bottom_radius = radius_start
+    shape.height = maxf(a.distance_to(b), 0.001)
+    shape.radial_segments = 12
+    var m := _mesh(rod_root, shape, (a + b) * 0.5, Vector3.ONE, mat)
+    m.quaternion = Quaternion(Vector3.UP, (b - a).normalized())
+
+func _ring_guide(parent: Node3D, p: Vector3, radius: float, mat: Material, width: float) -> void:
+    var ring_mesh := TorusMesh.new()
+    ring_mesh.inner_radius = maxf(0.002, radius - width)
+    ring_mesh.outer_radius = radius
+    var guide := _mesh(parent, ring_mesh, p, Vector3.ONE, mat)
+    guide.rotation.x = PI * 0.5
 
 func _create_bobber_and_fish() -> void:
     bobber = Node3D.new()
