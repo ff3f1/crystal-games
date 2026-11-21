@@ -337,7 +337,9 @@ func _make_natural_reeds_and_lilies() -> void:
     var pad_mat := StandardMaterial3D.new()
     pad_mat.vertex_color_use_as_albedo = true
     pad_mat.roughness = 0.82
-    pad_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    # Floating pads should be seen from above, but not as black levitating
+    # polygons when the underwater camera looks toward the light.
+    pad_mat.cull_mode = BaseMaterial3D.CULL_BACK
     var pad_mesh := MeshInstance3D.new()
     pad_mesh.mesh = pads.commit()
     pad_mesh.material_override = pad_mat
