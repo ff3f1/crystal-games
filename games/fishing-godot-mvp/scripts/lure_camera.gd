@@ -35,6 +35,16 @@ func _ready() -> void:
     camera.fov = 68.0
     camera.near = 0.05
     camera.far = 22.0
+    var underwater_env := Environment.new()
+    underwater_env.background_mode = Environment.BG_COLOR
+    underwater_env.background_color = Color(0.050, 0.17, 0.17)
+    underwater_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    underwater_env.ambient_light_color = Color(0.34, 0.61, 0.57)
+    underwater_env.ambient_light_energy = 0.72
+    underwater_env.fog_enabled = true
+    underwater_env.fog_light_color = Color(0.068, 0.21, 0.20)
+    underwater_env.fog_density = 0.018
+    camera.environment = underwater_env
     viewport.add_child(camera)
     camera.current = true
 
