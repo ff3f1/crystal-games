@@ -3,7 +3,7 @@ extends RefCounted
 ## depends on cover, depth, weather, feeding time and angler disturbance.
 ## All state changes use delta and reproducible RNG for deterministic QA.
 
-enum Signal { NONE, NIBBLE, STRIKE }
+enum BiteEvent { NONE, NIBBLE, STRIKE }
 
 var rng := RandomNumberGenerator.new()
 var time_underwater := 0.0
@@ -13,7 +13,7 @@ var cooldown := 0.0
 var disturbance := 0.0
 var nearby_species := ""
 var last_activity := 0.0
-var signal := Signal.NONE
+var last_signal := BiteEvent.NONE
 
 func _init() -> void:
     rng.seed = 122104
@@ -24,7 +24,7 @@ func reset_cast() -> void:
     nibble_timer = 0.0
     cooldown = 0.0
     nearby_species = ""
-    signal = Signal.NONE
+    last_signal = BiteEvent.NONE
 
 func register_disturbance(amount: float) -> void:
     disturbance = clampf(disturbance + amount, 0.0, 1.0)
@@ -79,7 +79,7 @@ func tick(delta: float, position: Vector3, lure_type: int, depth: float, retriev
     time_underwater += dt
     disturbance = maxf(0.0, disturbance - dt * 0.013)
     cooldown = maxf(0.0, cooldown - dt)
-    signal = Signal.NONE
+    last_signal = BiteEvent.NONE
     var weights := habitat_weights(position, lure_type, depth, retrieve_speed, twitch, spots, hour, wind)
     var total := 0.0
     for value in weights.values():
@@ -87,15 +87,15 @@ func tick(delta: float, position: Vector3, lure_type: int, depth: float, retriev
     last_activity = clampf(total / 2.6, 0.0, 1.0)
     var quiet := clampf(1.0 - disturbance * 0.65, 0.22, 1.0)
     if time_underwater < 1.3 or cooldown > 0.0:
-        return {"signal": Signal.NONE, "species": "", "activity": last_activity}
+        return {"signal": BiteEvent.NONE, "species": "", "activity": last_activity}
     if nibble_timer > 0.0:
         nibble_timer -= dt
         if nibble_timer <= 0.0:
-            signal = Signal.STRIKE
+            last_signal = BiteEvent.STRIKE
             cooldown = rng.randf_range(2.0, 3.8)
             attraction = 0.0
-            return {"signal": signal, "species": nearby_species, "activity": last_activity}
-        return {"signal": Signal.NONE, "species": nearby_species, "activity": last_activity}
+            return {"signal": last_signal, "species": nearby_species, "activity": last_activity}
+        return {"signal": BiteEvent.NONE, "species": nearby_species, "activity": last_activity}
     # A probabilistic search hazard means near-bank fish are not guaranteed;
     # repeated casting at productive cover genuinely improves success rate.
     var hazard := clampf(total * quiet * 0.14, 0.0, 0.38)
@@ -109,11 +109,11 @@ func tick(delta: float, position: Vector3, lure_type: int, depth: float, retriev
                 nearby_species = species
                 break
         if nearby_species.is_empty():
-            return {"signal": Signal.NONE, "species": "", "activity": last_activity}
-        signal = Signal.NIBBLE
+            return {"signal": BiteEvent.NONE, "species": "", "activity": last_activity}
+        last_signal = BiteEvent.NIBBLE
         nibble_timer = rng.randf_range(0.62, 1.32)
-        return {"signal": signal, "species": nearby_species, "activity": last_activity}
-    return {"signal": Signal.NONE, "species": "", "activity": last_activity}
+        return {"signal": last_signal, "species": nearby_species, "activity": last_activity}
+    return {"signal": BiteEvent.NONE, "species": "", "activity": last_activity}
 
 func describe_spot(spot: Dictionary, hour: float, wind: float) -> String:
     var habitat: String = str(spot.get("type", "perch"))
