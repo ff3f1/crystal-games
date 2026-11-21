@@ -49,7 +49,7 @@ func _page(name: String, wide: bool = false) -> Panel:
     _label(root, "ТИХОЕ ОЗЕРО", 48, 0.065, 0.055, 0.48, 0.15, ink)
     _label(root, "РЫБАЛКА • ПЕРВЫЙ ЗАБРОС", 21, 0.069, 0.165, 0.49, 0.24, amber)
     _label(root, "Свободный берег. Настоящий улов.\nТвой следующий заброс может стать рекордным.", 22, 0.07, 0.30, 0.47, 0.48, muted)
-    _label(root, "GODOT 4  ·  ALPINE 0.9", 17, 0.07, 0.88, 0.49, 0.96, muted)
+    _label(root, "GODOT 4  ·  SHORE 0.10", 17, 0.07, 0.88, 0.49, 0.96, muted)
     var panel := Panel.new()
     var style := StyleBoxFlat.new()
     style.bg_color = Color(0.035, 0.09, 0.10, 0.98)
