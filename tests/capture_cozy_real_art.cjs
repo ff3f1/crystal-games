@@ -123,6 +123,22 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.screenshot({path:path.join(dir,"12b-line-warning-tutorial.png")});
  // Leave the live game unpaused before exiting the browser test.
  await page.evaluate(()=>{FZ.appSuspended=false});
- assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/6 shop tabs/no broken assets");
+ // Verify the real render extensions are loaded and physical states gate effects.
+ const waterPhysics=await page.evaluate(()=>{
+   const g=FZ.CozyGear,b=FZ.CozyFeedback;
+   return{
+     bobberVisible:g.meniscusStrength(0,0,0),
+     bobberBite:g.meniscusStrength(.10,.9,9),
+     bobberSubmerged:g.meniscusStrength(1.15,.9,9),
+     shallow:b.surfaceActivity({phase:"run",D:.1,surface:.9,vx:2,vz:.5}),
+     deep:b.surfaceActivity({phase:"dive",D:3.1,surface:1,vx:3,vz:2})
+   };
+ });
+ assert(waterPhysics.bobberBite>waterPhysics.bobberVisible*2 &&
+   waterPhysics.bobberSubmerged===0,
+   'float creates realistic water contact only at its actual surface '+JSON.stringify(waterPhysics));
+ assert(waterPhysics.shallow>.5&&waterPhysics.deep===0,
+   'no fake droplets over a deep fish '+JSON.stringify(waterPhysics));
+ assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/speed-driven reel/true float contact/6 shop tabs");
  await b.close();
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});

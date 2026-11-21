@@ -79,7 +79,7 @@
    const weight = 0.00055 * 800 / screenHeight;
    return Math.min(horizontal * 0.16, weight * horizontal * horizontal / (8 * horizontalLoad));
  }
- function draw(ctx, mode, base, beam, reelAngle) {
+ function draw(ctx, mode, base, beam, reelAngle, reelSpeed) {
    const im = load(mode);
    if (!im.complete || !im.naturalWidth) return false;
    const { spec: c, angle, scale, flexEnd, span, delta, lengthRecovery } = beam;
@@ -106,10 +106,14 @@
      }
      ctx.drawImage(im, flexEnd, 0, 1440 - flexEnd, 300, flexEnd - c.baseX, -c.axisY, 1440 - flexEnd, 300);
    } else ctx.drawImage(im, -c.baseX, -c.axisY, 1440, 300);
-   if (reelAngle) {
+   // The photograph already contains a complete stationary reel.
+   // Only while it actually spins, reveal a faint animated metal bail.
+   // This also works at angle zero and reverses naturally during drag slip.
+   if (Math.abs(reelSpeed || 0) > .10) {
      ctx.save();
+     ctx.globalAlpha *= Math.min(.62,Math.abs(reelSpeed)/7*.62);
      ctx.translate(c.reelX - c.baseX, c.reelY - c.axisY);
-     drawRotor(ctx, mode, reelAngle);
+     drawRotor(ctx, mode, reelAngle || 0);
      ctx.restore();
    }
    ctx.restore();
@@ -125,7 +129,7 @@
    ctx.save();
    ctx.rotate(angle);
    ctx.lineCap="round";
-   ctx.globalAlpha=.84;
+   ctx.globalAlpha*=.84;
    ctx.strokeStyle="rgba(23,43,42,.82)";
    ctx.lineWidth=3.2;
    ctx.beginPath();ctx.arc(0,0,radius,-1.03,1.42);ctx.stroke();

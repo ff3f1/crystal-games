@@ -553,7 +553,15 @@
     rig.rod.jerk = 1;
     FZ.Scene.shake(5); FZ.Platform.vibrate(40);
     FZ.Sound.cozy('hook',.46);
-    if (!sess.ice) FZ.Scene.splash(rig.X, rig.Z, 0.25 + Math.min(1, w / 5) * 0.5);
+    // The strike is felt through the rod; it does not conjure a huge splash
+    // above a bottom feeder or deep artificial lure.
+    if(!sess.ice){
+      const bait=G.loadout(sess.mode).bait;
+      if(sess.mode==="float")FZ.Scene.ring(rig.X,rig.Z,.24,1.0);
+      else if(sess.mode==="spin" &&
+        (bait==="wobbler"||bait==="sea_wobbler"||bait==="mouse"))
+        FZ.Scene.splash(rig.X,rig.Z,.16);
+    }
     emit("hooked", { big: Fmax > G.gear(sess.mode).line.test * 0.75 || w >= s.trophy });
   }
 

@@ -47,6 +47,20 @@ assert(read("js/scene.js").includes("FZ.CozyMotion.lineShape"),
 assert(read("js/rod-art.js").includes("drawRotor(ctx, mode, reelAngle)") &&
  !read("js/rod-art.js").includes("drawCrank(ctx, mode, reelAngle)"),
  "reel image must have subtle rotor animation instead of oversized cartoon crank");
+// A still photograph must never be covered by a frozen decorative rotor.
+// The rotor appears only while reelSpeed is nonzero, including angle zero.
+context.Image=class{constructor(){this.complete=true;this.naturalWidth=1440}set src(s){this.source=s}};
+vm.runInNewContext(read("js/rod-art.js"),context,{filename:"rod-art.js"});
+const rodArt=F.RodArt,arcs=[];
+const reelCtx={save(){},restore(){},translate(){},rotate(){},scale(){},drawImage(){},
+ beginPath(){},arc(...a){arcs.push(a)},stroke(){},fill(){},set globalAlpha(v){},get globalAlpha(){return 1}};
+const beam=rodArt.solve("spin",{x:315,y:755},{x:145,y:380},null,0,3);
+assert(rodArt.draw(reelCtx,"spin",{x:315,y:755},beam,2.2,0),"complete rod must draw");
+assert.equal(arcs.length,0,"stationary photo reel has no overlay");
+assert(rodArt.draw(reelCtx,"spin",{x:315,y:755},beam,0,6),"moving reel draws at zero rotation");
+assert(arcs.length>0,"moving reel gets real rotor animation");
+assert(read("js/scene.js").includes("rod.reelAngle,rod.reelSpeed"),
+ "renderer uses actual reel speed to gate bail animation");
 assert.equal(M.lurePose("wobbler",true,0,1).visible,true);
 assert.equal(M.lurePose("mouse",false,4,1).visible,true);
 assert.equal(M.lurePose("jig",true,0,1).visible,false);

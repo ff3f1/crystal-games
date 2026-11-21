@@ -891,7 +891,7 @@
     }
     if (landing) R.drawLanding(v, L, t, landing);
 
-    if (FZ.RodArt.draw(ctx, v.mode, G.base, beam, rod.reelAngle)) return;
+    if (FZ.RodArt.draw(ctx,v.mode,G.base,beam,rod.reelAngle,rod.reelSpeed)) return;
     const point = t => FZ.RodArt.pointAt(G.base, beam, t);
     const rodCol = { float: "#2a2420", feeder: "#22384a", spin: "#1a1a1c", ice: "#c8a46a" }[v.mode];
     if (v.mode === "feeder") { // подставка (род-под)

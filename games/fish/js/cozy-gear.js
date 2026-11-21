@@ -30,6 +30,13 @@
    else if(FZ.EXTRAS&&FZ.EXTRAS[id])mapped="extra_"+id;
    return mapped?root+mapped+".svg":priorIcon.call(this,id,size);
  };
+ // Small waterline displacement is tied to actual float motion, never a
+ // permanent halo around a completely submerged or motionless bobber.
+ function meniscusStrength(sink,tilt,dx){
+   const exposure=Math.max(0,Math.min(1,(.78-Math.max(0,sink||0))/.78));
+   const activity=Math.min(1,Math.abs(tilt||0)*.7+Math.abs(dx||0)/13);
+   return exposure*(.055+.17*activity);
+ }
  const oldFloat=R.drawFloat;
  R.drawFloat=function(p,tk,L,t,night){
    const asset=img("float_"+skin());if(!asset)return oldFloat.apply(this,arguments);
@@ -43,9 +50,16 @@
    if(night)ctx.filter="brightness(.74)";
    ctx.drawImage(asset,-width/2,-h+h*Math.max(0,sink),width,height);
    ctx.restore();
-   if(night&&R.glow)R.glow(x,y-h*.67,h*.45);
-   ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle="#e6eee0";ctx.lineWidth=.8;
-   ctx.beginPath();ctx.ellipse(x,y+1,width*.95,width*.24,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+   const strength=meniscusStrength(sink,tk.tilt,tk.dx);
+   if(night&&R.glow&&strength>.045)R.glow(x,y-h*.67,h*.42);
+   if(strength>.018){
+     ctx.save();
+     ctx.strokeStyle="rgba(219,235,223,"+strength.toFixed(3)+")";
+     ctx.lineWidth=.7;
+     ctx.beginPath();
+     ctx.ellipse(x,y+.9,width*(.75+strength),width*.17,0,0,Math.PI*2);
+     ctx.stroke();ctx.restore();
+   }
  };
  const oldTackle=UI.showTackle;
  UI.showTackle=function(){
@@ -75,6 +89,7 @@
    return result;
  };
  FZ.CozyGear={
+   meniscusStrength,
    lineStyle(v,L){
      const id=G.loadout(v.mode).line||"l1";
      const widths={l1:.85,l2:.97,l3:1.06,l4:1.14,l5:1.17,l6:1.29,l7:1.34,l8:1.43};

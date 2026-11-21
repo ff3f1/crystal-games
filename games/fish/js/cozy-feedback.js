@@ -6,6 +6,13 @@
  const cv=document.getElementById('cv'),ctx=cv&&cv.getContext('2d');
  if(!ctx)return;
  const particles=[];let lastNear=-10;
+ function surfaceActivity(f){
+   if(!f||f.jump)return 0;
+   const energy=FZ.CozyMotion?FZ.CozyMotion.surfaceEnergy(f):
+     Math.max(0,Math.min(1,1-Math.max(0,f.D||0)/2.45))*(f.surface||0);
+   const speed=Math.min(1,Math.hypot(f.vx||0,f.vz||0)/1.2);
+   return Math.max(0,Math.min(1,energy*speed));
+ }
  function burst(X,Z,n,energy){
   if(!Number.isFinite(X)||!Number.isFinite(Z))return;
   const p=R.proj(X,Z);
@@ -19,8 +26,15 @@
  UI.onEvent=function(e){
   const sess=G.sess(),rig=G.rig();
   if(sess&&rig&&!sess.ice){
-   if(e.type==='take'&&sess.mode==='float')burst(rig.X,rig.Z,4,.52);
-   if(e.type==='hooked')burst(rig.X,rig.Z,e.big?14:8,e.big?1.25:.85);
+   if(e.type==='take'&&sess.mode==='float')burst(rig.X,rig.Z,3,.36);
+   if(e.type==='hooked'){
+     const bait=G.loadout(sess.mode).bait;
+     const surfaceLure=sess.mode==='spin'&&
+       (bait==='wobbler'||bait==='sea_wobbler'||bait==='mouse');
+     // A feeder hook-up or submerged spoon cannot explode at the surface.
+     if(sess.mode==='float'||surfaceLure)
+       burst(rig.X,rig.Z,e.big?5:3,e.big?.62:.4);
+   }
   }
   if(e.type==='session'){particles.length=0;lastNear=-10}
   return originalEvent.call(this,e);
@@ -33,8 +47,10 @@
   if(sess&&rig&&!sess.ice&&rig.state==='fight'&&rig.fish){
    const fish=rig.fish;
    // Surface wake is only tied to an actual hooked fish near the surface.
-   if(fish.surface>.35&&sess.t-lastNear>.58){
-    lastNear=sess.t;burst(fish.X,fish.Z,Math.min(4,Math.ceil(fish.surface*4)),Math.min(.9,fish.surface));
+   const activity=surfaceActivity(fish);
+   if(activity>.35&&fish.surface>.30&&sess.t-lastNear>1.0){
+    lastNear=sess.t;
+    burst(fish.X,fish.Z,Math.min(3,Math.ceil(activity*3)),activity*.62);
    }
   }
   ctx.save();
@@ -51,6 +67,6 @@
   }finally{ctx.restore()}
   return result;
  };
- FZ.CozyFeedback={stats:()=>({particles:particles.length,limit:32}),
+ FZ.CozyFeedback={surfaceActivity,stats:()=>({particles:particles.length,limit:32}),
   reset:()=>{particles.length=0;lastNear=-10}};
 })(window.FZ);
