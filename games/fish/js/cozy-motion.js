@@ -36,7 +36,7 @@
    const motion=clamp(Math.hypot(f.vx||0,f.vz||0)/2.5,0,1);
    const mass=clamp(Math.log2(1+Math.max(0,f.w||0))/5,0,1);
    const phase=f.phase||"rest";
-   const tail=phase==="shake"?.39:phase==="run"?.16+.29*motion:
+   const tail=phase==="shake"?.49:phase==="run"?.16+.29*motion:
      phase==="dive"?.11+.15*motion:phase==="tired"?.055:.10+.12*motion;
    const roll=phase==="shake"?Math.sin((f.swimPhase||t*9)*1.9)*.10:
      phase==="run"?clamp((f.vx||0)/4,-1,1)*.055:0;
