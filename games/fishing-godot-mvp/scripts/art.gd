@@ -203,7 +203,38 @@ func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: 
     prop.position = location
     prop.scale = Vector3.ONE * factor
     prop.rotation.y = facing
+    if name.begins_with("tree-") or name.begins_with("plant-") or name.begins_with("grass-"):
+        _correct_nature_colors(prop, name)
     return prop
+
+func _correct_nature_colors(node: Node, asset_name: String) -> void:
+    # Kenney glTF source uses a blue-cyan foliage palette. Preserve the original
+    # meshes, bark material and normals, but remap foliage colors to forest green.
+    # Imported meshes are shared, so surface overrides must be per-instance.
+    if node is MeshInstance3D:
+        var mesh_node := node as MeshInstance3D
+        if mesh_node.mesh != null:
+            for surface in range(mesh_node.mesh.get_surface_count()):
+                var original := mesh_node.mesh.surface_get_material(surface)
+                if original is StandardMaterial3D:
+                    var mat := original.duplicate() as StandardMaterial3D
+                    var base := mat.albedo_color
+                    var is_cyan := base.b > base.r * 1.04 and base.g > base.r * 1.08
+                    if is_cyan:
+                        var value := clampf(base.get_luminance(), 0.10, 0.95)
+                        var variation := 0.91 + absf(sin(mesh_node.global_position.x * 0.7)) * 0.18
+                        var green := Color(
+                            (0.105 + value * 0.16) * variation,
+                            (0.19 + value * 0.26) * variation,
+                            (0.085 + value * 0.10) * variation,
+                            base.a
+                        )
+                        if asset_name.begins_with("grass-"):
+                            green = Color(0.23, 0.31, 0.15, base.a)
+                        mat.albedo_color = green
+                        mesh_node.set_surface_override_material(surface, mat)
+    for child in node.get_children():
+        _correct_nature_colors(child, asset_name)
 
 func _mesh(parent: Node3D, shape: Mesh, location: Vector3, scale_factor: Vector3, material: Material) -> MeshInstance3D:
     var mesh := MeshInstance3D.new()
