@@ -35,6 +35,18 @@ var landing_from := Vector3.ZERO
 var last_sound_reel := 0.0
 var lure_sim
 var fight_sim
+var ecology
+var lake_hour := 7.1
+var wind := 0.28
+var last_footstep := -10.0
+var current_bite_species := ""
+var bite_sign_age := 99.0
+var shoreline_activity := 0.0
+var rod_angle := 0.0
+var rod_spring_speed := 0.0
+var fish_swimmers: Array[Node3D] = []
+var fish_swim_clock := 0.0
+var activity_rings: Array[MeshInstance3D] = []
 var minimap: Control
 var lure_depth := 0.0
 var fish_spots: Array[Dictionary] = [
@@ -90,7 +102,9 @@ func _ready() -> void:
     _create_bobber_and_fish()
     lure_sim = (load("res://scripts/lure_physics.gd") as GDScript).new()
     fight_sim = (load("res://scripts/fight_physics.gd") as GDScript).new()
+    ecology = (load("res://scripts/lake_ecology.gd") as GDScript).new()
     _create_hotspots()
+    _create_lake_swimmers()
     _create_ui()
     sounds = (load("res://scripts/soundscape.gd") as GDScript).new() as Node
     add_child(sounds)
@@ -109,6 +123,10 @@ func _process(delta: float) -> void:
         return
     _update_player(delta)
     ripple_age += delta
+    bite_sign_age += delta
+    lake_hour = fposmod(lake_hour + delta * 0.0014, 24.0)
+    wind = clampf(0.31 + 0.22 * sin(elapsed * 0.015), 0.05, 0.68)
+    _animate_lake(delta)
     if cast_charging and (phase == Phase.READY or phase == Phase.RESULT):
         cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
     if rod_root != null:
