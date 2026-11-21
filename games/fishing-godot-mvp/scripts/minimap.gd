@@ -70,6 +70,24 @@ func _draw() -> void:
             draw_arc(marker, 9.5, 0.2, TAU - 0.2, 21, Color(col.r, col.g, col.b, 0.22), 1.0, true)
             draw_circle(marker, 2.0, Color(col.r, col.g, col.b, 0.32))
 
+    # This sonar shows positions from the actual living simulation. A small
+    # dim echo is only shown when the moving fish is close to the real bait.
+    if game.fish_population != null and game.bobber.visible:
+        var lure_world: Vector3 = game.bobber.global_position
+        for living in game.fish_population.agents:
+            var fish_state: String = str(living["mode"])
+            if fish_state == "absent" or fish_state == "hooked":
+                continue
+            var world: Vector3 = living["pos"]
+            if world.distance_to(lure_world) > 9.0:
+                continue
+            var fish_marker := _world_to_map(world)
+            if fish_marker.x < 7.0 or fish_marker.y < 32.0 or fish_marker.x > width - 7.0 or fish_marker.y > height - 7.0:
+                continue
+            var interested := fish_state in ["approach", "inspect", "strike"]
+            draw_circle(fish_marker, 3.0 if interested else 2.2,
+                Color(0.87, 0.84, 0.57, 0.82) if interested else Color(0.46, 0.70, 0.69, 0.38))
+
     var player := Vector2(width * 0.50, height * 0.77)
     var heading: Vector3 = -game.camera.global_transform.basis.z
     var forward := Vector2(heading.x, heading.z).normalized()
