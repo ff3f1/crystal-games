@@ -193,6 +193,7 @@ jobs:
             games/fishing-godot-mvp/build/*.apk
             games/fishing-godot-mvp/build/scene-preview.png
             games/fishing-godot-mvp/build/gameplay-preview.png
+            games/fishing-godot-mvp/build/lure-minimap-preview.png
             games/fishing-godot-mvp/build/ultrawide-preview.png
             games/fishing-godot-mvp/build/settings-preview.png
             games/fishing-godot-mvp/build/journal-preview.png
