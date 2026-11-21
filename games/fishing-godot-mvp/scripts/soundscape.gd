@@ -54,3 +54,16 @@ func set_volume_fraction(value: float) -> void:
     else:
         AudioServer.set_bus_mute(0, false)
         AudioServer.set_bus_volume_db(0, linear_to_db(clampf(value, 0.001, 1.0)))
+
+func _exit_tree() -> void:
+    for channel in channels:
+        if channel != null:
+            channel.stop()
+            channel.stream = null
+    if water != null:
+        water.stop()
+        water.stream = null
+    if birds != null:
+        birds.stop()
+        birds.stream = null
+    effects.clear()
