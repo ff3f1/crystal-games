@@ -49,6 +49,10 @@ func _make_water() -> void:
     water_material = ShaderMaterial.new()
     water_material.shader = load("res://shaders/water.gdshader")
     water_material.set_shader_parameter("breeze", local_breeze)
+    # Reuse exactly the visible CC0 sky for physical-looking planar reflections.
+    var panorama := load("res://assets/textures/sky_panorama.jpg") as Texture2D
+    if panorama != null:
+        water_material.set_shader_parameter("sky_reflection", panorama)
     _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, water_material)
 
 func lake_floor_height(z: float) -> float:
