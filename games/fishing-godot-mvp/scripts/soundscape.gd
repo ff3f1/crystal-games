@@ -42,6 +42,15 @@ func _process(_delta: float) -> void:
     if birds != null and birds.stream != null and not birds.playing:
         birds.play()
 
+func set_weather(breeze: float, hour: float) -> void:
+    # Natural mixing: stronger wind raises bank wash; birds are most active
+    # at dawn. No extra audio loops or heavy CPU synthesizers in the game.
+    if water != null:
+        water.volume_db = -17.0 + clampf(breeze, 0.0, 1.0) * 8.0
+    if birds != null:
+        var morning: float = 1.0 - clampf(absf(hour - 7.5) / 8.0, 0.0, 1.0)
+        birds.volume_db = -23.0 + morning * 10.0 - breeze * 2.0
+
 func play(key: String) -> void:
     if not effects.has(key):
         return
