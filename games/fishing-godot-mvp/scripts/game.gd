@@ -518,6 +518,63 @@ func _create_hotspots() -> void:
         mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
         var marker_mesh := _mesh(self, shape, info["pos"] + Vector3.UP * 0.075, Vector3.ONE, mat)
         marker_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        marker_mesh.visible = false
+        activity_rings.append(marker_mesh)
+
+func _create_lake_swimmers() -> void:
+    # Reuse the same species meshes as trophies, rather than painted decals.
+    # Residents patrol their habitat below the waterline. Only an occasional
+    # short breach becomes visible at the surface.
+    var species := ["Карась", "Окунь", "Щука", "Окунь"]
+    for i in range(fish_spots.size()):
+        var fish := make_fish_visual(species[i])
+        add_child(fish)
+        var anchor: Vector3 = fish_spots[i]["pos"]
+        fish.position = anchor + Vector3(0.0, -1.20, 0.0)
+        fish.scale = Vector3.ONE * (0.38 if species[i] != "Щука" else 0.28)
+        fish.set_meta("swim_anchor", anchor)
+        fish.set_meta("swim_phase", float(i) * 1.73)
+        fish_swimmers.append(fish)
+
+func _animate_lake(delta: float) -> void:
+    fish_swim_clock += delta
+    var sunlight := clampf(sin((lake_hour - 6.0) / 13.5 * PI), 0.15, 1.0)
+    sun_light.light_energy = lerpf(sun_light.light_energy, 0.46 + sunlight * 0.47, minf(1.0, delta * 0.18))
+    sounds.call("set_weather", wind, lake_hour)
+    for i in range(fish_swimmers.size()):
+        var swimmer := fish_swimmers[i]
+        var centre: Vector3 = swimmer.get_meta("swim_anchor")
+        var phi: float = float(swimmer.get_meta("swim_phase")) + elapsed * (0.21 + float(i) * 0.018)
+        # Perch patrol the stones, carp circle vegetation, pike stays deeper.
+        var excursion := 2.4 if i == 2 else (1.3 if i == 0 else 1.8)
+        var z := centre.z + sin(phi) * excursion
+        var x := centre.x + cos(phi * 0.83) * excursion
+        swimmer.position = Vector3(x, -0.95 if i != 2 else -1.45, z)
+        swimmer.rotation.y = phi + PI * 0.5
+        swimmer.call("set_wiggle", 0.55 + wind * 0.30)
+        # Reveal fish only if they momentarily break the surface; otherwise
+        # the opaque water correctly hides the underwater habitat.
+        var breach_phase := fposmod(elapsed + float(i) * 10.4, 43.0 + i * 6.0)
+        var near_waterfront := camera.global_position.distance_to(centre) < 42.0
+        if near_waterfront and breach_phase < 0.80 and i != 2:
+            var arc := sin(breach_phase / 0.8 * PI)
+            swimmer.position.y = -0.65 + arc * 1.15
+            swimmer.rotation.x = sin(breach_phase / 0.8 * PI) * 0.20
+            if breach_phase < delta:
+                ring.position = Vector3(x, 0.045, z)
+                ripple_age = 0.0
+                ring.visible = true
+        else:
+            swimmer.rotation.x = 0.0
+        if i < activity_rings.size():
+            var ring_mark := activity_rings[i]
+            # Active cues come from actual habitats, not permanent glowing circles.
+            var cue_phase := fposmod(elapsed + float(i) * 7.3, 22.0 + float(i) * 4.0)
+            ring_mark.visible = near_waterfront and cue_phase < 2.7 and i != 2
+            if ring_mark.visible:
+                var alpha := sin(cue_phase / 2.7 * PI)
+                ring_mark.scale = Vector3.ONE * (0.35 + cue_phase * 0.29)
+                ring_mark.transparency = 1.0 - alpha * 0.48
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
