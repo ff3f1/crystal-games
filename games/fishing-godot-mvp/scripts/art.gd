@@ -32,6 +32,7 @@ func populate() -> void:
     _make_forest()
     _make_fishing_spot()
     _make_habitat_details()
+    _make_natural_reeds_and_lilies()
 
 func shore_edge(x: float) -> float:
     return 3.7 + sin(x * 0.12) * 0.85 + sin(x * 0.033) * 1.2
@@ -220,24 +221,13 @@ func _make_forest() -> void:
         var kind: String = bush_kinds[random.randi_range(0, bush_kinds.size() - 1)]
         _place_asset(kind, Vector3(px, ground_height(px, pz), pz), random.randf_range(1.4, 2.9), random.randf_range(0, TAU))
 
-    for i in range(185):
+    # Keep low-poly Nature Kit farther from the first-person camera.
+    # Former giant yellow cattails / angular grass filled half the view.
+    for i in range(86):
         var side := -1.0 if i % 2 == 0 else 1.0
-        var px := side * random.randf_range(1.5, 55.0)
-        var pz := shore_edge(px) + random.randf_range(0.2, 5.5)
-        _place_asset("grass-leafs" if i % 3 == 0 else "grass-large", Vector3(px, ground_height(px, pz), pz), random.randf_range(1.5, 3.2), random.randf_range(0, TAU))
-
-    for i in range(48):
-        var side := -1.0 if i % 2 == 0 else 1.0
-        var px := side * random.randf_range(4.5, 48.0)
-        var pz := shore_edge(px) + random.randf_range(-1.5, 0.8)
-        _place_asset("cattails", Vector3(px, -0.04, pz), random.randf_range(0.7, 1.4), random.randf_range(0, TAU))
-
-    for i in range(25):
-        var px := random.randf_range(-45, 45)
-        var pz := random.randf_range(-12, 0)
-        if absf(px) < 2.0:
-            continue
-        _place_asset("lilies", Vector3(px, 0.01, pz), random.randf_range(0.8, 1.4), random.randf_range(0, TAU))
+        var px := side * random.randf_range(8.0, 55.0)
+        var pz := shore_edge(px) + random.randf_range(1.7, 8.0)
+        _place_asset("grass-leafs" if i % 3 == 0 else "grass-large", Vector3(px, ground_height(px, pz), pz), random.randf_range(0.8, 1.5), random.randf_range(0, TAU))
 
 func _make_fishing_spot() -> void:
     # A small timber pier at the right side; walk there to inspect the equipment.
@@ -256,18 +246,6 @@ func _make_habitat_details() -> void:
     # The same physical landmarks the fish ecology understands:
     # reed-fringed crucian bay (left), outcrop for perch (right),
     # submerged fall and deep drop where the pike hunts.
-    for i in range(25):
-        var x := -11.3 + random.randf_range(-5.0, 5.0)
-        var z := -15.7 + random.randf_range(-3.6, 4.8)
-        var pad := _place_asset("lilies", Vector3(x, 0.012, z), random.randf_range(0.52, 1.15), random.randf_range(0, TAU))
-        if pad != null:
-            floating_leaves.append(pad)
-    for i in range(24):
-        var x := -13.0 + random.randf_range(-5.5, 8.0)
-        var z := shore_edge(x) + random.randf_range(-1.1, 0.35)
-        var reed := _place_asset("cattails", Vector3(x, 0.0, z), random.randf_range(0.55, 1.35), random.randf_range(0, TAU))
-        if reed != null:
-            reeds.append(reed)
     for i in range(11):
         var x := 10.0 + random.randf_range(-6.5, 6.5)
         var z := -17.0 + random.randf_range(-5.3, 6.1)
@@ -276,6 +254,98 @@ func _make_habitat_details() -> void:
             rock.rotation.x = random.randf_range(-0.22, 0.22)
     _place_asset("log", Vector3(-3.7, -0.17, -24.5), 1.8, -0.60)
     _place_asset("rock_moss_set_01", Vector3(3.0, -0.24, -26.5), 0.33, 1.2)
+
+func _leaf_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color) -> void:
+    st.set_color(tint)
+    st.add_vertex(a)
+    st.set_color(tint.lightened(0.07))
+    st.add_vertex(b)
+    st.set_color(tint.darkened(0.07))
+    st.add_vertex(c)
+
+func _make_natural_reeds_and_lilies() -> void:
+    # One original, batched low-poly ribbon mesh instead of hundreds of
+    # individual yellow Kenney cattail prefabs. Narrow dark stalks with
+    # tapering leaves are physically placed along the shallow bank.
+    var blades := SurfaceTool.new()
+    blades.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(215):
+        var zone := i % 3
+        var x := 0.0
+        var z := 0.0
+        if zone == 0:
+            x = -17.0 + random.randf_range(-12.0, 12.0)
+            z = shore_edge(x) + random.randf_range(-0.6, 1.2)
+        elif zone == 1:
+            x = 19.0 + random.randf_range(-8.0, 12.0)
+            z = shore_edge(x) + random.randf_range(-0.6, 1.1)
+        else:
+            x = random.randf_range(-48.0, 47.0)
+            z = shore_edge(x) + random.randf_range(-0.35, 0.55)
+        if absf(x) < 6.2 and z > 0.0:
+            continue
+        var base := Vector3(x, -0.12, z)
+        var height := random.randf_range(0.70, 1.62)
+        var tip := base + Vector3(random.randf_range(-0.09, 0.09), height, random.randf_range(-0.05, 0.05))
+        var green := Color(0.24 + random.randf_range(-0.05, 0.07), 0.34 + random.randf_range(-0.04, 0.06), 0.20, 1.0)
+        var stem_width := random.randf_range(0.009, 0.019)
+        _leaf_tri(blades, base + Vector3(-stem_width, 0, 0), tip, base + Vector3(stem_width, 0, 0), green)
+        _leaf_tri(blades, base + Vector3(0, 0, -stem_width), tip, base + Vector3(0, 0, stem_width), green.darkened(0.07))
+        for leaf in range(3):
+            var angle := float(leaf) * TAU / 3.0 + random.randf_range(-0.28, 0.28)
+            var root_height := height * random.randf_range(0.11, 0.31)
+            var spread := random.randf_range(0.26, 0.48)
+            var start := base + Vector3(0, root_height, 0)
+            var mid := start + Vector3(cos(angle) * spread * 0.42, height * 0.25, sin(angle) * spread * 0.42)
+            var leaf_tip := start + Vector3(cos(angle) * spread, height * 0.46, sin(angle) * spread)
+            var normal := Vector3(-sin(angle), 0.0, cos(angle)) * 0.043
+            _leaf_tri(blades, start, mid + normal, leaf_tip, green.lightened(0.06))
+            _leaf_tri(blades, start, leaf_tip, mid - normal, green.darkened(0.11))
+        # Small dark seed heads rather than thick fluorescent yellow blocks.
+        if i % 3 == 0:
+            var start_seed := tip - Vector3.UP * 0.18
+            var top_seed := tip - Vector3.UP * 0.025
+            var brown := Color(0.29, 0.25, 0.17)
+            var bw := 0.028
+            _leaf_tri(blades, start_seed + Vector3(-bw, 0, 0), top_seed, start_seed + Vector3(bw, 0, 0), brown)
+            _leaf_tri(blades, start_seed + Vector3(0, 0, -bw), top_seed, start_seed + Vector3(0, 0, bw), brown)
+    blades.generate_normals()
+    var reed_mat := StandardMaterial3D.new()
+    reed_mat.vertex_color_use_as_albedo = true
+    reed_mat.roughness = 1.0
+    reed_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    var reed_mesh := MeshInstance3D.new()
+    reed_mesh.mesh = blades.commit()
+    reed_mesh.material_override = reed_mat
+    reed_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    add_child(reed_mesh)
+
+    # Floating dark olive pads with rounded silhouettes. All world-space,
+    # no enormous square impostors painted on the water.
+    var pads := SurfaceTool.new()
+    pads.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for i in range(36):
+        var x := -12.4 + random.randf_range(-7.2, 8.0)
+        var z := -13.6 + random.randf_range(-7.0, 8.0)
+        var centre := Vector3(x, 0.015 + random.randf_range(0.0, 0.02), z)
+        var radius := random.randf_range(0.22, 0.48)
+        var leaf_col := Color(0.11 + random.randf_range(0.0, 0.08), 0.24 + random.randf_range(0.0, 0.06), 0.135)
+        for j in range(14):
+            var t0 := (float(j) + 0.6) * TAU / 15.0
+            var t1 := (float(j) + 1.6) * TAU / 15.0
+            var p0 := centre + Vector3(cos(t0) * radius, 0.0, sin(t0) * radius * 0.72)
+            var p1 := centre + Vector3(cos(t1) * radius, 0.0, sin(t1) * radius * 0.72)
+            _leaf_tri(pads, centre, p1, p0, leaf_col)
+    pads.generate_normals()
+    var pad_mat := StandardMaterial3D.new()
+    pad_mat.vertex_color_use_as_albedo = true
+    pad_mat.roughness = 0.82
+    pad_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+    var pad_mesh := MeshInstance3D.new()
+    pad_mesh.mesh = pads.commit()
+    pad_mesh.material_override = pad_mat
+    pad_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    add_child(pad_mesh)
 
 func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: float = 0.0) -> Node3D:
     var path := "res://assets/models/%s.glb" % name
