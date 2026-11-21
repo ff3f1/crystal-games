@@ -34,6 +34,9 @@ func _clear() -> void:
 
 func _page(name: String, wide: bool = false) -> Panel:
     screen_name = name
+    # Hide gameplay HUD while a menu page is open. The background game scene
+    # remains visible, but joystick/topbar must not bleed through the menu.
+    game.hud_layer.visible = false
     _clear()
     visible = true
     var veil := ColorRect.new()
