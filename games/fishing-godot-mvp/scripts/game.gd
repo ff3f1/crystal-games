@@ -130,11 +130,17 @@ func _process(delta: float) -> void:
     if cast_charging and (phase == Phase.READY or phase == Phase.RESULT):
         cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
     if rod_root != null:
-        rod_root.rotation.x = -0.04 + sin(elapsed * 1.2) * 0.008
+        # Elastic loaded blank: damped return, no instant angular snapping.
+        var bending := 0.0
         if phase == Phase.CASTING:
-            rod_root.rotation.x -= sin(PI * clampf(timer / 1.25, 0.0, 1.0)) * 0.34
-        if phase == Phase.FIGHT:
-            rod_root.rotation.x -= clampf(tension / 400.0, 0.0, 0.26)
+            bending = -sin(PI * clampf(timer / 1.35, 0.0, 1.0)) * 0.34
+        elif phase == Phase.FIGHT:
+            bending = -0.10 - clampf(tension / 245.0, 0.0, 0.40)
+            bending += sin(elapsed * 8.2) * float(fight_sim.burst) * 0.015
+        var dt := minf(delta, 0.05)
+        rod_spring_speed += ((bending - rod_angle) * 38.0 - rod_spring_speed * 11.5) * dt
+        rod_angle += rod_spring_speed * dt
+        rod_root.rotation.x = -0.04 + rod_angle + sin(elapsed * 1.2) * 0.005
     if reel_spool != null and is_reeling and (phase == Phase.FIGHT or phase == Phase.WAITING):
         reel_spool.rotate_z(delta * 17.0)
 
