@@ -36,8 +36,9 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Download CC0 art (mesh packs and PBR ground)
+      - name: Download CC0 art (meshes, PBR terrain and sky panorama)
         run: |
+          python3 -m pip install --quiet --break-system-packages Pillow
           python3 games/fishing-godot-mvp/tools/fetch_assets.py
           du -sh games/fishing-godot-mvp/assets
           test -s games/fishing-godot-mvp/assets/models/rod.glb
