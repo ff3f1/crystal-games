@@ -1,0 +1,94 @@
+name: Fishing 2.0.1 published APK — ads-only signed hotfix
+on:
+  push:
+    branches: [codex/fishing-2.0.1-ads-hotfix]
+    paths:
+      - tools/fishing_201_hotfix.py
+      - tools/fishing_201_download.py
+      - .github/workflows/fishing-201-ads-hotfix.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-hotfix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out hotfix scripts (no rejected experimental gameplay)
+        uses: actions/checkout@v4
+      - name: Download exact published RuStore 2.0.1 APK and verify checksum
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 tools/fishing_201_download.py out/original-2.0.1.apk
+          echo "Original SHA: $(sha256sum out/original-2.0.1.apk)"
+      - name: Apply minimal patch directly to original APK
+        run: |
+          set -euo pipefail
+          python3 tools/fishing_201_hotfix.py out/original-2.0.1.apk out/unsigned-hotfix.apk
+          unzip -tq out/unsigned-hotfix.apk
+          unzip -p out/unsigned-hotfix.apk assets/js/platform.js > "$RUNNER_TEMP/platform.js"
+          unzip -p out/unsigned-hotfix.apk assets/js/ui.js > "$RUNNER_TEMP/ui.js"
+          node --check "$RUNNER_TEMP/platform.js"
+          node --check "$RUNNER_TEMP/ui.js"
+      - name: Install Android tools
+        uses: android-actions/setup-android@v3
+      - name: Resolve Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager "build-tools;35.0.0" >/dev/null
+          echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_ENV"
+      - name: Require original publisher signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" || { echo "Missing release signing key: do not publish debug build"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: ZIP-align and sign with existing publisher keystore
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
+          "$BUILD_TOOLS/zipalign" -f -p 4 out/unsigned-hotfix.apk out/aligned-hotfix.apk
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASSWORD \
+            --key-pass env:KEY_PASSWORD \
+            --out out/fishing-2.0.2-ads-hotfix.apk \
+            out/aligned-hotfix.apk
+      - name: Reject wrong signature, package or version
+        run: |
+          set -euo pipefail
+          APK=out/fishing-2.0.2-ads-hotfix.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs out/original-2.0.1.apk > out/original-signature.txt
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" > out/hotfix-signature.txt
+          orig_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' out/original-signature.txt | head -1)
+          new_cert=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' out/hotfix-signature.txt | head -1)
+          test -n "$orig_cert" && test "$orig_cert" = "$new_cert" || { echo "WRONG SIGNING CERTIFICATE"; exit 1; }
+          "$BUILD_TOOLS/zipalign" -c -p 4 "$APK"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" > out/badging.txt
+          grep -F "name='ru.crystalgames.fishing' versionCode='2002' versionName='2.0.2'" out/badging.txt
+          unzip -tq "$APK"
+          unzip -p "$APK" assets/js/platform.js | grep -q '180e3'
+          unzip -p "$APK" assets/js/ui.js | grep -q 'Попробуйте ещё раз'
+          (cd out && sha256sum fishing-2.0.2-ads-hotfix.apk > SHA256SUMS.txt)
+          echo "Signed by original publisher; exact APK 2.0.1 baseline preserved; NO RuStore upload." > out/VERIFIED.txt
+      - name: Upload signed APK for manual moderation only
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fishing-2.0.2-ads-hotfix-for-rustore
+          path: |
+            out/fishing-2.0.2-ads-hotfix.apk
+            out/SHA256SUMS.txt
+            out/VERIFIED.txt
+            out/badging.txt
+            out/hotfix-signature.txt
+          retention-days: 30
