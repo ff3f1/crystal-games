@@ -46,6 +46,7 @@ var fish_spots: Array[Dictionary] = [
 var drag_button: Button
 var stamina_label: Label
 var bait_underwater: MeshInstance3D
+var spinner_glint: MeshInstance3D
 var float_parts: Array[MeshInstance3D] = []
 var bite_window := 2.0
 
@@ -132,6 +133,8 @@ func _process(delta: float) -> void:
             lure_depth = lure_sim.depth
             bobber.position = lure_sim.visible_surface_position()
             bobber.position.y += sin(elapsed * 2.8) * 0.025
+            if spinner_glint != null:
+                spinner_glint.scale = Vector3.ONE * (0.95 + sin(elapsed * 7.4) * 0.10)
             if bait_underwater != null:
                 bait_underwater.visible = lure_index == 1
                 bait_underwater.global_position = lure_sim.position
@@ -436,6 +439,12 @@ func _create_bobber_and_fish() -> void:
     metal.emission_energy_multiplier = 0.55
     bait_underwater = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.075, 0.075, 0.21), metal)
     bait_underwater.visible = false
+    var glint_mat := _material(Color(0.95, 0.72, 0.28), 0.20)
+    glint_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+    glint_mat.emission_enabled = true
+    glint_mat.emission = Color(0.96, 0.59, 0.22)
+    spinner_glint = _mesh(bobber, SphereMesh.new(), Vector3(0.0, 0.15, 0.0), Vector3(0.11, 0.065, 0.16), glint_mat)
+    spinner_glint.visible = false
 
     var torus := TorusMesh.new()
     torus.inner_radius = 0.40
@@ -677,6 +686,7 @@ func _reset_to_ready() -> void:
     bobber.visible = false
     fish_body.visible = false
     bait_underwater.visible = false
+    spinner_glint.visible = false
     lure_depth = 0.0
     line_mesh.clear_surfaces()
     _set_message("Выбери приманку и забрось в озеро.")
@@ -705,6 +715,7 @@ func _cast() -> void:
     is_bracing = false
     for part in float_parts:
         part.visible = lure_index == 0
+    spinner_glint.visible = lure_index == 1
     bait_underwater.visible = false
     bobber.visible = true
     bobber.global_position = cast_source
