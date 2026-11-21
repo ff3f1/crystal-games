@@ -62,6 +62,8 @@ var fish_spots: Array[Dictionary] = [
 var drag_button: Button
 var stamina_label: Label
 var bait_underwater: MeshInstance3D
+var worm_hook: MeshInstance3D
+var lure_view: Control
 var spinner_glint: MeshInstance3D
 var float_parts: Array[MeshInstance3D] = []
 var bite_window := 2.0
@@ -200,6 +202,10 @@ func _process(delta: float) -> void:
                 bait_underwater.visible = lure_index == 1
                 bait_underwater.global_position = lure_sim.position
                 bait_underwater.rotation.y += delta * 12.0 if is_reeling else delta * 1.5
+            if worm_hook != null:
+                worm_hook.visible = lure_index == 0
+                worm_hook.global_position = Vector3(lure_sim.position.x, -lure_sim.depth, lure_sim.position.z)
+                worm_hook.rotation.y = sin(elapsed * 1.4) * 0.16
             # Fish react to appropriate food and motion, not an arbitrary
             # strike countdown. A short nibble precedes a proper hook window.
             # The bait is a world-space point at its actual depth, NOT an
@@ -276,6 +282,10 @@ func _process(delta: float) -> void:
         if ripple_age > 1.72:
             ring.visible = false
     _draw_line()
+    if lure_view != null:
+        var lens_active := phase == Phase.WAITING or phase == Phase.BITE or phase == Phase.FIGHT
+        var lens_position := fish_body.global_position if phase == Phase.FIGHT else Vector3(lure_sim.position.x, -lure_sim.depth, lure_sim.position.z)
+        lure_view.call("update_bait_view", delta, lens_active, lens_position, camera.global_position)
     _update_stats()
     if minimap != null:
         minimap.queue_redraw()
@@ -537,6 +547,9 @@ func _create_bobber_and_fish() -> void:
     metal.emission_energy_multiplier = 0.55
     bait_underwater = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.075, 0.075, 0.21), metal)
     bait_underwater.visible = false
+    var worm_material := _material(Color(0.45, 0.18, 0.15), 0.78)
+    worm_hook = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.052, 0.037, 0.19), worm_material)
+    worm_hook.visible = false
     var glint_mat := _material(Color(0.95, 0.72, 0.28), 0.20)
     glint_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
     glint_mat.emission_enabled = true
@@ -711,6 +724,17 @@ func _create_ui() -> void:
     minimap.offset_bottom = 300.0
     root.add_child(minimap)
 
+    lure_view = (load("res://scripts/lure_camera.gd") as GDScript).new() as Control
+    lure_view.anchor_left = 1.0
+    lure_view.anchor_right = 1.0
+    lure_view.anchor_top = 0.0
+    lure_view.anchor_bottom = 0.0
+    lure_view.offset_left = -262.0
+    lure_view.offset_right = -16.0
+    lure_view.offset_top = 311.0
+    lure_view.offset_bottom = 482.0
+    root.add_child(lure_view)
+
 func _label(parent: Control, txt: String, font_size: int, l: float, t: float, r: float, b: float) -> Label:
     var result := Label.new()
     result.text = txt
@@ -853,6 +877,7 @@ func _reset_to_ready() -> void:
     cast_charging = false
     cast_charge_bar.visible = false
     bait_underwater.visible = false
+    worm_hook.visible = false
     spinner_glint.visible = false
     lure_depth = 0.0
     line_mesh.clear_surfaces()
@@ -889,6 +914,7 @@ func _cast() -> void:
         part.visible = lure_index == 0
     spinner_glint.visible = lure_index == 1
     bait_underwater.visible = false
+    worm_hook.visible = false
     bobber.visible = true
     bobber.global_position = cast_source
     _set_message("Заброс! Следи за поплавком и отметкой на мини-карте.")
@@ -995,6 +1021,7 @@ func _finish(text: String, won: bool = false) -> void:
     fish_body = staged_fish_body
     bobber.visible = false
     bait_underwater.visible = false
+    worm_hook.visible = false
     is_reeling = false
     is_bracing = false
     if not won:
