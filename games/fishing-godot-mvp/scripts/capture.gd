@@ -16,6 +16,11 @@ func _capture() -> void:
     for i in range(12):
         await process_frame
     _save("gameplay-preview.png")
+    game._cast()
+    game._process(1.42)
+    for i in range(15):
+        await process_frame
+    _save("lure-minimap-preview.png")
     game.open_pause()
     game.overlay.show_settings("pause")
     for i in range(12):
