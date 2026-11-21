@@ -505,21 +505,21 @@ func _create_ui() -> void:
     ui.add_child(root)
 
     var shade := ColorRect.new()
-    shade.color = Color(0.015, 0.055, 0.058, 0.68)
+    shade.color = Color(0.015, 0.055, 0.058, 0.44)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _place(shade, 0, 0, 1, 0.12)
     root.add_child(shade)
 
     var lower := ColorRect.new()
-    lower.color = Color(0.015, 0.045, 0.050, 0.73)
+    lower.color = Color(0.015, 0.045, 0.050, 0.42)
     lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(lower, 0, 0.73, 1, 1)
+    _place(lower, 0, 0.77, 1, 1)
     root.add_child(lower)
 
     title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 27, 0.026, 0.005, 0.68, 0.058)
     message_label = _label(root, "", 21, 0.026, 0.058, 0.78, 0.126)
     catch_label = _label(root, "Улов: 0  •  Рекорд: —", 19, 0.63, 0.012, 0.875, 0.079)
-    var pause_button := _button(root, "☰", 0.91, 0.012, 0.975, 0.10, Color(0.18, 0.34, 0.35))
+    var pause_button := _button(root, "☰", 0.88, 0.012, 0.946, 0.10, Color(0.18, 0.34, 0.35))
     pause_button.add_theme_font_size_override("font_size", 27)
     pause_button.pressed.connect(open_pause)
     stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
