@@ -117,7 +117,12 @@
  ['Реши судьбу улова','Забирай рыбу за монеты или отпускай ради опыта. У охраняемых видов доступно только отпускание. Улучшай снасти и открывай новые водоёмы.'],
  ['Лови зимой и в море','На льду сначала пробури лунку, выбери глубину и короткими нажатиями играй мормышкой. На зимнем морском берегу вода остаётся открытой.']
  ].map((a,i)=>'<div class="help-step"><b>'+String(i+1).padStart(2,'0')+'</b><div><h3>'+a[0]+'</h3><p>'+a[1]+'</p></div></div>').join('')+'</div>')};
+ // Keep the short renewal instructions in idle/casting states, but the
+ // canonical UI's safety-aware fight coach must own all live fish fights.
+ // Otherwise this legacy replacement hides dive/cover/drag warnings.
+ const coachedFightHint=UI.hint;
  UI.hint=function(s,r,st,t){
+  if(r.state==='fight'&&r.fish)return coachedFightHint(s,r,st,t);
   let html='';
   if(s.duel&&r.state==='idle')html='Целься в золотой круг';
   else if(r.state==='idle')html=G.canFish()!==true?G.canFish():r.aimSelected?'Точка выбрана · нажми «Заброс»':'Проведи по воде и отпусти';
