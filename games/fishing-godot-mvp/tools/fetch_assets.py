@@ -100,7 +100,7 @@ sky_source = TEX / "green-lake-source.jpg"
 sky_target = TEX / "sky_panorama.jpg"
 # Prefer CC0 sunny alpine mountains and blue sky as in the visual reference;
 # retain a known-good lake panorama and arboretum fallback.
-for sky_name in ("alps_field", "shudu_lake", "arboretum"):
+for sky_name in ("lakeside", "alps_field", "shudu_lake", "arboretum"):
     try:
         fetch(f"https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/{sky_name}.jpg", sky_source)
         print("Chosen photographic sky:", sky_name)
@@ -123,16 +123,8 @@ if not sky_target.exists():
         turned.paste(right_half, (0, 0))
         turned.paste(left_half, (half, 0))
         sky_img = turned
-        # The source is an alpine grass meadow, while the game is a lake.
-        # Replace the field below the distant tree line with a soft blue
-        # photographic reflection so a neon-green horizon cannot appear.
-        waterline = int(sky_img.height * 0.428)
-        reflection = sky_img.crop((0, int(sky_img.height * 0.18), sky_img.width, waterline))
-        reflection = reflection.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
-        reflection = reflection.resize((sky_img.width, sky_img.height - waterline), Image.Resampling.BILINEAR)
-        lake_tint = Image.new("RGB", reflection.size, (45, 103, 141))
-        reflection = Image.blend(reflection, lake_tint, 0.77)
-        sky_img.paste(reflection, (0, waterline))
+        # Use a real continuous lakeside panorama. Synthetic horizon colour
+        # blocks make a visible wall when the physical lake meets the sky.
         sky_img.save(sky_target, "JPEG", quality=88, optimize=True)
     print("Sky panorama ready", sky_target.stat().st_size, "bytes")
 sky_source.unlink(missing_ok=True)
