@@ -48,6 +48,10 @@ var rod_angle := 0.0
 var rod_spring_speed := 0.0
 var fish_population: Node3D
 var pending_fish_id := -1
+var fight_world_pos := Vector3.ZERO
+var fight_world_axis := Vector3.FORWARD
+var fight_world_side := Vector3.RIGHT
+var fight_prev_pos := Vector3.ZERO
 var staged_fish_body: Node3D
 var fish_swim_clock := 0.0
 var activity_rings: Array[MeshInstance3D] = []
@@ -845,6 +849,15 @@ func _main_action() -> void:
                 if live_fish != null:
                     fish_body = live_fish
                     fish_body.visible = true
+            fight_world_pos = fish_body.global_position
+            fight_prev_pos = fight_world_pos
+            fight_world_axis = fight_world_pos - camera.global_position
+            fight_world_axis.y = 0.0
+            if fight_world_axis.length_squared() < 0.04:
+                fight_world_axis = -camera.global_transform.basis.z
+                fight_world_axis.y = 0.0
+            fight_world_axis = fight_world_axis.normalized()
+            fight_world_side = Vector3(-fight_world_axis.z, 0.0, fight_world_axis.x)
             pending_fish_id = -1
             fight_sim.begin(fish_name, fish_weight, camera.global_position.distance_to(bobber.global_position) * 0.78)
             fight_distance = fight_sim.distance
@@ -987,19 +1000,23 @@ func _update_fight(delta: float) -> void:
         _update_buttons()
         return
 
-    var forward := -camera.global_transform.basis.z
-    forward.y = 0.0
-    forward = forward.normalized()
-    var sideways := camera.global_transform.basis.x
-    sideways.y = 0.0
-    sideways = sideways.normalized()
-    var fish_target: Vector3 = camera.global_position + forward * fight_distance + sideways * float(fight_sim.lateral)
-    fish_target.y = 0.09
-    bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 5.0))
-    var show_jump: bool = float(fight_sim.burst) > 0.73 and fight_distance < 15.0
-    fish_body.visible = show_jump or fight_distance < 8.0
-    fish_body.position = bobber.position + Vector3(0.0, (0.22 + maxf(0.0, sin(elapsed * 9.0)) * 0.55) if show_jump else -0.18, 0.30)
-    fish_body.rotation.y = sin(elapsed * 2.6) * 0.45 + float(fight_sim.lateral) * 0.018
+    # Keep the fish in physical WORLD coordinates. Rotating the camera
+    # cannot teleport a trophy around the player's viewpoint.
+    var goal: Vector3 = camera.global_position + fight_world_axis * fight_distance + fight_world_side * float(fight_sim.lateral)
+    goal.y = -float(fight_sim.depth)
+    fight_prev_pos = fight_world_pos
+    var maximum_swim_speed := 5.4 + float(fight_sim.burst) * 2.1
+    fight_world_pos = fight_world_pos.move_toward(goal, maximum_swim_speed * maxf(0.0, delta))
+    var swim_direction := fight_world_pos - fight_prev_pos
+    var show_jump: bool = float(fight_sim.burst) > 0.80 and fight_distance < 14.0
+    var fish_depth := -float(fight_sim.depth)
+    if show_jump:
+        fish_depth = 0.16 + maxf(0.0, sin(elapsed * 8.7)) * 0.65
+    fish_body.visible = true
+    fish_body.global_position = Vector3(fight_world_pos.x, fish_depth, fight_world_pos.z)
+    bobber.global_position = Vector3(fight_world_pos.x, 0.07, fight_world_pos.z)
+    if swim_direction.length_squared() > 0.015:
+        fish_body.rotation.y = lerp_angle(fish_body.rotation.y, atan2(-swim_direction.x, -swim_direction.z), minf(1.0, delta * 6.0))
     fish_body.rotation.z = float(fight_sim.headshake) * 0.17
     fish_population.call("move_hooked", fish_body.global_position)
     if fish_body.has_method("set_wiggle"):
