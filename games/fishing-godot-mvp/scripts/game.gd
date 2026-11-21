@@ -788,10 +788,10 @@ func _update_fight(delta: float) -> void:
     var sideways := camera.global_transform.basis.x
     sideways.y = 0.0
     sideways = sideways.normalized()
-    var fish_target := camera.global_position + forward * fight_distance + sideways * fight_sim.lateral
+    var fish_target: Vector3 = camera.global_position + forward * fight_distance + sideways * float(fight_sim.lateral)
     fish_target.y = 0.09
     bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 5.0))
-    var show_jump := fight_sim.burst > 0.73 and fight_distance < 15.0
+    var show_jump: bool = float(fight_sim.burst) > 0.73 and fight_distance < 15.0
     fish_body.visible = show_jump or fight_distance < 8.0
     fish_body.position = bobber.position + Vector3(0.0, (0.22 + maxf(0.0, sin(elapsed * 9.0)) * 0.55) if show_jump else -0.18, 0.30)
     fish_body.rotation.y = sin(elapsed * 2.6) * 0.45
