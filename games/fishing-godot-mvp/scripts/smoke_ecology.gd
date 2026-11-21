@@ -51,8 +51,8 @@ func _test() -> void:
     _check(saw_nibble and saw_strike, "Spinner must trigger a pursuit strike after attracting a fish")
     _check(chosen == "Щука" or chosen == "Окунь", "Spinner species must remain compatible")
 
-    var inactive := ecology.species_affinity("Щука", 1, 1.7, 0.0, 0.0, 12.0, 0.3)
-    var active := ecology.species_affinity("Щука", 1, 1.7, 3.1, 0.1, 8.0, 0.3)
+    var inactive: float = ecology.species_affinity("Щука", 1, 1.7, 0.0, 0.0, 12.0, 0.3)
+    var active: float = ecology.species_affinity("Щука", 1, 1.7, 3.1, 0.1, 8.0, 0.3)
     _check(active > inactive, "Pike should respond to realistic predator retrieve in the morning")
     ecology.register_disturbance(0.50)
     _check(ecology.disturbance > 0.0, "Bank footsteps should generate temporary pressure")
