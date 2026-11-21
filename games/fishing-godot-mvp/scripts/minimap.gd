@@ -58,9 +58,17 @@ func _draw() -> void:
         if marker.x < 12 or marker.x > width - 12 or marker.y < 35 or marker.y > height - 16:
             continue
         var col: Color = spot_colors[i % spot_colors.size()]
-        draw_circle(marker, 10.5 + sin(blink * 1.2 + i * 2.6) * 1.0, col)
-        draw_arc(marker, 16.5, 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.32), 1.4, true)
-        draw_circle(marker, 3.5, Color(col.r, col.g, col.b, 0.9))
+        var active := i < game.activity_rings.size() and game.activity_rings[i].visible
+        # Faint contour marks indicate underwater cover. Bright expanding rings
+        # are reserved for genuine surface activity in this specific habitat.
+        if active:
+            var pulse := 0.75 + sin(blink * 3.3) * 0.18
+            draw_circle(marker, 10.5 + pulse * 2.4, Color(col.r, col.g, col.b, 0.30))
+            draw_arc(marker, 16.5 + pulse * 3.0, 0.0, TAU, 32, Color(col.r, col.g, col.b, 0.62), 1.5, true)
+            draw_circle(marker, 3.8, Color(col.r, col.g, col.b, 0.95))
+        else:
+            draw_arc(marker, 9.5, 0.2, TAU - 0.2, 21, Color(col.r, col.g, col.b, 0.22), 1.0, true)
+            draw_circle(marker, 2.0, Color(col.r, col.g, col.b, 0.32))
 
     var player := Vector2(width * 0.50, height * 0.77)
     var heading: Vector3 = -game.camera.global_transform.basis.z
@@ -73,8 +81,12 @@ func _draw() -> void:
         lure_pos.x = clampf(lure_pos.x, 7.0, width - 7.0)
         lure_pos.y = clampf(lure_pos.y, 34.0, height - 8.0)
         draw_line(player, lure_pos, Color(0.96, 0.88, 0.71, 0.55), 1.2, true)
-        draw_circle(lure_pos, 5.4 + sin(blink * 5.5) * 1.0, Color(1.0, 0.55, 0.24))
-        draw_arc(lure_pos, 11.0 + sin(blink * 2.5) * 2.0, 0.0, TAU, 32, Color(1.0, 0.68, 0.40, 0.65), 1.7, true)
+        var nibbled := game.bite_sign_age < 1.40 and game.phase >= 2 and game.phase <= 3
+        var bait_col := Color(0.99, 0.86, 0.38) if nibbled else Color(1.0, 0.55, 0.24)
+        draw_circle(lure_pos, 5.4 + sin(blink * 5.5) * 1.0, bait_col)
+        draw_arc(lure_pos, 11.0 + sin(blink * 2.5) * 2.0, 0.0, TAU, 32, Color(bait_col.r, bait_col.g, bait_col.b, 0.75), 1.7, true)
+        if nibbled:
+            draw_arc(lure_pos, 17.0, 0.0, TAU, 28, Color(0.97, 0.90, 0.52, 0.83), 2.0, true)
         var dist: float = game.camera.global_position.distance_to(game.bobber.global_position)
         draw_string(font, Vector2(12, height - 9), "%.0f м   ·   %.1f м глуб." % [dist, game.lure_depth], HORIZONTAL_ALIGNMENT_LEFT, width - 17, 15, Color(0.97, 0.91, 0.81))
     else:
