@@ -1,8 +1,8 @@
 name: Fishing candidate APK and AAB
 on:
   push:
-    branches: [codex/fishing-overhaul]
-    paths: [".github/workflows/fish-candidate.yml", ".github/scripts/fish-emulator-smoke.sh"] # Avoid compiling on every small gameplay change
+    branches: [codex/fishing-overhaul, feature/fishing-living-water-redesign]
+    paths: [".github/workflows/fish-candidate.yml", ".github/scripts/fish-emulator-smoke.sh", "games/fish/js/living-water.js", "games/fish/js/game.js", "games/fish/js/ui.js", "games/fish/css/style.css"] # Meaningful redesign changes
   workflow_dispatch:
 permissions:
   contents: write
@@ -22,6 +22,7 @@ jobs:
           python tests/test_rod_art.py
       - name: Validate fishing physics
         run: |
+          node tests/test_fish_living_water.cjs
           node tests/test_fish_physics.js
           node tests/test_fish_input.js
           node tests/test_fish_foley.cjs
@@ -45,7 +46,7 @@ jobs:
             mkdir -p android/app/src/main/res/mipmap-$density
             cp store/fish/icons/ic_launcher_$density.png android/app/src/main/res/mipmap-$density/ic_launcher.png
           done
-          echo "CANDIDATE_CODE=2004" >> "$GITHUB_ENV"
+          echo "CANDIDATE_CODE=3000" >> "$GITHUB_ENV"
       - name: Existing release signing key
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
@@ -64,14 +65,14 @@ jobs:
           -PappId=ru.crystalgames.fishing
           '-PappName=Рыбалка: Клюёт!'
           -PversionCode=$CANDIDATE_CODE
-          -PversionName=2.0.4-test
+          -PversionName=3.0.0-test
           -PadInter=R-M-20269656-1
           -PadReward=R-M-20269656-2
       - name: Verify and package
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/release/*.apk out/fishing-2.0.4-test.apk
-          cp android/app/build/outputs/bundle/release/*.aab out/fishing-2.0.4-test.aab
+          cp android/app/build/outputs/apk/release/*.apk out/fishing-3.0.0-test.apk
+          cp android/app/build/outputs/bundle/release/*.aab out/fishing-3.0.0-test.aab
           APK=$(find out -name '*.apk')
           set -euo pipefail
           # Reject HTML landing pages, Git LFS pointers, truncated ZIPs and missing WebView files.
@@ -97,7 +98,7 @@ jobs:
           "$APKSIGNER" verify --verbose --print-certs "$APK" > out/signature.txt
           grep -qi 'certificate SHA-256 digest: 7a5f80c0bd45b837c6b8c03886dcc1916f5ceacf9b86fbe1b4f8c2aa5ca56347' out/signature.txt
           "$AAPT" dump badging "$APK" > out/package.txt
-          grep -q "name='ru.crystalgames.fishing' versionCode='2004'" out/package.txt
+          grep -q "name='ru.crystalgames.fishing' versionCode='3000'" out/package.txt
           grep -q "launchable-activity: name='ru.crystalgames.shell.MainActivity'" out/package.txt
           (cd out && sha256sum *.apk *.aab > SHA256SUMS.txt)
           echo 'ZIP, assets, original release signing key, package and version verified' > out/verification.txt
@@ -115,7 +116,7 @@ jobs:
           avd-name: fishing-smoke
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: bash .github/scripts/fish-emulator-smoke.sh out/fishing-2.0.4-test.apk
+          script: bash .github/scripts/fish-emulator-smoke.sh out/fishing-3.0.0-test.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -129,19 +130,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p site
-          cp out/fishing-2.0.4-test.apk site/
+          cp out/fishing-3.0.0-test.apk site/
           cp out/SHA256SUMS.txt site/
           cp out/signature.txt out/package.txt out/verification.txt out/emulator-result.txt site/
           cat > site/README.md <<EOF
-          # Рыбалка: Клюёт! 2.0.4-test
+          # Рыбалка: Клюёт! 3.0.0-test
 
           **Direct APK download (not a GitHub source tree page):**
-          https://raw.githubusercontent.com/${{ github.repository }}/builds-fishing-2.0.4-test/fishing-2.0.4-test.apk
+          https://raw.githubusercontent.com/${{ github.repository }}/builds-fishing-3.0.0-test/fishing-3.0.0-test.apk
 
           Test APK from branch codex/fishing-overhaul.
           Source: ${{ github.sha }}
           Package: ru.crystalgames.fishing
-          Version code: 2004
+          Version code: 3000
           Signed with the original release certificate; Android emulator install/launch tested. No store upload.
 
           The sampled reel/drag/snap effects are bundled.
@@ -149,9 +150,9 @@ jobs:
           bundled yet. Existing game music is retained.
           EOF
           cd site
-          git init -q -b builds-fishing-2.0.4-test
+          git init -q -b builds-fishing-3.0.0-test
           git config user.name github-actions
           git config user.email actions@github.com
           git add -A
           git commit -qm "Test APK from ${{ github.sha }}"
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" builds-fishing-2.0.4-test
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}" builds-fishing-3.0.0-test
