@@ -90,3 +90,18 @@ for name, palette in SPECIES.items():
         out = ROOT / f"fish_{name}_{kind}.png"
         texture.save(out, optimize=True)
         print(name, kind, out.stat().st_size, "bytes")
+
+# Tiled woven fabric. A material-scaled micro checker breaks the toy-like
+# uniform matte black on close first-person gloves and navy waterproof sleeves.
+cloth = Image.new("RGB", (256, 256))
+pixels = cloth.load()
+for y in range(256):
+    for x in range(256):
+        warp = 8 if (x % 8) < 3 else -4
+        weft = 7 if (y % 8) < 3 else -3
+        micro = int(4.0 * math.sin(x * 1.71 + y * 2.39))
+        value = int(clamp(218 + warp + weft + micro, 180, 252))
+        pixels[x, y] = (value, value, value)
+cloth.save(ROOT / "glove_weave.png", optimize=True)
+print("glove woven albedo ready")
+
