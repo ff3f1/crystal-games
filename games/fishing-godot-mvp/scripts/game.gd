@@ -427,9 +427,11 @@ func _create_environment() -> void:
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
     env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
-    env.fog_enabled = false
-    env.fog_light_color = Color(0.66, 0.67, 0.64)
-    env.fog_density = 0.0012
+    # Light blue-green distance haze blends the modeled shoreline into
+    # the photographic panorama rather than an abrupt razor-sharp boundary.
+    env.fog_enabled = true
+    env.fog_light_color = Color(0.46, 0.58, 0.57)
+    env.fog_density = 0.0017
     world_env.environment = env
 
 func _create_shore() -> void:
