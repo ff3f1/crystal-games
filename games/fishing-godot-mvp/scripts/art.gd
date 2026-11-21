@@ -30,6 +30,7 @@ func populate() -> void:
     _make_lakebed()
     _make_land()
     _make_forest()
+    _make_scanned_shore_details()
     _make_fishing_spot()
     _make_habitat_details()
     _make_natural_reeds_and_lilies()
@@ -230,6 +231,61 @@ func _make_forest() -> void:
         var px := side * random.randf_range(8.0, 55.0)
         var pz := shore_edge(px) + random.randf_range(1.7, 8.0)
         _place_asset("grass-leafs" if i % 3 == 0 else "grass-large", Vector3(px, ground_height(px, pz), pz), random.randf_range(0.8, 1.5), random.randf_range(0, TAU))
+
+func _make_scanned_shore_details() -> void:
+    # Actual CC0 photo-scanned glTF props — not generated triangles or billboards.
+    # Keep the water-facing middle clear so the player always sees the lure.
+    # Moss, roots, reeds and broadleaf vegetation break up the flat banks.
+    for i in range(54):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var x := side * random.randf_range(4.8, 42.0)
+        var z := shore_edge(x) + random.randf_range(0.35, 5.3)
+        var grass := _place_asset(
+            "grass_medium_02",
+            Vector3(x, ground_height(x, z) - 0.04, z),
+            random.randf_range(0.18, 0.46),
+            random.randf_range(-PI, PI)
+        )
+        if grass != null:
+            grass.visible = true
+
+    for i in range(32):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var x := side * random.randf_range(6.0, 48.0)
+        var z := shore_edge(x) + random.randf_range(1.3, 15.0)
+        _place_asset(
+            "shrub_04",
+            Vector3(x, ground_height(x, z) - 0.10, z),
+            random.randf_range(0.43, 0.83),
+            random.randf_range(-PI, PI)
+        )
+
+    # Mossy boulders have real UVs, normals and scanned albedo surfaces.
+    for i in range(17):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var x := side * random.randf_range(6.4, 53.0)
+        var z := shore_edge(x) + random.randf_range(-0.35, 6.6)
+        var rock_name := "rock_moss_set_02" if i % 3 == 0 else "rock_09"
+        if i % 7 == 0:
+            rock_name = "boulder_01"
+        _place_asset(
+            rock_name,
+            Vector3(x, ground_height(x, z) - 0.20, z),
+            random.randf_range(0.24, 0.68),
+            random.randf_range(-PI, PI)
+        )
+
+    # Tangled scanned roots and old stumps are landmarks in the shallows.
+    for i in range(8):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var x := side * random.randf_range(7.5, 31.0)
+        var z := shore_edge(x) + random.randf_range(1.0, 9.3)
+        _place_asset(
+            "pine_roots" if i % 2 == 0 else "tree_stump_01",
+            Vector3(x, ground_height(x, z) - 0.15, z),
+            random.randf_range(0.25, 0.54),
+            random.randf_range(-PI, PI)
+        )
 
 func _make_fishing_spot() -> void:
     # A small timber pier at the right side; walk there to inspect the equipment.
