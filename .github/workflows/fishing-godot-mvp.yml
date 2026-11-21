@@ -85,10 +85,23 @@ jobs:
           test -s games/fishing-godot-mvp/build/fishing-first-cast-debug.apk
           ls -lh games/fishing-godot-mvp/build/*.apk
 
+      - name: Capture real in-game screenshot
+        continue-on-error: true
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            godot --path games/fishing-godot-mvp \
+            --resolution 1280x720 \
+            --script res://scripts/capture.gd
+          test -s games/fishing-godot-mvp/build/scene-preview.png
+
       - name: Upload installable prototype
         uses: actions/upload-artifact@v4
         with:
           name: fishing-first-cast-godot-debug-apk
-          path: games/fishing-godot-mvp/build/*.apk
+          path: |
+            games/fishing-godot-mvp/build/*.apk
+            games/fishing-godot-mvp/build/scene-preview.png
           if-no-files-found: error
           retention-days: 14
