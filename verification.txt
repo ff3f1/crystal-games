@@ -1,0 +1,1 @@
+ZIP, assets, original release signing key, package and version verified
