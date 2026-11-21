@@ -19,6 +19,11 @@
      const impulse=clamp(Math.abs(f.vx||0)*.42+Math.abs(f.vz||0)*.17,0,2.5);
      return{x:clamp(f.vx||0,-1,1)*impulse,y:impulse*.55};
    }
+   if(f.phase==="dive"){
+     // A strong fish bows the existing rod tip toward the water.
+     const weight=clamp(.6+1.4*tension,0,2.1);
+     return{x:Math.sin(t*7)*.16*weight,y:weight};
+   }
    return{x:0,y:0};
  };
  // Let a surface lure settle naturally after the angler stops retrieving.
