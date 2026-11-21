@@ -469,3 +469,37 @@
  color:#f6d996;font-size:23px;box-shadow:0 2px 10px #001b1bb0;
 }
 #ovMenu.concept-redesign .concept-more-sections:focus-visible{outline:2px solid #ffe0a0}
+
+
+/* Approved "Моя оснастка": full equipped rod first, components below it. */
+#ovSheet .sheet.concept-loadout .cozy-loadout{
+ padding:13px!important;border:1px solid #d9bd8285!important;
+ background:radial-gradient(ellipse at 50% 0,rgba(130,156,103,.15),transparent 60%),
+ linear-gradient(135deg,#245146,#102e31)!important;
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout>div{
+ display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:7px!important;align-items:stretch!important
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot{
+ border-right:0!important;border-radius:10px;background:rgba(12,44,38,.68);
+ border:1px solid #e0c39136!important;padding:7px 5px!important;
+ min-width:0!important
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot:first-child{
+ grid-column:1/-1!important;padding:10px!important;
+ background:radial-gradient(circle at 40% 20%,rgba(192,190,146,.15),transparent 65%),rgba(11,40,34,.45);
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot:first-child img{
+ width:100%!important;max-width:230px!important;height:126px!important;
+ object-fit:contain!important;filter:drop-shadow(0 9px 7px #0009)
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot:not(:first-child) img{
+ height:61px!important;max-width:77px!important;
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot small{
+ font-size:10px!important;color:#f4e5c6!important
+}
+@media(max-height:700px){
+ #ovSheet .sheet.concept-loadout .cozy-loadout .cozy-slot:first-child img{height:92px!important}
+}
