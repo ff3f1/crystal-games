@@ -143,8 +143,12 @@ func _process(delta: float) -> void:
         rod_spring_speed += ((bending - rod_angle) * 38.0 - rod_spring_speed * 11.5) * dt
         rod_angle += rod_spring_speed * dt
         rod_root.rotation.x = -0.04 + rod_angle + sin(elapsed * 1.2) * 0.005
-    if reel_spool != null and is_reeling and (phase == Phase.FIGHT or phase == Phase.WAITING):
-        reel_spool.rotate_z(delta * 17.0)
+    if reel_spool != null:
+        if is_reeling and (phase == Phase.FIGHT or phase == Phase.WAITING):
+            reel_spool.rotate_z(delta * 17.0)
+        elif phase == Phase.FIGHT and float(fight_sim.slip_velocity) > 0.04:
+            # Free-running drag lets the spool yield during a trophy run.
+            reel_spool.rotate_z(-delta * float(fight_sim.slip_velocity) * 16.0)
 
     match phase:
         Phase.CASTING:
@@ -943,8 +947,11 @@ func _update_fight(delta: float) -> void:
     var show_jump: bool = float(fight_sim.burst) > 0.73 and fight_distance < 15.0
     fish_body.visible = show_jump or fight_distance < 8.0
     fish_body.position = bobber.position + Vector3(0.0, (0.22 + maxf(0.0, sin(elapsed * 9.0)) * 0.55) if show_jump else -0.18, 0.30)
-    fish_body.rotation.y = sin(elapsed * 2.6) * 0.45
-    fish_body.rotation.z = sin(elapsed * 8.0) * 0.15
+    fish_body.rotation.y = sin(elapsed * 2.6) * 0.45 + float(fight_sim.lateral) * 0.018
+    fish_body.rotation.z = float(fight_sim.headshake) * 0.17
+    for visual in fish_body.get_children():
+        if visual.has_method("set_wiggle"):
+            visual.call("set_wiggle", 0.48 + float(fight_sim.burst) * 1.8)
     if show_jump and ripple_age > 1.3:
         _splash()
 
