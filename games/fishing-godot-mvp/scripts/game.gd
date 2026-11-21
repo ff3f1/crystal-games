@@ -241,8 +241,11 @@ func _process(delta: float) -> void:
                 bobber.position.y = 0.09 + sin(elapsed * 2.2) * 0.035
 
     if ring.visible:
-        ring.scale = Vector3.ONE * (1.0 + minf(ripple_age, 2.0) * 2.0)
-        if ripple_age > 1.25:
+        var ripple_shader := ring.material_override as ShaderMaterial
+        if ripple_shader != null:
+            ripple_shader.set_shader_parameter("age", ripple_age)
+            ripple_shader.set_shader_parameter("wind", wind)
+        if ripple_age > 1.72:
             ring.visible = false
     _draw_line()
     _update_stats()
@@ -513,10 +516,12 @@ func _create_bobber_and_fish() -> void:
     spinner_glint = _mesh(bobber, SphereMesh.new(), Vector3(0.0, 0.15, 0.0), Vector3(0.11, 0.065, 0.16), glint_mat)
     spinner_glint.visible = false
 
-    var torus := TorusMesh.new()
-    torus.inner_radius = 0.40
-    torus.outer_radius = 0.43
-    ring = _mesh(self, torus, Vector3.ZERO, Vector3.ONE, _material(Color(0.80, 0.88, 0.82), 0.45))
+    var ripple_plane := PlaneMesh.new()
+    ripple_plane.size = Vector2(5.1, 5.1)
+    var ripple_mat := ShaderMaterial.new()
+    ripple_mat.shader = load("res://shaders/water_ripples.gdshader")
+    ring = _mesh(self, ripple_plane, Vector3.ZERO, Vector3.ONE, ripple_mat)
+    ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     ring.visible = false
 
     fish_body = Node3D.new()
@@ -544,14 +549,11 @@ func _create_hotspots() -> void:
     var colors := [Color(0.67, 0.77, 0.47, 0.19), Color(0.59, 0.76, 0.79, 0.16), Color(0.71, 0.68, 0.50, 0.13), Color(0.59, 0.74, 0.73, 0.17)]
     for i in range(fish_spots.size()):
         var info: Dictionary = fish_spots[i]
-        var shape := TorusMesh.new()
-        shape.inner_radius = 2.6
-        shape.outer_radius = 2.65
-        shape.rings = 16
-        shape.ring_segments = 48
-        var mat := _material(colors[i], 0.90)
-        mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        var shape := PlaneMesh.new()
+        shape.size = Vector2(5.2, 5.2)
+        var mat := ShaderMaterial.new()
+        mat.shader = load("res://shaders/water_ripples.gdshader")
+        mat.set_shader_parameter("ripple_color", colors[i])
         var marker_mesh := _mesh(self, shape, info["pos"] + Vector3.UP * 0.075, Vector3.ONE, mat)
         marker_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
         marker_mesh.visible = false
@@ -610,8 +612,11 @@ func _animate_lake(delta: float) -> void:
             ring_mark.visible = near_waterfront and cue_phase < 2.7 and i != 2
             if ring_mark.visible:
                 var alpha := sin(cue_phase / 2.7 * PI)
-                ring_mark.scale = Vector3.ONE * (0.35 + cue_phase * 0.29)
-                ring_mark.transparency = 1.0 - alpha * 0.48
+                ring_mark.scale = Vector3.ONE * (0.85 + cue_phase * 0.18)
+                var cue_material := ring_mark.material_override as ShaderMaterial
+                if cue_material != null:
+                    cue_material.set_shader_parameter("age", minf(1.6, cue_phase * 0.60))
+                    cue_material.set_shader_parameter("wind", wind)
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
