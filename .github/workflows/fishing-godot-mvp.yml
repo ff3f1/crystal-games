@@ -32,6 +32,10 @@ jobs:
           version: 4.5.1-stable
           export-templates: true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Download CC0 art (mesh packs and PBR ground)
         run: |
           python3 games/fishing-godot-mvp/tools/fetch_assets.py
@@ -39,13 +43,36 @@ jobs:
           test -s games/fishing-godot-mvp/assets/models/rod.glb
           test -s games/fishing-godot-mvp/assets/textures/shore_diffuse.jpg
 
-      - name: Import and parse project
+      - name: Convert glTF quantized meshes for Godot compatibility
         run: |
-          godot --headless --path games/fishing-godot-mvp --editor --quit
+          npm install -g @gltf-transform/cli@4.5.0
+          for name in rod perch carp trout dock boat chair tackle cooler cattails lilies float_set lure net sign rock_cluster; do
+            input="games/fishing-godot-mvp/assets/models/${name}.glb"
+            output="games/fishing-godot-mvp/assets/models/${name}.converted.glb"
+            gltf-transform dequantize "$input" "$output"
+            test -s "$output"
+            mv "$output" "$input"
+          done
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path games/fishing-godot-mvp --editor --quit 2>&1 | tee godot-import.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:' godot-import.log; then
+            echo "::error::Godot import emitted an error; refusing broken APK"
+            exit 1
+          fi
 
       - name: Run headless scene smoke test
+        shell: bash
         run: |
-          godot --headless --path games/fishing-godot-mvp --quit-after 45
+          set -o pipefail
+          godot --headless --path games/fishing-godot-mvp --quit-after 45 2>&1 | tee godot-scene.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:' godot-scene.log; then
+            echo "::error::Game scene failed headless smoke test"
+            exit 1
+          fi
 
       - name: Android SDK components
         shell: bash
