@@ -186,6 +186,11 @@
     autoBait();
     if (sess.ice && !st.load.ice.rod) sess.noIceRod = true;
     resetRig();
+    if (!sess.ice && FZ.LivingWater) {
+      sess.living = FZ.LivingWater.create(loc, season, FZ.SP, G.maxCast(), FZ.Scene.maxLat, U.dayKey());
+      FZ.LivingWater.update(sess.living, sess, 0);
+      sess.spots = FZ.LivingWater.spots(sess.living);
+    }
     G.save(true);
     emit("session");
     return sess;
@@ -337,6 +342,10 @@
     rig.reelStreak=0;rig.wasReeling=false;rig.pauseQualified=false;rig.stepMemory=0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
+    if (sess.living && FZ.LivingWater) {
+      const reading = FZ.LivingWater.onCast(sess.living, rig.X, rig.Z);
+      emit("water_read", { text: reading.text, level: reading.level });
+    }
     if (sess.loc.id === "pond" && sess.mode === "float") {
       const habitat = G.pondHabitat(rig.X, rig.Z);
       if (habitat && habitat.id !== "water")
@@ -471,6 +480,12 @@
     sess.spots.push({ ...chosen, radius: 4.5, born: sess.t, duration, life: duration, intensity: 0 });
   }
   function updateSpots(dt) {
+    // Schools are stable, responsive inhabitants, not a decorative random timer.
+    if (sess.living && FZ.LivingWater) {
+      FZ.LivingWater.update(sess.living, sess, dt);
+      sess.spots = FZ.LivingWater.spots(sess.living);
+      return;
+    }
     // Absolute simulation age avoids accumulating lifespan drift with FPS.
     for (const sp of sess.spots) {
       const age = sess.t - sp.born;
@@ -517,9 +532,15 @@
         if (sess.fedSpot && Math.hypot(sess.fedSpot.X - rig.X, sess.fedSpot.Z - rig.Z) < 4) m *= 1 + sess.fedSpot.level;
         if (sess.gbUntil > sess.t) m *= 1.35;
       }
-      let spotBonus = 1;
-      sess.spots.forEach(sp => { spotBonus = Math.max(spotBonus, G.spotBonus(s, sp, rig.X, rig.Z)); });
-      m *= spotBonus;
+      // Visible feeding activity now changes the actual probability of a bite.
+      // The original species/bait/time/depth checks above still apply.
+      if (sess.living && FZ.LivingWater) {
+        m *= FZ.LivingWater.bonus(sess.living, s, rig.X, rig.Z);
+      } else {
+        let spotBonus = 1;
+        sess.spots.forEach(sp => { spotBonus = Math.max(spotBonus, G.spotBonus(s, sp, rig.X, rig.Z)); });
+        m *= spotBonus;
+      }
       if (sess.ice) {
         m *= sess.hole ? sess.hole.fish : 1;
         m *= FZ.FightPhysics.iceAttraction(s, rig.jig, rig.jigPause);
@@ -689,7 +710,8 @@
     rig.state = "fight";
     rig.bite = null;
     rig.fish = {
-      s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
+      s, w, lenCm, lenM: lenCm / 100, hooked: true, X: rig.X, Z: sess.ice ? 0 : rig.Z,
+      hookOriginX: rig.X, hookOriginZ: rig.Z, D: sess.ice ? (sess.hole.depth * (rig.lure || 0.8)) : 0,
       vx: 0, vz: 0, turn: 1, S: 1, effort: 0.45, phase: "rest", phaseT: 0.65, nextDecision: 0, T: Fmax * 0.6, Fmax, slackT: 0, snagT: 0,
       firstRunDuration: U.rand.range(0.8, 1.6),
       surface: 0, jump: null, chance: 0, jumped: 0, t: 0
@@ -929,6 +951,10 @@
       const best = st.daily.tour;
       if (!best || w > best.w) { st.daily.tour = { w, sid: s.id, len: f.lenCm, loc: sess.loc.id }; res.tourBest = true; }
       res.tier = null; tour.tiers.forEach((t2) => { if (w >= t2.w) res.tier = t2; });
+    }
+    if (sess.living && FZ.LivingWater) {
+      const scattered = FZ.LivingWater.onCatch(sess.living, s, f.hookOriginX, f.hookOriginZ);
+      if (scattered) emit("water_shift", { name: scattered.name });
     }
     rig.fish = null; rig.state = "result"; rig.landing = null; rig.result = res;
     sess.catches++;

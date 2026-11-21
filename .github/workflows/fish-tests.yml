@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - codex/fishing-overhaul
+      - feature/fishing-living-water-redesign
       - "feature/fishing-expeditions-*"
     paths:
       - "games/fish/**"
@@ -42,6 +43,7 @@ jobs:
       - name: Run fishing gameplay tests
         run: |
           mkdir -p test-output
+          node tests/test_fish_living_water.cjs
           node tests/test_fish_input.js
           node tests/test_fish_foley.cjs
           node tests/test_fish_mechanics.js

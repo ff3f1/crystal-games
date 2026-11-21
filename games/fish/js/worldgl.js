@@ -534,5 +534,5 @@
   R.snapshot=function(){if(!enabled)return oldSnapshot();renderer.render(scene,camera);const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const g=c.getContext('2d');g.drawImage(canvas,0,0);if(detailCanvas&&detailCanvas.style.visibility!=='hidden')g.drawImage(detailCanvas,0,0,c.width,c.height);return c;};
   R.graphicsInfo=()=>({renderer:enabled?'webgl':'canvas',contextLost,metrics:R.metrics,error:R.rendererError||null,
     hole:enabled?{x:uniforms.hole.value.x,y:uniforms.hole.value.y,rx:uniforms.holeRadius.value.x,ry:uniforms.holeRadius.value.y,open:uniforms.holeOn.value,drilling:uniforms.drillProgress.value}:null,
-    reelCrankAngle:enabled&&reelCrank?(FZ.Game.rig().rod.reelAngle||0):null,landing:landingMetrics,tackle:tackleMetrics});
+    reelCrankAngle:enabled&&reelCrank&&FZ.Game.rig()?(FZ.Game.rig().rod.reelAngle||0):null,landing:landingMetrics,tackle:tackleMetrics});
 })(window.FZ);

@@ -75,6 +75,7 @@
         '<button class="pill" id="hTime"></button>' +
       "</div>" +
       '<div class="locname" id="hLoc"></div>' +
+       '<div class="water-note hide" id="hWater" aria-live="off"></div>' +
       '<button class="pill round film" id="bFilm" aria-label="Режим съёмки">' + ic("cam") + "</button>" +
       '<div class="echo hide" id="hEcho"></div>' +
       '<div class="hint" id="hHint"></div>' +
@@ -140,7 +141,7 @@
   const setH = (id, v) => { const e = $(id); if (e._h !== v) { e._h = v; e.innerHTML = v; } };
   const setS = (id, k, v) => { const e = $(id); const c = "_s" + k; if (e[c] !== v) { e[c] = v; e.style[k] = v; } };
   const setC = (id, cls, on) => { const e = typeof id === "string" ? $(id) : id; const c = "_c" + cls; if (e[c] !== on) { e[c] = on; e.classList.toggle(cls, on); } };
-  let echoT = 0;
+  let echoT = 0, waterT = 0, lastWaterNote = "";
   UI.frame = function (dt, t) {
     const s = G.sess(); if (!s || !hudBuilt) return;
     const st = G.state(), r = G.rig();
@@ -173,6 +174,24 @@
     if (s.ice && s.hole) { const k = s.hole.lure; setS("iceKnob", "top", k * 100 + "%"); setT("iceTxt", (s.hole.depth * k).toFixed(1).replace(".", ",") + " м"); }
     if (r.state === "fight" && r.fish) UI.drawTension(r.fish, s);
     setT("dVal", Math.round(st.drag * 100) + "%");
+    // A quiet, reliable reading of real fish activity, not a magic scanner.
+    const waterNote = $("hWater");
+    const showWater = !s.ice && !!s.living && !fight && r.state !== "landing" && r.state !== "result";
+    setC(waterNote, "hide", !showWater);
+    if (showWater) {
+      waterT -= dt;
+      if (waterT <= 0) {
+        waterT = .65;
+        const pt = (r.state === "wait" || r.state === "bite") ? r :
+          (s.lastAim || { X:0, Z:Math.min(18,s.loc.zfar*.24) });
+        const report = FZ.LivingWater.read(s.living,pt.X,pt.Z);
+        if (report.text !== lastWaterNote) {
+          waterNote.textContent=report.text;
+          lastWaterNote=report.text;
+        }
+        waterNote.classList.toggle("feeding", report.level === 2);
+      }
+    }
     // эхолот — 4 раза в секунду
     if (st.extras.echo && !fight) {
       setC("hEcho", "hide", false);
@@ -263,6 +282,12 @@
       case "msg": UI.toast(e.text, e.bad ? "bad" : ""); break;
       case "need": UI.toast(e.what, "bad"); break;
       case "cast": G.rig().castAt = s.t; if (G.state().tut === 0) { G.state().tut = 1; } break;
+      case "water_read":
+        if (e.level === 2) UI.toast("Хорошее место: "+e.text, "gold", 1800);
+        break;
+      case "water_shift":
+        UI.toast("Стая отошла: "+e.name.toLowerCase(), "", 1900);
+        break;
       case "take": if (G.state().tut === 1) G.state().tut = 2; break;
       case "hooked": if (e.big) UI.toast("Крупная рыба! Не перетяните", "gold"); break;
       case "jump": UI.toast("Свечка! Ослабьте натяжение", "gold", 1400); break;
@@ -306,11 +331,11 @@
     const tourBadge = st.daily.tour ? tour.tiers.filter((t2) => st.daily.tour.w >= t2.w && st.daily.tourClaim.indexOf(t2.id) < 0).length : 0;
     const d = new Date(); const wd = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"][d.getDay()];
     ov.innerHTML = '<div class="shade"></div>' +
-      '<div class="logo"><div class="eyebrow">CRYSTAL GAMES · РЫБОЛОВНЫЕ ЭКСПЕДИЦИИ</div><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div><div class="menu-caption">Твой берег. Твоя история.</div></div>' +
+      '<div class="logo"><div class="eyebrow">CRYSTAL GAMES · ЖИВАЯ ВОДА</div><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div><div class="menu-caption">Не угадывай. Присматривайся.</div></div>' +
       '<div class="menu-bottom">' +
         '<button class="today" id="mToday"><div class="wx">' + skyIc(wx.sky, s.period === "night") + '</div><div style="text-align:left"><div class="t">' + wd + ", " + U.dateRu(d) + ". " + FZ.SEASONS[s.season] + "</div>" +
         '<div class="d">' + s.loc.n + ": клёв " + stars(wx.score) + "<br>" + Wd.tip(wx) + "</div></div></button>" +
-        '<button class="go" id="mGo">Рыбачить<small>' + s.loc.n + "</small></button>" +
+        '<button class="go" id="mGo">К воде<small>' + s.loc.n + "</small></button>" +
         '<div class="grid">' +
           '<button class="tile" id="mMap">' + ic("map") + "Водоёмы</button>" +
           '<button class="tile" id="mShop">' + ic("bag") + "Снасти</button>" +
