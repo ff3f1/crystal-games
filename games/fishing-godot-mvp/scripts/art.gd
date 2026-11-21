@@ -121,11 +121,9 @@ func _make_forest() -> void:
         var tree: String = tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
         _place_asset(tree, Vector3(px, ground_height(px, pz), pz), random.randf_range(3.5, 6.3), random.randf_range(-PI, PI))
 
-    for i in range(75):
-        var px := random.randf_range(-105, 105)
-        var pz := random.randf_range(-94, -137)
-        var tree: String = tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
-        _place_asset(tree, Vector3(px, 0.1 + absf(pz + 91) * 0.013, pz), random.randf_range(4.0, 7.0), random.randf_range(-PI, PI))
+    # The photographic panorama already contains a natural distant forest.
+    # Avoid toy-like GLB trees at the horizon: 3D vegetation should live near
+    # the player, where parallax and motion make a difference.
 
     for i in range(90):
         var px := random.randf_range(-93, 93)
