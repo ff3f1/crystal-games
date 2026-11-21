@@ -217,6 +217,9 @@ func _process(delta: float) -> void:
             fish_body.global_position = landing_from.lerp(landing_target, progress)
             fish_body.rotation.z = sin(elapsed * 14.0) * 0.24 * (1.0 - progress)
             fish_body.rotation.x = sin(elapsed * 11.0) * 0.13 * (1.0 - progress)
+            for visual in fish_body.get_children():
+                if visual.has_method("set_wiggle"):
+                    visual.call("set_wiggle", 1.85 * (1.0 - progress) + 0.15)
             if progress >= 1.0:
                 _record_catch()
                 sounds.call("play", "catch")
@@ -299,6 +302,11 @@ func _update_player(delta: float) -> void:
     if dock_walk:
         ground = 0.73
     player_walk_phase += delta * 8.0
+    if elapsed - last_footstep > 0.47:
+        last_footstep = elapsed
+        sounds.call("play", "footstep")
+        if next_position.z < edge + 5.0:
+            ecology.register_disturbance(0.025)
     next_position.y = lerpf(camera.position.y, 1.67 + ground + sin(player_walk_phase) * 0.018, minf(1.0, delta * 6.0))
     camera.position = next_position
 
@@ -814,6 +822,7 @@ func _reset_to_ready() -> void:
     phase = Phase.READY
     is_reeling = false
     is_bracing = false
+    current_bite_species = ""
     bobber.visible = false
     fish_body.visible = false
     cast_charging = false
@@ -845,6 +854,8 @@ func _cast() -> void:
     cast_target.y = 0.09
     cast_target.z = minf(1.5, cast_target.z)
     lure_sim.begin_cast(cast_source, cast_target, lure_index)
+    ecology.reset_cast()
+    ecology.register_disturbance(0.07)
     lure_depth = 0.0
     is_reeling = false
     is_bracing = false
@@ -859,38 +870,21 @@ func _cast() -> void:
 
 
 func _choose_fish() -> void:
-    # Correct species distribution follows bait and actual lure location.
-    var place := "perch"
-    var best := 0.0
-    for entry in fish_spots:
-        var p: Vector3 = entry["pos"]
-        var d := Vector2(bobber.position.x - p.x, bobber.position.z - p.z).length()
-        var bonus := maxf(0.0, 1.0 - d / 27.0)
-        var kind: String = str(entry["type"])
-        if lure_index == 0 and kind == "carp":
-            bonus *= 1.7
-        elif lure_index == 1 and kind == "pike":
-            bonus *= 1.55
-        elif lure_index == 1 and kind == "carp":
-            bonus *= 0.15
-        elif lure_index == 0 and kind == "pike":
-            bonus *= 0.18
-        if bonus > best:
-            best = bonus
-            place = kind
-    var roll := rng.randf()
-    if lure_index == 0:
-        fish_name = "Карась" if (place == "carp" and roll < 0.83) or roll < 0.23 else "Окунь"
-    else:
-        fish_name = "Щука" if (place == "pike" and roll < 0.68) or (place != "pike" and roll < 0.22) else "Окунь"
+    # The ecology has already chosen an eligible fish from the local habitat.
+    # The result is never a pike taking a worm, or a crucian taking a spinner.
+    fish_name = current_bite_species
+    if fish_name.is_empty():
+        fish_name = "Карась" if lure_index == 0 else "Окунь"
     match fish_name:
         "Карась":
             fish_weight = rng.randf_range(0.25, 1.60)
+            fish_strength = 0.95
         "Окунь":
-            fish_weight = rng.randf_range(0.18, 1.10)
+            fish_weight = rng.randf_range(0.18, 1.15)
+            fish_strength = 1.20
         _:
             fish_weight = rng.randf_range(1.20, 5.20)
-    fish_strength = 0.95 if fish_name == "Карась" else 1.20 if fish_name == "Окунь" else 1.86
+            fish_strength = 1.86
     _set_fish_model(fish_name)
 
 func _cycle_drag() -> void:
