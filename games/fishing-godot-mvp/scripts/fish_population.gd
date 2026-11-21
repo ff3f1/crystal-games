@@ -253,14 +253,23 @@ func simulate(
             target = lure_pos
             urgency = 0.18
         elif mode == "inspect":
-            # Approach closely, hesitate, then commit to a short strike.
-            target = lure_pos + Vector3(0.0, -0.16, 0.0)
-            urgency = 0.55
-            fish["nibble"] = float(fish["nibble"]) - step
-            if float(fish["nibble"]) <= 0.0:
-                mode = "strike"
-                reserved_fish = i
-                out = {"signal": STRIKE, "id": i, "species": fish["species"], "position": lure_pos, "activity": 1.0}
+            # A fish cannot nibble a hook that has been reeled metres away.
+            # Pulling the bait sharply at the wrong moment spooks the same
+            # physical fish instead of causing an impossible remote strike.
+            if pos.distance_to(lure_pos) > 1.80:
+                mode = "spooked"
+                fish["timer"] = rng.randf_range(3.5, 5.5)
+                fish["cooldown"] = 5.0
+                if reserved_fish == i:
+                    reserved_fish = -1
+            else:
+                target = lure_pos + Vector3(0.0, -0.16, 0.0)
+                urgency = 0.55
+                fish["nibble"] = float(fish["nibble"]) - step
+                if float(fish["nibble"]) <= 0.0:
+                    mode = "strike"
+                    reserved_fish = i
+                    out = {"signal": STRIKE, "id": i, "species": fish["species"], "position": lure_pos, "activity": 1.0}
         elif mode == "approach":
             fish["attention_time"] = float(fish["attention_time"]) + step
             # The fish remembers the position it last investigated, but
