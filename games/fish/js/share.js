@@ -91,6 +91,7 @@
   };
 
   Sh.share = async function (r) {
+    if(FZ.Fish3D)await FZ.Fish3D.ready(r.s);
     const c = Sh.card(r);
     return FZ.Platform.shareImage(c, Sh.text(r));
   };

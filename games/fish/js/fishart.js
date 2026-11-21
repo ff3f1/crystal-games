@@ -52,6 +52,7 @@
   /* Нарисовать рыбу. Голова слева. (x,y) — центр, len — полная длина с хвостом.
      o: {phase, amp (изгиб), silhouette, alpha, dir (1 — голова влево, -1 — вправо), roll} */
   A.drawFish = function (ctx, s, x, y, len, o) {
+    if (FZ.Fish3D) return FZ.Fish3D.draw(ctx, s, x, y, len, o);
     o = o || {};
     if (!o.direct) {
       // готовый спрайт: сгенерированный или нарисованный кодом один раз (рисовать рыбу каждый кадр дорого)
@@ -352,20 +353,14 @@
     if (o.silhouette) ctx.filter = "brightness(0) saturate(0)";
     const amp = o.amp || 0;
     if (!amp) ctx.drawImage(img, -w / 2, -h / 2, w, h);
-    else {
-      const n = 24, sw = img.width / n, dw = w / n;
-      for (let i = 0; i < n; i++) {
-        const t = i / (n - 1);
-        const dy = Math.sin((o.phase || 0) - t * 3.2) * amp * h * 0.45 * t * t;
-        ctx.drawImage(img, i * sw, 0, sw + 1, img.height, -w / 2 + i * dw, -h / 2 + dy, dw + 0.6, h);
-      }
-    }
+    else { ctx.rotate(Math.sin(o.phase || 0) * amp * .035); ctx.drawImage(img, -w / 2, -h / 2, w, h); }
     ctx.restore();
   };
 
   // Кэш картинок рыб для меню (canvas → dataURL)
   const cache = {};
   A.fishURL = function (s, w, sil) {
+    if (FZ.Fish3D) return FZ.Fish3D.thumbnail(s, w, sil);
     const key = s.id + "|" + w + "|" + (sil ? 1 : 0) + "|" + (FZ.Assets && FZ.Assets.fish(s.id) ? "img" : "pr");
     if (cache[key]) return cache[key];
     const c = document.createElement("canvas");

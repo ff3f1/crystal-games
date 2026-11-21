@@ -1,0 +1,43 @@
+name: Fishing real gameplay promo
+on:
+  push:
+    branches: [codex/fishing-overhaul]
+    paths: ["tests/record_fish_promo.py", ".github/workflows/fish-promo.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  promo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Browser, image and video dependencies
+        run: |
+          python -m pip install playwright Pillow
+          python -m playwright install --with-deps chromium
+          # Playwright downloads a capture-only FFmpeg, not a system executable.
+          # Install the full FFmpeg toolchain used for H.264/AAC + libass captions.
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg fontconfig fonts-dejavu-core
+          command -v ffmpeg
+          command -v ffprobe
+          ffmpeg -hide_banner -version
+          ffprobe -hide_banner -version
+          ffmpeg -hide_banner -encoders > "$RUNNER_TEMP/ffmpeg-encoders.txt"
+          grep -E '[[:space:]]libx264[[:space:]]' "$RUNNER_TEMP/ffmpeg-encoders.txt"
+          grep -E '[[:space:]]aac[[:space:]]' "$RUNNER_TEMP/ffmpeg-encoders.txt"
+          ffmpeg -hide_banner -filters > "$RUNNER_TEMP/ffmpeg-filters.txt"
+          grep -E '[[:space:]]subtitles[[:space:]]' "$RUNNER_TEMP/ffmpeg-filters.txt"
+          fc-match 'DejaVu Sans' | grep -i 'DejaVuSans'
+      - name: Record production gameplay and validate H264/AAC
+        run: python tests/record_fish_promo.py promo-output
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fishing-real-gameplay-promo
+          path: promo-output/
+          if-no-files-found: ignore

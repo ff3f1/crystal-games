@@ -101,13 +101,20 @@
     // глубина в лунке
     const tr = $("iceTrack");
     const setFromY = (y) => { const r = tr.getBoundingClientRect(); G.setLure(U.clamp((y - r.top) / r.height, 0.05, 1)); };
-    tr.onpointerdown = (e) => { e.stopPropagation(); tr.setPointerCapture(e.pointerId); setFromY(e.clientY); tr.onpointermove = (ev) => setFromY(ev.clientY); };
-    tr.onpointerup = () => { tr.onpointermove = null; };
+    let depthPointer = null;
+    tr.onpointerdown = (e) => {
+      e.stopPropagation(); if(depthPointer!==null)return;
+      depthPointer=e.pointerId; tr.setPointerCapture(e.pointerId); setFromY(e.clientY);
+    };
+    tr.onpointermove = (e) => { if(e.pointerId===depthPointer)setFromY(e.clientY); };
+    tr.onpointerup = tr.onpointercancel = tr.onlostpointercapture = (e) => {
+      if(e.pointerId===depthPointer)depthPointer=null;
+    };
     $("hIce").onpointerdown = (e) => e.stopPropagation();
     // действие
     const act = $("bAct");
-    act.onpointerdown = (e) => { e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(); };
-    act.onpointerup = act.onpointercancel = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(); };
+    act.onpointerdown = (e) => { e.stopPropagation(); act.setPointerCapture(e.pointerId); act.classList.add("held"); FZ.Input.actionDown(e.pointerId); };
+    act.onpointerup = act.onpointercancel = act.onlostpointercapture = (e) => { e.stopPropagation(); act.classList.remove("held"); FZ.Input.actionUp(e.pointerId); if (FZ.Input.snapshot().actions) act.classList.add("held"); };
     ["tRod", "tBait", "tGb", "tMore", "bMenu", "hTime", "bFilm", "hDrag"].forEach((id) => { $(id).addEventListener("pointerdown", (e) => e.stopPropagation()); });
     UI.refreshTools();
   };
@@ -148,9 +155,9 @@
     switch (r.state) {
       case "idle": label = "Заброс"; break;
       case "fly": case "settle": label = "…"; calm = true; break;
-      case "wait": label = mode === "spin" ? "Крутить" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
-      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Клюёт…"; calm = true; } break;
-      case "fight": label = "Тянуть"; break;
+      case "wait": label = mode === "spin" ? "Подмотка" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
+      case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Подмотка" : "Клюёт…"; calm = true; } break;
+      case "fight": label = "Подмотка"; break;
       case "landing": case "result": label = "…"; calm = true; break;
       case "nohole": label = "Бурить"; break;
       case "drill": label = "Бурю…"; calm = true; break;
@@ -187,20 +194,33 @@
       const ok = G.canFish();
       if (ok !== true) h = ok + "<small>Откройте «Снасти» в меню</small>";
       else if (st.tut === 0) h = "Коснитесь воды и отпустите — это заброс<small>Чем выше на экране, тем дальше</small>";
+      else if (s.loc.id === "pond" && s.spots && s.spots.some(sp => sp.intensity > .22) && r.idleHint > 2)
+        h = "Видите рябь на воде?<small>Там кормится рыба. Забросьте ближе к всплескам</small>";
       else if (r.idleHint > 6) h = "Коснитесь воды, чтобы забросить";
     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
     else if (r.state === "wait") {
       const since = s.t - (r.castAt || 0);
-      if (mode === "spin") h = since < 5 ? "Держите палец — проводка<small>Отпустите — приманка остановится. Хищник бьёт на проводке</small>" : "";
+      if (mode === "spin") h = since < 5 ? "Удерживайте «Подмотка»<small>Другим пальцем ведите удилище по воде. Отпустите кнопку — пауза</small>" : (r.retrieveStyle || "Пауза") + "<small>Приманка: " + (r.lureDepth || 0).toFixed(1).replace(".", ",") + " м · короткий жест — рывок</small>";
       else if (!G.gear(mode).bait || !G.baitLeft(G.gear(mode).bait.id)) h = "Нет наживки<small>Купите в «Снастях» или получите за рекламу на кнопке наживки</small>";
-      else if (mode === "ice") h = since < 6 ? "Тапайте по экрану — играйте мормышкой<small>Следите за кивком: опустился или поднялся — подсекайте</small>" : "";
-      else if (since < 5) h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" : (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Ждём поклёвку");
+      else if (mode === "ice") h = since < 9 ? "Короткие подёргивания мормышкой<small>Сделайте паузу после серии движений — рыба берёт на остановке</small>" : "";
+      else if (since < 5) {
+        const habitat = mode === "float" ? G.pondHabitat(r.X, r.Z) : null;
+        h = mode === "feeder" ? "Ждём поклёвку<small>Следите за вершинкой и колокольчиком</small>" :
+          habitat && habitat.id !== "water" ? habitat.name + "<small>Следите за антенной поплавка. Подсекайте на уверенной потяжке</small>" :
+          (st.tut < 3 ? "Ждём поклёвку<small>Поплавок утонул или лёг набок — подсекайте</small>" : "Следите за поплавком");
+      }
+    } else if (r.state === "bite" && r.bite.phase === "touch") {
+      h = mode === "feeder" ? "Вершинка ожила — ждите уверенной потяжки" :
+        mode === "spin" ? "Хищник пробует приманку — продолжайте проводку" :
+        mode === "ice" ? "Кивок шевелится — дождитесь подъёма или прогиба" :
+        "Поплавок шевелится — подсекайте на уверенной поклёвке";
     } else if (r.state === "bite" && r.bite.phase === "take") { h = "Подсекай!<small>смахните вверх или нажмите кнопку</small>"; cls = "strike"; }
     else if (r.state === "fight" && r.fish) {
       const f = r.fish;
       if (f.tension > st.drag * 0.98 || f.tension > 0.86) h = "Отпустите! Леска на пределе";
+      else if (f.telegraph) h = "Сейчас будет рывок! Отпустите подмотку";
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
-      else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
+      else if (st.tut < 3) h = "Удерживайте кнопку — подматывайте<small>Другим пальцем направляйте удилище. При рывке отпустите кнопку</small>";
       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";
       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
     }
@@ -215,14 +235,25 @@
     const cx = 115, cy = 108, R = 92, a0 = Math.PI * 1.08, a1 = Math.PI * 1.92;
     const v = U.clamp(f.tension || 0, 0, 1.05), dm = G.state().drag;
     g.lineCap = "round";
-    g.strokeStyle = "rgba(10,36,40,0.8)"; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
+    g.strokeStyle = "rgba(10,36,40,0.85)"; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
     const col = v < 0.6 ? "#7ccf6a" : v < 0.85 ? "#f2c21a" : "#ff4416";
+    if (v > 0.84) { g.shadowColor = "#ff3311"; g.shadowBlur = 10; }
     g.strokeStyle = col; g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, a0, a0 + (a1 - a0) * Math.min(1, v)); g.stroke();
+    g.shadowBlur = 0;
     const ad = a0 + (a1 - a0) * dm;
-    g.strokeStyle = "#eef3f1"; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 13), cy + Math.sin(ad) * (R - 13)); g.lineTo(cx + Math.cos(ad) * (R + 13), cy + Math.sin(ad) * (R + 13)); g.stroke();
-    g.fillStyle = "#eef3f1"; g.font = "700 11px Rubik,sans-serif"; g.textAlign = "center"; g.fillText("натяжение", cx, cy - 46);
+    g.strokeStyle = "#ffffff"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 14), cy + Math.sin(ad) * (R - 14)); g.lineTo(cx + Math.cos(ad) * (R + 14), cy + Math.sin(ad) * (R + 14)); g.stroke();
+    let tag = "натяжение", tagCol = "#eef3f1";
+    if (f.jump) { tag = "СВЕЧКА!"; tagCol = "#f2a71b"; }
+    else if (f.telegraph) { tag = "СЕЙЧАС РЫВОК!"; tagCol = "#ff6a3a"; }
+    else if (f.phase === "run") { tag = "РЫВОК!"; tagCol = "#ff3a1a"; }
+    else if (f.phase === "shake") { tag = "РЫВКИ ГОЛОВОЙ"; tagCol = "#f2c21a"; }
+    else if (f.phase === "tired") { tag = "УСТАЁТ"; tagCol = "#7ccf6a"; }
+    else if (f.against) { tag = "УДЕРЖАНИЕ СНАСТИ"; tagCol = "#8fd3e0"; }
+    g.fillStyle = tagCol; g.font = "700 11px Rubik,sans-serif"; g.textAlign = "center"; g.fillText(tag, cx, cy - 46);
     $("hDist").textContent = s.ice ? "глубина " + Math.max(0, f.D).toFixed(1).replace(".", ",") + " м" : (f.Z - 3).toFixed(1).replace(".", ",") + " м";
-    $("hStam").style.width = Math.round(f.S * 100) + "%";
+    const stamEl = $("hStam");
+    stamEl.style.width = Math.round(f.S * 100) + "%";
+    stamEl.style.background = f.S > 0.5 ? "var(--line, #8fd3e0)" : f.S > 0.25 ? "#f2c21a" : "#ff4416";
   };
 
   // ---------- События игры ----------
@@ -275,7 +306,7 @@
     const tourBadge = st.daily.tour ? tour.tiers.filter((t2) => st.daily.tour.w >= t2.w && st.daily.tourClaim.indexOf(t2.id) < 0).length : 0;
     const d = new Date(); const wd = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"][d.getDay()];
     ov.innerHTML = '<div class="shade"></div>' +
-      '<div class="logo"><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div></div>' +
+      '<div class="logo"><div class="eyebrow">CRYSTAL GAMES · РЫБОЛОВНЫЕ ЭКСПЕДИЦИИ</div><div class="w1">Рыбалка</div><div class="w2">Клюёт!<i></i></div><div class="menu-caption">Твой берег. Твоя история.</div></div>' +
       '<div class="menu-bottom">' +
         '<button class="today" id="mToday"><div class="wx">' + skyIc(wx.sky, s.period === "night") + '</div><div style="text-align:left"><div class="t">' + wd + ", " + U.dateRu(d) + ". " + FZ.SEASONS[s.season] + "</div>" +
         '<div class="d">' + s.loc.n + ": клёв " + stars(wx.score) + "<br>" + Wd.tip(wx) + "</div></div></button>" +
@@ -293,8 +324,8 @@
         "</div></div>";
     ov.classList.add("on");
     $("hud").classList.add("hide");
-    const close = () => { ov.classList.remove("on"); $("hud").classList.remove("hide"); };
-    $("mGo").onclick = () => { FZ.Sound.unlock(); FZ.Sound.click(); close(); UI.ambience(); if (G.giftAvailable() && G.state().tut >= 3) setTimeout(UI.showGift, 400); };
+    const close = () => { ov.classList.remove("on"); $("hud").classList.remove("hide"); UI.menuOpen = false; };
+    $("mGo").onclick = () => { FZ.Sound.unlock(); FZ.Sound.click(); close(); UI.ambience(); if (G.giftAvailable() && G.state().tut >= 3) UI.toast("Подарок ждёт в меню «Задания»", "gold", 3200); };
     $("mToday").onclick = () => UI.showForecast();
     $("mMap").onclick = () => UI.showMap();
     $("mShop").onclick = () => UI.showShop();
@@ -684,9 +715,9 @@
     const st = G.state(), S = st.settings;
     const sw = (k, n) => '<div class="opt"><span>' + n + '</span><button class="sw ' + (S[k] ? "on" : "") + '" data-k="' + k + '" aria-label="' + n + '"></button></div>';
     let html = "<h2>Настройки</h2><div class=\"sub\">" + FZ.CONFIG.title + "</div><div class=\"scroll\">" + sw("sound", "Звуки природы и эффекты") + sw("music", "Музыка") + sw("vibro", "Вибрация") +
-      '<div class="opt"><span>Графика</span><b>Реалистичная</b></div>' +
+      '<div class="opt"><span>Графика</span><b>Объёмная</b></div>' +
       '<div class="opt"><span>Плавность и чёткость</span></div><div class="seg" id="qSeg">' + [["auto", "Авто"], ["hi", "Чётко"], ["mid", "Средне"], ["lo", "Плавно"]].map((q) => '<button data-q="' + q[0] + '" class="' + (S.quality === q[0] ? "on" : "") + '">' + q[1] + "</button>").join("") + "</div>" +
-      '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» само снижает чёткость, если телефон не успевает показывать 60 кадров.</div>' +
+      '<div class="d" style="color:var(--muted);font-size:12.5px;margin-top:-4px">«Авто» снижает разрешение сцены при просадках плавности.</div>' +
       '<div class="row"><div class="pic">' + ic("cam") + '</div><div class="body"><div class="t">Режим съёмки</div><div class="d">Кнопка с камерой на берегу прячет интерфейс — удобно снимать ролики и Shorts с экрана.</div></div></div>' +
       (FZ.CONFIG.youtube ? '<button class="btn" id="sYt" style="width:100%;margin-top:10px">' + ic("yt") + " Наш канал на YouTube</button>" : "") +
       '<button class="btn ghost" id="sRate" style="width:100%;margin-top:10px">' + ic("star") + " Оценить игру</button>" +
@@ -727,9 +758,9 @@
     else if (r.tour) badges.push(["Турнир дня", "#c8d0d8"]);
     let doubled = false;
     ov.innerHTML = '<div class="dim"></div><div class="catch">' +
-      '<div class="badges">' + badges.map((b, i) => '<span class="bdg" style="background:' + b[1] + ";animation-delay:" + (0.5 + i * 0.12) + 's">' + b[0] + "</span>").join("") + "</div>" +
+      '<div class="catch-heading"><div class="eyebrow">УЛОВ В ТВОЕЙ ИСТОРИИ</div><h1>' + s.n + '</h1><div class="latin">' + s.lat + '</div></div><div class="badges">' + badges.map((b, i) => '<span class="bdg" style="background:' + b[1] + ";animation-delay:" + (0.5 + i * 0.12) + 's">' + b[0] + "</span>").join("") + "</div>" +
       '<canvas id="cFish"></canvas>' +
-      '<div class="wt" id="cWt">0 г</div><div class="nm">' + s.n + '</div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
+      '<div class="catch-measures"><div><span>МАССА</span><div class="wt" id="cWt">0 г</div></div><div><span>ДЛИНА</span><div class="length">' + r.len + '<small> см</small></div></div></div><div class="rar" style="color:' + rar.c + '">' + rar.n + '</div>' +
       '<div class="note">' + r.len + " см, " + FZ.LOC[r.loc].n.toLowerCase() + "</div>" +
       '<div class="pct">Крупнее ' + Math.floor(r.pct) + "% рыб этого вида" + (r.record && r.prevRecord ? ". Прошлый рекорд " + U.kg(r.prevRecord) : "") + "</div>" +
       (r.mustRelease ? '<div class="redbook">' + s.n + ": " + (r.expeditionFull ? "рюкзак экспедиции заполнен" : s.release === "Красная книга" ? "вид из Красной книги" : s.release || "правило платника") + " — только отпустить. Опыт ×2</div>" : "") +
@@ -743,11 +774,11 @@
       "</div></div>";
     ov.classList.add("on"); $("hud").classList.add("hide");
     // анимация рыбы и веса
-    const cv = $("cFish"); const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cv = $("cFish"); const dpr = Math.min(3, window.devicePixelRatio || 1);
     const rect = cv.getBoundingClientRect(); cv.width = rect.width * dpr; cv.height = rect.height * dpr;
     const g = cv.getContext("2d");
     const t0 = performance.now();
-    const len = Math.min(rect.width * 0.95, rect.height * 2.6);
+    const len = Math.min(rect.width * 1.06, rect.height * 2.6);
     const drops = [];
     const particleCount = Math.min(22, Math.max(10, Math.round(rect.width / 18)));
     for (let i = 0; i < particleCount; i++) drops.push({ x: rect.width / 2 + (Math.random() - 0.5) * len * 0.8, y: rect.height * 0.55, vx: (Math.random() - 0.5) * 180, vy: -70 - Math.random() * 190, r: 1 + Math.random() * 2.2 });

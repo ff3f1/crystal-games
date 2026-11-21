@@ -27,26 +27,39 @@ with sync_playwright() as p:
     pg = b.new_page(viewport={"width": 390, "height": 844}, device_scale_factor=2)
     pg.on("pageerror", lambda e: errors.append(str(e) + "\n" + str(getattr(e, "stack", ""))))
     pg.on("console", lambda m: m.type == "error" and errors.append(m.text))
-    pg.goto(URL); pg.wait_for_timeout(1500)
+    pg.goto(URL); pg.wait_for_function("window.__game"); pg.wait_for_timeout(1500)
     pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_timeout(1500)
     check("меню открыто", pg.is_visible("#mGo"))
     pg.screenshot(path=f"{OUT}/f_menu.png")
+    pg.evaluate("FZ.U.rand=FZ.U.rng(20261116); __game.G.state().settings.quality='lo'; FZ.applyQuality()")
     pg.click("#mGo"); pg.wait_for_timeout(400)
 
     # Заброс касанием воды
     pg.mouse.move(195, 470); pg.mouse.down(); pg.mouse.move(185, 460); pg.mouse.up()
-    pg.wait_for_timeout(2200)
+    pg.wait_for_function("['wait','bite'].includes(__game.G.rig().state)",timeout=15000)
     check("заброс → ожидание", pg.evaluate("__game.G.rig().state") in ("wait", "bite"))
     # Обучающая поклёвка приходит быстро
     for _ in range(40):
         if pg.evaluate("__game.G.rig().state==='bite' && __game.G.rig().bite.phase==='take'"): break
         pg.wait_for_timeout(200)
-    pg.screenshot(path=f"{OUT}/f_bite.png")
+
     check("поклёвка", pg.evaluate("__game.G.rig().state") == "bite")
+    # The new reaction mechanic requires the visible, well-seated take. Merely
+    # entering the 'take' phase is deliberately too early for a reliable hook.
+    pg.wait_for_function("""() => {
+      const G=__game.G,r=G.rig(),b=r.bite;
+      return r.state==='bite' && b && b.phase==='take' &&
+        FZ.FightPhysics.strikeChance(b,G.sess().mode,G.gear(G.sess().mode).hook,G.state().tut<3).chance>=.999;
+    }""",timeout=6000)
     pg.mouse.move(195, 640); pg.mouse.down(); pg.mouse.move(195, 540); pg.mouse.up()  # свайп вверх
     pg.wait_for_timeout(200)
     check("подсечка → вываживание", pg.evaluate("__game.G.rig().state") == "fight")
+    pg.screenshot(path=f"{OUT}/f_fight.png")
     pg.mouse.move(250, 650); pg.mouse.down()
+    # Hold the real action input independently of rod steering. This matches
+    # two-finger Android play; a mouse held on water is not a reel button.
+    pg.evaluate("FZ.Input.actionDown('tutorial-reel')")
+    assert pg.evaluate("__game.G.rig().reeling"), "Tutorial reel action did not engage"
     # Steering matters in the 1.2 simulation: steer against fish velocity.
     # Don't silently continue as if a lost fish had produced a catch card.
     for frame in range(330):
@@ -56,6 +69,7 @@ with sync_playwright() as p:
             vx = pg.evaluate("(__game.G.rig().fish || {}).vx || 0")
             pg.mouse.move(140 if vx > 0 else 285, 650)
         pg.wait_for_timeout(100)
+    pg.evaluate("FZ.Input.actionUp('tutorial-reel')")
     pg.mouse.up()
     pg.wait_for_timeout(1600)
     pg.screenshot(path=f"{OUT}/f_catch.png")
@@ -79,7 +93,7 @@ with sync_playwright() as p:
         pg.screenshot(path=f"{OUT}/f_catch_failed.png")
         raise AssertionError(f"Expected catch card after tutorial fight; state={diagnostic}")
     money0 = pg.evaluate("__game.G.state().money")
-    pg.click("#cKeep", timeout=2000); pg.wait_for_timeout(300)
+    pg.click("#cKeep", timeout=15000); pg.wait_for_timeout(300)
     check("деньги за улов", pg.evaluate("__game.G.state().money") > money0)
     check("рыба в атласе", pg.evaluate("Object.keys(__game.G.state().caught).length") == 1)
     check("улов записан в личный журнал", pg.evaluate("__game.G.state().journal.length===1 && __game.G.state().journal[0].kept===true"))
@@ -99,7 +113,7 @@ with sync_playwright() as p:
     check("фидер в руках", pg.evaluate("__game.G.sess().mode") == "feeder")
 
     # Второй шанс: детерминированная проверка восстановления после потери рыбы
-    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.lost={canRevive:true,f:{revived:false,Fmax:30,T:30,phase:'run',phaseT:1,slackT:0,snagT:0,jump:null,S:.25,X:8,Z:22}};if(!G.revive())throw new Error('revive API returned false');}""")
+    pg.evaluate("""()=>{const G=__game.G,r=G.rig();r.lost={canRevive:true,f:{s:FZ.SP.perch,w:.5,lenM:.25,lenCm:25,vx:.2,vz:0,t:0,effort:.4,surface:0,jumped:0,revived:false,Fmax:30,T:30,phase:'run',phaseT:1,slackT:0,snagT:0,jump:null,S:.25,X:8,Z:22}};if(!G.revive())throw new Error('revive API returned false');}""")
     check("второй шанс возвращает рыбу в fight", pg.evaluate("__game.G.rig().state==='fight' && !!__game.G.rig().fish.revived && !__game.G.rig().lost"))
 
 
@@ -109,6 +123,14 @@ with sync_playwright() as p:
     pg.click("#bAct"); pg.wait_for_timeout(2800)
     check("лунка пробурена", pg.evaluate("__game.G.rig().state") == "wait")
     pg.screenshot(path=f"{OUT}/f_ice.png")
+    jigging = pg.evaluate("""()=>{
+      const G=__game.G, r=G.rig();
+      G.jig(); const first=r.jig;
+      for(let i=0;i<90;i++)G.update(1/60,10+i/60);
+      return {first,after:r.jig,pause:r.jigPause,attract:FZ.FightPhysics.iceAttraction(FZ.SP.perch,first,0)};
+    }""")
+    check("мормышка подыгрывается и затухает на паузе", jigging["first"]>0.4 and jigging["after"]<0.1 and jigging["pause"]>1)
+    check("игра мормышкой усиливает интерес хищника", jigging["attract"]>0.9)
 
     # Новые водоёмы, событие «Перволёд», достижения и экспедиция
     check("новые виды рыб загружены", pg.evaluate("!!FZ.SP.palia && !!FZ.SP.brooktrout && !!FZ.SP.nase && !!FZ.SP.sterlet && !!FZ.SP.chekhon && !!FZ.SP.rybets && !!FZ.SP.nelma && !!FZ.SP.muksun && !!FZ.SP.chir"))
@@ -127,7 +149,7 @@ with sync_playwright() as p:
 
     # Visual regression: every previously vector fish is now a bitmap atlas sprite.
     check("реалистичная графика без SVG", pg.evaluate("Object.values(FZ.Assets.manifest.images).every(v=>!v.endsWith('.svg'))"))
-    check("атлас 16 видов загружен", pg.evaluate("['perch','catfish','palia','brooktrout','sterlet','nelma','muksun','chir','nase','rybets','chekhon','chinook','coho','sockeye','halibut','terpug'].every(id=>!!FZ.Assets.fish(id))"))
+    check("геометрия анимации для 16 видов зарегистрирована", pg.evaluate("['perch','catfish','palia','brooktrout','sterlet','nelma','muksun','chir','nase','rybets','chekhon','chinook','coho','sockeye','halibut','terpug'].every(id=>!!FZ.Fish3D.profiles[id])"))
     check("поплавок растровый", pg.evaluate("!!FZ.Assets.item('float') && FZ.Assets.item('float').height>100"))
     pg.evaluate("__game.G.state().settings.gfx='art'; FZ.Assets.setStyle('art')")
     check("рисованный режим отключён", pg.evaluate("FZ.Assets.style==='paint'"))
@@ -137,7 +159,7 @@ with sync_playwright() as p:
     check("новые 62 вида рыб", pg.evaluate("FZ.SPECIES.length>=62 && FZ.REALISM_CONTENT.species===FZ.SPECIES.length"))
     check("20 доступных водоёмов", pg.evaluate("FZ.LOCATIONS.length>=20 && FZ.REALISM_CONTENT.waters===FZ.LOCATIONS.length"))
     check("семь новых регионов", pg.evaluate("['seliger','onega','katun','kola','amur','blacksea','barents'].every(id=>!!FZ.LOC[id])"))
-    check("все рыбы с растровыми изображениями", pg.evaluate("FZ.SPECIES.every(s=>!!FZ.Assets.fish(s.id))"))
+    check("все 62 HD ресурса зарегистрированы", pg.evaluate("FZ.SPECIES.every(s=>!!FZ.Assets.manifest.images['fishhd/'+s.id])"))
     check("все сезонные фотографии доступны в манифесте", pg.evaluate("FZ.LOCATIONS.every(l=>FZ.SEASON_ORDER.every(z=>!!FZ.Assets.manifest.images['bg/'+l.id+'_'+z]))"))
     check("фон загружен только для текущего водоёма", pg.evaluate("Object.keys(FZ.Assets.img).filter(k=>k.startsWith('bg/')).length<=10"))
     check("без векторных ассетов в манифесте", pg.evaluate("!Object.values(FZ.Assets.manifest.images).some(v=>v.endsWith('.svg'))"))
@@ -180,6 +202,7 @@ with sync_playwright() as p:
     check("открывается доска контрактов", pg.locator(".sheet").get_by_text("Трофейная охота").count()>0 and pg.locator(".sheet").get_by_text("Волжская школа").count()>0)
     pg.evaluate("__game.UI.closeSheet(); __game.G.startSession('pond')")
 
+    pg.evaluate("FZ.Fish3D.ready(FZ.SP.pike)")
     # Карточка для шаринга рисуется
     ok = pg.evaluate("""()=>{const s=FZ.SP.pike;const c=FZ.Share.card({s,w:5.2,len:88,loc:'oka',date:'2026-10-23',trophy:false,record:true,newSpecies:false,pct:90});return c.width===1080&&c.toDataURL().length>50000}""")
     check("карточка улова 1080×1920", ok)

@@ -45,3 +45,29 @@ their respective ShareAlike terms. Attribution must ship with the game.
 * **blacksea / winter**: File:Majestic red sunset above the Black sea.jpg — Vian; license CC BY-SA 4.0; https://commons.wikimedia.org/wiki/File:Majestic_red_sunset_above_the_Black_sea.jpg
 * **barents / summer**: File:Баренцево море в Териберке.jpg — Ted.ns; license CC BY 4.0; https://commons.wikimedia.org/wiki/File:%D0%91%D0%B0%D1%80%D0%B5%D0%BD%D1%86%D0%B5%D0%B2%D0%BE_%D0%BC%D0%BE%D1%80%D0%B5_%D0%B2_%D0%A2%D0%B5%D1%80%D0%B8%D0%B1%D0%B5%D1%80%D0%BA%D0%B5.jpg
 * **barents / winter**: File:Teriberka, Kola Peninsula, Russia (21522572999).jpg — Ninara; license CC BY 2.0; https://commons.wikimedia.org/wiki/File:Teriberka,_Kola_Peninsula,_Russia_(21522572999).jpg
+
+## Active winter replacement credits (2026-11-17)
+
+To remove close-up animals, map labels and photographs of roads/tyre tracks
+from fishing scenes, six winter backdrops now reuse existing licensed
+photographs already credited above in this file. The original entries for
+these six destination/season pairs are retained as historical source records,
+but the **active image attribution** is as follows:
+
+* **northstream / winter** uses the **kola / winter** photograph by Ted.ns
+  (CC BY 4.0).
+* **taiga / winter** uses the **pond / winter** photograph by Adrian Farwell
+  (CC BY 3.0).
+* **akhtuba / winter** uses the **don / winter** photograph by Vyacheslav
+  Argenberg (CC BY 4.0).
+* **amur / winter** uses the **onega / winter** photograph by Eniisi Lisika
+  (CC0).
+* **oka / winter** uses the **volga / winter** photograph by Александр Б.
+  (CC BY 2.0).
+* **polar / winter** uses the **mountainlake / winter** photograph by Jakub
+  Fryš (CC BY-SA 4.0).
+
+Full source URLs are in the donor entries above. These are authentic winter
+landscapes reused across locations, not claims that the source photograph was
+taken at the named destination. Location-specific licensed photography should
+replace these reused assets when available.
