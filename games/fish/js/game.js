@@ -575,11 +575,16 @@
       f.phaseT=Math.min(f.phaseT,.62);
     }
     if (f.nextPhase === "run" && !f.runDirection) {
-      f.runDirection = FZ.Ecology.chooseRunDirection(s,f.X,FZ.Scene.maxLat(Math.max(f.Z,5)),rng);
+      const bank=FZ.Scene.maxLat(Math.max(f.Z,5));
+      f.runDirection=FZ.Ecology.chooseRunDirection(s,f.X,bank,rng);
+      f.coverRun=!sess.ice && FZ.Ecology.profile(s,f.w).cover>0 &&
+        Math.abs(f.X)>bank*.45 && Math.sign(f.runDirection)===Math.sign(f.X);
     }
-    f.warning = f.nextPhase === "run" && f.phaseT < 0.65 && f.phaseT > 0 && f.S >= 0.16;
-    if (f.warning && !f.wasWarning) FZ.Platform.vibrate(18);
-    f.wasWarning = f.warning;
+    f.warning=f.nextPhase==="run"&&f.phaseT<.65&&f.phaseT>0&&f.S>=.16;
+    f.diveWarning=f.nextPhase==="dive"&&f.phaseT<.60&&f.phaseT>0&&f.S>=.16;
+    const warned=f.warning||f.diveWarning;
+    if(warned&&!f.wasWarning)FZ.Platform.vibrate(18);
+    f.wasWarning=warned;
     // смена поведения
     f.phaseT -= dt;
     if (f.phaseT <= 0 || (f.jump && f.jump.k >= 1)) {
@@ -589,6 +594,8 @@
       f.nextPhase = null;
       f.runDirection = null;
       f.warning = false;
+      f.diveWarning=false;
+      if(planned!=="run")f.coverRun=false;
       if (f.S < 0.16) { f.phase = "tired"; f.effort = 0.14; f.phaseT = rng.range(1.2, 2.5); f.vx *= 0.5; }
       else if (planned === "run") {
         const character=FZ.Ecology.profile(s,f.w);
@@ -603,6 +610,12 @@
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
         }
         FZ.Scene.shake(2 + Math.min(6, f.Fmax)); FZ.Platform.vibrate(25);
+      } else if (planned === "dive" && !sess.ice && f.S>.2) {
+        const character=FZ.Ecology.profile(s,f.w);
+        f.phase="dive";f.effort=.76;
+        f.phaseT=rng.range(.9,1.6)*Math.min(1.45,character.duration);
+        f.vx*=.35;
+        FZ.Platform.vibrate(22);
       } else if (planned === "toward" && f.S > 0.25) { f.phase = "toward"; f.effort = -0.3; f.phaseT = rng.range(0.8, 1.8); }
       else if (planned === "shake") { f.phase = "shake"; f.effort = 0.62; f.phaseT = rng.range(0.6, 1.1)*Math.min(1.25,FZ.Ecology.profile(s,f.w).duration); }
       else { f.phase = "rest"; f.effort = rng.range(0.28, 0.45); f.phaseT = rng.range(1, 2.4); }
@@ -611,7 +624,7 @@
     let eff = f.effort * (0.35 + 0.65 * f.S);
     if (f.phase === "shake") eff *= 1 + 0.45 * Math.sin(f.t * 28);
     const reeling = rig.reeling;
-    const run = f.phase === "run";
+    const run = f.phase === "run", diving=f.phase==="dive";
     const bank = sess.ice ? 0 : FZ.Scene.maxLat(Math.max(f.Z, 5));
     const nearBank = bank > 0 && Math.abs(f.X) > bank * 0.72;
     const awayFromBank = nearBank && Math.sign(rig.tilt) === -Math.sign(f.X);
@@ -625,6 +638,8 @@
     let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
     if (f.phase === "tired") targetTension = reeling ? 0.22 * f.Fmax + 0.06 * rod.power : 0.08 * f.Fmax;
+    // Forcing a deep fish increases load; yielding removes this extra force.
+    if(diving && reeling)targetTension+=.10*f.Fmax;
     if (f.jump) targetTension *= 1 + 0.48 * Math.sin(Math.PI * Math.min(1, f.jump.k));
     f.T = U.damp(f.T, targetTension, 5 + rod.sens * 3, dt);
 
@@ -640,7 +655,8 @@
     const takingLine = reeling && !slip;
     const surge = run ? Math.min(1.6, f.Fmax * 0.31) * f.S * (1 - 0.83 * steer) : 0;
     const slipSpeed = slip ? Math.min(3, slip / f.Fmax * 4 + 0.35) : 0;
-    const swim = (f.phase === "toward" ? -0.85 : surge) + slipSpeed;
+    const divePull=diving?(.52+.42*f.S)*(1-.24*steer):0;
+    const swim=(f.phase==="toward"?-.85:surge+divePull)+slipSpeed;
     f.vz = U.damp(f.vz, swim - (takingLine ? reelSpeed : 0), 5, dt);
     if (sess.ice) f.D = Math.min(sess.hole.depth, f.D + f.vz * 0.56 * dt);
     else f.Z += f.vz * dt;
@@ -664,14 +680,14 @@
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
     const drain = (0.035 + 0.14 * U.clamp(f.T / f.Fmax, 0, 1.5))
       / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (1 + 0.65 * steer)
-      * rodF * (sess.duel ? 1.55 : st.tut < 3 ? 2 : 1);
+      * rodF * (diving?1.16:1) * (sess.duel ? 1.55 : st.tut < 3 ? 2 : 1);
     f.S = Math.max(0, f.S - drain * dt);
     // провис лески — сход
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
     if (f.slackT > 1.3 && rng() < 0.7 * (1.3 - (g.hook ? g.hook.hold : 1)) * dt * 2) return lose("slack");
     if (f.jump && !f.jump.hurt && f.T > 0.45 * lineT) { f.jump.hurt = true; if (rng() < 0.5 * (1.3 - (g.hook ? g.hook.hold : 1))) return lose("jump"); }
     // поверхность
-    f.surface = U.damp(f.surface, f.phase === "tired" ? 1 : 0.15 * (1 - f.S), 2, dt);
+    f.surface=U.damp(f.surface,diving?0:f.phase==="tired"?1:.15*(1-f.S),2,dt);
     // дистанция
     if (sess.ice) {
       if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; f.vz = Math.max(0, f.vz); }
