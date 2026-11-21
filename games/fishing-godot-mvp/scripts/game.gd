@@ -572,6 +572,7 @@ func _animate_lake(delta: float) -> void:
     fish_swim_clock += delta
     var sunlight := clampf(sin((lake_hour - 6.0) / 13.5 * PI), 0.15, 1.0)
     sun_light.light_energy = lerpf(sun_light.light_energy, 0.46 + sunlight * 0.47, minf(1.0, delta * 0.18))
+    shore_art.call("set_wind", wind)
     sounds.call("set_weather", wind, lake_hour)
     for i in range(fish_swimmers.size()):
         var swimmer := fish_swimmers[i]
@@ -1042,7 +1043,8 @@ func _update_stats() -> void:
             var warning_style := Color(0.97, 0.46, 0.29) if tension >= 79.0 else Color(0.75, 0.86, 0.82)
             stats_label.add_theme_color_override("font_color", warning_style)
         Phase.WAITING:
-            stats_label.text = "Дальность %.0f м  ·  Глубина %.1f м  ·  %s" % [Vector2(bobber.position.x - camera.position.x, bobber.position.z - camera.position.z).length(), lure_depth, "ВЕДИ БЛЕСНУ" if lure_index == 1 else "СЛЕДИ ЗА ПОПЛАВКОМ"]
+            var attention := "ОСТОРОЖНАЯ ПОКЛЁВКА" if bite_sign_age < 1.4 else ("АКТИВНОСТЬ ВЫСОКАЯ" if shoreline_activity > 0.65 else "ИЩИ УКРЫТИЯ")
+            stats_label.text = "%.0f м  ·  Глубина %.1f м  ·  %s" % [Vector2(bobber.position.x - camera.position.x, bobber.position.z - camera.position.z).length(), lure_depth, attention]
         Phase.BITE:
             stats_label.text = "ПОДСЕЧЬ СЕЙЧАС  ·  %.1f сек." % maxf(0.0, bite_window - timer)
         Phase.LANDING:
