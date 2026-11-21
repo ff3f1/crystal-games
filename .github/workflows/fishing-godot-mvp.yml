@@ -75,6 +75,17 @@ jobs:
             exit 1
           fi
 
+      - name: End-to-end fishing gameplay smoke test
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_game.gd 2>&1 | tee godot-gameplay.log
+          grep -q "FISHING_MVP_SMOKE_OK" godot-gameplay.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:|FISHING_MVP_SMOKE_FAIL:' godot-gameplay.log; then
+            echo "::error::Fishing gameplay scenario failed"
+            exit 1
+          fi
+
       - name: Android SDK components
         shell: bash
         run: |
@@ -124,6 +135,17 @@ jobs:
             --script res://scripts/capture.gd
           test -s games/fishing-godot-mvp/build/scene-preview.png
 
+      - name: Capture 3D trophy preview
+        continue-on-error: true
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            godot --path games/fishing-godot-mvp \
+            --resolution 1280x720 \
+            --script res://scripts/capture_result.gd
+          test -s games/fishing-godot-mvp/build/trophy-preview.png
+
       - name: Upload installable prototype
         uses: actions/upload-artifact@v4
         with:
@@ -131,6 +153,7 @@ jobs:
           path: |
             games/fishing-godot-mvp/build/*.apk
             games/fishing-godot-mvp/build/scene-preview.png
+            games/fishing-godot-mvp/build/trophy-preview.png
             games/fishing-godot-mvp/assets/textures/sky_panorama.jpg
           if-no-files-found: error
           retention-days: 14
