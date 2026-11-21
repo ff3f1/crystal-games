@@ -61,6 +61,29 @@ const spinner=FZ.BAIT.spinner,jig=FZ.BAIT.jig;
 assert(E.presentation(pike,spinner,'spin','day',{spinPause:0})>E.presentation(pike,spinner,'spin','day',{spinPause:4}));
 assert(E.presentation(FZ.SP.perch,jig,'spin','day',{spinPause:.8})>E.presentation(FZ.SP.perch,jig,'spin','day',{spinPause:5}));
 assert.equal(E.presentation(FZ.SP.crucian,spinner,'spin','day',{spinPause:0}),0);
+assert(E.presentation(pike,FZ.BAIT.wobbler,'spin','day',{spinPause:.2,reeling:false,spinPulse:1}) >
+ E.presentation(pike,FZ.BAIT.wobbler,'spin','day',{spinPause:.2,reeling:false,spinPulse:0}),
+ 'a real twitch improves wobbler presentation');
+assert(E.presentation(FZ.SP.perch,jig,'spin','day',{spinPause:.8,spinPulse:1}) >
+ E.presentation(FZ.SP.perch,jig,'spin','day',{spinPause:.8,spinPulse:0}),
+ 'jig responds to an actual lift');
+assert(E.presentation(pike,spinner,'spin','day',{reeling:true,spinPause:0}) >
+ E.presentation(pike,spinner,'spin','day',{reeling:false,spinPause:1}),
+ 'spinner rewards a steady retrieve');
+{
+ const twig=G.startSession('pond','summer'),r=G.rig();
+ st.active='spin';r.state='wait';r.X=2;r.Z=18;r.reeling=false;
+ st.load.spin.bait='wobbler';st.lures.wobbler=1;
+ const start=r.Z;
+ assert.equal(G.twitchSpin(),true,'short touch works on a real spinning rig');
+ assert.equal(r.spinPulse,1);assert(r.Z<start,'short touch advances actual lure');
+ assert(r.rod.jerk>0,'short touch causes an actual rod-tip reaction');
+ assert.equal(G.twitchSpin(),false,'input cooldown prevents spamming');
+ G.update(.05,2);
+ assert(r.spinPulse<1&&r.spinPulse>0,'pulse decays with game time');
+ r.state='fight';
+ assert.equal(G.twitchSpin(),false,'twitch cannot happen during fish fight');
+}
 assert.equal(E.patience(0,300),0,'no guaranteed bites from empty table');
 assert(E.patience(.08,30)>E.patience(.002,30),'good spot improved, poor spot not forced');
 const T=E.trophyQuality(pike,'spoon',pond,{X:14,Z:8},35,18,'summer','dusk',spot);

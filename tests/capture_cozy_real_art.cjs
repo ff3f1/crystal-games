@@ -52,6 +52,13 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.evaluate(()=>{FZ.Game.rig().reeling=false});
  await page.waitForTimeout(420);
  await page.screenshot({path:path.join(dir,"09-wobbler-paused.png")});
+ // Touch the genuine canvas; do not use a fake overlay or force a catch.
+ await page.evaluate(()=>{const r=FZ.Game.rig();r.state='wait';r.bite=null;r.spinPause=.45;r.reeling=false;r.twitchCooldown=0});
+ await page.touchscreen.tap(195,410);
+ await page.waitForTimeout(65);
+ const twitch=await page.evaluate(()=>({pulse:FZ.Game.rig().spinPulse||0,state:FZ.Game.rig().state}));
+ assert(twitch.pulse>.1&&twitch.state==='wait','short canvas tap must twitch the real lure '+JSON.stringify(twitch));
+ await page.screenshot({path:path.join(dir,"09b-wobbler-twitch.png")});
  await page.evaluate(()=>{FZ.Game.state().lures.mouse=1;FZ.Game.state().load.spin.bait="mouse";FZ.Game.rig().reeling=true});
  await page.waitForTimeout(330);
  await page.screenshot({path:path.join(dir,"10-mouse-retrieve.png")});

@@ -24,6 +24,9 @@ assert.equal(M.lurePose("spinner",false,4,1).wake,0,"no wake when paused");
 assert.equal(M.lurePose("spoon",true,0,1).wake,0,"submerged spoon never paints a surface wake");
 assert.equal(M.lurePose("spinner",true,0,1).wake,0,"submerged spinner never paints a surface wake");
 assert(M.lurePose("wobbler",false,2,1).wake<.001,"stationary surface lure settles after retrieve");
+assert(M.lurePose("wobbler",false,.1,1,1).wake>M.lurePose("wobbler",false,.1,1,0).wake,
+ "existing wobbler responds visually to a real twitch");
+assert.equal(M.lurePose("spoon",false,0,1,1).wake,0,"twitch never makes submerged spoon look surface-floating");
 const spoonFlight=M.castPose("spoon",.5,1),jigFlight=M.castPose("jig",.5,1);
 assert(spoonFlight.sx<1 && Number.isFinite(spoonFlight.angle),"spoon visibly flutters during real cast");
 assert.equal(jigFlight.sx,1,"submerged jig stays stable in air");
@@ -64,6 +67,7 @@ assert(E.isEdgeFish(F.SP.pike));
 assert(!E.isEdgeFish(F.SP.bream));
 assert(!read("js/game.js").includes("EDGE_FISH"),"no dangling fish class reference");
 assert(!read("js/cozy-gear.js").includes("ctx.ellipse(p.x,p.y+1"),"never draw unconditional ring above submerged gear");
+assert(read("js/main.js").includes("G.twitchSpin()"),"canvas input is wired to real lure action");
 // An extended fight at the edge should end in loss, not a ReferenceError.
 const sess=G.startSession("pond","summer"),rig=G.rig();
 st.active="float";st.load.float.rod="f3";st.rods.push("f3");st.load.float.line="l7";st.lines.push("l7");st.load.float.hook="h4";st.hooks.push("h4");
