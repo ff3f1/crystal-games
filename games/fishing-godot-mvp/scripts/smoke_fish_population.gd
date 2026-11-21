@@ -51,6 +51,21 @@ func _run() -> void:
     for i in range(1500):
         population.call("simulate", 0.10, false, Vector3.ZERO, 0, 0.0, 0.0, 7.5, 0.3, fake_camera)
     _check(population.active_count == 16, "Habitat should eventually replenish only after cooldown")
+    # A fish investigating a real bait must abandon a hook that is suddenly
+    # reeled far away. This prevents impossible distant strikes.
+    var cautious: Dictionary = population.agents[0]
+    cautious["mode"] = "inspect"
+    cautious["pos"] = Vector3(-8.0, -0.9, -18.0)
+    cautious["nibble"] = 0.01
+    population.agents[0] = cautious
+    population.reserved_fish = 0
+    var jerk_result: Dictionary = population.call(
+        "simulate", 0.08, true, Vector3(18.0, -0.7, -25.0),
+        0, 0.0, 0.0, 7.5, 0.25, fake_camera
+    )
+    _check(int(jerk_result["signal"]) != 2, "Fish must not bite bait pulled metres away")
+    _check(str(population.agents[0]["mode"]) == "spooked", "Abruptly fleeing bait should spook inspecting fish")
+    _check(population.reserved_fish == -1, "Spooked fish must release exclusive bait contact")
     population.queue_free()
     for i in range(3):
         await process_frame
