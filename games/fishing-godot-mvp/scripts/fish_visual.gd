@@ -6,6 +6,7 @@ var species_name := "Окунь"
 var tail_joint: Node3D
 var fin_clock := 0.0
 var motion_intensity := 0.52
+var skin_material: ShaderMaterial
 
 func configure(species: String) -> void:
     species_name = species
@@ -27,6 +28,8 @@ func _process(delta: float) -> void:
 
 func set_wiggle(amount: float) -> void:
     motion_intensity = clampf(amount, 0.0, 2.0)
+    if skin_material != null:
+        skin_material.set_shader_parameter("swim_power", motion_intensity)
 
 func _make_crucian() -> void:
     # Deep round-bodied golden crucian, short snout and prominent dorsal fin.
@@ -139,6 +142,8 @@ func _body_mesh(sections: Array[Vector4], fish: String) -> void:
     mat.set_shader_parameter("fish_albedo", load("res://assets/textures/fish_%s_albedo.png" % fish))
     mat.set_shader_parameter("fish_normal", load("res://assets/textures/fish_%s_normal.png" % fish))
     mat.set_shader_parameter("wetness", 0.78)
+    mat.set_shader_parameter("swim_power", motion_intensity)
+    skin_material = mat
     mesh.material_override = mat
     mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
     add_child(mesh)
