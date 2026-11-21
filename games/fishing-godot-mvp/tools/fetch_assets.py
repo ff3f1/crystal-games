@@ -99,7 +99,7 @@ for output, url in {
 sky_source = TEX / "green-lake-source.jpg"
 sky_target = TEX / "sky_panorama.jpg"
 # Prefer a forested lake panorama; fall back to the known-good Arboretum.
-for sky_name in ("shudu_lake", "lake_pier", "arboretum"):
+for sky_name in ("lakeside", "arboretum"):
     try:
         fetch(f"https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/{sky_name}.jpg", sky_source)
         print("Chosen photographic sky:", sky_name)
