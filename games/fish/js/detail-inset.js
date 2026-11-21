@@ -66,6 +66,8 @@
     g.restore();
   }
   R.drawLureInset=function(g,v,w,h){
+    // Don't mask the real lake with a schematic underwater box.
+    if(FZ.LivingWater)return;
     if(v.ice||(v.mode!=='spin'&&v.mode!=='float')||(FZ.UI&&FZ.UI.anyOpen()))return;
     const isSpin=v.mode==='spin',tk=v.tackle||{};
     if(tk.state!=='water'&&tk.state!=='fight')return;
