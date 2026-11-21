@@ -22,7 +22,7 @@ function host(width=390) {
   });
   const fire=(name,type,id,x=100,y=500)=>{for(const f of handlers[name+":"+type]||[])f({
     pointerId:id,pointerType:"touch",button:0,clientX:x,clientY:y,preventDefault(){}});};
-  return {I:FZ.Input,fire,rig,sess,setOpen:v=>open=v,setRig:r=>rig=r,counts:()=>({casts,strikes})};
+  return {I:FZ.Input,fire,canvas:target,rig,sess,setOpen:v=>open=v,setRig:r=>rig=r,counts:()=>({casts,strikes})};
 }
 for(const width of [360,390,412,768]) {
   const h=host(width),{I,rig,fire}=h;
@@ -47,3 +47,22 @@ for(const width of [360,390,412,768]) {
   assert.equal(I.snapshot().actions,0);
   console.log("PASS independent pointers, cancellation, menu, blur, rig change:",width);
 }
+
+const fallback = host(390);
+const replacement = fallback.canvas("canvas-fallback");
+fallback.I.actionDown(11);
+assert.equal(fallback.rig.reeling,true);
+fallback.I.rebindCanvas(replacement);
+assert.equal(fallback.rig.reeling,false,"replacing a WebGL canvas clears stale holds");
+fallback.I.actionDown(12);
+fallback.fire("canvas-fallback","pointerdown",42);
+fallback.fire("canvas-fallback","pointermove",42,180);
+assert.ok(fallback.rig.tilt>.25,"rod must steer on the replacement canvas");
+assert.equal(fallback.rig.reeling,true,"independent second thumb continues reeling");
+fallback.fire("canvas-fallback","pointercancel",42,180);
+assert.equal(fallback.rig.reeling,true,"pointer cancellation preserves the other thumb");
+fallback.I.actionUp(12);
+assert.equal(fallback.rig.reeling,false);
+fallback.I.rebindCanvas(replacement);
+assert.equal(fallback.I.snapshot().pointers,0,"rebinding to the same canvas is idempotent");
+console.log("PASS input restored after WebGL fallback canvas replacement");
