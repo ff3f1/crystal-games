@@ -76,8 +76,15 @@
       arrow.setAttribute('aria-label',atEnd?'Показать первые вкладки':'Показать остальные вкладки');
     };
     arrow.addEventListener('click',()=>{
-      const atEnd=tabs.scrollLeft>=tabs.scrollWidth-tabs.clientWidth-3;
-      tabs.scrollLeft+=atEnd?-Math.max(125,tabs.clientWidth*.78):Math.max(125,tabs.clientWidth*.78);
+      const current=tabs.scrollLeft,max=Math.max(0,tabs.scrollWidth-tabs.clientWidth);
+      const atEnd=current>=max-3;
+      // Snap to a WHOLE category label. A fixed pixel offset used to leave
+      // clipped Cyrillic letter fragments at the left of the shop bar.
+      const frame=tabs.getBoundingClientRect();
+      const starts=[...tabs.querySelectorAll('.tab')].map(tab=>
+        tab.getBoundingClientRect().left-frame.left+current);
+      const next=starts.find(x=>x>current+Math.max(40,tabs.clientWidth*.53));
+      tabs.scrollLeft=atEnd?0:Math.min(max,next==null?max:next);
       update();
     });
     tabs.addEventListener('scroll',update,{passive:true});
