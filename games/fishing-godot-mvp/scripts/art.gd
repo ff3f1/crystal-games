@@ -45,8 +45,11 @@ func _make_water() -> void:
     _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, shader)
 
 func _make_land() -> void:
+    # The panoramic sky already contains the distant mountains/shoreline.
+    # A second flat "far-bank" terrain strip creates an ugly hard black seam
+    # where the 3D water meets the photographic horizon. Keep only the
+    # detailed near-bank mesh with real walkable geometry.
     _shore_surface(false)
-    _shore_surface(true)
 
 func _shore_surface(far_bank: bool) -> void:
     var builder := SurfaceTool.new()
