@@ -232,7 +232,7 @@ func _create_environment() -> void:
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
     env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
-    env.fog_enabled = true
+    env.fog_enabled = false
     env.fog_light_color = Color(0.66, 0.67, 0.64)
     env.fog_density = 0.0012
     world_env.environment = env
