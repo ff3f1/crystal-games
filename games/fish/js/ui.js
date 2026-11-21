@@ -221,6 +221,8 @@
       else if (f.telegraph) h = "Сейчас будет рывок! Отпустите подмотку";
       else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
       else if (st.tut < 3) h = "Удерживайте кнопку — подматывайте<small>Другим пальцем направляйте удилище. При рывке отпустите кнопку</small>";
+      else if (f.tension < 0.2 && !r.reeling && f.phase !== "tired") h = "Рыба почти не устаёт<small>Наберите натяжение подмоткой, но следите за фрикционом</small>";
+      else if (f.controlQuality > 0.72 && r.reeling && f.phase !== "run") h = "Хорошее натяжение — рыба сдаёт!<small>Держите стрелку у светлой отметки. На рывке отпускайте подмотку</small>";
       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";
       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
     }
@@ -240,6 +242,10 @@
     if (v > 0.84) { g.shadowColor = "#ff3311"; g.shadowBlur = 10; }
     g.strokeStyle = col; g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, a0, a0 + (a1 - a0) * Math.min(1, v)); g.stroke();
     g.shadowBlur = 0;
+    // Slim marked sector: sustainable working tension, not another button.
+    // It shares the same target window as FightPhysics.fightControl.
+    g.strokeStyle = "rgba(169,246,207,0.85)"; g.lineWidth = 3;
+    g.beginPath(); g.arc(cx, cy, R - 13, a0 + (a1 - a0) * .34, a0 + (a1 - a0) * .74); g.stroke();
     const ad = a0 + (a1 - a0) * dm;
     g.strokeStyle = "#ffffff"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 14), cy + Math.sin(ad) * (R - 14)); g.lineTo(cx + Math.cos(ad) * (R + 14), cy + Math.sin(ad) * (R + 14)); g.stroke();
     let tag = "натяжение", tagCol = "#eef3f1";
