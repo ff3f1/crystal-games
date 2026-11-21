@@ -112,6 +112,19 @@ jobs:
             exit 1
           fi
 
+      - name: Physical fish residents, lure proximity and same-fish hook test
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout --signal=SIGINT --kill-after=5s 100s \
+            godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_fish_population.gd 2>&1 | tee godot-physical-fish.log
+          grep -q "PHYSICAL_FISH_OK" godot-physical-fish.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:|PHYSICAL_FISH_FAIL:' godot-physical-fish.log \
+             | grep -v -E 'ERROR: [0-9]+ resources still in use at exit'; then
+            echo "::error::Real 3D fish ecology and hooking identity failed"
+            exit 1
+          fi
+
       - name: End-to-end fishing gameplay smoke test
         shell: bash
         run: |
