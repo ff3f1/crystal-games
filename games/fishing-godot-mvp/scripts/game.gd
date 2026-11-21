@@ -1,6 +1,6 @@
 extends Node3D
 ## Fishing: First Cast — an isolated, playable Godot 4 mobile prototype.
-## Procedural art is intentional; the core loop is the test, not photoreal assets.
+## Mobile-first realistic lake renderer, physical fish, and visual-only first-person gear.
 
 enum Phase { READY, CASTING, WAITING, BITE, FIGHT, LANDING, RESULT }
 
@@ -31,6 +31,7 @@ var hud_layer: CanvasLayer
 var overlay: CanvasLayer
 var sounds: Node
 var sun_light: DirectionalLight3D
+var hands: Node3D
 var landing_from := Vector3.ZERO
 var last_sound_reel := 0.0
 var last_drag_sound := -10.0
@@ -157,6 +158,8 @@ func _process(delta: float) -> void:
         )
     if cast_charging and (phase == Phase.READY or phase == Phase.RESULT):
         cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
+    if hands != null:
+        hands.call("set_winding", is_reeling)
     if rod_root != null:
         # Elastic loaded blank: damped return, no instant angular snapping.
         var bending := 0.0
@@ -406,9 +409,9 @@ func _create_environment() -> void:
     var light := DirectionalLight3D.new()
     sun_light = light
     add_child(light)
-    light.rotation_degrees = Vector3(-38, -52, -8)
-    light.light_color = Color(1.0, 0.88, 0.71)
-    light.light_energy = 0.82
+    light.rotation_degrees = Vector3(-49, -52, -8)
+    light.light_color = Color(1.0, 0.965, 0.87)
+    light.light_energy = 1.20
     light.shadow_enabled = true
 
     var world_env := WorldEnvironment.new()
@@ -430,6 +433,7 @@ func _create_environment() -> void:
         sky.sky_material = sky_mat
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+    env.ambient_light_energy = 0.95
     env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
     # The mobile Compatibility renderer renders global fog across the entire
     # photographic sky, destroying its detail. Keep it OFF in the main view;
@@ -451,7 +455,7 @@ func _create_rod() -> void:
     # the broken bending/rotation of the earlier preview-model GLB.
     rod_root = Node3D.new()
     camera.add_child(rod_root)
-    rod_root.position = Vector3(0.48, -0.44, -0.70)
+    rod_root.position = Vector3(0.59, -0.44, -0.70)
 
     var carbon := _material(Color(0.075, 0.09, 0.092), 0.27)
     carbon.metallic = 0.35
@@ -465,6 +469,8 @@ func _create_rod() -> void:
     gunmetal.metallic = 0.83
     var copper := _material(Color(0.57, 0.39, 0.19), 0.29)
     copper.metallic = 0.75
+    var cobalt := _material(Color(0.14, 0.21, 0.64), 0.21)
+    cobalt.metallic = 0.76
 
     var butt := Vector3(0.025, -0.31, 0.23)
     var grip_start := Vector3(0.015, -0.18, -0.18)
@@ -501,6 +507,11 @@ func _create_rod() -> void:
 
     reel_spool = _mesh(rod_root, CylinderMesh.new(), reel_center + Vector3(0.34, 0, 0), Vector3.ONE * 0.11, steel)
     reel_spool.rotation.z = PI / 2.0
+    var blue_lip := TorusMesh.new()
+    blue_lip.inner_radius = 0.092
+    blue_lip.outer_radius = 0.115
+    var blue_rim := _mesh(rod_root, blue_lip, reel_center + Vector3(0.40, 0.0, 0.0), Vector3.ONE, cobalt)
+    blue_rim.rotation.z = PI * 0.5
 
     var bail := TorusMesh.new()
     bail.inner_radius = 0.115
@@ -520,6 +531,9 @@ func _create_rod() -> void:
     line_node.mesh = line_mesh
     line_node.material_override = _material(Color(0.91, 0.92, 0.87), 0.65)
     add_child(line_node)
+    # First-person hand models do not affect rod physics or casting.
+    hands = (load("res://scripts/first_person_hands.gd") as GDScript).new() as Node3D
+    camera.add_child(hands)
 
 func _taper_rod(a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
     var shape := CylinderMesh.new()
