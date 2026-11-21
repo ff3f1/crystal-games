@@ -11,6 +11,16 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  page.on("response",r=>{if(r.status()>=400&&r.url().includes("/assets/equipment/"))errs.push(r.url()+" "+r.status())});
  await page.goto(url,{waitUntil:"domcontentloaded"});await page.waitForSelector("#mGo",{timeout:30000});
  await page.waitForTimeout(1000);await page.screenshot({path:path.join(dir,"01-menu.png")});
+ // A real player can find skill progression from the main menu.
+ assert(await page.locator('#mSkills').count()===1,'angler skills must be visible in the lodge');
+ await page.locator('#mSkills').click();
+ await page.waitForSelector('#cozySkillContent .cozy-skill-item');
+ assert.equal(await page.locator('#cozySkillContent .cozy-skill-item').count(),3,
+   'three actual trainable angler skills');
+ assert((await page.locator('#cozySkillContent').textContent()).includes('Меткость'),
+   'accuracy skill is available');
+ await page.screenshot({path:path.join(dir,'01b-angler-skills.png')});
+ await page.evaluate(()=>FZ.UI.closeSheet());
  for(const [tab,n] of Object.entries({rod:14,line:8,hook:5,bait:13,lure:11,extra:3})){
    await page.evaluate(t=>FZ.UI.showShop(t),tab);
    await page.waitForSelector(".cozy-catalog-row");await page.waitForTimeout(500);
@@ -201,6 +211,35 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
    'float creates realistic water contact only at its actual surface '+JSON.stringify(waterPhysics));
  assert(waterPhysics.shallow>.5&&waterPhysics.deep===0,
    'no fake droplets over a deep fish '+JSON.stringify(waterPhysics));
- assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/speed-driven reel/true float contact/6 shop tabs");
+ // Real charging by pointer down/release, including the live HUD meter.
+ await page.evaluate(()=>{
+   const G=FZ.Game,st=G.state();st.active='spin';st.load.spin.rod='s1';
+   st.lures.wobbler=1;st.load.spin.bait='wobbler';G.startSession('pond','summer');
+   G.sess().lastAim={X:1,Z:G.maxCast()};
+ });
+ await page.waitForTimeout(120);
+ const act=page.locator('#bAct'),button=await act.boundingBox();
+ assert(button,'casting action button must be visible');
+ await page.mouse.move(button.x+button.width*.5,button.y+button.height*.5);
+ await page.mouse.down();await page.waitForTimeout(580);
+ const charge=await page.evaluate(()=>({
+   cast:FZ.Input.castCharge(),
+   shown:!document.getElementById('hCastPower').classList.contains('hide'),
+   percent:document.getElementById('hCastLabel').textContent
+ }));
+ assert(charge.shown&&charge.cast&&charge.cast.power>.30&&charge.cast.power<1,
+   'hold button must show real, intermediate casting power '+JSON.stringify(charge));
+ await page.screenshot({path:path.join(dir,'13-power-casting-hud.png')});
+ await page.mouse.up();await page.waitForTimeout(80);
+ const landed=await page.evaluate(()=>({
+   state:FZ.Game.rig().state,
+   power:FZ.Game.rig().castTarget?.power,
+   preview:FZ.Game.rig().castTarget?.Z,
+   max:FZ.Game.maxCast()
+ }));
+ assert(landed.power>.30&&landed.power<1&&landed.preview<landed.max,
+   'charged release must make a shorter real cast '+JSON.stringify(landed));
+ await page.screenshot({path:path.join(dir,'14-charged-cast-flight.png')});
+ assert.deepEqual(errs,[]);console.log("PASS: actual gameplay, skill page, real charge HUD, float water line, pike & catfish, shop art");
  await b.close();
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
