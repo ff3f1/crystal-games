@@ -841,12 +841,19 @@
 
     // Sag is measured from the chord between the actual line endpoints.
     if (lineEnd) {
-      const sag = target.air ? 0 : FZ.RodArt.lineSag(lineFrom, lineEnd, load, H);
-      ctx.strokeStyle = lineCol; ctx.lineWidth = lineVis ? lineVis.width : 1;
-      ctx.beginPath(); ctx.moveTo(lineFrom.x, lineFrom.y);
-      if (sag < 0.45) ctx.lineTo(lineEnd.x, lineEnd.y);
-      else ctx.quadraticCurveTo((lineFrom.x + lineEnd.x) / 2, (lineFrom.y + lineEnd.y) / 2 + 2 * sag, lineEnd.x, lineEnd.y);
-      ctx.stroke();
+      const ordinarySag=target.air?0:FZ.RodArt.lineSag(lineFrom,lineEnd,load,H);
+      const shape=FZ.CozyMotion&&FZ.CozyMotion.lineShape(v,ordinarySag,lineFrom,lineEnd,H)
+        || {sag:ordinarySag,opacity:1};
+      // One real fishing line, with a subtle bend when genuinely slack.
+      // No glow duplicate and no random motion detached from the lure.
+      ctx.save();
+      ctx.globalAlpha*=shape.opacity;
+      ctx.strokeStyle=lineCol;ctx.lineWidth=lineVis?lineVis.width:1;
+      ctx.beginPath();ctx.moveTo(lineFrom.x,lineFrom.y);
+      if(shape.sag<.45)ctx.lineTo(lineEnd.x,lineEnd.y);
+      else ctx.quadraticCurveTo((lineFrom.x+lineEnd.x)/2,
+        (lineFrom.y+lineEnd.y)/2+2*shape.sag,lineEnd.x,lineEnd.y);
+      ctx.stroke();ctx.restore();
     }
 
     if (v.approach != null && target && !target.air) {
@@ -995,7 +1002,8 @@
     // Only fish close to the real surface leave a wake. A deep catfish cannot
     // draw foam on top of the lake while it pulls down underwater.
     const depthFade=U.clamp(1-Math.max(0,f.D||0)/2.4,0,1);
-    const surfFade=U.clamp((.18+.82*(f.surface||0))*depthFade,0,1);
+    const surfFade=FZ.CozyMotion?FZ.CozyMotion.surfaceEnergy(f):
+      U.clamp((.18+.82*(f.surface||0))*depthFade,0,1);
     if (!f.jump && surfFade>.10)
       drawWake(p,sp,f.vx,-f.vz,(.35+.46*sp)*(1-.45*L.dark)*surfFade,t);
     // силуэт рыбы под водой рядом с берегом

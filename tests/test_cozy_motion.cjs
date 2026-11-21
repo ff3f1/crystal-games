@@ -16,6 +16,26 @@ F.Scene={
 F.Sound=new Proxy({},{get:()=>()=>{}});
 F.Platform={vibrate(){}};
 assert(M,"CozyMotion module loaded");
+assert.equal(M.surfaceEnergy({phase:"dive",D:3,surface:1}),0,
+ "deep fish cannot create surface foam even at high speed");
+assert(M.surfaceEnergy({phase:"run",D:.12,surface:.8})>.5,
+ "a genuine near-surface run still disturbs water");
+assert(M.surfaceEnergy({phase:"dive",D:0,surface:.5}) <
+ M.surfaceEnergy({phase:"run",D:0,surface:.5}),
+ "deep-fish surface activity decays at the start of its dive");
+const from={x:300,y:280},to={x:80,y:400};
+const tautLine=M.lineShape({fish:{hooked:true,tension:.8,slackT:0}},3,from,to,844);
+const slackLine=M.lineShape({fish:{hooked:true,tension:.05,slackT:.9}},3,from,to,844);
+assert(slackLine.sag>tautLine.sag+6,"real slack makes the one fishing line visibly bow");
+assert(slackLine.sag<19,"slack never creates an enormous cartoon loop");
+assert(M.lineShape({fish:null},3,from,to,844).sag===3,
+ "the cast line retains the original physics when there is no hooked fish");
+assert(slackLine.opacity<tautLine.opacity,"slack line is optically lighter, not duplicated");
+assert(read("js/scene.js").includes("FZ.CozyMotion.lineShape"),
+ "game renderer must draw real tension through the existing line path");
+assert(read("js/rod-art.js").includes("drawRotor(ctx, mode, reelAngle)") &&
+ !read("js/rod-art.js").includes("drawCrank(ctx, mode, reelAngle)"),
+ "reel image must have subtle rotor animation instead of oversized cartoon crank");
 assert.equal(M.lurePose("wobbler",true,0,1).visible,true);
 assert.equal(M.lurePose("mouse",false,4,1).visible,true);
 assert.equal(M.lurePose("jig",true,0,1).visible,false);

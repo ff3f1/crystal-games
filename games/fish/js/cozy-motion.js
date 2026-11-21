@@ -7,6 +7,28 @@
  if(!G||!U)return;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const M={};
+ // Real underwater position controls whether a fish can disturb the surface.
+ // No scripted foam for deep divers, even during a strong lateral run.
+ M.surfaceEnergy=function(f){
+   if(!f||f.jump)return 0;
+   const depth=clamp(1-Math.max(0,f.D||0)/2.45,0,1);
+   const attitude=f.phase==="dive"?.24:1;
+   return clamp((.25+.75*clamp(f.surface||0,0,1))*depth*attitude,0,1);
+ };
+ // The single line becomes visibly slack during a genuine low-tension fight.
+ // This changes the curvature of the existing endpoint-to-tip path only.
+ M.lineShape=function(v,baseSag,from,to,screenHeight){
+   const distance=Math.hypot((to&&to.x||0)-(from&&from.x||0),
+                             (to&&to.y||0)-(from&&from.y||0));
+   const normal=Math.max(0,Number.isFinite(baseSag)?baseSag:0);
+   const fish=v&&v.fish;
+   if(!fish||!fish.hooked)return{sag:normal,opacity:1};
+   const tension=clamp(fish.tension||0,0,1);
+   const slack=clamp((fish.slackT||0)/.9,0,1);
+   const bound=Math.min(18,distance*.11,Math.max(8,(screenHeight||800)*.023));
+   const sag=Math.min(bound,normal*(1-.62*tension)+bound*.84*slack);
+   return{sag:Math.max(0,sag),opacity:clamp(.72+.24*tension-.18*slack,.47,.96)};
+ };
  M.rodReaction=function(v,t){
    const f=v&&v.fish,mode=v&&v.mode;
    if(!f||!f.hooked||v.landing||f.jump||mode==="ice")return{x:0,y:0};

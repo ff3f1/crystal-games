@@ -62,6 +62,38 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.evaluate(()=>{FZ.Game.state().lures.mouse=1;FZ.Game.state().load.spin.bait="mouse";FZ.Game.rig().reeling=true});
  await page.waitForTimeout(330);
  await page.screenshot({path:path.join(dir,"10-mouse-retrieve.png")});
- assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/6 shop tabs/real asset paths/no broken images");
+ // Exercise the actual gameplay fight renderer, never a composited illustration.
+ await page.evaluate(()=>{
+   const G=FZ.Game,st=G.state();
+   st.active="spin";st.load.spin.rod="s1";st.lures.wobbler=1;
+   st.load.spin.bait="wobbler";
+   const r=G.rig();r.state="bite";
+   r.bite={s:FZ.SP.pike,w:3,take:2,style:"drag",t:.6,phase:"take"};
+   G.strike();
+   if(r.state!=="fight"||!r.fish)throw Error("real game failed to hook pike");
+   r.reeling=false;
+   Object.assign(r.fish,{X:1,Z:10,D:.1,surface:.9,phase:"run",phaseT:1.4,
+     nextPhase:null,vx:2.2,vz:.35,S:.7,slackT:0});
+ });
+ await page.waitForTimeout(130);
+ const pike=await page.evaluate(()=>{
+   const f=FZ.Game.rig().fish;return{phase:f?.phase,energy:FZ.CozyMotion.surfaceEnergy(f),hud:document.querySelector('#cozyFightSignal')?.textContent};
+ });
+ assert(pike.phase==="run"&&pike.energy>.20&&pike.hud,"real pike fight must animate and update the HUD "+JSON.stringify(pike));
+ await page.screenshot({path:path.join(dir,"11-pike-fight-real.png")});
+ await page.evaluate(()=>{
+   const G=FZ.Game,r=G.rig(),f=r.fish;
+   f.s=FZ.SP.catfish;f.w=12;f.phase="dive";f.phaseT=1.1;
+   f.X=0;f.Z=14;f.D=2.6;f.surface=.03;f.vx=.1;f.vz=.65;
+   f.S=.7;f.slackT=0;r.reeling=false;
+ });
+ await page.waitForTimeout(130);
+ const catfish=await page.evaluate(()=>{
+   const f=FZ.Game.rig().fish;return{phase:f?.phase,energy:FZ.CozyMotion.surfaceEnergy(f),hud:document.querySelector('#cozyFightSignal')?.textContent};
+ });
+ assert(catfish.phase==="dive"&&catfish.energy<.12&&catfish.hud.includes("глубине"),
+   "deep catfish must not render fake surface wake "+JSON.stringify(catfish));
+ await page.screenshot({path:path.join(dir,"12-catfish-deep-real.png")});
+ assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/6 shop tabs/no broken assets");
  await b.close();
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});

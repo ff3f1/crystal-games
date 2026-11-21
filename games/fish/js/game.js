@@ -604,8 +604,11 @@
         f.runSpeed = rng.range(1.3, 2.35) * runDirection * character.speed;
         f.vx += sess.ice ? 0 : f.runSpeed * 0.26;
         if (rig.reeling) f.T += 0.14 * f.Fmax;
-        if (!sess.ice) FZ.Scene.splash(f.X, f.Z, 0.22 + 0.24 * f.S);
-        if (!sess.ice && s.fight.jump > 0 && f.Z < 30 && rng() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
+        // Only genuinely shallow fighters throw spray. A heavy deep-water
+        // run bends the rod instead of erupting at the water surface.
+        if (!sess.ice && (f.D||0)<.65 && (f.surface||0)>.28)
+          FZ.Scene.splash(f.X,f.Z,.22+.24*f.S);
+        if (!sess.ice && (f.D||0)<1.25 && s.fight.jump > 0 && f.Z < 30 && rng() < s.fight.jump * (0.4 + f.S * 0.6) && f.jumped < 3) {
           f.jump = { k: 0, dur: 0.95, dir: f.vx > 0 ? -1 : 1, hurt: false }; f.jumped++;
           FZ.Scene.splash(f.X, f.Z, 0.7); FZ.Sound.splash(1); emit("jump");
         }

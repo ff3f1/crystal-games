@@ -109,28 +109,32 @@
    if (reelAngle) {
      ctx.save();
      ctx.translate(c.reelX - c.baseX, c.reelY - c.axisY);
-     drawCrank(ctx, mode, reelAngle);
+     drawRotor(ctx, mode, reelAngle);
      ctx.restore();
    }
    ctx.restore();
    return true;
  }
 
- function drawCrank(ctx, mode, angle) {
-   const ice = mode === "ice";
+ // A narrow rotating bail over the photographic reel, not an extra drawn
+ // reel or an oversized cartoon crank. Coordinates are calibrated to the
+ // original complete tackle photograph.
+ function drawRotor(ctx, mode, angle) {
+   const ice=mode==="ice";
+   const radius=ice?12:15;
+   ctx.save();
    ctx.rotate(angle);
-   ctx.lineCap = "round";
-   ctx.strokeStyle = "#26383c";
-   ctx.lineWidth = ice ? 6 : 8;
-   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ice ? 22 : 26, 9); ctx.lineTo(ice ? 26 : 35, 15); ctx.stroke();
-   ctx.strokeStyle = "#b8c3bc";
-   ctx.lineWidth = 3;
-   ctx.stroke();
-   ctx.fillStyle = "#213436";
-   ctx.beginPath(); ctx.ellipse(ice ? 26 : 35, 15, 6, ice ? 8 : 11, 0, 0, Math.PI * 2); ctx.fill();
-   ctx.strokeStyle = "#819b96";
-   ctx.lineWidth = 1.8;
-   ctx.stroke();
+   ctx.lineCap="round";
+   ctx.globalAlpha=.84;
+   ctx.strokeStyle="rgba(23,43,42,.82)";
+   ctx.lineWidth=3.2;
+   ctx.beginPath();ctx.arc(0,0,radius,-1.03,1.42);ctx.stroke();
+   ctx.strokeStyle="#c5c8b8";
+   ctx.lineWidth=1.35;
+   ctx.beginPath();ctx.arc(0,0,radius,-1.03,1.42);ctx.stroke();
+   ctx.fillStyle="#e2d3ad";
+   ctx.beginPath();ctx.arc(Math.cos(1.42)*radius,Math.sin(1.42)*radius,2,0,Math.PI*2);ctx.fill();
+   ctx.restore();
  }
 
  modes.forEach(load);

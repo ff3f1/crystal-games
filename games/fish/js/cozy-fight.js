@@ -28,15 +28,18 @@
     if (!f || v.ice || f.jump || !Number.isFinite(f.X) || !Number.isFinite(f.Z)) return;
     const speed=clamp(Math.hypot(f.vx||0,f.vz||0)/2.3,0,1);
     const surf=clamp(f.surface||0,0,1);
+    const energy=FZ.CozyMotion?FZ.CozyMotion.surfaceEnergy(f):
+      clamp((.2+.8*surf)*(1-Math.max(0,f.D||0)/2.45),0,1);
     const near=clamp((13-(f.Z||30))/9,0,1);
-    const awake=clamp(.3*speed + .65*surf + .22*near,0,1);
+    const awake=clamp((.3*speed+.65*surf+.22*near)*energy,0,1);
     if (awake < .12 || !Number.isFinite(p.x) || !Number.isFinite(p.y))return;
     const scale=clamp(p.s||30,5,85);
     const alpha=(.11+awake*.24)*(1-clamp(L.dark||0,0,.9)*.28);
     // The original R.drawFightFish already renders a directional wake.
     // Do not draw a duplicate wake on top; only add an occasional near-shore ring.
     // Surface shimmer, only above a genuinely hooked, shallow fish.
-    if(surf>.35 && near>.12)poolRipple(p.x,p.y,clamp(5+scale*.20,7,20),alpha*.7,reduced?0:t);
+    if(surf>.35 && energy>.30 && near>.12)
+      poolRipple(p.x,p.y,clamp(5+scale*.20,7,20),alpha*.7,reduced?0:t);
     metrics.fighting++;
     if(near>.15)metrics.shore++;
   }
