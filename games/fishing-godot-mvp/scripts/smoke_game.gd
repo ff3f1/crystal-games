@@ -66,6 +66,12 @@ func _run_test() -> void:
     _require(game.fish_body == actual_mesh, "Fight must animate the exact real fish that bit")
     _require(game.fish_population.current_hook == real_id, "Hook must reserve the live fish agent")
     _require(game.fight_sim.distance >= 15.0, "Fish fight should begin at a grounded distance")
+    game._update_fight(0.1)
+    var world_before: Vector3 = game.fish_body.global_position
+    game.camera.rotation.y += 0.8
+    game._update_fight(0.05)
+    var world_after: Vector3 = game.fish_body.global_position
+    _require(world_before.distance_to(world_after) < 0.85, "Rotating camera must not teleport a hooked fish in lake")
     _require(game.fight_sim.drag_level == 1, "Default drag should be balanced")
     for tick in range(850):
         game.is_reeling = game.tension < 73.0
