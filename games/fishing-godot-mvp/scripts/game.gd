@@ -209,7 +209,7 @@ func _create_environment() -> void:
     add_child(light)
     light.rotation_degrees = Vector3(-38, -52, -8)
     light.light_color = Color(1.0, 0.88, 0.71)
-    light.light_energy = 1.2
+    light.light_energy = 0.82
     light.shadow_enabled = true
 
     var world_env := WorldEnvironment.new()
@@ -217,18 +217,24 @@ func _create_environment() -> void:
     var env := Environment.new()
     env.background_mode = Environment.BG_SKY
     var sky := Sky.new()
-    var sky_mat := ProceduralSkyMaterial.new()
-    sky_mat.sky_top_color = Color(0.33, 0.50, 0.67)
-    sky_mat.sky_horizon_color = Color(0.76, 0.77, 0.68)
-    sky_mat.ground_horizon_color = Color(0.48, 0.59, 0.55)
-    sky_mat.ground_bottom_color = Color(0.19, 0.26, 0.25)
-    sky.sky_material = sky_mat
+    var panoramic_texture := load("res://assets/textures/sky_panorama.jpg") as Texture2D
+    if panoramic_texture != null:
+        var sky_mat := PanoramaSkyMaterial.new()
+        sky_mat.panorama = panoramic_texture
+        sky.sky_material = sky_mat
+    else:
+        var sky_mat := ProceduralSkyMaterial.new()
+        sky_mat.sky_top_color = Color(0.28, 0.46, 0.62)
+        sky_mat.sky_horizon_color = Color(0.71, 0.72, 0.67)
+        sky_mat.ground_horizon_color = Color(0.38, 0.54, 0.52)
+        sky_mat.ground_bottom_color = Color(0.14, 0.23, 0.22)
+        sky.sky_material = sky_mat
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
     env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
     env.fog_enabled = true
-    env.fog_light_color = Color(0.67, 0.72, 0.69)
-    env.fog_density = 0.004
+    env.fog_light_color = Color(0.66, 0.67, 0.64)
+    env.fog_density = 0.0012
     world_env.environment = env
 
 func _create_shore() -> void:
