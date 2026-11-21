@@ -812,8 +812,13 @@
     const against = !sess.ice && Math.abs(rig.tilt) > 0.25 && Math.sign(rig.tilt) === -Math.sign(f.vx) && Math.abs(f.vx) > 0.15;
     f.against = against;
     const pressure = U.clamp(f.T / lineT, 0, 1);
-    f.controlQuality = U.clamp(1 - Math.abs(pressure - .46) / .46, 0, 1);
-    const control = st.tut < 3 ? 1 : .55 + f.controlQuality * .75;
+    // Good reel timing and steering tire the fish; waiting with a slack line
+    // no longer exhausts a trophy nearly as quickly as controlled pressure.
+    const handling = FZ.FightPhysics.fightControl({
+      tension: pressure, reeling: rig.reeling, against, lift: rig.rod.lift
+    });
+    f.controlQuality = handling.quality;
+    const control = st.tut < 3 ? 1 : handling.work;
     f.swimDepth = U.damp(f.swimDepth == null ? .7 : f.swimDepth,
       f.phase === 'run' ? G.depthAt(f.X, Math.max(4,f.Z)) * .70 : f.phase === 'tired' ? .08 : .55, 1.4, dt);
     // выносливость
