@@ -996,6 +996,12 @@
       fish: r.fish ? Object.assign({}, r.fish, { depth: sess.ice ? r.fish.D : null, lenPx: r.fish.lenM * 300 }) : null,
       landing: r.landing ? { k: r.landing.k } : null
     };
+    // Wind changes the float's physical waterline and the line endpoint by
+    // the SAME amount. Underwater takes damp the surface motion to zero.
+    if(sess.mode==="float" && ["settle","wait","bite"].includes(r.state) &&
+       FZ.CozyMotion){
+      v.tackle.bob=FZ.CozyMotion.floatMotion(sess.wx,t,r.X,r.Z,r.fa.sink);
+    }
     if (sess.duel && r.state === "idle") v.duelSpot = FZ.Duel.spot(sess.duel, sess.t);
     const b = r.bite;
     if (b && b.phase === "touch" && b.t < b.approach) {

@@ -780,7 +780,8 @@
     // Lightweight real-state feedback; never adds a second line or rod sprite.
     if (FZ.CozyMotion) {
       const tremor=FZ.CozyMotion.rodReaction(v,v.t||0);
-      tip.x+=tremor.x;tip.y+=tremor.y;
+      const wind=FZ.CozyMotion.rodWeather(v,v.t||0);
+      tip.x+=tremor.x+wind.x;tip.y+=tremor.y+wind.y;
     }
     if (v.tackle && v.tackle.state === "fly") {
       const k = v.tackle.flyT;
@@ -948,7 +949,8 @@
     }
   };
   function floatSurface(p, tk, t) {
-    return { x: p.x + (tk.dx || 0), y: p.y + Math.sin(t * 2.1) * 0.6 + (tk.bob || 0) };
+    // Same endpoint for line and float art; no independent looping sine.
+    return { x:p.x+(tk.dx||0),y:p.y+(tk.bob||0) };
   }
 
   R.drawFloat = function (p, tk, L, t, night) {
@@ -975,9 +977,14 @@
     ctx.beginPath(); ctx.roundRect(-w / 2, top, w, hgt * 0.47, w / 2); ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(-w / 2, top + hgt * 0.45, w, Math.max(1, hgt * 0.05));
     ctx.restore();
-    // кольцо у основания
-    ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a0c0", L.dark), 0.4 + Math.abs(tk.bob || 0) * 0.1); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.ellipse(x, y + 1, w * 2.2, w * 0.6, 0, 0, Math.PI * 2); ctx.stroke();
+    // Even the fallback renderer obeys water exposure: a submerged float
+    // cannot cast a bright halo on top of the lake.
+    const exposure=U.clamp((.78-Math.max(0,sink))/.78,0,1);
+    if(exposure>.05){
+      ctx.strokeStyle=U.rgba(U.mix("#dae9de","#7b8a95",L.dark),(.065+.055*Math.min(1,Math.abs(tk.bob||0)))*exposure);
+      ctx.lineWidth=.7;ctx.beginPath();
+      ctx.ellipse(x,y+1,w*1.55,w*.28,0,0,Math.PI*2);ctx.stroke();
+    }
   };
 
   function drawWake(p, speed, dx, dy, alpha, t) {

@@ -16,6 +16,24 @@ F.Scene={
 F.Sound=new Proxy({},{get:()=>()=>{}});
 F.Platform={vibrate(){}};
 assert(M,"CozyMotion module loaded");
+const calm=Array.from({length:45},(_,i)=>M.floatMotion({wind:0},i*.15,2,12,0));
+const breezy=Array.from({length:45},(_,i)=>M.floatMotion({wind:10},i*.15,2,12,0));
+const span=a=>Math.max(...a)-Math.min(...a);
+assert(span(breezy)>span(calm)*3,"real wind should move the float more than calm water");
+assert.equal(M.floatMotion({wind:11},4,2,12,1.1),0,"fully submerged bobber never bounces above water");
+assert(M.floatMotion({wind:8},3,2,12,.55)!==M.floatMotion({wind:8},3,2,12,0),
+ "bite sinking dampens the weather motion");
+assert.deepEqual(
+ JSON.parse(JSON.stringify(M.rodWeather({ice:{},wx:{wind:11},tackle:{state:"water"}},3))),
+ {x:0,y:0},"ice rods never sway in summer wind");
+assert.equal(M.rodWeather({wx:{wind:11},fish:{hooked:true},tackle:{state:"water"}},4).x,0,
+ "real fish tension overrides decorative wind");
+assert.equal(M.rodWeather({wx:{wind:11},tackle:{state:"fly"}},4).x,0,
+ "cast animation is not polluted by weather sway");
+assert.equal(M.rodWeather({wx:{wind:0},tackle:{state:"water"}},4).x,0,
+ "no fake rod sway at zero wind");
+assert(Math.abs(M.rodWeather({wx:{wind:10},tackle:{state:"water",X:1}},2).x)>0,
+ "rod tip responds modestly to wind when waiting");
 const agile={w:3,phase:"run",vx:2.4,vz:.2,swimPhase:2,S:.9};
 const exhausted={...agile,phase:"tired",vx:0,vz:0};
 const shaking={...agile,phase:"shake"};
@@ -44,6 +62,12 @@ assert(M.lineShape({fish:null},3,from,to,844).sag===3,
 assert(slackLine.opacity<tautLine.opacity,"slack line is optically lighter, not duplicated");
 assert(read("js/scene.js").includes("FZ.CozyMotion.lineShape"),
  "game renderer must draw real tension through the existing line path");
+assert(read("js/game.js").includes("FZ.CozyMotion.floatMotion"),
+ "live game view transmits real session wind to float rendering");
+assert(!read("js/cozy-gear.js").includes("Math.sin(t*2.1)*.6"),
+ "float and line endpoint must share exactly one weather-driven bob");
+assert(read("js/scene.js").includes("FZ.CozyMotion.rodWeather"),
+ "wind sway uses the existing full rod instead of a floating ornament");
 assert(read("js/rod-art.js").includes("drawRotor(ctx, mode, reelAngle)") &&
  !read("js/rod-art.js").includes("drawCrank(ctx, mode, reelAngle)"),
  "reel image must have subtle rotor animation instead of oversized cartoon crank");

@@ -34,6 +34,28 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.waitForTimeout(250);await page.screenshot({path:path.join(dir,"06-tackle.png")});
  await page.evaluate(()=>{FZ.UI.closeSheet&&FZ.UI.closeSheet();FZ.UI.closeMenu&&FZ.UI.closeMenu();FZ.Game.startSession("pond","summer")});
  await page.waitForTimeout(650);await page.screenshot({path:path.join(dir,"07-game-water.png")});
+ // Test a real float on a windy day, then restore the world state untouched.
+ const bobState=await page.evaluate(()=>{
+   const G=FZ.Game,s=G.sess(),r=G.rig(),wind=s.wx.wind;
+   r.state="wait";r.X=1;r.Z=13;
+   const originalWind=wind;
+   s.wx.wind=0;
+   const calm=Array.from({length:20},(_,i)=>G.view(i*.25).tackle.bob);
+   s.wx.wind=10;
+   const breezy=Array.from({length:20},(_,i)=>G.view(i*.25).tackle.bob);
+   s.wx.wind=originalWind;
+   const span=a=>Math.max(...a)-Math.min(...a);
+   return{calm:span(calm),breezy:span(breezy),mode:s.mode};
+ });
+ assert(bobState.mode==="float"&&bobState.breezy>bobState.calm*2.5,
+   "real float must move with session wind "+JSON.stringify(bobState));
+ await page.evaluate(()=>{
+   const G=FZ.Game,s=G.sess(),r=G.rig();
+   r.state="wait";r.X=0;r.Z=12;s.wx.__reviewWind=s.wx.wind;s.wx.wind=8;
+ });
+ await page.waitForTimeout(150);
+ await page.screenshot({path:path.join(dir,"07b-windy-float.png")});
+ await page.evaluate(()=>{const s=FZ.Game.sess();s.wx.wind=s.wx.__reviewWind;delete s.wx.__reviewWind});
  // Real engine renders the equipped lure; set up a playable spin scene.
  await page.evaluate(()=>{
    const G=FZ.Game,st=G.state();

@@ -7,6 +7,26 @@
  if(!G||!U)return;
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const M={};
+ // Gentle water motion comes from the actual session wind and position.
+ // It is deterministic across devices, and never creates a synthetic bite.
+ M.floatMotion=function(wx,t,X,Z,sink){
+   const exposure=clamp((.92-Math.max(0,sink||0))/.92,0,1);
+   if(!exposure)return 0;
+   const wind=clamp(wx&&wx.wind||0,0,11);
+   const amplitude=.16+wind*.094;
+   const phase=t*(1.65+.06*wind)+(X||0)*.21+(Z||0)*.09;
+   return exposure*amplitude*(.65*Math.sin(phase)+.35*Math.sin(phase*.64+.7));
+ };
+ // Wind gently flexes the same rod image only while waiting at the water.
+ // Fish tension and the cast animation always take priority over weather.
+ M.rodWeather=function(v,t){
+   if(!v||v.ice||v.fish||!v.tackle||v.tackle.state!=="water")return{x:0,y:0};
+   const wind=clamp(v.wx&&v.wx.wind||0,0,11);
+   const amplitude=wind/11*.85;
+   const phase=t*2.1+(v.tackle.X||0)*.18;
+   return{x:amplitude*(Math.sin(phase)+.28*Math.sin(phase*1.6)),
+     y:amplitude*.27*Math.sin(phase*.88)};
+ };
  // Real underwater position controls whether a fish can disturb the surface.
  // No scripted foam for deep divers, even during a strong lateral run.
  M.surfaceEnergy=function(f){

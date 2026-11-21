@@ -32,17 +32,18 @@
  };
  // Small waterline displacement is tied to actual float motion, never a
  // permanent halo around a completely submerged or motionless bobber.
- function meniscusStrength(sink,tilt,dx){
+ function meniscusStrength(sink,tilt,dx,bob){
    const exposure=Math.max(0,Math.min(1,(.78-Math.max(0,sink||0))/.78));
-   const activity=Math.min(1,Math.abs(tilt||0)*.7+Math.abs(dx||0)/13);
-   return exposure*(.055+.17*activity);
+   const activity=Math.min(1,Math.abs(tilt||0)*.7+Math.abs(dx||0)/13+Math.abs(bob||0)*.20);
+   return exposure*(.04+.14*activity);
  }
  const oldFloat=R.drawFloat;
  R.drawFloat=function(p,tk,L,t,night){
    const asset=img("float_"+skin());if(!asset)return oldFloat.apply(this,arguments);
    const ctx=document.getElementById("cv").getContext("2d");
    const z=Math.max(1,tk.Z||10),h=Math.max(11,Math.min(34,30*Math.pow(10/z,.65)));
-   const sink=tk.sink||0,x=p.x+(tk.dx||0),y=p.y+Math.sin(t*2.1)*.6+(tk.bob||0);
+   // Anchor the image to the same weather-driven endpoint as the line.
+   const sink=tk.sink||0,x=p.x+(tk.dx||0),y=p.y+(tk.bob||0);
    const width=h*(skin()==="match"?.47:.65),height=h*1.5;
    ctx.save();
    ctx.beginPath();ctx.rect(x-h*2,y-h*3,h*4,h*3+.5);ctx.clip();
@@ -50,7 +51,7 @@
    if(night)ctx.filter="brightness(.74)";
    ctx.drawImage(asset,-width/2,-h+h*Math.max(0,sink),width,height);
    ctx.restore();
-   const strength=meniscusStrength(sink,tk.tilt,tk.dx);
+   const strength=meniscusStrength(sink,tk.tilt,tk.dx,tk.bob);
    if(night&&R.glow&&strength>.045)R.glow(x,y-h*.67,h*.42);
    if(strength>.018){
      ctx.save();
