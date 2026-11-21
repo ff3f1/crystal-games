@@ -94,4 +94,18 @@ for (const species of [{kind:"pred",id:"pike"},{kind:"peace",id:"roach"}]) for (
   const v = P.iceAttraction(species, jig, 1);
   assert(Number.isFinite(v) && v >= 0.5 && v <= 2, "winter attraction remains positive and bounded");
 }
-console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery, cast flight, species bites, winter pauses and 30/60/120Hz invariance");
+const slackControl = P.fightControl({ tension: .03, reeling: false, against: false, lift: 0 });
+const activeControl = P.fightControl({ tension: .54, reeling: true, against: false, lift: 0 });
+const passiveControl = P.fightControl({ tension: .54, reeling: false, against: false, lift: 0 });
+const overControl = P.fightControl({ tension: 1.05, reeling: true, against: false, lift: 0 });
+const steeringControl = P.fightControl({ tension: .54, reeling: true, against: true, lift: .7 });
+assert(activeControl.work > passiveControl.work * 1.5, "player-controlled reeling should tire fish faster than passive waiting");
+assert(activeControl.work > slackControl.work * 3, "slack line must not exhaust trophy at normal pace");
+assert(activeControl.work > overControl.work, "dangerously overloaded line is not optimal play");
+assert(steeringControl.work > activeControl.work, "steering and rod lift have meaningful tactical value");
+assert(activeControl.quality > .99 && slackControl.quality < .1, "visible working zone must match productive pressure");
+for (const t of [-100, 0, .15, .4, .54, .74, 1, 100, NaN]) {
+  const c = P.fightControl({ tension:t, reeling:true, against:false, lift:0 });
+  assert(Number.isFinite(c.quality) && Number.isFinite(c.work) && c.work > 0 && c.work <= 1.45, "handling remains bounded");
+}
+console.log("OK: inertia, steering, drag, reel, ice, species personalities, shoreline recovery, cast flight, species bites, winter pauses and 30/60/120Hz invariance; active control");
