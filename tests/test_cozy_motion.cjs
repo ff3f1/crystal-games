@@ -40,6 +40,8 @@ assert.equal(ice.x,0);
 const run=M.rodReaction({mode:"spin",fish:{...f,phase:"run",vx:3,vz:-1}},.1);
 assert(run.x>0,"rod pulls with actual fish run");
 assert(Math.abs(run.x)<5,"no overacted pixel jumps");
+const dive=M.rodReaction({mode:"spin",fish:{...f,phase:"dive",tension:.7}},.2);
+assert(dive.y>1&&Math.abs(dive.x)<1,"deep fish load bends the same rod tip, without fake motion");
 const actions=[];const ctx={
  save(){actions.push("save")},restore(){actions.push("restore")},translate(){},rotate(){},
  drawImage(){actions.push("drawImage")},beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){actions.push("stroke")},
