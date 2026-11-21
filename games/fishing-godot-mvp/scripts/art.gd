@@ -6,6 +6,7 @@ var reeds: Array[Node3D] = []
 var floating_leaves: Array[Node3D] = []
 var local_breeze := 0.28
 var wave_clock := 0.0
+var water_material: ShaderMaterial
 
 func _process(delta: float) -> void:
     wave_clock += delta
@@ -20,10 +21,13 @@ func _process(delta: float) -> void:
 
 func set_wind(value: float) -> void:
     local_breeze = clampf(value, 0.0, 1.0)
+    if water_material != null:
+        water_material.set_shader_parameter("breeze", local_breeze)
 
 func populate() -> void:
     random.seed = 14390221
     _make_water()
+    _make_lakebed()
     _make_land()
     _make_forest()
     _make_fishing_spot()
@@ -40,9 +44,45 @@ func _make_water() -> void:
     plane.size = Vector2(260, 550)
     plane.subdivide_width = 120
     plane.subdivide_depth = 144
-    var shader := ShaderMaterial.new()
-    shader.shader = load("res://shaders/water.gdshader")
-    _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, shader)
+    water_material = ShaderMaterial.new()
+    water_material.shader = load("res://shaders/water.gdshader")
+    water_material.set_shader_parameter("breeze", local_breeze)
+    _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, water_material)
+
+func lake_floor_height(z: float) -> float:
+    # Real submerged bottom beneath translucent water. The player-facing
+    # shallows slope toward the deep drop where large pike inhabit the lake.
+    return -clampf(1.0 + maxf(0.0, 4.0 - z) * 0.11, 1.0, 10.0)
+
+func _make_lakebed() -> void:
+    var st := SurfaceTool.new()
+    st.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for ix in range(56):
+        var xa := -128.0 + float(ix) * 4.6
+        var xb := xa + 4.6
+        for iz in range(54):
+            var za := 7.5 - float(iz) * 4.65
+            var zb := za - 4.65
+            var a := Vector3(xa, lake_floor_height(za) + sin(xa * 0.22 + za * 0.11) * 0.07, za)
+            var b := Vector3(xb, lake_floor_height(za) + sin(xb * 0.22 + za * 0.11) * 0.07, za)
+            var c := Vector3(xa, lake_floor_height(zb) + sin(xa * 0.22 + zb * 0.11) * 0.07, zb)
+            var d := Vector3(xb, lake_floor_height(zb) + sin(xb * 0.22 + zb * 0.11) * 0.07, zb)
+            for tri in [[a, b, c], [b, d, c]]:
+                for v in tri:
+                    st.set_uv(Vector2(v.x / 3.2, v.z / 3.2))
+                    st.add_vertex(v)
+    st.generate_normals()
+    var mud := StandardMaterial3D.new()
+    mud.albedo_texture = load("res://assets/textures/shore_diffuse.jpg")
+    mud.albedo_color = Color(0.28, 0.39, 0.30)
+    mud.roughness = 1.0
+    mud.cull_mode = BaseMaterial3D.CULL_DISABLED
+    mud.uv1_triplanar = false
+    var bed := MeshInstance3D.new()
+    bed.mesh = st.commit()
+    bed.material_override = mud
+    bed.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    add_child(bed)
 
 func _make_land() -> void:
     # The panoramic sky already contains the distant mountains/shoreline.
