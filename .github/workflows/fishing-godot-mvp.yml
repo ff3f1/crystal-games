@@ -131,5 +131,6 @@ jobs:
           path: |
             games/fishing-godot-mvp/build/*.apk
             games/fishing-godot-mvp/build/scene-preview.png
+            games/fishing-godot-mvp/assets/textures/sky_panorama.jpg
           if-no-files-found: error
           retention-days: 14
