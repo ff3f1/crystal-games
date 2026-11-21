@@ -21,7 +21,7 @@ func _run() -> void:
         return
     # Guard against regressions to flat cards and sphere-only bait:
     # these nodes must be real Godot 3D mesh surfaces in the rendered world.
-    var vegetation := game.shore_art.get_node_or_null("SculptedVegetation3D")
+    var vegetation: Node = game.shore_art.get_node_or_null("SculptedVegetation3D")
     if vegetation == null:
         push_error("START_SCENE_FAIL: sculpted 3D lake vegetation missing")
         quit(1)
