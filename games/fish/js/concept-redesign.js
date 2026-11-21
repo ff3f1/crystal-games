@@ -103,6 +103,24 @@
    shelfTitle.className="concept-secondary-label";
    shelfTitle.textContent="Ещё разделы";
    grid.insertAdjacentElement("beforebegin",shelfTitle);
+   // Discoverable, snapped navigation instead of a half-cut final tile.
+   const next=document.createElement("button");
+   next.id="conceptMoreSections";
+   next.type="button";next.className="concept-more-sections";
+   const updateArrow=()=>{
+     const end=grid.scrollLeft>=grid.scrollWidth-grid.clientWidth-3;
+     next.textContent=end?"‹":"›";
+     next.setAttribute("aria-label",end?"К началу разделов":"Показать ещё разделы");
+   };
+   next.onclick=()=>{
+     const end=grid.scrollLeft>=grid.scrollWidth-grid.clientWidth-3;
+     grid.scrollTo({left:end?0:Math.min(grid.scrollWidth-grid.clientWidth,
+       grid.scrollLeft+grid.clientWidth*.82),behavior:"smooth"});
+     setTimeout(updateArrow,320);
+   };
+   grid.addEventListener("scroll",updateArrow,{passive:true});
+   grid.insertAdjacentElement("afterend",next);
+   updateArrow();
    const duel=lodge.querySelector("#mDuel");
    if(duel)duel.setAttribute("aria-label","Испытание дня: Три заброса");
    return ret;
