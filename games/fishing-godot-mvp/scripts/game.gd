@@ -33,6 +33,22 @@ var sounds: Node
 var sun_light: DirectionalLight3D
 var landing_from := Vector3.ZERO
 var last_sound_reel := 0.0
+var lure_sim
+var fight_sim
+var minimap: Control
+var lure_depth := 0.0
+var fish_spots: Array[Dictionary] = [
+    {"pos": Vector3(-8.0, 0.0, -18.0), "type": "carp", "name": "Травяная заводь"},
+    {"pos": Vector3(11.0, 0.0, -23.0), "type": "perch", "name": "Каменная гряда"},
+    {"pos": Vector3(0.0, 0.0, -33.0), "type": "pike", "name": "Глубокий свал"},
+    {"pos": Vector3(-20.0, 0.0, -25.0), "type": "perch", "name": "Коряжник"}
+]
+var drag_button: Button
+var stamina_label: Label
+var bait_underwater: MeshInstance3D
+var float_parts: Array[MeshInstance3D] = []
+var bite_window := 2.0
+
 var shore_art: Node3D
 var joystick_vector := Vector2.ZERO
 var joystick_touch_id := -1
@@ -68,6 +84,9 @@ func _ready() -> void:
     _create_shore()
     _create_rod()
     _create_bobber_and_fish()
+    lure_sim = (load("res://scripts/lure_physics.gd") as GDScript).new()
+    fight_sim = (load("res://scripts/fight_physics.gd") as GDScript).new()
+    _create_hotspots()
     _create_ui()
     sounds = (load("res://scripts/soundscape.gd") as GDScript).new() as Node
     add_child(sounds)
@@ -92,27 +111,37 @@ func _process(delta: float) -> void:
             rod_root.rotation.x -= sin(PI * clampf(timer / 1.25, 0.0, 1.0)) * 0.34
         if phase == Phase.FIGHT:
             rod_root.rotation.x -= clampf(tension / 400.0, 0.0, 0.26)
-    if reel_spool != null and is_reeling and phase == Phase.FIGHT:
+    if reel_spool != null and is_reeling and (phase == Phase.FIGHT or phase == Phase.WAITING):
         reel_spool.rotate_z(delta * 17.0)
 
     match phase:
         Phase.CASTING:
             timer += delta
-            var alpha := clampf(timer / 1.25, 0.0, 1.0)
-            bobber.position = cast_source.lerp(cast_target, alpha)
-            bobber.position.y += sin(alpha * PI) * 3.3
-            if alpha >= 1.0:
+            var landed: bool = lure_sim.tick_air(delta)
+            bobber.position = lure_sim.position
+            if landed:
                 phase = Phase.WAITING
                 timer = 0.0
-                bite_delay = rng.randf_range(2.7, 6.0)
+                bite_delay = rng.randf_range(4.3, 7.1)
                 _splash()
                 sounds.call("play", "splash")
-                _set_message("Поплавок на воде. Следи за поклёвкой.")
+                _set_message("Поплавок в воде. Следи за поклёвкой." if lure_index == 0 else "Блесна в воде. Удерживай «ВЕСТИ» и подыгрывай рывками.")
                 _update_buttons()
         Phase.WAITING:
-            timer += delta
-            bobber.position.y = 0.09 + sin(elapsed * 2.8) * 0.045
-            if timer >= bite_delay:
+            lure_sim.tick_water(delta, is_reeling, is_bracing, camera.global_position)
+            lure_depth = lure_sim.depth
+            bobber.position = lure_sim.visible_surface_position()
+            bobber.position.y += sin(elapsed * 2.8) * 0.025
+            if bait_underwater != null:
+                bait_underwater.visible = lure_index == 1
+                bait_underwater.global_position = lure_sim.position
+                bait_underwater.rotation.y += delta * 12.0 if is_reeling else delta * 1.5
+            var readiness: float = lure_sim.bite_readiness(fish_spots, is_reeling)
+            timer += delta * (0.32 + readiness * 0.72)
+            if lure_index == 1 and lure_sim.is_near_angler(camera.global_position):
+                _reset_to_ready()
+                _set_message("Блесна у берега. Выбери направление и забрасывай снова!")
+            elif timer >= bite_delay:
                 phase = Phase.BITE
                 timer = 0.0
                 _choose_fish()
@@ -123,7 +152,7 @@ func _process(delta: float) -> void:
         Phase.BITE:
             timer += delta
             bobber.position.y = -0.06 + absf(sin(elapsed * 12.0)) * 0.20
-            if timer >= 1.75:
+            if timer >= bite_window:
                 _finish("Опоздал с подсечкой. Рыба ушла.")
         Phase.FIGHT:
             _update_fight(delta)
@@ -152,6 +181,8 @@ func _process(delta: float) -> void:
             ring.visible = false
     _draw_line()
     _update_stats()
+    if minimap != null:
+        minimap.queue_redraw()
 
 func _input(event: InputEvent) -> void:
     if menu_open:
@@ -392,10 +423,17 @@ func _create_bobber_and_fish() -> void:
     var orange := _material(Color(0.97, 0.22, 0.13), 0.44)
     var white := _material(Color(0.94, 0.91, 0.80), 0.53)
     var top := SphereMesh.new()
-    _mesh(bobber, top, Vector3(0, 0.095, 0), Vector3(0.16, 0.20, 0.16), orange)
-    _mesh(bobber, top, Vector3(0, -0.015, 0), Vector3(0.17, 0.12, 0.17), white)
-    _cylinder(bobber, Vector3(0, 0.22, 0), Vector3(0, 0.41, 0), 0.018, white)
+    float_parts.append(_mesh(bobber, top, Vector3(0, 0.095, 0), Vector3(0.16, 0.20, 0.16), orange))
+    float_parts.append(_mesh(bobber, top, Vector3(0, -0.015, 0), Vector3(0.17, 0.12, 0.17), white))
+    float_parts.append(_cylinder(bobber, Vector3(0, 0.22, 0), Vector3(0, 0.41, 0), 0.018, white))
     bobber.visible = false
+    var metal := _material(Color(0.86, 0.77, 0.49), 0.17)
+    metal.metallic = 0.74
+    metal.emission_enabled = true
+    metal.emission = Color(0.54, 0.41, 0.12)
+    metal.emission_energy_multiplier = 0.55
+    bait_underwater = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.075, 0.075, 0.21), metal)
+    bait_underwater.visible = false
 
     var torus := TorusMesh.new()
     torus.inner_radius = 0.40
@@ -422,6 +460,22 @@ func make_fish_visual(species: String) -> Node3D:
     var visual := (load("res://scripts/fish_visual.gd") as GDScript).new() as Node3D
     visual.call("configure", species)
     return visual
+
+func _create_hotspots() -> void:
+    # World ripple circles match exactly the species-rich points on the sonar.
+    var colors := [Color(0.67, 0.77, 0.47, 0.19), Color(0.59, 0.76, 0.79, 0.16), Color(0.71, 0.68, 0.50, 0.13), Color(0.59, 0.74, 0.73, 0.17)]
+    for i in range(fish_spots.size()):
+        var info: Dictionary = fish_spots[i]
+        var shape := TorusMesh.new()
+        shape.inner_radius = 2.6
+        shape.outer_radius = 2.65
+        shape.rings = 16
+        shape.ring_segments = 48
+        var mat := _material(colors[i], 0.90)
+        mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+        var marker_mesh := _mesh(self, shape, info["pos"] + Vector3.UP * 0.075, Vector3.ONE, mat)
+        marker_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
