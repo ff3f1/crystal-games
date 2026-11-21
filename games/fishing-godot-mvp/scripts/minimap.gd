@@ -58,7 +58,7 @@ func _draw() -> void:
         if marker.x < 12 or marker.x > width - 12 or marker.y < 35 or marker.y > height - 16:
             continue
         var col: Color = spot_colors[i % spot_colors.size()]
-        var active := i < game.activity_rings.size() and game.activity_rings[i].visible
+        var active: bool = i < game.activity_rings.size() and bool(game.activity_rings[i].visible)
         # Faint contour marks indicate underwater cover. Bright expanding rings
         # are reserved for genuine surface activity in this specific habitat.
         if active:
@@ -81,7 +81,7 @@ func _draw() -> void:
         lure_pos.x = clampf(lure_pos.x, 7.0, width - 7.0)
         lure_pos.y = clampf(lure_pos.y, 34.0, height - 8.0)
         draw_line(player, lure_pos, Color(0.96, 0.88, 0.71, 0.55), 1.2, true)
-        var nibbled := game.bite_sign_age < 1.40 and game.phase >= 2 and game.phase <= 3
+        var nibbled: bool = float(game.bite_sign_age) < 1.40 and int(game.phase) >= 2 and int(game.phase) <= 3
         var bait_col := Color(0.99, 0.86, 0.38) if nibbled else Color(1.0, 0.55, 0.24)
         draw_circle(lure_pos, 5.4 + sin(blink * 5.5) * 1.0, bait_col)
         draw_arc(lure_pos, 11.0 + sin(blink * 2.5) * 2.0, 0.0, TAU, 32, Color(bait_col.r, bait_col.g, bait_col.b, 0.75), 1.7, true)
