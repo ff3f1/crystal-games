@@ -19,6 +19,28 @@ func _run() -> void:
         push_error("START_SCENE_FAIL: home menu did not initialize")
         quit(1)
         return
+    # Guard against regressions to flat cards and sphere-only bait:
+    # these nodes must be real Godot 3D mesh surfaces in the rendered world.
+    var vegetation := game.shore_art.get_node_or_null("SculptedVegetation3D")
+    if vegetation == null:
+        push_error("START_SCENE_FAIL: sculpted 3D lake vegetation missing")
+        quit(1)
+        return
+    for mesh_name in ["SolidReeds3D", "ThickLilyPads3D", "WaterLilyFlowers3D", "SubmergedStems3D"]:
+        var plant := vegetation.get_node_or_null(mesh_name) as MeshInstance3D
+        if plant == null or plant.mesh == null or plant.mesh.get_surface_count() == 0:
+            push_error("START_SCENE_FAIL: missing native 3D mesh " + mesh_name)
+            quit(1)
+            return
+    if game.bait_underwater == null or game.bait_underwater.name != "SculptedSpoon3D" or game.bait_underwater.get_child_count() < 3:
+        push_error("START_SCENE_FAIL: imported game must have a curved spoon and metal hooks")
+        quit(1)
+        return
+    if game.worm_hook == null or game.worm_hook.name != "SculptedWorm3D" or game.worm_hook.get_child_count() < 5:
+        push_error("START_SCENE_FAIL: curved worm and real hook mesh missing")
+        quit(1)
+        return
+    print("START_TRACE: validated batched 3D vegetation and modeled tackle")
     print("START_TRACE: entering fishing session")
     game.start_game()
     for i in range(8):
