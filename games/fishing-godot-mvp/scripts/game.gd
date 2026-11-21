@@ -121,7 +121,7 @@ func _input(event: InputEvent) -> void:
         if event.pressed:
             if event.position.x < view_size.x * 0.32 and event.position.y > view_size.y * 0.52 and joystick_touch_id == -1:
                 joystick_touch_id = event.index
-                joystick_origin = Vector2(view_size.x * 0.145, view_size.y * 0.85)
+                joystick_origin = Vector2(view_size.x * 0.135, view_size.y * 0.862)
                 _move_joystick(event.position)
             elif look_touch_id == -1 and event.position.y < view_size.y * 0.73:
                 look_touch_id = event.index
@@ -144,7 +144,7 @@ func _move_joystick(pos: Vector2) -> void:
 
 func _update_joystick_knob() -> void:
     if joystick_knob != null:
-        joystick_knob.position = Vector2(50, 50) + joystick_vector * 43.0
+        joystick_knob.position = Vector2(82, 42) + joystick_vector * 43.0
 
 func _update_player(delta: float) -> void:
     var move := joystick_vector
@@ -310,37 +310,59 @@ func _create_ui() -> void:
     ui.add_child(root)
 
     var shade := ColorRect.new()
-    shade.color = Color(0.02, 0.07, 0.08, 0.70)
+    shade.color = Color(0.015, 0.055, 0.058, 0.68)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(shade, 0, 0, 1, 0.14)
+    _place(shade, 0, 0, 1, 0.12)
     root.add_child(shade)
 
     var lower := ColorRect.new()
-    lower.color = Color(0.025, 0.065, 0.065, 0.76)
+    lower.color = Color(0.015, 0.045, 0.050, 0.73)
     lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(lower, 0, 0.72, 1, 1)
+    _place(lower, 0, 0.73, 1, 1)
     root.add_child(lower)
 
-    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 27, 0.03, 0.012, 0.73, 0.067)
-    message_label = _label(root, "", 21, 0.03, 0.073, 0.82, 0.13)
-    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 21, 0.66, 0.024, 0.985, 0.092)
-    stats_label = _label(root, "", 21, 0.03, 0.73, 0.95, 0.785)
+    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 27, 0.026, 0.005, 0.68, 0.058)
+    message_label = _label(root, "", 21, 0.026, 0.058, 0.78, 0.126)
+    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 20, 0.70, 0.012, 0.985, 0.079)
+    stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
 
     tension_bar = ProgressBar.new()
     tension_bar.min_value = 0
     tension_bar.max_value = 100
     tension_bar.show_percentage = false
-    _place(tension_bar, 0.44, 0.795, 0.965, 0.83)
+    _place(tension_bar, 0.435, 0.806, 0.960, 0.839)
     root.add_child(tension_bar)
 
-    action_button = _button(root, "ЗАБРОС", 0.025, 0.835, 0.28, 0.96, Color(0.83, 0.49, 0.24))
+    # Mobile joystick occupies the lower left. Movement input is processed via _input,
+    # allowing right-hand gestures to freely rotate the first-person camera.
+    var pad := Panel.new()
+    var pad_style := StyleBoxFlat.new()
+    pad_style.bg_color = Color(0.24, 0.37, 0.39, 0.40)
+    pad_style.border_color = Color(0.81, 0.86, 0.74, 0.48)
+    pad_style.set_border_width_all(2)
+    pad_style.set_corner_radius_all(72)
+    pad.add_theme_stylebox_override("panel", pad_style)
+    _place(pad, 0.045, 0.755, 0.225, 0.97)
+    pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(pad)
+    joystick_knob = Panel.new()
+    var knob_style := StyleBoxFlat.new()
+    knob_style.bg_color = Color(0.88, 0.88, 0.76, 0.80)
+    knob_style.set_corner_radius_all(39)
+    joystick_knob.add_theme_stylebox_override("panel", knob_style)
+    joystick_knob.size = Vector2(62, 62)
+    joystick_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    pad.add_child(joystick_knob)
+    _update_joystick_knob()
+
+    action_button = _button(root, "ЗАБРОС", 0.772, 0.845, 0.977, 0.973, Color(0.76, 0.43, 0.23))
     action_button.pressed.connect(_main_action)
-    lure_button = _button(root, "ЧЕРВЬ", 0.30, 0.835, 0.47, 0.96, Color(0.24, 0.42, 0.44))
+    lure_button = _button(root, "ЧЕРВЬ", 0.594, 0.845, 0.76, 0.973, Color(0.22, 0.44, 0.45))
     lure_button.pressed.connect(_toggle_lure)
-    reel_button = _button(root, "МОТАТЬ", 0.50, 0.835, 0.73, 0.96, Color(0.13, 0.47, 0.51))
+    reel_button = _button(root, "МОТАТЬ", 0.548, 0.845, 0.766, 0.973, Color(0.12, 0.43, 0.51))
     reel_button.button_down.connect(func() -> void: is_reeling = true)
     reel_button.button_up.connect(func() -> void: is_reeling = false)
-    brace_button = _button(root, "ДЕРЖАТЬ", 0.75, 0.835, 0.975, 0.96, Color(0.36, 0.41, 0.28))
+    brace_button = _button(root, "ДЕРЖАТЬ", 0.777, 0.845, 0.977, 0.973, Color(0.34, 0.41, 0.28))
     brace_button.button_down.connect(func() -> void: is_bracing = true)
     brace_button.button_up.connect(func() -> void: is_bracing = false)
 
@@ -572,9 +594,13 @@ func _update_buttons() -> void:
         Phase.RESULT:
             action_button.text = "ЕЩЁ ЗАБРОС"
     action_button.disabled = phase == Phase.CASTING or phase == Phase.WAITING or phase == Phase.FIGHT
+    action_button.visible = phase != Phase.FIGHT
     lure_button.disabled = phase != Phase.READY and phase != Phase.RESULT
+    lure_button.visible = phase == Phase.READY or phase == Phase.RESULT
     reel_button.disabled = phase != Phase.FIGHT
+    reel_button.visible = phase == Phase.FIGHT
     brace_button.disabled = phase != Phase.FIGHT
+    brace_button.visible = phase == Phase.FIGHT
     tension_bar.visible = phase == Phase.FIGHT
 
 func _update_stats() -> void:
