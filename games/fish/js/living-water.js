@@ -117,6 +117,7 @@
       const d=Math.hypot(X-g.X,Z-g.Z);
       if(d>=g.radius*1.65)continue;
       g.pressure=Math.max(g.pressure,18+Math.round(g.intensity*12));
+      g.intensity=0; // Visible feed stops immediately on the catch frame.
       if(d<min){found=g;min=d;}
     }
     if(!found)return null;
