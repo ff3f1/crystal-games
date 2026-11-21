@@ -23,6 +23,13 @@ var ripple_age := 99.0
 var catch_count := 0
 var best_weight := 0.0
 var result_text := ""
+var shore_art: Node3D
+var joystick_vector := Vector2.ZERO
+var joystick_touch_id := -1
+var look_touch_id := -1
+var joystick_origin := Vector2.ZERO
+var joystick_knob: Panel
+var player_walk_phase := 0.0
 
 var camera: Camera3D
 var rod_root: Node3D
@@ -56,6 +63,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     elapsed += delta
+    _update_player(delta)
     ripple_age += delta
     if rod_root != null:
         rod_root.rotation.x = -0.04 + sin(elapsed * 1.2) * 0.008
@@ -107,10 +115,72 @@ func _process(delta: float) -> void:
     _draw_line()
     _update_stats()
 
+func _input(event: InputEvent) -> void:
+    if event is InputEventScreenTouch:
+        var view_size := get_viewport().get_visible_rect().size
+        if event.pressed:
+            if event.position.x < view_size.x * 0.32 and event.position.y > view_size.y * 0.52 and joystick_touch_id == -1:
+                joystick_touch_id = event.index
+                joystick_origin = Vector2(view_size.x * 0.145, view_size.y * 0.85)
+                _move_joystick(event.position)
+            elif look_touch_id == -1 and event.position.y < view_size.y * 0.73:
+                look_touch_id = event.index
+        else:
+            if event.index == joystick_touch_id:
+                joystick_touch_id = -1
+                joystick_vector = Vector2.ZERO
+                _update_joystick_knob()
+            if event.index == look_touch_id:
+                look_touch_id = -1
+    elif event is InputEventScreenDrag:
+        if event.index == joystick_touch_id:
+            _move_joystick(event.position)
+        elif event.index == look_touch_id:
+            _look_drag(event.relative)
+
+func _move_joystick(pos: Vector2) -> void:
+    joystick_vector = ((pos - joystick_origin) / 74.0).limit_length(1.0)
+    _update_joystick_knob()
+
+func _update_joystick_knob() -> void:
+    if joystick_knob != null:
+        joystick_knob.position = Vector2(50, 50) + joystick_vector * 43.0
+
+func _update_player(delta: float) -> void:
+    var move := joystick_vector
+    if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+        move.x -= 1.0
+    if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+        move.x += 1.0
+    if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
+        move.y -= 1.0
+    if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):
+        move.y += 1.0
+    move = move.limit_length(1.0)
+    if move.length() < 0.04 or shore_art == null:
+        player_walk_phase = 0.0
+        return
+    var right_dir := camera.global_transform.basis.x
+    var back_dir := camera.global_transform.basis.z
+    right_dir.y = 0.0
+    back_dir.y = 0.0
+    var delta_pos := (right_dir.normalized() * move.x + back_dir.normalized() * move.y) * 3.9 * delta
+    var next_position := camera.position + delta_pos
+    next_position.x = clampf(next_position.x, -42.0, 42.0)
+    next_position.z = clampf(next_position.z, -6.0, 39.0)
+    var dock_walk := absf(next_position.x - 15.5) < 1.16 and next_position.z < 6.7
+    var edge: float = shore_art.call("shore_edge", next_position.x)
+    if not dock_walk:
+        next_position.z = maxf(next_position.z, edge + 0.50)
+    var ground: float = shore_art.call("ground_height", next_position.x, next_position.z)
+    if dock_walk:
+        ground = 0.73
+    player_walk_phase += delta * 8.0
+    next_position.y = lerpf(camera.position.y, 1.67 + ground + sin(player_walk_phase) * 0.018, minf(1.0, delta * 6.0))
+    camera.position = next_position
+
 func _unhandled_input(event: InputEvent) -> void:
-    if event is InputEventScreenDrag:
-        _look_drag(event.relative)
-    elif event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+    if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
         _look_drag(event.relative)
     elif event is InputEventKey and not event.echo:
         if event.keycode == KEY_SPACE and event.pressed:
@@ -162,71 +232,33 @@ func _create_environment() -> void:
     world_env.environment = env
 
 func _create_shore() -> void:
-    var water_plane := PlaneMesh.new()
-    water_plane.size = Vector2(240, 200)
-    water_plane.subdivide_width = 80
-    water_plane.subdivide_depth = 80
-    var water_material := ShaderMaterial.new()
-    water_material.shader = load("res://shaders/water.gdshader")
-    _mesh(self, water_plane, Vector3(0, 0, -95), Vector3.ONE, water_material)
-
-    var sand := _material(Color(0.38, 0.32, 0.23), 0.97)
-    var grass := _material(Color(0.21, 0.28, 0.18), 0.96)
-    var dark_green := _material(Color(0.12, 0.23, 0.18), 0.96)
-    var pine_green := _material(Color(0.12, 0.28, 0.22), 0.96)
-    var bark := _material(Color(0.23, 0.19, 0.15), 0.98)
-    var grey := _material(Color(0.33, 0.34, 0.31), 0.94)
-
-    var shore := BoxMesh.new()
-    shore.size = Vector3(250, 0.65, 20)
-    _mesh(self, shore, Vector3(0, -0.28, 14), Vector3.ONE, sand)
-
-    var back_bank := BoxMesh.new()
-    back_bank.size = Vector3(260, 2.0, 37)
-    _mesh(self, back_bank, Vector3(0, -0.4, -111), Vector3.ONE, grass)
-    var far_hill := SphereMesh.new()
-    for i in range(9):
-        var x := (float(i) - 4.0) * 27.0
-        _mesh(self, far_hill, Vector3(x, -2.0, -134), Vector3(rng.randf_range(19.0, 35.0), rng.randf_range(6.0, 12.0), 20.0), dark_green)
-
-    for i in range(66):
-        var far_x := rng.randf_range(-112.0, 112.0)
-        var far_z := rng.randf_range(-102.0, -125.0)
-        _tree(Vector3(far_x, 0.1, far_z), rng.randf_range(4.0, 10.0), bark, pine_green)
-
-    # Nearby rocks and reeds frame the view without blocking the water.
-    for i in range(35):
-        var side := -1.0 if i % 2 == 0 else 1.0
-        var x := side * rng.randf_range(8.0, 32.0)
-        var z := rng.randf_range(3.5, 17.0)
-        _tree(Vector3(x, 0.15, z), rng.randf_range(4.5, 9.5), bark, dark_green)
-    for i in range(48):
-        var side := -1.0 if i % 2 == 0 else 1.0
-        var x := side * rng.randf_range(1.8, 19.0)
-        var z := rng.randf_range(3.3, 6.0)
-        var stalk_height := rng.randf_range(0.35, 1.05)
-        _cylinder(self, Vector3(x, 0, z), Vector3(x + rng.randf_range(-0.07, 0.07), stalk_height, z), 0.017, grass)
-    for i in range(20):
-        var side := -1.0 if i % 2 == 0 else 1.0
-        var x := side * rng.randf_range(2.5, 28.0)
-        var rock := SphereMesh.new()
-        _mesh(self, rock, Vector3(x, 0.03, rng.randf_range(3.5, 7.3)), Vector3(rng.randf_range(0.20, 0.65), rng.randf_range(0.14, 0.35), rng.randf_range(0.2, 0.56)), grey)
+    var art_script := load("res://scripts/art.gd") as GDScript
+    shore_art = art_script.new() as Node3D
+    add_child(shore_art)
+    shore_art.call("populate")
 
 func _create_rod() -> void:
     rod_root = Node3D.new()
     camera.add_child(rod_root)
-    rod_root.position = Vector3(0.30, -0.40, -0.52)
-    var rod_dark := _material(Color(0.095, 0.11, 0.12), 0.34)
-    var rod_grey := _material(Color(0.37, 0.39, 0.37), 0.30)
-    var cork := _material(Color(0.35, 0.26, 0.18), 0.79)
-    _cylinder(rod_root, Vector3(0.14, -0.16, 0.23), Vector3(0.03, -0.05, -0.75), 0.065, cork)
-    _cylinder(rod_root, Vector3(0.03, -0.05, -0.75), Vector3(-0.14, 0.18, -1.64), 0.026, rod_dark)
-    _cylinder(rod_root, Vector3(-0.14, 0.18, -1.64), Vector3(-0.29, 0.39, -2.86), 0.010, rod_dark)
-    _cylinder(rod_root, Vector3(0.03, 0.015, -0.55), Vector3(0.03, -0.31, -0.55), 0.025, rod_grey)
-    reel_spool = _cylinder(rod_root, Vector3(-0.08, -0.30, -0.55), Vector3(0.19, -0.30, -0.55), 0.13, rod_grey)
+    rod_root.position = Vector3(0.34, -0.54, -0.51)
+    var rod_asset := load("res://assets/models/rod.glb") as PackedScene
+    if rod_asset != null:
+        var model := rod_asset.instantiate() as Node3D
+        rod_root.add_child(model)
+        model.rotation_degrees = Vector3(-78, 3, -12)
+        model.position = Vector3(0.02, -0.10, 0.02)
+        model.scale = Vector3.ONE * 1.20
+    else:
+        var rod_dark := _material(Color(0.095, 0.11, 0.12), 0.34)
+        var rod_grey := _material(Color(0.37, 0.39, 0.37), 0.30)
+        var cork := _material(Color(0.35, 0.26, 0.18), 0.79)
+        _cylinder(rod_root, Vector3(0.14, -0.16, 0.23), Vector3(0.03, -0.05, -0.75), 0.065, cork)
+        _cylinder(rod_root, Vector3(0.03, -0.05, -0.75), Vector3(-0.14, 0.18, -1.64), 0.026, rod_dark)
+        _cylinder(rod_root, Vector3(-0.14, 0.18, -1.64), Vector3(-0.29, 0.39, -2.86), 0.010, rod_dark)
+        reel_spool = _cylinder(rod_root, Vector3(-0.08, -0.30, -0.55), Vector3(0.19, -0.30, -0.55), 0.13, rod_grey)
     rod_tip = Marker3D.new()
     rod_root.add_child(rod_tip)
-    rod_tip.position = Vector3(-0.29, 0.39, -2.86)
+    rod_tip.position = Vector3(-0.25, 0.34, -2.6)
 
     line_mesh = ImmediateMesh.new()
     line_node = MeshInstance3D.new()
@@ -253,14 +285,21 @@ func _create_bobber_and_fish() -> void:
 
     fish_body = Node3D.new()
     add_child(fish_body)
-    var fish_mat := _material(Color(0.32, 0.40, 0.23), 0.56)
-    var belly_mat := _material(Color(0.69, 0.67, 0.48), 0.56)
-    _mesh(fish_body, SphereMesh.new(), Vector3.ZERO, Vector3(0.27, 0.18, 0.62), fish_mat)
-    _mesh(fish_body, SphereMesh.new(), Vector3(0, -0.10, 0), Vector3(0.20, 0.10, 0.51), belly_mat)
-    var tail := PrismMesh.new()
-    tail.size = Vector3(0.43, 0.38, 0.26)
-    _mesh(fish_body, tail, Vector3(0, 0, 0.68), Vector3.ONE, fish_mat)
+    _set_fish_model("Окунь")
     fish_body.visible = false
+
+func _set_fish_model(species: String) -> void:
+    if fish_body == null:
+        return
+    for old in fish_body.get_children():
+        old.queue_free()
+    var asset := "carp" if species == "Карась" else "perch" if species == "Окунь" else "trout"
+    var fish_asset := load("res://assets/models/%s.glb" % asset) as PackedScene
+    if fish_asset != null:
+        var model := fish_asset.instantiate() as Node3D
+        fish_body.add_child(model)
+        model.rotation_degrees = Vector3(0, 90, 0)
+        model.scale = Vector3.ONE * 0.55
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
@@ -413,6 +452,12 @@ func _reset_to_ready() -> void:
     _update_buttons()
 
 func _cast() -> void:
+    if camera.position.z > 18.0:
+        _set_message("Подойди поближе к воде, чтобы сделать заброс.")
+        return
+    if (-camera.global_transform.basis.z).z > -0.22:
+        _set_message("Повернись лицом к озеру.")
+        return
     phase = Phase.CASTING
     timer = 0.0
     cast_source = rod_tip.global_position
@@ -437,6 +482,7 @@ func _choose_fish() -> void:
         fish_name = "Окунь" if roll < 0.40 else "Щука"
         fish_strength = 1.1 if fish_name == "Окунь" else 1.95
         fish_weight = rng.randf_range(0.25, 0.95) if fish_name == "Окунь" else rng.randf_range(1.3, 4.6)
+    _set_fish_model(fish_name)
 
 func _update_fight(delta: float) -> void:
     var fish_run := 0.8 + sin(elapsed * (1.3 + fish_strength * 0.3)) * 0.6
@@ -540,5 +586,5 @@ func _update_stats() -> void:
     elif phase == Phase.BITE:
         stats_label.text = "Окно подсечки: %.1f сек." % maxf(0.0, 1.75 - timer)
     else:
-        stats_label.text = "Наживка: %s  •  Свайп — обзор" % ("червь" if lure_index == 0 else "блесна")
+        stats_label.text = "Наживка: %s  •  Слева — ходьба  •  Справа — обзор" % ("червь" if lure_index == 0 else "блесна")
     catch_label.text = "Улов: %d  •  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
