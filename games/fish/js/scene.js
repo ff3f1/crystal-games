@@ -868,12 +868,13 @@
       // and calibrated tension mechanics resume.
       ctx.save();
       ctx.globalAlpha*=floatSlack?floatSlack.opacity:shape.opacity;
-      ctx.strokeStyle=lineCol;ctx.lineWidth=lineVis?lineVis.width:1;
+      ctx.strokeStyle=lineCol;ctx.lineWidth=floatSlack?.76:(lineVis?lineVis.width:1);
       ctx.beginPath();ctx.moveTo(lineFrom.x,lineFrom.y);
       if(floatSlack){
         const q=floatSlack;
-        ctx.quadraticCurveTo(q.air.x,q.air.y,q.contact.x,q.contact.y);
-        ctx.bezierCurveTo(q.water1.x,q.water1.y,q.water2.x,q.water2.y,lineEnd.x,lineEnd.y);
+        // One cubic curve with continuous tangent; a separate pair of
+        // strokes produced an implausible pointed V beneath the float.
+        ctx.bezierCurveTo(q.air.x,q.air.y,q.water1.x,q.water1.y,lineEnd.x,lineEnd.y);
       }else if(shape.sag<.45)ctx.lineTo(lineEnd.x,lineEnd.y);
       else ctx.quadraticCurveTo((lineFrom.x+lineEnd.x)/2,
         (lineFrom.y+lineEnd.y)/2+2*shape.sag,lineEnd.x,lineEnd.y);

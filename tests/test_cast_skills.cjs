@@ -66,8 +66,9 @@ assert(testFloat.contact.y>Math.max(343,412)+35,
 assert(testFloat.opacity>.6&&testFloat.opacity<=1);
 assert(Number.isFinite(testFloat.water1.x)&&Number.isFinite(testFloat.water2.y),
  "one continuous surface Bezier connects the rod tip to the actual float");
-assert(read("js/scene.js").includes("ctx.bezierCurveTo(q.water1.x"),
- "renderer draws one surface line rather than a straight tension strand");
+assert(read("js/scene.js").includes("ctx.bezierCurveTo(q.air.x") &&
+ !read("js/scene.js").includes("ctx.quadraticCurveTo(q.air.x"),
+ "float line must have one continuous curved strand, without a V-shaped kink");
 assert(read("js/main.js").includes("G.castPower(performance.now()-began)"),
  "action button release uses actual hold duration");
 assert(read("js/main.js").includes("if(mode===\"float\")"),

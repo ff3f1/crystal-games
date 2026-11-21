@@ -54,13 +54,15 @@
    // Do not make a strange loop on casts close to the bottom edge.
    contact.y=Math.max(Math.min(H-16,Math.max(from.y,to.y)+12),contact.y);
    const breeze=clamp((wind||0)*.14,0,1.6);
+   // One smooth drooping Bezier, not two sections joining in a sharp V.
+   // The trough appears close to the angler and fades into the far float.
    return{contact,
-     air:{x:from.x+(contact.x-from.x)*.62,y:from.y+(contact.y-from.y)*.76},
-     water1:{x:contact.x+(to.x-contact.x)*.33,
-       y:contact.y+(to.y-contact.y)*.27+breeze},
+     air:{x:from.x+(contact.x-from.x)*.28,y:contact.y-5},
+     water1:{x:contact.x+(to.x-contact.x)*.12,
+       y:contact.y+9+breeze},
      water2:{x:contact.x+(to.x-contact.x)*.76,
        y:contact.y+(to.y-contact.y)*.73+breeze*.5},
-     opacity:clamp(.82-(wind||0)*.009,.69,.82)};
+     opacity:clamp(.52-(wind||0)*.007,.39,.52)};
  };
  M.lineShape=function(v,baseSag,from,to,screenHeight){
    const distance=Math.hypot((to&&to.x||0)-(from&&from.x||0),

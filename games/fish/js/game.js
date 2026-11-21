@@ -291,7 +291,8 @@
   // ---------- Заброс ----------
   G.maxCast = function () {
     const gear=G.gear(sess.mode);
-    return Math.min((gear.rod?gear.rod.cast:10)*G.skillBonuses().range,sess.loc.zfar-6);
+    const bonus=sess.duel?1:G.skillBonuses().range;
+    return Math.min((gear.rod?gear.rod.cast:10)*bonus,sess.loc.zfar-6);
   };
   // The held power bar determines distance for feeder and spinning rods;
   // pointing determines direction. Float rods target an exact water spot.
@@ -694,7 +695,7 @@
     f.against = against;
     // Control training rewards correct counter-steering, never auto-fights.
     const fishPull = f.Fmax * Math.max(0, eff) *
-      (1 - (run ? (0.29+G.skillBonuses().steering)*steer : 0)) *
+      (1 - (run ? (0.29+(sess.duel?0:G.skillBonuses().steering))*steer : 0)) *
       (run && reeling && f.w >= s.trophy ? 1.055 : 1);
     let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;
