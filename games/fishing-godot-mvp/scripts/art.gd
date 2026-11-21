@@ -37,9 +37,9 @@ func ground_height(x: float, z: float) -> float:
 
 func _make_water() -> void:
     var plane := PlaneMesh.new()
-    plane.size = Vector2(260, 240)
+    plane.size = Vector2(260, 550)
     plane.subdivide_width = 120
-    plane.subdivide_depth = 100
+    plane.subdivide_depth = 144
     var shader := ShaderMaterial.new()
     shader.shader = load("res://shaders/water.gdshader")
     _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, shader)
