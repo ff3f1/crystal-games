@@ -9,13 +9,34 @@
   // A few readable personalities tune the shared physical model. Existing
   // species fight stats still determine base strength and encounter odds.
   const CHARACTERS = Object.freeze({
-    roach:    { run: 0.72, forward: 1.12, lateral: 0.85, duration: 0.70, fatigue: 1.32, surge: 0.70 },
-    perch:    { run: 1.06, forward: 1.13, lateral: 1.50, duration: 0.78, fatigue: 1.08, surge: 1.03 },
-    bream:    { run: 0.80, forward: 0.76, lateral: 0.57, duration: 1.16, fatigue: 0.82, surge: 0.88 },
-    carp:     { run: 1.08, forward: 1.12, lateral: 0.95, duration: 1.28, fatigue: 0.87, surge: 1.18, shore: 1.34, recover: 0.23 },
-    wildcarp: { run: 1.10, forward: 1.17, lateral: 1.00, duration: 1.32, fatigue: 0.85, surge: 1.20, shore: 1.35, recover: 0.23 },
-    pike:     { run: 1.04, forward: 1.16, lateral: 1.55, duration: 0.77, fatigue: 1.10, surge: 1.22, shore: 1.16 },
-    catfish:  { run: 0.90, forward: 0.65, lateral: 0.43, duration: 1.32, fatigue: 0.62, surge: 1.04 }
+    roach:       { run: 0.72, forward: 1.12, lateral: 0.85, duration: 0.70, fatigue: 1.32, surge: 0.70 },
+    perch:       { run: 1.06, forward: 1.13, lateral: 1.50, duration: 0.78, fatigue: 1.08, surge: 1.03 },
+    bream:       { run: 0.80, forward: 0.76, lateral: 0.57, duration: 1.16, fatigue: 0.82, surge: 0.88 },
+    carp:        { run: 1.08, forward: 1.12, lateral: 0.95, duration: 1.28, fatigue: 0.87, surge: 1.18, shore: 1.34, recover: 0.23 },
+    wildcarp:    { run: 1.10, forward: 1.17, lateral: 1.00, duration: 1.32, fatigue: 0.85, surge: 1.20, shore: 1.35, recover: 0.23 },
+    pike:        { run: 1.04, forward: 1.16, lateral: 1.55, duration: 0.77, fatigue: 1.10, surge: 1.22, shore: 1.16 },
+    catfish:     { run: 0.90, forward: 0.65, lateral: 0.43, duration: 1.32, fatigue: 0.62, surge: 1.04 },
+    crucian:     { run: 0.76, forward: 0.86, lateral: 1.14, duration: 0.82, fatigue: 1.24, surge: 0.76 },
+    gcrucian:    { run: 0.82, forward: 0.90, lateral: 1.18, duration: 0.90, fatigue: 1.15, surge: 0.84 },
+    zander:      { run: 1.02, forward: 1.22, lateral: 0.76, duration: 0.88, fatigue: 0.95, surge: 1.15, deep: 1.35 },
+    asp:         { run: 1.18, forward: 1.35, lateral: 1.45, duration: 0.72, fatigue: 1.05, surge: 1.30, shore: 1.10 },
+    trout:       { run: 1.15, forward: 1.28, lateral: 1.65, duration: 0.68, fatigue: 1.15, surge: 1.25 },
+    brooktrout:  { run: 1.12, forward: 1.25, lateral: 1.60, duration: 0.70, fatigue: 1.18, surge: 1.20 },
+    palia:       { run: 1.05, forward: 1.20, lateral: 1.10, duration: 0.85, fatigue: 0.98, surge: 1.10 },
+    sturgeon:    { run: 0.88, forward: 1.26, lateral: 0.40, duration: 1.45, fatigue: 0.65, surge: 1.22, deep: 1.50 },
+    sterlet:     { run: 0.92, forward: 1.15, lateral: 0.50, duration: 1.20, fatigue: 0.75, surge: 1.12 },
+    tench:       { run: 0.85, forward: 0.92, lateral: 1.30, duration: 1.10, fatigue: 0.88, surge: 0.95, shore: 1.28 },
+    grasscarp:   { run: 1.12, forward: 1.30, lateral: 1.05, duration: 1.25, fatigue: 0.84, surge: 1.28, shore: 1.30, recover: 0.18 },
+    silvercarp:  { run: 1.08, forward: 1.24, lateral: 0.90, duration: 1.30, fatigue: 0.82, surge: 1.22 },
+    burbot:      { run: 0.75, forward: 0.70, lateral: 0.38, duration: 1.20, fatigue: 0.78, surge: 0.85 },
+    chub:        { run: 1.02, forward: 1.15, lateral: 1.20, duration: 0.75, fatigue: 1.12, surge: 1.08 },
+    salmon:      { run: 1.22, forward: 1.40, lateral: 1.35, duration: 1.10, fatigue: 0.80, surge: 1.35 },
+    chumsalmon:  { run: 1.20, forward: 1.38, lateral: 1.30, duration: 1.12, fatigue: 0.78, surge: 1.32 },
+    pinksalmon:  { run: 1.16, forward: 1.32, lateral: 1.40, duration: 0.85, fatigue: 0.92, surge: 1.26 },
+    eel:         { run: 0.92, forward: 0.85, lateral: 1.45, duration: 1.15, fatigue: 0.82, surge: 0.96 },
+    rudd:        { run: 0.78, forward: 1.08, lateral: 1.10, duration: 0.68, fatigue: 1.28, surge: 0.75 },
+    bleak:       { run: 0.65, forward: 1.05, lateral: 0.95, duration: 0.55, fatigue: 1.50, surge: 0.55 },
+    amurpike:    { run: 1.08, forward: 1.22, lateral: 1.52, duration: 0.78, fatigue: 1.05, surge: 1.28, shore: 1.20 }
   });
   const DEFAULT_CHARACTER = Object.freeze({
     run: 1, forward: 1, lateral: 1, duration: 1, fatigue: 1, surge: 1, shore: 1, recover: 0
@@ -193,6 +214,13 @@
     // A jump increases the physical load, not the previous frame's tension.
     // Multiplying f.T every frame compounded the force at higher frame rates.
     if (opts.jumping) target *= 1 + 0.3 * Math.sin(clamp(opts.jumpProgress, 0, 1) * Math.PI);
+    // Leverage from rod lifting / lowering (pumping):
+    // Rod lift adds leverage (higher tension when fish pulls against high rod angle).
+    // Lowering rod cushions the line tension, helping survive aggressive surges.
+    if (opts.lift != null && Math.abs(opts.lift) > 0.05) {
+      const liftF = clamp(opts.lift, -0.6, 1);
+      target *= (1 + 0.18 * liftF);
+    }
     const spring = clamp(rod.power / maximum, 0.35, 2.2);
     const rate = (3.2 + rod.sens * 2) * spring;
     f.T = Math.max(0, (f.T || 0) + (target - (f.T || 0)) * (1 - Math.exp(-rate * dt)));
@@ -206,7 +234,8 @@
     // the retrieval speed; never override line tension or drag/slipping.
     const tired = clamp((0.34 - (f.S == null ? 1 : f.S)) / 0.26, 0, 1);
     const teachingReel = opts.tutorial ? 1.35 + 1.45 * (tired * tired * (3 - 2 * tired)) : 1;
-    const reelSp = rod.reel * (1 - 0.52 * clamp(fishPull / maximum, 0, 1)) * teachingReel;
+    const pumpBonus = (reeling && opts.liftVel != null && opts.liftVel < -0.15) ? 1.25 : 1;
+    const reelSp = rod.reel * (1 - 0.52 * clamp(fishPull / maximum, 0, 1)) * teachingReel * pumpBonus;
     const intake = reeling && !slipping ? Math.max(0, reelSp) : 0;
     return { slipping, slipSpeed, intake, excess, tension: f.T };
   };

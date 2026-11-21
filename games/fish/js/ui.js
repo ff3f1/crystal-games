@@ -235,14 +235,25 @@
     const cx = 115, cy = 108, R = 92, a0 = Math.PI * 1.08, a1 = Math.PI * 1.92;
     const v = U.clamp(f.tension || 0, 0, 1.05), dm = G.state().drag;
     g.lineCap = "round";
-    g.strokeStyle = "rgba(10,36,40,0.8)"; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
+    g.strokeStyle = "rgba(10,36,40,0.85)"; g.lineWidth = 18; g.beginPath(); g.arc(cx, cy, R, a0, a1); g.stroke();
     const col = v < 0.6 ? "#7ccf6a" : v < 0.85 ? "#f2c21a" : "#ff4416";
+    if (v > 0.84) { g.shadowColor = "#ff3311"; g.shadowBlur = 10; }
     g.strokeStyle = col; g.lineWidth = 12; g.beginPath(); g.arc(cx, cy, R, a0, a0 + (a1 - a0) * Math.min(1, v)); g.stroke();
+    g.shadowBlur = 0;
     const ad = a0 + (a1 - a0) * dm;
-    g.strokeStyle = "#eef3f1"; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 13), cy + Math.sin(ad) * (R - 13)); g.lineTo(cx + Math.cos(ad) * (R + 13), cy + Math.sin(ad) * (R + 13)); g.stroke();
-    g.fillStyle = "#eef3f1"; g.font = "700 11px Rubik,sans-serif"; g.textAlign = "center"; g.fillText("натяжение", cx, cy - 46);
+    g.strokeStyle = "#ffffff"; g.lineWidth = 3.5; g.beginPath(); g.moveTo(cx + Math.cos(ad) * (R - 14), cy + Math.sin(ad) * (R - 14)); g.lineTo(cx + Math.cos(ad) * (R + 14), cy + Math.sin(ad) * (R + 14)); g.stroke();
+    let tag = "натяжение", tagCol = "#eef3f1";
+    if (f.jump) { tag = "СВЕЧКА!"; tagCol = "#f2a71b"; }
+    else if (f.telegraph) { tag = "СЕЙЧАС РЫВОК!"; tagCol = "#ff6a3a"; }
+    else if (f.phase === "run") { tag = "РЫВОК!"; tagCol = "#ff3a1a"; }
+    else if (f.phase === "shake") { tag = "РЫВКИ ГОЛОВОЙ"; tagCol = "#f2c21a"; }
+    else if (f.phase === "tired") { tag = "УСТАЁТ"; tagCol = "#7ccf6a"; }
+    else if (f.against) { tag = "УДЕРЖАНИЕ СНАСТИ"; tagCol = "#8fd3e0"; }
+    g.fillStyle = tagCol; g.font = "700 11px Rubik,sans-serif"; g.textAlign = "center"; g.fillText(tag, cx, cy - 46);
     $("hDist").textContent = s.ice ? "глубина " + Math.max(0, f.D).toFixed(1).replace(".", ",") + " м" : (f.Z - 3).toFixed(1).replace(".", ",") + " м";
-    $("hStam").style.width = Math.round(f.S * 100) + "%";
+    const stamEl = $("hStam");
+    stamEl.style.width = Math.round(f.S * 100) + "%";
+    stamEl.style.background = f.S > 0.5 ? "var(--line, #8fd3e0)" : f.S > 0.25 ? "#f2c21a" : "#ff4416";
   };
 
   // ---------- События игры ----------

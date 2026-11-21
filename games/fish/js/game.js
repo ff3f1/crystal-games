@@ -766,7 +766,8 @@
     const lineMotion = FZ.FightPhysics.line(f, {
       rod, lineTest: lineT, drag: st.drag, fishPull, phase: f.phase,
       currentLoad, surge: f.surge, reeling: rig.reeling, tutorial: st.tut < 3,
-      jumping: !!(f.jump && f.jump.k < 1), jumpProgress: f.jump ? f.jump.k : 0
+      jumping: !!(f.jump && f.jump.k < 1), jumpProgress: f.jump ? f.jump.k : 0,
+      lift: rig.rod.lift, liftVel: rig.rod.liftVel
     }, dt);
     if (lineMotion.slipping) FZ.Sound.drag(U.clamp(lineMotion.excess / lineT, 0, 1));
     // A revived fish needs a brief recovery after the broken-line/ad handoff;
@@ -817,14 +818,26 @@
       f.phase === 'run' ? G.depthAt(f.X, Math.max(4,f.Z)) * .70 : f.phase === 'tired' ? .08 : .55, 1.4, dt);
     // выносливость
     const rodF = U.clamp(rod.power * 1.5 / f.Fmax, 0.3, 1);
-    const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * rodF * character.fatigue * (st.tut < 3 ? 2 : 1);
+    const pumpDrain = (rig.rod.lift && rig.rod.lift > 0.15) ? (1 + 0.35 * U.clamp(rig.rod.lift, 0, 1)) : 1;
+    const drain = (0.03 + 0.12 * U.clamp(f.T / f.Fmax, 0, 1.5)) / (s.fight.stamina * (0.5 + 0.5 * Math.sqrt(f.w))) * (against ? 1.4 : 1) * pumpDrain * rodF * character.fatigue * (st.tut < 3 ? 2 : 1);
     f.S = Math.max(0, f.S - drain * control * dt);
     // провис лески — сход
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
     if (f.slackT > 1.3 && U.rand() < 0.7 * (1.3 - (g.hook ? g.hook.hold : 1)) * dt * 2) return lose("slack");
     if (f.jump && !f.jump.hurt && f.T > 0.45 * lineT) { f.jump.hurt = true; if (U.rand() < 0.5 * (1.3 - (g.hook ? g.hook.hold : 1))) return lose("jump"); }
-    // поверхность
+    // поверхность и всплески
     f.surface = U.damp(f.surface, f.phase === "tired" ? 1 : 0.15 * (1 - f.S), 2, dt);
+    if (!sess.ice && (f.phase === "run" || f.phase === "shake" || f.surface > 0.35)) {
+      f.disturbT = (f.disturbT || 0) + dt;
+      const rate = f.surface > 0.5 ? 0.12 : 0.28;
+      if (f.disturbT > rate) {
+        f.disturbT = 0;
+        if (FZ.WaterFX && FZ.WaterFX.bubbles) FZ.WaterFX.bubbles(f.X, Math.max(3.6, f.Z), 2);
+        if (f.surface > 0.4 || f.phase === "run") {
+          if (FZ.WaterFX && FZ.WaterFX.ring) FZ.WaterFX.ring(f.X, Math.max(3.6, f.Z), 0.28 + f.surface * 0.45 + (f.w > 3 ? 0.35 : 0.08), 1.2);
+        }
+      }
+    }
     // дистанция
     if (sess.ice) {
       if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; if (f.phase !== "run") f.phaseT = 0; }
@@ -1010,7 +1023,9 @@
     r.rod.jerk = U.damp(r.rod.jerk, 0, 9, dt);
     r.rod.ring = U.damp(r.rod.ring, 0, 3, dt);
     r.rod.tilt = U.damp(r.rod.tilt, r.state === "fight" || sess.mode === "spin" ? r.tilt : 0, 8, dt);
-    r.rod.lift=U.damp(r.rod.lift||0,r.liftTarget||0,9,dt);
+    const prevLift = r.rod.lift || 0;
+    r.rod.lift = U.damp(r.rod.lift || 0, r.liftTarget || 0, 9, dt);
+    r.rod.liftVel = dt > 0 ? (r.rod.lift - prevLift) / dt : 0;
     r.jig = Math.max(0, (r.jig || 0) - dt * 0.85);
     r.jigCooldown = Math.max(0, (r.jigCooldown || 0) - dt);
     r.jigPause = Math.min(10, (r.jigPause || 0) + dt);

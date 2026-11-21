@@ -96,11 +96,20 @@
       const lx=x+bw*.43+(l.reeling?Math.sin(t*2)*1.5:0);
       const ly=surface+15+depth*(bh-65);
       fish(g,l.approach,lx+17,ly,t,Math.min(45,bw*.3));
-      // The lure follows actual depth and reel speed; its flutter is visual only.
+      // The lure follows actual depth and reel speed; distinct realistic play per lure type.
+      const isWobbler = l.baitId && (l.baitId.indexOf("wobbler") >= 0);
+      const isJig = l.kind === "bottom";
+      const wobbleFreq = isWobbler ? 24 : isJig ? 16 : 12;
+      const wobbleAmp = (l.reeling ? (isWobbler ? 0.22 : 0.16) : (l.twitch ? 0.35 : 0.05));
+      const fallAngle = (!l.reeling && isJig && (l.speed || 0) < 0.05) ? 0.38 : 0;
       g.strokeStyle='rgba(220,238,228,.42)';g.lineWidth=.7;
       g.beginPath();g.moveTo(lx+(l.reeling?5:0),y);g.quadraticCurveTo(lx-6,surface+6,lx,ly);g.stroke();
       g.save();g.translate(lx,ly);
-      g.rotate(Math.sin(t*(3+speed*7))*(l.reeling?.17:.055)+(l.twitch||0)*.25);
+      g.rotate(Math.sin(t*(3+speed*wobbleFreq))*wobbleAmp+(l.twitch||0)*.25+fallAngle);
+      if (l.reeling && speed > 0.2) {
+        g.strokeStyle = "rgba(200,240,245,0.45)"; g.lineWidth = 0.8;
+        g.beginPath(); g.moveTo(-12, 0); g.lineTo(-20 - speed * 3, Math.sin(t * 20) * 1.8); g.stroke();
+      }
       const lure=FZ.Assets&&FZ.Assets.item(l.baitId||'spinner');
       if(lure){
         const scale=clamp(bw*.20/Math.max(lure.width,lure.height),.045,.3);

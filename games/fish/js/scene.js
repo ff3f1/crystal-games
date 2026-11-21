@@ -703,7 +703,7 @@
       const step = Math.max(1, Math.round((lo ? 4 + k * 12 : 2.5 + k * 7) * dpr));
       const y = top0 + d;
       const amp = (0.4 + k * k * 9) * windF;
-      const dx = Math.round((Math.sin(y / dpr * 0.11 + t * 1.7) * amp + Math.sin(y / dpr * 0.037 - t * 1.1) * amp * 0.7 - 8) * dpr);
+      const dx = Math.round((Math.sin(y / dpr * 0.11 + t * 1.7) * amp + Math.sin(y / dpr * 0.037 - t * 1.1) * amp * 0.7) * dpr);
       const hh = Math.min(step, rh - d);
       ctx.drawImage(reflC, 0, d, reflC.width, hh, dx + ox, y, reflC.width, hh);
       d += step;
@@ -1134,12 +1134,15 @@
       lineFrom = { x: kx, y: ky };
     }
 
-    // леска
+    // леска с физическим провисом и дрожью при натяжении
     if (target) {
-      const sag = (1 - U.clamp(rod.tension || 0, 0, 1)) * (target.air ? 0 : 40) + 4;
-      ctx.strokeStyle = lineCol; ctx.lineWidth = 1;
+      const tension = U.clamp(rod.tension || 0, 0, 1);
+      const sag = (1 - tension) * (target.air ? 0 : 40) + 4;
+      const vibration = tension > 0.78 ? Math.sin(t * 65) * (tension - 0.78) * 3 : 0;
+      const warnColor = tension > 0.85 ? U.mix(lineCol, "#ff5533", (tension - 0.85) * 4) : lineCol;
+      ctx.strokeStyle = warnColor; ctx.lineWidth = tension > 0.8 ? 1.4 : 1;
       ctx.beginPath(); ctx.moveTo(lineFrom.x, lineFrom.y);
-      ctx.quadraticCurveTo((lineFrom.x + target.x) / 2, Math.max(lineFrom.y, target.y) + sag, target.x, target.y); ctx.stroke();
+      ctx.quadraticCurveTo((lineFrom.x + target.x) / 2 + vibration, Math.max(lineFrom.y, target.y) + sag + vibration * 0.5, target.x, target.y); ctx.stroke();
     }
 
     // поплавок / рыба / приманка
@@ -1216,24 +1219,70 @@
   R.drawFightFish = function (v, L, t, p) {
     const f = v.fish;
     const night = L.dark > 0.35;
-    // бурун и усы от движения
     const sp = Math.min(1, Math.hypot(f.vx || 0, f.vz || 0) / 2);
     const s = p.s;
-    ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#8090b0", L.dark), 0.25 + sp * 0.4); ctx.lineWidth = 1.2;
     const dirx = -(f.vx || 0) >= 0 ? 1 : -1;
-    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + dirx * s * 0.8 * sp + s * 0.3, p.y + s * 0.12 * sp + 2); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + dirx * s * 0.8 * sp - s * 0.3, p.y + s * 0.12 * sp + 2); ctx.stroke();
-    if (Math.random() < 0.1 + sp * 0.25) R.ring(f.X, f.Z, 0.25 + f.surface * 0.5, 1);
-    // силуэт рыбы под водой рядом с берегом
-    const lenPx = Math.max(26, f.lenM * s * 1.1);
-    if (f.Z < 9 && !f.jump) {
-      const a = U.clamp(1 - (f.Z - 3) / 6, 0.15, 1) * (0.3 + f.surface * 0.4);
-      FZ.Art.drawFish(ctx, f.s, p.x, p.y + 6 + (1 - f.surface) * 10, lenPx, { silhouette: f.surface < 0.6, alpha: f.surface < 0.6 ? a : 0.85, phase: t * 9, amp: 0.25 + sp * 0.3, dir: (f.vx || 0) > 0 ? -1 : 1, roll: f.surface > 0.8 ? 0.15 : 0 });
+    // Теневой и пенный бурун от движения рыбы
+    ctx.save();
+    const wakeSpread = s * (0.4 + sp * 0.7);
+    const wakeLen = s * (0.6 + sp * 1.1) * dirx;
+    // Тень под поверхностным буруном
+    ctx.strokeStyle = "rgba(8,26,30,0.35)"; ctx.lineWidth = 3; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y + 1);
+    ctx.quadraticCurveTo(p.x + wakeLen * 0.5, p.y + wakeSpread * 0.18 + 2, p.x + wakeLen, p.y + wakeSpread * 0.28 + 2);
+    ctx.moveTo(p.x, p.y + 1);
+    ctx.quadraticCurveTo(p.x + wakeLen * 0.5, p.y - wakeSpread * 0.18 + 2, p.x + wakeLen, p.y - wakeSpread * 0.28 + 2);
+    ctx.stroke();
+    // Светлый пенный след
+    ctx.strokeStyle = U.rgba(U.mix("#ffffff", "#90a8c8", L.dark), 0.35 + sp * 0.45); ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.quadraticCurveTo(p.x + wakeLen * 0.45, p.y + wakeSpread * 0.15 + 1, p.x + wakeLen * 0.9, p.y + wakeSpread * 0.24 + 1);
+    ctx.moveTo(p.x, p.y);
+    ctx.quadraticCurveTo(p.x + wakeLen * 0.45, p.y - wakeSpread * 0.15 + 1, p.x + wakeLen * 0.9, p.y - wakeSpread * 0.24 + 1);
+    ctx.stroke();
+    // Всплески и пена на поверхности при сопротивлении
+    if (f.surface > 0.4 || sp > 0.5) {
+      const foamRad = Math.max(3, s * 0.25 * (f.surface + sp * 0.5));
+      ctx.fillStyle = U.rgba("#e8f8ff", (0.2 + f.surface * 0.3) * (1 - L.dark * 0.4));
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y + 1, foamRad * 1.4, foamRad * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.restore();
+    if (Math.random() < 0.12 + sp * 0.28) R.ring(f.X, f.Z, 0.25 + f.surface * 0.6, 1.1);
+    // Силуэт рыбы в воде с плавным проявлением по мере приближения к берегу
+    const lenPx = Math.max(26, f.lenM * s * 1.1);
+    if (f.Z < 16 && !f.jump) {
+      const a = U.clamp(1 - (f.Z - 3) / 13, 0.1, 1) * (0.28 + f.surface * 0.55);
+      const thrash = f.phase === "shake" ? 0.45 : (0.2 + sp * 0.35);
+      FZ.Art.drawFish(ctx, f.s, p.x, p.y + 5 + (1 - f.surface) * 9, lenPx, {
+        silhouette: f.surface < 0.55,
+        alpha: f.surface < 0.55 ? a : 0.88,
+        phase: t * (f.phase === "shake" ? 18 : 9),
+        amp: thrash,
+        dir: (f.vx || 0) > 0 ? -1 : 1,
+        roll: f.surface > 0.7 ? 0.18 : (f.phase === "shake" ? Math.sin(t * 15) * 0.15 : 0)
+      });
+    }
+    // Свечка: прыжок рыбы из воды с каплями и брызгами
     if (f.jump) {
       const k = f.jump.k;
       const hgt = Math.sin(k * Math.PI) * Math.max(40, lenPx * 1.1);
       ctx.save();
-      FZ.Art.drawFish(ctx, f.s, p.x + (k - 0.5) * lenPx * 0.7 * (f.jump.dir || 1), p.y - hgt, lenPx * 1.15, { phase: t * 16, amp: 0.55, dir: f.jump.dir || 1, roll: (k - 0.5) * 1.6 * (f.jump.dir || 1) });
+      // Капли брызг под летящей рыбой
+      if (k > 0.15 && k < 0.85) {
+        ctx.fillStyle = "rgba(220,245,255,0.75)";
+        for (let i = 0; i < 6; i++) {
+          const dropX = p.x + (Math.sin(i * 3.5 + t * 10) - 0.5) * lenPx * 0.5;
+          const dropY = p.y - hgt * (0.2 + 0.6 * ((i * 0.23 + t * 4) % 1));
+          ctx.beginPath(); ctx.arc(dropX, dropY, 1.4, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      FZ.Art.drawFish(ctx, f.s, p.x + (k - 0.5) * lenPx * 0.7 * (f.jump.dir || 1), p.y - hgt, lenPx * 1.15, {
+        phase: t * 16, amp: 0.55, dir: f.jump.dir || 1, roll: (k - 0.5) * 1.6 * (f.jump.dir || 1)
+      });
       ctx.restore();
     }
     if (night) { ctx.fillStyle = "rgba(160,255,140,0.6)"; }
