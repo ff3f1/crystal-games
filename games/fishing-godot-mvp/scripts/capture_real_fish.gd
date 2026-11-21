@@ -25,7 +25,24 @@ func _render() -> void:
     for i in range(18):
         await process_frame
     _save("real-underwater-fish-preview.png")
-    print("FISH_SCENE_CAPTURE_OK: real rendered fish and lakebed")
+    # Return to first-person fishing. This capture shows the fish visually
+    # responding to a real lure in the same fully interactive scene.
+    game.camera.position = Vector3(-8.0, 1.72, 4.85)
+    game.camera.look_at(Vector3(-8.0, -0.72, -17.0), Vector3.UP)
+    game.lure_index = 0
+    game._cast()
+    game.lure_sim.destination = Vector3(-8.0, 0.075, -18.0)
+    game._process(1.35)
+    var encountered := false
+    for i in range(1400):
+        game._process(0.08)
+        if game.phase == 3 or game.bite_sign_age < 0.08:
+            encountered = true
+            break
+    for i in range(15):
+        await process_frame
+    _save("live-fish-at-lure-preview.png")
+    print("FISH_SCENE_CAPTURE_OK: real rendered fish and lakebed; lure contact=", encountered)
     quit(0)
 
 func _save(name: String) -> void:
