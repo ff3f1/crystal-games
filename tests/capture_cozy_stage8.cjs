@@ -88,6 +88,12 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    assert(await arrow.isVisible(),'small-shop category arrow must be visible');
    await arrow.click();
    assert(await page.locator('#ovSheet .tabs').evaluate(el=>el.scrollLeft>0),'category arrow must scroll tabs');
+   const aligned=await page.locator('#ovSheet .tabs').evaluate(el=>{
+     const frame=el.getBoundingClientRect();
+     const first=[...el.querySelectorAll('.tab')].find(t=>t.getBoundingClientRect().right>frame.left+3);
+     return !!first&&first.getBoundingClientRect().left>=frame.left-3;
+   });
+   assert(aligned,'the first visible shop tab must not start with clipped letters');
    await page.screenshot({path:path.join(output,'05-compact-lure-shop.png')});
  }
  assert.deepEqual(errors,[]);
