@@ -54,7 +54,11 @@
       else { G.sess().lastAim = selected; r.aimSelected = true; }
     }
     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
-    else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
+    else if (P.moved < 14 && dt < 400) {
+      if (s === "bite" && r.bite.phase === "take") G.strike();
+      else if (s === "wait" && G.sess().ice) G.jig();
+      else if (s === "wait" && G.sess().mode === "spin" && dt < 300) G.twitchSpin();
+    }
   }
   cv.addEventListener("pointerup", up);
   cv.addEventListener("pointercancel", up);

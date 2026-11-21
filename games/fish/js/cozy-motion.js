@@ -23,16 +23,17 @@
  };
  // Let a surface lure settle naturally after the angler stops retrieving.
  // spinPause comes from the actual rig, so a stationary lure cannot make a fake wake.
- M.lurePose=function(id,reeling,spinPause,t){
-   const active=!!reeling;
-   const residual=active?1:Math.exp(-8*clamp(spinPause||0,0,8));
+ M.lurePose=function(id,reeling,spinPause,t,pulse){
+   const active=!!reeling,kick=clamp(pulse||0,0,1);
+   const residual=Math.max(active?1:Math.exp(-8*clamp(spinPause||0,0,8)),kick*.85);
    const wave=(speed)=>Math.sin(t*speed);
    if(id==="wobbler"||id==="sea_wobbler")
-     return{visible:true,angle:wave(17)*.22*residual,dy:active?wave(13)*1.35:Math.sin(t*1.7)*.45,roll:active?1:0,
-       wake:active?.85:.10*residual,w:18,h:10};
+     return{visible:true,angle:wave(17)*.22*residual+kick*.10,
+       dy:(active?wave(13)*1.35:Math.sin(t*1.7)*.45)-kick*.85,
+       roll:active?1:0,wake:active?.85:Math.max(.10*residual,.4*kick),w:18,h:10};
    if(id==="mouse")
-     return{visible:true,angle:wave(5)*.07*residual,dy:Math.sin(t*(active?8:1.7))*.62,
-       roll:0,wake:active?1:.10*residual,w:17,h:11};
+     return{visible:true,angle:wave(5)*.07*residual,dy:Math.sin(t*(active?8:1.7))*.62-kick*.35,
+       roll:0,wake:active?1:Math.max(.10*residual,.28*kick),w:17,h:11};
    if(id==="spoon"||id==="spinner"||id==="salmon_spinner")
      return{visible:false,angle:0,dy:0,roll:0,wake:0}; // submerged: no fake surface trail
    if(id==="jig"||id==="deep_jig")
@@ -57,8 +58,8 @@
    if(!v||v.mode!=="spin"||!p||v.fish||!tk)return false;
    const baitId=G.loadout("spin").bait;
    if(!baitId)return false;
-   const pause=(G.rig()&&G.rig().spinPause)||0;
-   const pose=M.lurePose(baitId,tk.reeling,pause,t);
+   const rig=G.rig(),pause=rig&&rig.spinPause||0;
+   const pose=M.lurePose(baitId,tk.reeling,pause,t,rig&&rig.spinPulse||0);
    let painted=false;
    if(pose.visible){
      const img=loadImage(baitId==="spoon"||baitId==="wobbler"?baitId:"bait_"+baitId);

@@ -294,7 +294,7 @@
     }
     sess.lastAim = { X: a.X, Z: a.Z };
     rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.5 + a.Z / 68;
-    rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.idleT = 0;
+    rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.spinPulse = 0; rig.twitchCooldown = 0; rig.idleT = 0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
     FZ.Sound.cast(); emit("cast");
     if (sess.mode === "feeder" && (st.inv.gb || 0) > 0) { st.inv.gb--; feedSpot(rig.X, rig.Z, 0.22); }
@@ -343,6 +343,19 @@
   G.jig = function () {
     if (!sess.ice || rig.state !== "wait") return;
     rig.jig = Math.min(1, (rig.jig || 0) + 0.22); rig.rod.nod = -0.35; rig.still = 0;
+  };
+  // A short touch moves the current lure only, without fabricating a fish or bite.
+  G.twitchSpin = function () {
+    if (!sess || sess.mode !== "spin" || sess.duel || !rig ||
+        rig.state !== "wait" || (rig.twitchCooldown || 0)>0) return false;
+    const bait=G.gear("spin").bait;
+    if(!bait || !bait.lure || G.baitLeft(bait.id)<=0)return false;
+    rig.spinPulse=1;
+    rig.twitchCooldown=.24;
+    rig.spinPause=0;
+    rig.Z=Math.max(4.3,rig.Z-.16);
+    rig.rod.jerk=Math.max(rig.rod.jerk||0,.23);
+    return true;
   };
   G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; } };
 
@@ -838,6 +851,9 @@
     }
 
     const r = rig;
+    // Decay manual twitch and cooldown in seconds at every frame rate.
+    r.spinPulse=Math.max(0,(r.spinPulse||0)-dt*2.7);
+    r.twitchCooldown=Math.max(0,(r.twitchCooldown||0)-dt);
     r.rod.jerk = U.damp(r.rod.jerk, 0, 9, dt);
     r.rod.ring = U.damp(r.rod.ring, 0, 3, dt);
     r.rod.tilt = U.damp(r.rod.tilt, r.state === "fight" ? r.tilt : 0, 8, dt);

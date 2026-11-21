@@ -66,13 +66,23 @@
     if(!s||!bait||!(s.baits[bait.id]>0)||!(s.methods[mode]>0)||!bait.m.includes(mode))return 0;
     if(mode!=="spin")return 1;
     const paused=Math.max(0,rig&&rig.spinPause||0);
-    if(bait.id==="jig"||bait.id==="deep_jig")
-      return paused>.25&&paused<1.8?1.22:paused>3.4?.48:1;
-    if(bait.id==="mouse")return period==="dusk"||period==="night"?1.26:period==="day"?.55:.95;
+    const moving=!!(rig&&rig.reeling),twitch=clamp(rig&&rig.spinPulse||0,0,1);
+    // Food, habitat, depth and season still gate eligibility. The player can
+    // only improve presentation for an already compatible species.
+    if(bait.id==="jig"||bait.id==="deep_jig"){
+      const fall=paused>.25&&paused<1.8?1.22:paused>3.4?.46:moving?1.05:.82;
+      return fall*(1+.22*twitch);
+    }
+    if(bait.id==="mouse"){
+      const light=period==="dusk"||period==="night"?1.26:period==="day"?.55:.95;
+      return light*(moving?1.08:twitch>.1?.9:paused>3?.30:.72);
+    }
     if(bait.id==="spinner"||bait.id==="salmon_spinner")
-      return paused>1.9?.25:paused>.9?.64:1.12;
+      return moving?1.12:paused>.9?.25:paused>.28?.55:.92;
     if(bait.id==="wobbler"||bait.id==="sea_wobbler")
-      return paused>2.3?.30:paused>1.1?.75:1.08;
+      return moving?1.08:paused>2.3?.30:(.73+.53*twitch);
+    if(bait.id==="spoon"||bait.id==="icespoon")
+      return moving?1.12:paused>2.5?.56:paused>.25&&paused<1.3?1.18:.90;
     return paused>2.5?.62:1;
   };
   E.spotBonus=function(s,spots,X,Z){
