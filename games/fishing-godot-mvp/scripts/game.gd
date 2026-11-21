@@ -208,7 +208,11 @@ func _process(delta: float) -> void:
             if bait_underwater != null:
                 bait_underwater.visible = lure_index == 1
                 bait_underwater.global_position = lure_sim.position
-                bait_underwater.rotation.y += delta * 12.0 if is_reeling else delta * 1.5
+                # The metal spoon now has a curved 3D body with rigged hook.
+                # A pull makes it flash and roll; a pause lets it settle.
+                bait_underwater.rotation.y += delta * (10.0 if is_reeling else 1.2)
+                bait_underwater.rotation.z = sin(elapsed * (12.0 if is_reeling else 2.0)) * (0.42 if is_reeling else 0.08)
+                bait_underwater.rotation.x = sin(elapsed * 5.4) * (0.21 if is_reeling else 0.045)
             if worm_hook != null:
                 worm_hook.visible = lure_index == 0
                 worm_hook.global_position = Vector3(lure_sim.position.x, -lure_sim.depth, lure_sim.position.z)
@@ -566,10 +570,15 @@ func _create_bobber_and_fish() -> void:
     metal.emission_enabled = true
     metal.emission = Color(0.54, 0.41, 0.12)
     metal.emission_energy_multiplier = 0.55
-    bait_underwater = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.075, 0.075, 0.21), metal)
+    var tackle := (load("res://scripts/tackle_visual_3d.gd") as GDScript).new()
+    bait_underwater = _mesh(self, tackle.call("make_spoon_mesh") as Mesh, Vector3.ZERO, Vector3.ONE, metal)
+    bait_underwater.name = "SculptedSpoon3D"
+    tackle.call("add_spoon_hardware", bait_underwater)
     bait_underwater.visible = false
     var worm_material := _material(Color(0.45, 0.18, 0.15), 0.78)
-    worm_hook = _mesh(self, SphereMesh.new(), Vector3.ZERO, Vector3(0.052, 0.037, 0.19), worm_material)
+    worm_hook = _mesh(self, tackle.call("make_worm_mesh") as Mesh, Vector3.ZERO, Vector3.ONE, worm_material)
+    worm_hook.name = "SculptedWorm3D"
+    tackle.call("add_worm_hook", worm_hook)
     worm_hook.visible = false
     var glint_mat := _material(Color(0.95, 0.72, 0.28), 0.20)
     glint_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
