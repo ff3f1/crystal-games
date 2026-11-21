@@ -99,7 +99,7 @@ for output, url in {
 sky_source = TEX / "green-lake-source.jpg"
 sky_target = TEX / "sky_panorama.jpg"
 # Prefer a forested lake panorama; fall back to the known-good Arboretum.
-for sky_name in ("lakeside", "arboretum"):
+for sky_name in ("shudu_lake", "arboretum"):
     try:
         fetch(f"https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/{sky_name}.jpg", sky_source)
         print("Chosen photographic sky:", sky_name)
@@ -112,6 +112,16 @@ if not sky_target.exists():
     with Image.open(sky_source) as sky_img:
         sky_img = sky_img.convert("RGB")
         sky_img = sky_img.resize((3072, 1536), Image.Resampling.LANCZOS)
+        # Equirectangular photo is 360 degrees. Rotate it by half its width
+        # so the camera looks across the remote pine-covered lake rather than
+        # toward the wooden visitor boardwalk at the original panorama seam.
+        half = sky_img.width // 2
+        left_half = sky_img.crop((0, 0, half, sky_img.height))
+        right_half = sky_img.crop((half, 0, sky_img.width, sky_img.height))
+        turned = Image.new("RGB", sky_img.size)
+        turned.paste(right_half, (0, 0))
+        turned.paste(left_half, (half, 0))
+        sky_img = turned
         sky_img.save(sky_target, "JPEG", quality=85, optimize=True)
     print("Sky panorama ready", sky_target.stat().st_size, "bytes")
 sky_source.unlink(missing_ok=True)
