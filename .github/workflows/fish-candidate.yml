@@ -2,7 +2,7 @@ name: Fishing candidate APK and AAB
 on:
   push:
     branches: [codex/fishing-overhaul]
-    paths: [".github/workflows/fish-candidate.yml"] # Avoid compiling on every small gameplay change
+    paths: [".github/workflows/fish-candidate.yml", ".github/scripts/fish-emulator-smoke.sh"] # Avoid compiling on every small gameplay change
   workflow_dispatch:
 permissions:
   contents: write
@@ -115,31 +115,7 @@ jobs:
           avd-name: fishing-smoke
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: |
-            set -euo pipefail
-            adb logcat -c || true
-            adb install -r out/fishing-2.0.3-test.apk | tee out/emulator-install.txt
-            adb shell pm path ru.crystalgames.fishing | tee out/emulator-package.txt
-            grep -q '^package:' out/emulator-package.txt
-            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity | tee out/emulator-start.txt
-            sleep 20
-            adb shell pidof ru.crystalgames.fishing | tee out/emulator-pid.txt
-            test -s out/emulator-pid.txt
-            adb exec-out screencap -p > out/emulator-game.png
-            python - <<'PY'
-            from PIL import Image, ImageStat
-            with Image.open('out/emulator-game.png') as img:
-                img.load()
-                if img.width < 300 or img.height < 500 or max(ImageStat.Stat(img.convert('RGB')).stddev) < 1.0:
-                    raise SystemExit('Emulator screenshot is blank or invalid')
-                print('Emulator screenshot:', img.size)
-            PY
-            adb shell am force-stop ru.crystalgames.fishing
-            adb shell am start -W -n ru.crystalgames.fishing/ru.crystalgames.shell.MainActivity | tee out/emulator-restart.txt
-            sleep 6
-            adb shell pidof ru.crystalgames.fishing
-            adb logcat -d -v brief > out/emulator-logcat.txt
-            echo 'INSTALL_AND_LAUNCH=PASS' > out/emulator-result.txt
+          script: bash .github/scripts/fish-emulator-smoke.sh out/fishing-2.0.3-test.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
