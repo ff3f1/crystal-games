@@ -189,6 +189,18 @@ jobs:
             --script res://scripts/capture.gd
           test -s games/fishing-godot-mvp/build/scene-preview.png
 
+      - name: Render actual shoreline fish and underwater lake QA
+        continue-on-error: true
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a -s "-screen 0 1280x720x24" \
+            godot --path games/fishing-godot-mvp \
+            --resolution 1280x720 \
+            --script res://scripts/capture_real_fish.gd 2>&1 | tee godot-fish-capture.log
+          grep -q "FISH_SCENE_CAPTURE_OK" godot-fish-capture.log
+          test -s games/fishing-godot-mvp/build/real-underwater-fish-preview.png
+
       - name: Verify fullscreen 20:9 game image has no pillarboxing
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
@@ -219,6 +231,8 @@ jobs:
             games/fishing-godot-mvp/build/*.apk
             games/fishing-godot-mvp/build/scene-preview.png
             games/fishing-godot-mvp/build/gameplay-preview.png
+            games/fishing-godot-mvp/build/fish-from-shore-preview.png
+            games/fishing-godot-mvp/build/real-underwater-fish-preview.png
             games/fishing-godot-mvp/build/lure-minimap-preview.png
             games/fishing-godot-mvp/build/ultrawide-preview.png
             games/fishing-godot-mvp/build/settings-preview.png
