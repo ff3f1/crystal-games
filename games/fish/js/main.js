@@ -4,6 +4,7 @@
   const U = FZ.U, G = FZ.Game, UI = FZ.UI, Sc = FZ.Scene;
   const cv = document.getElementById("cv");
   let t = 0, last = 0, aim = null, ambT = 0, running = false;
+  let buttonCastAt=null;
   const P = { down: false, x: 0, y: 0, sx: 0, sy: 0, st: 0, id: null, moved: 0, canvasReeling: false };
 
   // ---------- Ввод ----------
@@ -50,8 +51,15 @@
     const dt = performance.now() - P.st, dy = P.sy - P.y;
     const s = r.state;
     if (selected && s === "idle") {
-      if (P.moved >= 20) G.cast(selected.X, selected.Z);
-      else { G.sess().lastAim = selected; r.aimSelected = true; }
+      const mode=G.sess().mode;
+      if(mode==="float"){
+        if(P.moved>=20)G.cast(selected.X,selected.Z);
+        else{G.sess().lastAim=selected;r.aimSelected=true;}
+      }else if(mode==="spin"||mode==="feeder"){
+        if(P.moved>=15||dt>=180)
+          G.cast(selected.X,selected.Z,{power:G.castPower(dt)});
+        else{G.sess().lastAim=selected;r.aimSelected=true;}
+      }
     }
     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
     else if (P.moved < 14 && dt < 400) {
@@ -65,11 +73,24 @@
   cv.addEventListener("lostpointercapture", up);
   function tiltOf(x) { const S = Sc.size(); return U.clamp((x - S.W / 2) / (S.W * 0.38), -1, 1); }
 
+  Input.castCharge=function(){
+    const r=G.rig(),s=G.sess();
+    if(!r||!s||r.state!=="idle"||s.ice)return null;
+    if(s.mode!=="spin"&&s.mode!=="feeder")return null;
+    const began=buttonCastAt!==null?buttonCastAt:P.down?P.st:null;
+    if(began===null)return null;
+    const ms=Math.max(0,performance.now()-began);
+    return{power:G.castPower(ms),ms,active:true};
+  };
   Input.actionDown = function () {
     FZ.Sound.unlock();
     if (blocked()) return;
     const r = G.rig(), s = r.state, mode = G.sess().mode;
-    if (s === "idle") { if (G.sess().ice) return; G.cast(); }
+    if (s === "idle") {
+      if (G.sess().ice) return;
+      if(mode==="spin"||mode==="feeder")buttonCastAt=performance.now();
+      else G.cast();
+    }
     else if (s === "nohole") G.drill();
     else if (s === "bite" && r.bite.phase === "take") {
       G.strike();
@@ -81,7 +102,14 @@
     else if (s === "wait" && mode === "ice") G.jig();
     else if (s === "wait" || s === "settle") G.retrieve();
   };
-  Input.actionUp = function () { const r = G.rig(); if (r) {r.reeling = false;r.netting = false;} };
+  Input.actionUp = function (confirm) {
+    const began=buttonCastAt;buttonCastAt=null;
+    const r=G.rig();
+    if(r){r.reeling=false;r.netting=false;}
+    if(confirm===true&&began!==null&&r&&r.state==="idle"&&!blocked()){
+      G.cast(null,null,{power:G.castPower(performance.now()-began)});
+    }
+  };
   Input.reelSteer = function (deltaX) {
     const r = G.rig();
     if (!P.down && r && r.state === "fight") r.tilt = U.clamp(deltaX / 55, -1, 1);
@@ -91,7 +119,7 @@
     if (e.code === "Space") { e.preventDefault(); Input.actionDown(); }
     if (e.code === "ArrowUp") G.strike && G.rig() && G.strike();
   });
-  window.addEventListener("keyup", function (e) { if (e.code === "Space") Input.actionUp(); });
+  window.addEventListener("keyup", function (e) { if (e.code === "Space") Input.actionUp(true); });
   FZ.Input = Input;
 
   // ---------- Цикл ----------
@@ -108,7 +136,12 @@
       if (r) r.idleHint = r.state === "idle" ? (r.idleHint || 0) + dt : 0;
       const v = G.view(t);
       Sc.render(v, dt);
-      if(r&&r.state==="idle"&&(aim||r.aimSelected&&s.lastAim))Sc.drawAim(v,aim||s.lastAim);
+      if(r&&r.state==="idle"&&(aim||r.aimSelected&&s.lastAim)){
+        const selected=aim||s.lastAim,charge=Input.castCharge();
+        const preview=charge?G.castPreview(selected.X,selected.Z,charge.power):selected;
+        Sc.drawAim(v,{...preview,skillRadius:Math.max(.5,G.skillBonuses().accuracy*preview.Z),
+          charged:!!charge});
+      }
       UI.frame(dt, t);
       ambT -= dt; if (ambT <= 0) { ambT = 3; UI.ambience(); }
     }
@@ -156,8 +189,8 @@
     });
     window.addEventListener("resize", () => Sc.resize());
     document.addEventListener("visibilitychange", () => {if(document.hidden)window.__appPause();else window.__appResume()});
-    window.__appPause = function () { FZ.appSuspended=true;P.down=false;aim=null;Input.actionUp();FZ.Sound.suspend('app');G.save(true); };
-    window.addEventListener('blur', () => { P.down = false; P.canvasReeling = false; aim = null; Input.actionUp(); Input.reelSteer(0); });
+    window.__appPause = function () { FZ.appSuspended=true;P.down=false;aim=null;Input.actionUp(false);FZ.Sound.suspend('app');G.save(true); };
+    window.addEventListener('blur', () => { P.down = false; P.canvasReeling = false; aim = null; Input.actionUp(false); Input.reelSteer(0); });
     window.__appResume = function () { const was=FZ.appSuspended;FZ.appSuspended=false;last=performance.now();FZ.Sound.resume("app");if(was&&G.sess()&&!UI.anyOpen()&&!FZ.Ads.isBusy())UI.showMenu(); };
     window.__game = { G, UI, Sc, FZ, aim: () => aim, setAim: (x, y) => setAim(x, y) };
   }

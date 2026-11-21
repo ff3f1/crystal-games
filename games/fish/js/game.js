@@ -28,6 +28,7 @@
       records: {}, caught: {}, stats: { total: 0, kg: 0, released: 0, trophies: 0, best: null, days: 0 },
       daily: { day: "", quests: [], giftDay: "", streak: 0, tour: null, tourDay: "", tourClaim: [] },
       settings: { volumes: {music:.35,effects:.7,nature:.18}, sound: true, music: true, vibro: true, quality: "auto", autoQ: "hi", gfx: "paint", qv: 2 },
+      skills:{accuracy:0,casting:0,control:0},
       tut: 0, rateAsked: 0, firstDay: U.dayKey(), lastDay: ""
     };
   }
@@ -37,6 +38,13 @@
     // Upgrade in place; keep an untouched copy of the installed 1.0.10 save.
     if(!st.renewal){try{const old=localStorage.getItem(KEY);if(old&&!localStorage.getItem('fz_save.backup.1.0.10'))localStorage.setItem('fz_save.backup.1.0.10',old)}catch(_){}st.renewal=1;st.settings.gfx='paint';st.settings.volumes={music:st.settings.music?.35:0,effects:st.settings.sound?.7:0,nature:st.settings.sound?.18:0}}
     const defaults=fresh();st.load=st.load||{};st.inv=st.inv||{};st.lures=st.lures||{};st.records=st.records||{};st.caught=st.caught||{};
+    // Backward compatible: old players immediately receive unspent points
+    // from every earned level. No currency, equipment or XP is reset.
+    st.skills=st.skills&&typeof st.skills==="object"?st.skills:{};
+    for(const key of ["accuracy","casting","control"]){
+      const n=Number(st.skills[key]);
+      st.skills[key]=Number.isFinite(n)?U.clamp(Math.floor(n),0,8):0;
+    }
     for(const k of ["rods","lines","hooks"])if(!Array.isArray(st[k]))st[k]=defaults[k];
     if(!st.load[st.active]||st.active==="ice")st.active="float";
     st.settings.volumes=Object.assign({music:.35,effects:.7,nature:.18},st.settings.volumes||{});
@@ -108,6 +116,28 @@
     b.largest=Math.max(b.largest,entry.w||0);
   }
 
+  // ---------- Навыки рыбака ----------
+  const SKILL_IDS=["accuracy","casting","control"];
+  G.skillRank=id=>st&&st.skills&&SKILL_IDS.includes(id)?st.skills[id]||0:0;
+  G.skillPoints=()=>{
+    if(!st)return 0;
+    const spent=SKILL_IDS.reduce((sum,k)=>sum+G.skillRank(k),0);
+    return Math.max(0,st.lvl-1-spent);
+  };
+  G.trainSkill=function(id){
+    if(!SKILL_IDS.includes(id)||G.skillRank(id)>=8||!G.skillPoints())return false;
+    st.skills[id]++;G.save(true);
+    emit("skill",{id,rank:st.skills[id]});
+    return true;
+  };
+  G.skillBonuses=function(){
+    const level=st?Math.max(1,st.lvl):1;
+    return{
+      accuracy:U.clamp(.042-.004*G.skillRank("accuracy")-.0003*(level-1),.008,.042),
+      range:1+.025*G.skillRank("casting")+.002*Math.min(25,level-1),
+      steering:.012*G.skillRank("control")
+    };
+  };
   // ---------- Снасти ----------
   G.season = function () { return st.seasonPick || U.seasonOf(); };
   G.modeFor = function (season) { return season === "winter" ? "ice" : (st.load[st.active] && st.load[st.active].rod ? st.active : "float"); };
@@ -259,7 +289,19 @@
   };
 
   // ---------- Заброс ----------
-  G.maxCast = function () { const g = G.gear(sess.mode); return Math.min(g.rod ? g.rod.cast : 10, sess.loc.zfar - 6); };
+  G.maxCast = function () {
+    const gear=G.gear(sess.mode);
+    return Math.min((gear.rod?gear.rod.cast:10)*G.skillBonuses().range,sess.loc.zfar-6);
+  };
+  // The held power bar determines distance for feeder and spinning rods;
+  // pointing determines direction. Float rods target an exact water spot.
+  G.castPower=ms=>U.clamp(.18+Math.max(0,ms)/1350*.82,.18,1);
+  G.castPreview=function(X,Z,power){
+    const desired=G.aimClamp(X,Z);
+    if(sess.mode==="float"||power==null)return desired;
+    const distance=4.5+(G.maxCast()-4.5)*U.clamp(power,0,1);
+    return G.aimClamp(desired.X*distance/Math.max(4.5,desired.Z),distance);
+  };
   G.aimClamp = function (X, Z) {
     const zMax = G.maxCast();
     const z = U.clamp(Z, 4.5, zMax);
@@ -278,13 +320,16 @@
     if (!g.bait || G.baitLeft(g.bait.id) <= 0) return sess.mode === "spin" ? "Нет приманки — купите вертушку или воблер" : "Закончилась наживка";
     return true;
   };
-  G.cast = function (X, Z) {
+  G.cast = function (X, Z, options) {
     if (rig.state !== "idle") return false;
     const ok = G.canFish(); if (ok !== true) { emit("need", { what: ok }); return false; }
     const point = X == null ? (sess.lastAim || { X: 0, Z: G.maxCast() * 0.65 }) : { X, Z };
-    const a = G.aimClamp(point.X, point.Z);
-    // разброс зависит от дальности
-    const sc = 0.04 * a.Z;
+    // Old direct cast calls and competitive challenges retain their behavior.
+    // Only a real player charged cast gets power-driven distance.
+    const power=!sess.duel&&options&&Number.isFinite(options.power)?options.power:null;
+    const a=sess.duel?G.aimClamp(point.X,point.Z):G.castPreview(point.X,point.Z,power);
+    // Practice narrows the landing ellipse, but never removes uncertainty.
+    const sc=G.skillBonuses().accuracy*a.Z;
     if (sess.duel) {
       sess.duel.cast = FZ.Duel.cast(sess.duel, a, sess.t);
       rig.Z = a.Z; rig.X = a.X;
@@ -292,7 +337,10 @@
       rig.Z = U.clamp(a.Z + U.rand.range(-sc, sc), 4.5, G.maxCast());
       rig.X = G.aimClamp(a.X + U.rand.range(-sc, sc), rig.Z).X;
     }
-    sess.lastAim = { X: a.X, Z: a.Z };
+    // Preserve the selected bearing for the next charge, not the last
+    // shortened landing position. Without this, repeated casts creep closer.
+    sess.lastAim={X:point.X,Z:point.Z};
+    rig.castTarget={X:a.X,Z:a.Z,power};
     rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.5 + a.Z / 68;
     rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.spinPulse = 0; rig.twitchCooldown = 0; rig.idleT = 0;
     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
@@ -644,7 +692,9 @@
     const steer = !sess.ice && (awayFromBank || opposeRun) ? U.smooth(U.clamp((Math.abs(rig.tilt) - 0.12) / 0.72, 0, 1)) : 0;
     const against = steer > 0.12;
     f.against = against;
-    const fishPull = f.Fmax * Math.max(0, eff) * (1 - (run ? 0.29 * steer : 0)) *
+    // Control training rewards correct counter-steering, never auto-fights.
+    const fishPull = f.Fmax * Math.max(0, eff) *
+      (1 - (run ? (0.29+G.skillBonuses().steering)*steer : 0)) *
       (run && reeling && f.w >= s.trophy ? 1.055 : 1);
     let targetTension = fishPull + (reeling ? 0.1 * rod.power + 0.32 * fishPull + 0.06 * f.Fmax : 0);
     if (f.phase === "toward") targetTension = reeling ? 0.14 * f.Fmax + 0.08 * rod.power : 0.02 * f.Fmax;

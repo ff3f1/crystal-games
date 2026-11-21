@@ -37,6 +37,25 @@
  };
  // The single line becomes visibly slack during a genuine low-tension fight.
  // This changes the curvature of the existing endpoint-to-tip path only.
+ // A float setup has a deliberately slack main line. The part leaving
+ // the tip drops onto the water, then continues along its surface to the
+ // bobber. Both curves form ONE continuous strand.
+ M.floatLine=function(from,to,H,wind){
+   const d=Math.hypot(to.x-from.x,to.y-from.y);
+   const slack=clamp(d*.21+(wind||0)*.35,7,26);
+   const contact={
+     x:from.x+(to.x-from.x)*.49,
+     y:Math.max(to.y+Math.min(7,slack*.30),
+       from.y+(to.y-from.y)*.49+slack)
+   };
+   // Keep the water-contact point on screen even on short casts.
+   contact.y=clamp(contact.y,Math.min(from.y,to.y)+4,Math.min(H-8,Math.max(from.y,to.y)+24));
+   return{contact,
+     air:{x:from.x+(contact.x-from.x)*.84,y:from.y+(contact.y-from.y)*.38},
+     water1:{x:contact.x+(to.x-contact.x)*.35,y:contact.y+slack*.13},
+     water2:{x:contact.x+(to.x-contact.x)*.77,y:to.y+slack*.26},
+     opacity:clamp(.79-(wind||0)*.009,.65,.79)};
+ };
  M.lineShape=function(v,baseSag,from,to,screenHeight){
    const distance=Math.hypot((to&&to.x||0)-(from&&from.x||0),
                              (to&&to.y||0)-(from&&from.y||0));

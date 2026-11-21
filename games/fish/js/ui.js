@@ -125,7 +125,7 @@
       reelPointer = null;
       act.classList.remove("held");
       FZ.Input.reelSteer(0);
-      FZ.Input.actionUp();
+      FZ.Input.actionUp(e.type==="pointerup");
     };
     ["tRod", "tBait", "tGb", "tMore", "bMenu", "hTime", "bFilm", "hDrag"].forEach((id) => { $(id).addEventListener("pointerdown", (e) => e.stopPropagation()); });
     UI.refreshTools();
@@ -177,7 +177,7 @@
     let label = "", calm = false, alarm = false;
     const mode = s.mode;
     switch (r.state) {
-      case "idle": label = "Заброс"; break;
+      case "idle": label = mode==="spin"||mode==="feeder"?"Сила заброса":"Заброс"; break;
       case "fly": case "settle": label = "…"; calm = true; break;
       case "wait": label = mode === "spin" ? "Крутить" : mode === "ice" ? "Играть" : "Смотать"; calm = mode !== "spin"; break;
       case "bite": if (r.bite.phase === "take") { label = "Подсечь!"; alarm = true; } else { label = mode === "spin" ? "Крутить" : "Ждать"; calm = true; } break;

@@ -857,15 +857,21 @@
     // Sag is measured from the chord between the actual line endpoints.
     if (lineEnd) {
       const ordinarySag=target.air?0:FZ.RodArt.lineSag(lineFrom,lineEnd,load,H);
+      const floatSlack=floatOnWater&&FZ.CozyMotion&&FZ.CozyMotion.floatLine(lineFrom,lineEnd,H,v.wx&&v.wx.wind);
       const shape=FZ.CozyMotion&&FZ.CozyMotion.lineShape(v,ordinarySag,lineFrom,lineEnd,H)
         || {sag:ordinarySag,opacity:1};
-      // One real fishing line, with a subtle bend when genuinely slack.
-      // No glow duplicate and no random motion detached from the lure.
+      // A float is NOT a tight spinning rod: one strand drops into the
+      // water and follows the surface. During a fight the normal taut line
+      // and calibrated tension mechanics resume.
       ctx.save();
-      ctx.globalAlpha*=shape.opacity;
+      ctx.globalAlpha*=floatSlack?floatSlack.opacity:shape.opacity;
       ctx.strokeStyle=lineCol;ctx.lineWidth=lineVis?lineVis.width:1;
       ctx.beginPath();ctx.moveTo(lineFrom.x,lineFrom.y);
-      if(shape.sag<.45)ctx.lineTo(lineEnd.x,lineEnd.y);
+      if(floatSlack){
+        const q=floatSlack;
+        ctx.quadraticCurveTo(q.air.x,q.air.y,q.contact.x,q.contact.y);
+        ctx.bezierCurveTo(q.water1.x,q.water1.y,q.water2.x,q.water2.y,lineEnd.x,lineEnd.y);
+      }else if(shape.sag<.45)ctx.lineTo(lineEnd.x,lineEnd.y);
       else ctx.quadraticCurveTo((lineFrom.x+lineEnd.x)/2,
         (lineFrom.y+lineEnd.y)/2+2*shape.sag,lineEnd.x,lineEnd.y);
       ctx.stroke();ctx.restore();
@@ -1213,8 +1219,9 @@
     ctx.strokeStyle = aim.ok ? "rgba(255,255,255,0.75)" : "rgba(255,120,100,0.8)"; ctx.setLineDash([5, 6]); ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(G.tip.x, G.tip.y); ctx.quadraticCurveTo((G.tip.x + p.x) / 2, Math.min(G.tip.y, p.y) - 60, p.x, p.y); ctx.stroke();
     ctx.setLineDash([]);
-    const r = Math.max(10, p.s * 0.9);
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(p.x, p.y, r, r * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+    const radiusM=aim.skillRadius||.6;
+    const r = Math.max(9,p.s*(.40+radiusM*.22));
+    ctx.lineWidth = 1.4;ctx.beginPath();ctx.ellipse(p.x,p.y,r,r*.30,0,0,Math.PI*2);ctx.stroke();
     ctx.beginPath(); ctx.ellipse(p.x, p.y, r * 0.35, r * 0.1, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     return p;
