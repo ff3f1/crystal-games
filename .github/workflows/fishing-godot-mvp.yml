@@ -32,6 +32,13 @@ jobs:
           version: 4.5.1-stable
           export-templates: true
 
+      - name: Download CC0 art (mesh packs and PBR ground)
+        run: |
+          python3 games/fishing-godot-mvp/tools/fetch_assets.py
+          du -sh games/fishing-godot-mvp/assets
+          test -s games/fishing-godot-mvp/assets/models/rod.glb
+          test -s games/fishing-godot-mvp/assets/textures/shore_diffuse.jpg
+
       - name: Import and parse project
         run: |
           godot --headless --path games/fishing-godot-mvp --editor --quit
