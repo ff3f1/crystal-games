@@ -49,6 +49,9 @@ var bait_underwater: MeshInstance3D
 var spinner_glint: MeshInstance3D
 var float_parts: Array[MeshInstance3D] = []
 var bite_window := 2.0
+var cast_charging := false
+var cast_charge := 0.64
+var cast_charge_bar: ProgressBar
 
 var shore_art: Node3D
 var joystick_vector := Vector2.ZERO
@@ -106,6 +109,8 @@ func _process(delta: float) -> void:
         return
     _update_player(delta)
     ripple_age += delta
+    if cast_charging and (phase == Phase.READY or phase == Phase.RESULT):
+        cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
     if rod_root != null:
         rod_root.rotation.x = -0.04 + sin(elapsed * 1.2) * 0.008
         if phase == Phase.CASTING:
@@ -188,6 +193,8 @@ func _process(delta: float) -> void:
     _update_stats()
     if minimap != null:
         minimap.queue_redraw()
+    if cast_charging and cast_charge_bar != null:
+        cast_charge_bar.value = cast_charge * 100.0
 
 func _input(event: InputEvent) -> void:
     if menu_open:
@@ -551,6 +558,15 @@ func _create_ui() -> void:
 
     action_button = _button(root, "ЗАБРОС", 0.772, 0.845, 0.977, 0.973, Color(0.76, 0.43, 0.23))
     action_button.pressed.connect(_main_action)
+    action_button.button_down.connect(_begin_charge)
+    action_button.button_up.connect(_end_charge)
+    cast_charge_bar = ProgressBar.new()
+    cast_charge_bar.min_value = 0.0
+    cast_charge_bar.max_value = 100.0
+    cast_charge_bar.show_percentage = false
+    _place(cast_charge_bar, 0.555, 0.811, 0.962, 0.834)
+    root.add_child(cast_charge_bar)
+    cast_charge_bar.visible = false
     lure_button = _button(root, "ЧЕРВЬ", 0.594, 0.845, 0.76, 0.973, Color(0.22, 0.44, 0.45))
     lure_button.pressed.connect(_toggle_lure)
     reel_button = _button(root, "МОТАТЬ", 0.548, 0.845, 0.766, 0.973, Color(0.12, 0.43, 0.51))
@@ -651,6 +667,24 @@ func _tree(p: Vector3, height: float, trunk_mat: Material, needles: Material) ->
         cone.radial_segments = 6
         _mesh(self, cone, p + Vector3.UP * (height * (0.56 + tier * 0.16)), Vector3.ONE, needles)
 
+func _begin_charge() -> void:
+    if phase != Phase.READY and phase != Phase.RESULT:
+        return
+    cast_charging = true
+    cast_charge = 0.64
+    cast_charge_bar.visible = true
+    cast_charge_bar.value = cast_charge * 100.0
+
+func _end_charge() -> void:
+    if not cast_charging:
+        return
+    cast_charging = false
+    cast_charge_bar.visible = false
+    if phase == Phase.RESULT:
+        _reset_to_ready()
+    if phase == Phase.READY:
+        _cast()
+
 func _main_action() -> void:
     match phase:
         Phase.READY:
@@ -685,6 +719,8 @@ func _reset_to_ready() -> void:
     is_bracing = false
     bobber.visible = false
     fish_body.visible = false
+    cast_charging = false
+    cast_charge_bar.visible = false
     bait_underwater.visible = false
     spinner_glint.visible = false
     lure_depth = 0.0
@@ -700,13 +736,15 @@ func _cast() -> void:
         _set_message("Повернись лицом к озеру.")
         return
     phase = Phase.CASTING
+    cast_charging = false
+    cast_charge_bar.visible = false
     sounds.call("play", "cast")
     timer = 0.0
     cast_source = rod_tip.global_position
     var forward := -camera.global_transform.basis.z
     forward.y = 0
     forward = forward.normalized()
-    cast_target = camera.global_position + forward * (31.0 if lure_index == 1 else 26.0)
+    cast_target = camera.global_position + forward * (11.0 + cast_charge * 27.0)
     cast_target.y = 0.09
     cast_target.z = minf(1.5, cast_target.z)
     lure_sim.begin_cast(cast_source, cast_target, lure_index)
@@ -997,6 +1035,7 @@ func exit_to_menu() -> void:
     session_started = false
     is_reeling = false
     is_bracing = false
+    cast_charging = false
     _reset_to_ready()
     overlay.call("show_home")
 
