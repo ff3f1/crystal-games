@@ -39,7 +39,6 @@ func _shore_surface(far_bank: bool) -> void:
     mat.normal_texture = load("res://assets/textures/%s_normal.jpg" % tex_name)
     mat.normal_scale = 0.55
     mat.roughness = 0.94
-    mat.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
     if far_bank:
         mat.albedo_color = Color(0.59, 0.70, 0.57)
     else:
@@ -77,7 +76,6 @@ func _shore_surface(far_bank: bool) -> void:
     if not far_bank:
         var shore_mat := StandardMaterial3D.new()
         shore_mat.albedo_texture = load("res://assets/textures/shore_diffuse.jpg")
-        shore_mat.texture_repeat = BaseMaterial3D.TEXTURE_REPEAT_ENABLED
         shore_mat.albedo_color = Color(0.91, 0.83, 0.69)
         shore_mat.roughness = 0.98
         var sand_strip := SurfaceTool.new()
@@ -120,13 +118,13 @@ func _make_forest() -> void:
             continue
         if absf(px - 15.0) < 5.0 and pz < 17.0:
             continue
-        var tree := tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
+        var tree: String = tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
         _place_asset(tree, Vector3(px, ground_height(px, pz), pz), random.randf_range(3.5, 6.3), random.randf_range(-PI, PI))
 
     for i in range(75):
         var px := random.randf_range(-105, 105)
         var pz := random.randf_range(-94, -137)
-        var tree := tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
+        var tree: String = tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
         _place_asset(tree, Vector3(px, 0.1 + absf(pz + 91) * 0.013, pz), random.randf_range(4.0, 7.0), random.randf_range(-PI, PI))
 
     for i in range(90):
@@ -134,7 +132,7 @@ func _make_forest() -> void:
         var pz := random.randf_range(5.2, 59)
         if absf(px) < 3.3 and pz < 13:
             continue
-        var kind := rock_kinds[random.randi_range(0, rock_kinds.size() - 1)]
+        var kind: String = rock_kinds[random.randi_range(0, rock_kinds.size() - 1)]
         var scale_factor := random.randf_range(1.2, 2.9)
         _place_asset(kind, Vector3(px, ground_height(px, pz) - 0.10, pz), scale_factor, random.randf_range(0, TAU))
 
@@ -143,7 +141,7 @@ func _make_forest() -> void:
         var pz := random.randf_range(7.1, 69)
         if absf(px) < 2.3 and pz < 14:
             continue
-        var kind := bush_kinds[random.randi_range(0, bush_kinds.size() - 1)]
+        var kind: String = bush_kinds[random.randi_range(0, bush_kinds.size() - 1)]
         _place_asset(kind, Vector3(px, ground_height(px, pz), pz), random.randf_range(1.4, 2.9), random.randf_range(0, TAU))
 
     for i in range(185):
