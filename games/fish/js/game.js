@@ -699,6 +699,11 @@
     }
     // Deep fish make less surface disturbance. Tired fish rise toward the net.
     f.surface=U.damp(f.surface,diving?0:f.phase==="tired"?1:.15*(1-f.S),2,dt);
+    const swimVelocity=U.clamp(Math.hypot(f.vx||0,f.vz||0)/2.5,0,1);
+    const mass=U.clamp(Math.log2(1+Math.max(0,f.w||0))/5,0,1);
+    const swimRate=(f.phase==="shake"?16:f.phase==="run"?9+3*swimVelocity:
+      diving?5:f.phase==="tired"?2.4:4+3*swimVelocity)*(1-.30*mass);
+    f.swimPhase=(Number.isFinite(f.swimPhase)?f.swimPhase:0)+dt*swimRate;
     // дистанция
     if (sess.ice) {
       if (f.D < 0.5) { if (f.S < 0.3) return startLanding(); f.D = 0.5; f.vz = Math.max(0, f.vz); }

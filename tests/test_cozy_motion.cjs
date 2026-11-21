@@ -16,6 +16,17 @@ F.Scene={
 F.Sound=new Proxy({},{get:()=>()=>{}});
 F.Platform={vibrate(){}};
 assert(M,"CozyMotion module loaded");
+const agile={w:3,phase:"run",vx:2.4,vz:.2,swimPhase:2,S:.9};
+const exhausted={...agile,phase:"tired",vx:0,vz:0};
+const shaking={...agile,phase:"shake"};
+assert(M.fishPose(agile,1).amp>M.fishPose(exhausted,1).amp*2,
+  "fast pike beats its tail much harder than an exhausted fish");
+assert(M.fishPose(shaking,1).amp>M.fishPose(agile,1).amp,
+  "head shake and sprint have distinct movement");
+assert.equal(M.fishPose({...agile,swimPhase:4.5},20).phase,4.5,
+  "swim animation is driven by integrated game time, not reset on phase change");
+assert(read("js/scene.js").includes("FZ.CozyMotion.fishPose"),
+  "real game must animate fish with phase-aware pose");
 assert.equal(M.surfaceEnergy({phase:"dive",D:3,surface:1}),0,
  "deep fish cannot create surface foam even at high speed");
 assert(M.surfaceEnergy({phase:"run",D:.12,surface:.8})>.5,

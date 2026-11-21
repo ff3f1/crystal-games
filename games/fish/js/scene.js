@@ -694,11 +694,20 @@
   R.ring = function (X, Z, size, life) { R.rings.push({ X, Z, r: 0, size: size || 0.6, life: life || 1.6, age: 0 }); };
   R.splash = function (X, Z, power, col) {
     const p = R.proj(X, Z);
-    const n = Math.min(30, Math.round(7 + power * 15));
-    for (let i = 0; i < n; i++) {
-      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
-      const sp = (40 + Math.random() * 140) * (0.5 + power) * Math.min(1.6, p.s / 40 + 0.4);
-      R.parts.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp * 0.6, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.5, age: 0, r: 1 + Math.random() * 2.2 * (0.5 + power), col: col || "rgba(230,242,250,0.9)", kind: "water", g: 420, floor: p.y + 2 });
+    // Low, brief droplets instead of the old white streaks flying far above
+    // the lake. Strong jumps still make a splash, scaled by screen distance.
+    const force=U.clamp(power||.2,.05,1.4);
+    const n=Math.min(14,Math.round(3+force*8));
+    const perspective=U.clamp(p.s/65+.32,.34,1.15);
+    for(let i=0;i<n;i++){
+      const a=-Math.PI/2+(Math.random()-.5)*2.3;
+      const sp=(24+Math.random()*74)*(.34+force*.62)*perspective;
+      R.parts.push({
+        x:p.x,y:p.y,vx:Math.cos(a)*sp*.65,vy:Math.sin(a)*sp,
+        life:.27+Math.random()*.28,age:0,
+        r:.60+Math.random()*1.1*(.55+force*.35),
+        col:col||"rgba(212,229,222,.73)",kind:"water",g:480,floor:p.y+2
+      });
     }
     R.ring(X, Z, 0.5 + power, 1.8); R.ring(X, Z, 0.25 + power * 0.6, 1.3);
   };
@@ -1010,9 +1019,11 @@
     const lenPx = Math.max(26, f.lenM * s * 1.1);
     if (f.Z < 9 && !f.jump && depthFade>.08) {
       const a=U.clamp(1-(f.Z-3)/6,.15,1)*(.30+(f.surface||0)*.40)*depthFade;
+      const swim=FZ.CozyMotion?FZ.CozyMotion.fishPose(f,t):
+        {phase:t*7,amp:.16+sp*.18,dir:(f.vx||0)>0?-1:1,roll:0};
       FZ.Art.drawFish(ctx,f.s,p.x,p.y+6+(1-(f.surface||0))*10+Math.max(0,f.D||0)*2,lenPx,{
         silhouette:f.surface<.6,alpha:(f.surface<.6?a:.85*depthFade),
-        phase:t*9,amp:.25+sp*.3,dir:(f.vx||0)>0?-1:1,roll:f.surface>.8?.15:0
+        phase:swim.phase,amp:swim.amp,dir:swim.dir,roll:swim.roll
       });
     }
     if (f.jump) {
@@ -1174,7 +1185,7 @@
       if(p.kind==="water"){
         // Velocity-aligned teardrops avoid the old floating-circle appearance.
         const speed=Math.hypot(p.vx,p.vy);
-        ctx.ellipse(p.x,p.y,Math.max(.65,p.r*.72),Math.min(p.r*2.1,p.r*(1.15+speed/200)),Math.atan2(p.vy,p.vx)-Math.PI/2,0,Math.PI*2);
+        ctx.ellipse(p.x,p.y,Math.max(.50,p.r*.75),Math.min(p.r*1.55,p.r*(1+speed/340)),Math.atan2(p.vy,p.vx)-Math.PI/2,0,Math.PI*2);
       }else ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
       ctx.fill();
     }
