@@ -1,0 +1,420 @@
+/* Approved lake-and-lodge v2: genuine rearrangement of navigation and real HUD.
+   Higher specificity is intentional: this replaces the stack of legacy 1.6 skins. */
+:root{--cv2-green:#102a28;--cv2-gold:#e9bb68;--cv2-line:#c9a76e70;--cv2-cream:#faf1d9}
+#ovMenu.cozy-concept-menu.concept-redesign{
+ background-color:#102a2a!important;
+ background-image:
+ linear-gradient(90deg,rgba(7,22,20,.19),rgba(4,21,19,.04) 38%,rgba(6,22,22,.48) 79%),
+ linear-gradient(180deg,rgba(5,28,26,.26),transparent 32%,rgba(2,20,20,.37) 74%,#091e1d),
+ url("../assets/base/seliger.webp")!important;
+ background-size:cover!important;background-position:center!important;
+ overflow:hidden!important;align-items:center!important;
+}
+#ovMenu.concept-redesign::before{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+ background:radial-gradient(ellipse at 22% 47%,rgba(253,188,82,.15),transparent 46%)!important;
+}
+#ovMenu.cozy-concept-menu.concept-redesign .lodge{
+ display:block!important;position:relative!important;isolation:isolate;
+ height:100dvh!important;min-height:0!important;
+ width:100%!important;max-width:520px!important;
+ padding:0!important;margin:0 auto!important;overflow:hidden!important;
+}
+#ovMenu.concept-redesign .cozy-menu-scene,
+#ovMenu.concept-redesign .cozy-atmosphere,
+#ovMenu.concept-redesign .cozy-menu-reeds,
+#ovMenu.concept-redesign .cozy-menu-sun{display:none!important}
+#ovMenu.concept-redesign .lodge-title{
+ position:absolute!important;top:calc(12px + var(--safe-t))!important;
+ left:4%!important;margin:0!important;padding:10px 27px!important;
+ width:69%!important;min-height:103px!important;max-height:103px!important;
+ z-index:3!important;border-radius:21px!important;
+ background:repeating-linear-gradient(0deg,#ffffff07 0 2px,transparent 3px 19px),
+ linear-gradient(160deg,#624226,#2b2019 63%,#49331f)!important;
+ box-shadow:0 5px 0 #231810,0 13px 28px #000a,inset 0 2px #e4b67d58!important;
+}
+#ovMenu.concept-redesign .lodge-title>small{
+ letter-spacing:.28em!important;font-size:9px!important;
+}
+#ovMenu.concept-redesign .lodge-title h1{
+ font-size:clamp(39px,10.8vw,58px)!important;
+ font-family:Georgia,"Rubik",serif!important;
+ letter-spacing:-1.4px!important;line-height:1.05!important;margin-top:5px!important;
+}
+#ovMenu.concept-redesign .cozy-sign-fish{height:48px!important;width:39px!important;top:25%!important}
+#ovMenu.concept-redesign .lodge-bottom{display:contents!important}
+#ovMenu.concept-redesign .lodge-profile{
+ position:absolute!important;top:calc(125px + var(--safe-t))!important;
+ left:4%!important;right:4%!important;margin:0!important;
+ height:49px!important;min-height:49px!important;padding:3px 8px!important;
+ border-radius:12px!important;z-index:2;
+ border:1px solid rgba(236,191,105,.56)!important;
+ background:rgba(12,44,37,.92)!important;
+ box-shadow:0 5px 20px #0005!important;
+}
+#ovMenu.concept-redesign .lodge-profile .rank{
+ width:37px!important;height:37px!important;flex-shrink:0
+}
+#ovMenu.concept-redesign .lodge-profile>strong{font-size:13px!important;white-space:nowrap}
+#ovMenu.concept-redesign .concept-player-detail{
+ position:absolute;top:calc(178px + var(--safe-t));left:5%;right:5%;
+ z-index:2;display:grid;grid-template-columns:1fr auto;align-items:center;
+ column-gap:10px;row-gap:3px;
+ color:#e9d7b5;font-size:9px;text-shadow:0 1px #000c;
+}
+#ovMenu.concept-redesign .concept-player-track{
+ grid-column:1/-1;height:5px;background:#172d298f;border-radius:4px;overflow:hidden;
+ border:1px solid #c49d554d;
+}
+#ovMenu.concept-redesign .concept-player-track i{
+ display:block;height:100%;border-radius:4px;
+ background:linear-gradient(90deg,#996d2c,#e8bc60,#ffda86);
+ box-shadow:0 0 9px #ffd47d88;
+}
+#ovMenu.concept-redesign .concept-primary{
+ position:absolute;top:calc(216px + var(--safe-t));right:4%;
+ width:55%;max-width:251px;z-index:4;display:flex;flex-direction:column;gap:7px;
+}
+#ovMenu.concept-redesign .concept-primary>button{
+ display:flex!important;align-items:center!important;justify-content:flex-start!important;
+ text-align:left!important;gap:11px!important;width:100%!important;
+ min-height:49px!important;height:49px!important;margin:0!important;
+ padding:7px 11px!important;border-radius:12px!important;
+ border:1px solid #d7b477a8!important;border-bottom:3px solid #745331!important;
+ background:linear-gradient(120deg,rgba(31,66,52,.96),rgba(12,42,39,.97))!important;
+ color:#f6eed9!important;font-size:13px!important;font-weight:700!important;
+ letter-spacing:0!important;text-shadow:0 1px 2px #000a!important;
+ box-shadow:inset 0 1px #ffffff24,0 6px 16px #001e1d66!important;
+ flex:0 0 auto!important;transform:none!important;
+}
+#ovMenu.concept-redesign .concept-primary>button:active{
+ transform:translateY(2px)!important;
+ background:linear-gradient(120deg,#315d45,#163e3b)!important;
+}
+#ovMenu.concept-redesign .concept-primary>button:focus-visible{
+ outline:2px solid #ffe0a0;outline-offset:2px;
+}
+#ovMenu.concept-redesign .concept-primary .go{
+ min-height:63px!important;height:63px!important;
+ display:block!important;position:relative!important;
+ font-size:16px!important;padding:10px 38px 9px 14px!important;
+ color:#392613!important;text-transform:uppercase!important;
+ background:linear-gradient(110deg,#fff0af,#e8af4e 57%,#c78327)!important;
+ border-color:#ffebbc!important;box-shadow:0 3px 0 #865922,0 10px 22px #001d1b99!important;
+}
+#ovMenu.concept-redesign .concept-primary .go small{color:#654522!important;display:block;font-size:9px!important}
+#ovMenu.concept-redesign .concept-primary .go svg{width:20px;right:13px;top:14px}
+#ovMenu.concept-redesign .cozy-play-angler{display:none!important}
+#ovMenu.concept-redesign .concept-primary .tile{min-width:0!important}
+#ovMenu.concept-redesign .concept-primary .tile>span:last-child{
+ white-space:nowrap;font-size:13px!important
+}
+#ovMenu.concept-redesign .concept-primary .tile .i,
+#ovMenu.concept-redesign .concept-primary .concept-quick .i{
+ width:23px!important;height:23px!important;flex:0 0 23px;
+ stroke:#f4d49e;color:#f4d49e;
+}
+#ovMenu.concept-redesign .concept-primary .tile .cozy-tile-art{
+ display:grid!important;place-items:center;width:35px!important;height:34px!important;
+ flex:0 0 35px!important;position:static!important;transform:none!important;
+ opacity:1!important;background:none!important;box-shadow:none!important;
+}
+#ovMenu.concept-redesign .concept-primary .tile .cozy-tile-art img{
+ max-width:34px!important;max-height:32px!important;object-fit:contain!important
+}
+#ovMenu.concept-redesign .concept-primary .tile:has(.cozy-tile-art)>.i{display:none!important}
+#ovMenu.concept-redesign .concept-lakeside{
+ position:absolute;left:5%;top:calc(300px + var(--safe-t));width:39%;
+ z-index:1;color:#fff1d1;text-shadow:0 2px 7px #001d1e,0 3px 12px #000;
+ pointer-events:none
+}
+#ovMenu.concept-redesign .concept-lakeside-label{
+ display:block;color:#e7cc94;font-size:8px;letter-spacing:1.2px;line-height:1.6
+}
+#ovMenu.concept-redesign .concept-lakeside strong{
+ display:block;font-size:clamp(14px,4.2vw,20px);font-family:Georgia,serif;
+ line-height:1.35;margin-top:5px;font-weight:700
+}
+#ovMenu.concept-redesign .duel-entry{
+ position:absolute!important;left:4%!important;bottom:calc(165px + var(--safe-b))!important;
+ width:45%!important;min-height:47px!important;height:47px!important;z-index:2!important;
+ border-radius:12px!important;text-align:left!important;margin:0!important;
+ padding:7px 8px!important;background:rgba(11,44,35,.89)!important;
+ border-color:#c6a36b!important;
+}
+#ovMenu.concept-redesign .duel-entry small{font-size:8px!important}
+#ovMenu.concept-redesign .concept-secondary-label{
+ position:absolute;left:4%;bottom:calc(141px + var(--safe-b));
+ z-index:2;font-size:9px;letter-spacing:1.2px;color:#eed4a2
+}
+#ovMenu.concept-redesign .lodge-grid{
+ position:absolute!important;left:3.5%!important;right:3.5%!important;
+ width:93%!important;bottom:calc(70px + var(--safe-b))!important;
+ display:flex!important;flex-direction:row!important;
+ overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;
+ gap:8px!important;align-items:stretch!important;padding:5px 1px 7px!important;
+ margin:0!important;z-index:3!important;grid-template-columns:none!important;
+}
+#ovMenu.concept-redesign .lodge-grid::-webkit-scrollbar{display:none}
+#ovMenu.concept-redesign .lodge-grid .tile{
+ flex:0 0 132px!important;width:132px!important;height:60px!important;min-height:60px!important;
+ display:flex!important;flex-direction:row!important;
+ gap:5px!important;padding:6px 7px!important;text-align:left!important;
+ justify-content:flex-start!important;align-items:center!important;
+ border-radius:12px!important;
+}
+#ovMenu.concept-redesign .lodge-grid .tile .cozy-tile-art{
+ flex:0 0 35px!important;width:35px!important;height:42px!important;
+ position:static!important;transform:none!important;
+ display:grid!important;place-items:center!important;opacity:1!important;
+ background:none!important;box-shadow:none!important;
+}
+#ovMenu.concept-redesign .lodge-grid .tile .cozy-tile-art img{
+ width:34px!important;height:36px!important;object-fit:contain!important
+}
+#ovMenu.concept-redesign .lodge-grid .tile>.i{width:27px!important;height:27px!important;flex:0 0 27px}
+#ovMenu.concept-redesign .lodge-grid .tile:has(.cozy-tile-art)>.i{display:none!important}
+#ovMenu.concept-redesign .lodge-grid .tile>span:last-child{
+ white-space:nowrap!important;text-wrap:nowrap!important;overflow-wrap:normal!important;
+ font-size:10px!important;line-height:1!important;flex:1 1 auto;min-width:0;
+}
+#ovMenu.concept-redesign .lodge-footer{
+ position:absolute!important;left:4%!important;right:4%!important;
+ bottom:calc(9px + var(--safe-b))!important;z-index:3;
+ display:flex!important;align-items:center;justify-content:space-between!important;
+ gap:5px!important;margin:0!important;min-height:39px!important;
+}
+#ovMenu.concept-redesign .lodge-footer button{
+ min-height:32px!important;flex:1 1 auto!important;min-width:0!important;
+ padding:5px 7px!important;white-space:nowrap;
+ font-size:clamp(8px,2.4vw,11px)!important;line-height:1.12
+}
+@media(max-height:735px){
+ #ovMenu.concept-redesign .lodge-title{min-height:87px!important;max-height:87px!important}
+ #ovMenu.concept-redesign .lodge-title h1{font-size:clamp(34px,10.1vw,48px)!important}
+ #ovMenu.concept-redesign .lodge-profile{top:calc(108px + var(--safe-t))!important}
+ #ovMenu.concept-redesign .concept-player-detail{top:calc(161px + var(--safe-t))}
+ #ovMenu.concept-redesign .concept-primary{top:calc(199px + var(--safe-t));gap:5px}
+ #ovMenu.concept-redesign .concept-primary>button{height:44px!important;min-height:44px!important}
+ #ovMenu.concept-redesign .concept-primary .go{height:57px!important;min-height:57px!important}
+ #ovMenu.concept-redesign .concept-lakeside{top:calc(265px + var(--safe-t))}
+ #ovMenu.concept-redesign .duel-entry{bottom:calc(154px + var(--safe-b))!important}
+}
+@media(min-width:650px){
+ #ovMenu.cozy-concept-menu.concept-redesign .lodge{max-width:900px!important}
+ #ovMenu.concept-redesign .lodge-title{width:48%!important;left:4%!important;top:4%!important}
+ #ovMenu.concept-redesign .lodge-profile{top:calc(137px + var(--safe-t))!important;right:43%!important;left:4%!important}
+ #ovMenu.concept-redesign .concept-player-detail{top:calc(196px + var(--safe-t));right:43%!important}
+ #ovMenu.concept-redesign .concept-primary{top:17%;right:5%;width:36%;max-width:315px}
+ #ovMenu.concept-redesign .concept-primary>button{height:58px!important;min-height:58px!important}
+ #ovMenu.concept-redesign .concept-primary .go{height:70px!important;min-height:70px!important}
+ #ovMenu.concept-redesign .concept-lakeside{left:6%;top:42%;max-width:280px}
+ #ovMenu.concept-redesign .duel-entry{left:5%!important;width:38%!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #ovMenu.concept-redesign *{animation:none!important;transition:none!important}
+}
+
+/* Gameplay HUD follows the approved first-person mockup: controls at sides. */
+#hud.concept-hud .topbar{
+ position:absolute;left:11px;right:11px;top:calc(9px + var(--safe-t));
+ gap:6px!important;align-items:center;z-index:11;
+}
+#hud.concept-hud .pill{background:rgba(7,31,29,.85);border:1px solid rgba(225,190,116,.45);
+ border-radius:11px;box-shadow:0 2px 10px #001b1a5c;color:#f3e8cd}
+#hud.concept-hud #hLvlBox{border-color:#e0b57177;cursor:pointer}
+#hud.concept-hud .locname{
+ position:absolute;left:11px;right:auto;top:calc(55px + var(--safe-t));
+ font-size:12px;letter-spacing:.2px;text-transform:none;
+ padding:8px 12px;background:rgba(7,35,32,.82);border:1px solid #d9bb865c;
+ border-radius:10px;max-width:min(70%,265px);color:#f6e5bf;
+ z-index:5
+}
+#hud.concept-hud .concept-weather{
+ position:absolute;top:calc(100px + var(--safe-t));left:11px;z-index:5;
+ color:#e6e9d7;font-size:10px;line-height:1.3;
+ padding:7px 10px;border:1px solid #c9ad7940;border-radius:8px;
+ background:rgba(7,36,32,.76);max-width:calc(100% - 25px);
+}
+#hud.concept-hud .tray{
+ position:absolute;top:calc(157px + var(--safe-t));left:9px;
+ bottom:auto!important;right:auto!important;
+ width:62px!important;max-width:62px!important;
+ display:flex!important;flex-direction:column!important;align-items:center!important;
+ justify-content:flex-start!important;gap:8px!important;padding:0!important;
+ background:none!important;box-shadow:none!important;z-index:11;
+ pointer-events:none
+}
+#hud.concept-hud .tray .tool{
+ display:flex!important;flex-direction:column!important;
+ align-items:center!important;flex:0 0 auto!important;
+ width:59px!important;height:66px!important;max-width:59px!important;
+ min-height:0!important;gap:3px!important;border-radius:11px;
+ padding:4px!important;background:rgba(8,33,30,.78);
+ border:1px solid rgba(220,185,118,.50);box-shadow:0 3px 12px #001c1b77;
+ pointer-events:auto
+}
+#hud.concept-hud .tray .tool .ic{
+ width:41px!important;height:40px!important;border-radius:8px!important;
+ background:rgba(23,57,48,.75)!important;
+ border:1px solid #d6ad6959!important;
+}
+#hud.concept-hud .tray .tool .ic img{width:37px!important;height:37px!important}
+#hud.concept-hud .tray .tool .cnt{
+ font-size:8px!important;white-space:nowrap!important;overflow:hidden;
+ text-overflow:ellipsis;max-width:51px!important;color:#f6dba9;
+ background:none!important;padding:0!important
+}
+#hud.concept-hud .tray #bAct{
+ position:fixed!important;right:calc(15px + var(--safe-r))!important;
+ bottom:calc(21px + var(--safe-b))!important;left:auto!important;
+ top:auto!important;z-index:14;pointer-events:auto;
+ width:106px!important;min-width:106px!important;max-width:106px!important;
+ height:106px!important;min-height:106px!important;
+ border-radius:50%!important;padding:16px 9px!important;
+ display:flex;align-items:center;justify-content:center;text-align:center;
+ font-size:13px!important;line-height:1.23!important;font-weight:800!important;
+ background:radial-gradient(circle at 42% 26%,#ffebb1,#c99b58 65%,#69482f)!important;
+ color:#272c20!important;box-shadow:inset 0 0 0 5px #263e39,
+ inset 0 0 0 7px #d9be8f,0 5px 0 #563e27,0 8px 25px #000b!important;
+ text-transform:none!important;letter-spacing:0!important;
+}
+#hud.concept-hud .tray #bAct.calm{
+ background:radial-gradient(circle at 40% 20%,#4c7563,#204a41 63%,#0c302e)!important;
+ color:#f3e9cc!important
+}
+#hud.concept-hud .tray #bAct.alarm{
+ background:radial-gradient(circle at 40% 30%,#fff5bd,#e3a867 70%,#9d5b37)!important
+}
+#hud.concept-hud .concept-reel-badge{
+ pointer-events:none;position:absolute;inset:6px;
+ border:1px dashed rgba(255,255,255,.48);border-radius:50%;
+ box-shadow:0 0 0 2px #1d3e3e8c
+}
+#hud.concept-hud #hTens{
+ position:absolute;left:12px!important;right:130px!important;
+ bottom:calc(25px + var(--safe-b))!important;top:auto!important;
+ transform:none!important;width:calc(100% - 151px)!important;
+ max-width:none!important;padding:8px 7px 12px!important;
+ border-radius:12px!important;z-index:10;
+}
+#hud.concept-hud #hDrag{
+ position:absolute;right:15px!important;bottom:calc(140px + var(--safe-b))!important;
+ top:auto!important;left:auto!important;max-width:112px;
+ border-radius:14px!important;background:rgba(9,38,35,.91)!important;
+ border-color:#ebc6868c!important;z-index:11
+}
+#hud.concept-hud #hDrag button{
+ border-radius:50%!important;background:#385b4b!important;color:#fae3a5!important
+}
+#hud.concept-hud #hHint{
+ position:absolute;top:calc(140px + var(--safe-t))!important;
+ right:10px!important;left:83px!important;
+ width:auto!important;max-width:calc(100% - 97px)!important;
+ padding:9px 11px!important;z-index:5;
+ font-size:12px!important;line-height:1.35!important;
+ background:rgba(8,37,35,.87)!important;border-color:#dfbc805a!important
+}
+#hud.concept-hud #hHint:empty{display:none!important}
+#hud.concept-hud #hCastPower{
+ bottom:calc(142px + var(--safe-b))!important;left:50%;
+ width:min(270px,calc(100% - 102px));max-width:270px
+}
+#hud.concept-hud .echo{top:calc(209px + var(--safe-t));left:80px}
+#hud.concept-hud .film{top:calc(56px + var(--safe-t));right:11px}
+@media(max-width:350px){
+ #hud.concept-hud .tray{left:5px;width:54px!important}
+ #hud.concept-hud .tray .tool{width:52px!important;max-width:52px!important}
+ #hud.concept-hud .tray #bAct{width:92px!important;height:92px!important;min-width:92px!important;min-height:92px!important;right:10px!important;font-size:11.5px!important}
+ #hud.concept-hud #hTens{width:calc(100% - 123px)!important;right:107px!important}
+ #hud.concept-hud #hHint{left:70px!important;right:8px!important}
+}
+@media(max-height:710px){
+ #hud.concept-hud .tray{top:calc(145px + var(--safe-t));gap:5px!important}
+ #hud.concept-hud .tray .tool{height:60px!important}
+ #hud.concept-hud .tray #bAct{bottom:calc(13px + var(--safe-b))!important}
+}
+
+/* Equipment store as photographic cards rather than legacy list rows. */
+#ovSheet .sheet.concept-shop{
+ border-radius:20px 20px 0 0!important;
+ background:linear-gradient(145deg,#193a31,#0b2827 62%,#091f22)!important
+}
+#ovSheet .sheet.concept-shop .scroll{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:9px!important;align-content:start!important;
+ padding:5px 1px 18px!important;
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row{
+ width:100%!important;min-width:0!important;max-width:100%!important;
+ display:flex!important;flex-direction:column!important;gap:5px!important;
+ padding:8px!important;margin:0!important;align-items:stretch!important;
+ justify-content:space-between!important;min-height:166px!important;
+ border:1px solid #c6a57280!important;border-radius:13px!important;
+ background:linear-gradient(145deg,#204b3c,#102f32)!important;
+ box-shadow:inset 0 1px rgba(246,223,171,.19),0 5px 9px #0016;
+ overflow:hidden!important
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row.cozy-focused{
+ border:2px solid #f4c46f!important;
+ box-shadow:0 0 0 1px #f1cd8a5c,0 0 15px #e7b8663a!important
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row .pic{
+ width:100%!important;height:76px!important;min-height:76px!important;
+ display:grid!important;place-items:center!important;border:0!important;
+ background:none!important;flex:0 0 76px!important;
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row .pic img{
+ width:100%!important;max-width:115px!important;height:75px!important;
+ object-fit:contain!important;filter:drop-shadow(0 6px 5px #0008)
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row .body{
+ width:100%!important;flex:0 0 auto!important;text-align:center!important;
+ min-height:38px!important;min-width:0!important;
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row .body .t{
+ font-size:12px!important;line-height:1.25!important;
+ overflow-wrap:normal!important;word-break:normal!important;
+ hyphens:none!important;color:#faedd5!important
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row .body .d{display:none!important}
+#ovSheet .sheet.concept-shop .cozy-mini-status{font-size:8px!important}
+#ovSheet .sheet.concept-shop .cozy-catalog-row>.btn{
+ width:100%!important;max-width:100%!important;min-width:0!important;
+ min-height:29px!important;padding:5px!important;margin-top:2px!important;
+ font-size:10px!important;background:linear-gradient(120deg,#e9c889,#c9a36b)!important;
+ color:#21372d!important
+}
+#ovSheet .sheet.concept-shop .cozy-preview{
+ min-height:94px!important;background:linear-gradient(125deg,#275747,#12372f)!important;
+}
+#ovSheet .sheet.concept-shop .cozy-preview>img{
+ width:94px!important;height:84px!important
+}
+#ovSheet .sheet.concept-shop .cozy-preview strong{font-size:15px}
+#ovSheet .sheet.concept-shop .cozy-preview span{font-size:10.5px}
+#ovSheet .sheet.concept-shop .cozy-tab-strip .tab.on{
+ background:#e6bd70!important;color:#243b2c!important
+}
+#ovSheet .sheet.concept-loadout .cozy-loadout{
+ background:linear-gradient(125deg,#315b49,#12352e)!important;
+ border-color:#e8c17b!important
+}
+#ovSheet .concept-achievement{
+ display:flex;align-items:center;gap:10px;padding:12px 9px;margin:8px 0;
+ background:#174038;border:1px solid #c49d695b;border-radius:12px
+}
+#ovSheet .concept-achievement.done{border-color:#e6c37aa5;background:#254c3d}
+#ovSheet .concept-achievement>div{flex:1;min-width:0}
+#ovSheet .concept-achievement strong{font-size:12px;color:#f8e9c8}
+#ovSheet .concept-achievement small{display:block;font-size:9px;color:#bccfc2;line-height:1.5;margin-top:3px}
+#ovSheet .concept-achievement b{font-size:10px;color:#e6c183}
+#ovSheet .concept-medal{color:#edca81;font-size:26px}
+#ovSheet .concept-achievement-track{height:5px;border-radius:5px;background:#0a2929;margin-top:8px;overflow:hidden}
+#ovSheet .concept-achievement-track i{display:block;height:100%;background:#e0b665}
+@media(max-width:355px){
+ #ovSheet .sheet.concept-shop .scroll{gap:6px!important}
+ #ovSheet .sheet.concept-shop .cozy-catalog-row{padding:6px!important}
+ #ovSheet .sheet.concept-shop .cozy-catalog-row .body .t{font-size:11px!important}
+ #ovSheet .sheet.concept-shop .cozy-preview>img{width:75px!important}
+}
