@@ -34,6 +34,12 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  await page.waitForTimeout(250);await page.screenshot({path:path.join(dir,"06-tackle.png")});
  await page.evaluate(()=>{FZ.UI.closeSheet&&FZ.UI.closeSheet();FZ.UI.closeMenu&&FZ.UI.closeMenu();FZ.Game.startSession("pond","summer")});
  await page.waitForTimeout(650);await page.screenshot({path:path.join(dir,"07-game-water.png")});
+ const realRodIcon=await page.evaluate(()=>{
+   const G=FZ.Game,id=G.loadout(G.sess().mode).rod;
+   return{expected:FZ.Art.icon(id,56),rendered:document.querySelector('#tRodIc img')?.getAttribute('src')};
+ });
+ assert.equal(realRodIcon.rendered,realRodIcon.expected,
+   "the method button must show the equipped rod, not an unrelated spinning reel");
  // Test a real float on a windy day, then restore the world state untouched.
  const bobState=await page.evaluate(()=>{
    const G=FZ.Game,s=G.sess(),r=G.rig(),wind=s.wx.wind;
