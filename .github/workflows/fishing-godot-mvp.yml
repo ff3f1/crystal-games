@@ -82,6 +82,17 @@ jobs:
             exit 1
           fi
 
+      - name: Isolated cast / fish / drag / framerate physics tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_physics.gd 2>&1 | tee godot-physics.log
+          grep -q "FISHING_PHYSICS_OK" godot-physics.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:|FISHING_PHYSICS_FAIL:' godot-physics.log; then
+            echo "::error::Fishing physics QA failed"
+            exit 1
+          fi
+
       - name: End-to-end fishing gameplay smoke test
         shell: bash
         run: |
