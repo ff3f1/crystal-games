@@ -19,8 +19,13 @@ var run_phase := 0.0
 var drag_level := 1 # 0 loose / 1 balanced / 2 tight
 var reel_speed := 0.0
 var pump_energy := 0.0
+var species_name := "Окунь"
+var slip_velocity := 0.0
+var line_wear := 0.0
+var headshake := 0.0
 
 func begin(species: String, body_weight: float, distance_from_shore: float) -> void:
+    species_name = species
     weight = maxf(0.10, body_weight)
     strength = 0.94 if species == "Карась" else (1.16 if species == "Окунь" else 1.72)
     strength *= clampf(0.91 + sqrt(weight) * 0.12, 0.89, 1.28)
@@ -35,6 +40,9 @@ func begin(species: String, body_weight: float, distance_from_shore: float) -> v
     slack_time = 0.0
     reel_speed = 0.0
     pump_energy = 0.0
+    slip_velocity = 0.0
+    line_wear = 0.0
+    headshake = 0.0
     drag_level = 1
 
 func drag_fraction() -> float:
@@ -51,11 +59,18 @@ func step(delta: float, reeling: bool, pumping: bool) -> int:
     time += dt
     var energy := 0.28 + 0.72 * stamina / 100.0
     var wave := maxf(0.0, sin(time * (1.55 + strength * 0.15) + run_phase))
-    burst = pow(wave, 3.0)
+    var long_run := pow(maxf(0.0, sin(time * 0.54 + run_phase * 2.3)), 8.0) if species_name == "Щука" else 0.0
+    var quick_dart := pow(maxf(0.0, cos(time * 2.7 + run_phase)), 9.0) if species_name == "Окунь" else 0.0
+    var steady_surge := pow(wave, 3.0) * (0.72 if species_name == "Карась" else 1.0)
+    burst = clampf(steady_surge + long_run * 0.58 + quick_dart * 0.35, 0.0, 1.5)
+    headshake = sin(time * (9.0 if species_name == "Щука" else 5.1)) * burst
     var fish_pull := strength * energy * (0.62 + burst * 1.28)
     var drag := drag_fraction()
     lateral = sin(time * (0.64 + strength * 0.12)) * minf(9.0, distance * 0.27) * (0.55 + burst * 0.52)
+    if species_name == "Щука":
+        lateral += sin(time * 0.43) * 1.40 * long_run
     depth = 0.55 + 1.6 * burst + 0.3 * sin(time * 0.8)
+    slip_velocity = 0.0
 
     if pumping:
         pump_energy = clampf(pump_energy + 0.75 * dt, 0.0, 1.0)
@@ -81,13 +96,17 @@ func step(delta: float, reeling: bool, pumping: bool) -> int:
         var slip := (tension - slip_threshold) * (0.16 + (1.0 - drag) * 0.54)
         tension -= slip * dt * 14.0
         distance += slip * dt * 0.20
+        slip_velocity = slip * 0.20
     tension = clampf(tension, 0.0, 115.0)
+    # Abrasion accumulates slowly only under dangerously sustained pressure;
+    # brief controlled surges are safe, continuous abuse is not.
+    line_wear = clampf(line_wear + maxf(0.0, tension - 78.0) * 0.00035 * dt, 0.0, 1.0)
 
     if tension < 6.0:
         slack_time += dt
     else:
         slack_time = maxf(0.0, slack_time - dt * 1.8)
-    if tension >= 102.0:
+    if tension >= 102.0 - line_wear * 5.0:
         return Outcome.LINE_BROKE
     if distance >= 47.0:
         return Outcome.FISH_ESCAPED
