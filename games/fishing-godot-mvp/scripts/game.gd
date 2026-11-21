@@ -378,7 +378,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _look_drag(movement: Vector2) -> void:
     var speed := float(profile.get("sensitivity", 1.0))
     camera.rotation.y = clampf(camera.rotation.y - movement.x * 0.0035 * speed, -1.2, 1.2)
-    camera.rotation.x = clampf(camera.rotation.x - movement.y * 0.002 * speed, -0.27, 0.20)
+    camera.rotation.x = clampf(camera.rotation.x - movement.y * 0.002 * speed, -0.78, 0.28)
 
 func _create_environment() -> void:
     camera = Camera3D.new()
