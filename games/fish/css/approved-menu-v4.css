@@ -13,13 +13,19 @@
   display:block!important;position:relative!important;isolation:isolate;
   width:100%!important;max-width:520px!important;height:100dvh!important;min-height:0!important;
   padding:0!important;margin:0 auto!important;overflow:hidden!important;
-  background:linear-gradient(180deg,#344627 43%,#0c3027 64%,#09231e 92%,#061911 100%);
+  /* Extend the SAME approved lake photo behind the full menu instead of
+     the former flat green lower half. The logo remains a separate top hero;
+     only lake/dock pixels of this cover image appear beneath the cards. */
+  background-image:linear-gradient(180deg,rgba(5,29,24,0) 35%,rgba(7,30,25,.12) 50%,rgba(4,26,20,.38) 65%,rgba(2,23,19,.67) 100%),url('../assets/menu-reference/hero.webp')!important;
+  background-position:center center!important;
+  background-repeat:no-repeat!important;
+  background-size:cover!important;
+  background-color:#0a2b23!important;
   box-shadow:0 0 60px #0009;
 }
 #ovMenu.reference-menu-v4 .reference-layout::after{
   content:"";position:absolute;inset:52% 0 0;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse at 50% 5%,rgba(167,114,45,.15),transparent 70%),
-    repeating-linear-gradient(104deg,#ffffff02 0 9px,transparent 10px 26px);
+  background:linear-gradient(180deg,transparent,rgba(7,31,23,.12) 46%,rgba(5,26,20,.29) 100%);
 }
 #ovMenu.reference-menu-v4 .reference-hero{
   position:absolute;top:0;left:0;width:100%;height:52.5%;z-index:0;
@@ -215,4 +221,21 @@
 @media(max-width:350px){
  #ovMenu.reference-menu-v4 .lodge-grid{gap:3px!important}
  #ovMenu.reference-menu-v4 .lodge-footer button{letter-spacing:-.15px!important}
+}
+
+
+/* Menu must never vanish during re-render after closing a submenu.
+   The previous delayed "backwards" keyframes concealed every card and PLAY,
+   leaving the entire photographic lower half looking like an empty green void.
+   Retain tactile press/rebound animations but never animate a button from zero opacity. */
+#ovMenu.reference-menu-v4 .go:not(.ref-rebound),
+#ovMenu.reference-menu-v4 .lodge-grid .tile:not(.ref-rebound){
+  animation:none!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+#ovMenu.reference-menu-v4 .go.ref-rebound,
+#ovMenu.reference-menu-v4 .lodge-grid .tile.ref-rebound{
+  opacity:1!important;
+  visibility:visible!important;
 }

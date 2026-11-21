@@ -80,6 +80,28 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    assert(await page.locator('#ovSheet').evaluate(el=>el.classList.contains('on')),
      'real map button must open its interactive sheet');
    await page.evaluate(()=>FZ.UI.closeSheet());
+   // Check IMMEDIATELY: the old menu played delayed backwards keyframes
+   // after each sheet close and visibly vanished for ~0.7s.
+   const afterReturn=await page.evaluate(()=>{
+     const menu=document.getElementById('ovMenu');
+     const lodge=menu.querySelector('.reference-layout');
+     const grid=menu.querySelector('.lodge-grid');
+     const buttons=[document.getElementById('mGo'),...grid.querySelectorAll('.tile')];
+     const states=buttons.map(el=>{
+       const c=getComputedStyle(el),r=el.getBoundingClientRect();
+       const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+       return{id:el.id,opacity:Number(c.opacity),visible:c.visibility==='visible',
+         hit:!!top&&(top===el||el.contains(top)),display:c.display};
+     });
+     const bg=getComputedStyle(lodge);
+     return {buttons:states,background:bg.backgroundImage,size:bg.backgroundSize,
+       menuVisible:menu.classList.contains('on')};
+   });
+   assert(afterReturn.menuVisible&&afterReturn.buttons.length===10&&
+     afterReturn.buttons.every(b=>b.opacity>.98&&b.visible&&b.hit&&b.display!=='none')&&
+     afterReturn.background.includes('hero.webp')&&afterReturn.size==='cover',
+     'menu re-entry must show PLAY and nine tappable cards on a full lake backdrop '+JSON.stringify(afterReturn));
+   await page.screenshot({path:path.join(output,'00-return-full-lake-no-blank.png')});
    await page.waitForTimeout(80);
  }
  await page.screenshot({path:path.join(output,name+'.png')});
