@@ -359,7 +359,7 @@ func _create_environment() -> void:
     add_child(camera)
     camera.position = Vector3(0, 1.68, 9.2)
     camera.fov = 70.0
-    camera.far = 230.0
+    camera.far = 410.0
     camera.look_at(Vector3(0, 0.3, -30.0), Vector3.UP)
     camera.current = true
 
