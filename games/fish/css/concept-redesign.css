@@ -418,3 +418,31 @@
  #ovSheet .sheet.concept-shop .cozy-catalog-row .body .t{font-size:11px!important}
  #ovSheet .sheet.concept-shop .cozy-preview>img{width:75px!important}
 }
+
+
+/* Correct inherited fixed anchors from pre-concept HUD.
+   Legacy .hint had bottom+translateX(-50%) and stretched across half the lake. */
+#hud.concept-hud #hHint{
+ transform:none!important;
+ bottom:auto!important;
+ left:83px!important;
+ right:10px!important;
+ width:calc(100% - 93px)!important;
+ min-height:0!important;
+ height:auto!important;
+ max-height:108px!important;
+ overflow:hidden!important;
+}
+#hud.concept-hud .tray #bAct{
+ right:15px!important;
+ left:auto!important;
+ transform:none;
+}
+#hud.concept-hud .tray #bAct.held{
+ transform:scale(.96)!important;
+}
+@media(max-width:350px){
+ #hud.concept-hud #hHint{left:69px!important;right:9px!important;
+ width:calc(100% - 78px)!important}
+ #hud.concept-hud .tray #bAct{right:10px!important}
+}
