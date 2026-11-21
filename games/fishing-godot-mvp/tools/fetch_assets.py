@@ -58,6 +58,14 @@ for output_name, exact_title in QUIET_LAKE.items():
         raise ValueError(f"Unable to resolve asset {exact_title!r} in manifest")
     fetch(matches[0]["cdnUrl"], MODELS / f"{output_name}.glb")
 
+# CC0 mesh with actual articulated fingers and a skeleton (not placeholder spheres).
+# WRAD ARMS is public domain. Source: https://github.com/wwwriks/wrad-arms
+# Pin exact revision to keep CI and signing reproducible.
+wrad_sha = "f3987244176c33d2c20d4f9e139980af12684d87"
+wrad_base = f"https://raw.githubusercontent.com/wwwriks/wrad-arms/{wrad_sha}/"
+fetch(wrad_base + "arms.glb", MODELS / "fps_arms.glb")
+fetch(wrad_base + "arm_albedo_dark.png", TEX / "fps_arm_albedo.png")
+
 # Kenney Nature Kit: CC0. Pin to a checked repo commit, not a moving branch.
 kenney_sha = "2063cb42fb45b80a20c3db066b71e627cc64741c"
 kenney_base = f"https://raw.githubusercontent.com/Hidencod/tge-assets/{kenney_sha}/packs/nature-kit/"
@@ -80,6 +88,13 @@ for category, model in (
     ("polyhaven-nature-rocks", "stone_01"),
     ("polyhaven-nature-plants", "shrub_02"),
     ("polyhaven-nature-plants", "shrub_03"),
+    ("polyhaven-nature-rocks", "rock_09"),
+    ("polyhaven-nature-rocks", "rock_moss_set_02"),
+    ("polyhaven-nature-rocks", "boulder_01"),
+    ("polyhaven-nature-plants", "shrub_04"),
+    ("polyhaven-nature-plants", "grass_medium_02"),
+    ("polyhaven-nature-plants", "tree_stump_01"),
+    ("polyhaven-nature-plants", "pine_roots"),
 ):
     fetch(poly_model_base + f"{category}/models/{model}/{model}.glb", MODELS / f"{model}.glb")
 
