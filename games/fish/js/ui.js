@@ -275,8 +275,14 @@
         h="Рыба давит на глубину<small>Выждите рывок, подмотайте на отдыхе</small>";
       } else if(f.slipping){
         h="Фрикцион отдаёт леску<small>Не форсируйте, дождитесь ослабления рывка</small>";
-      } else if(!s.ice && f.phase==="run" && !f.against && Math.abs(f.vx)>.6){
-        h="Рыба рвётся в сторону!<small>Отведите удилище против рывка</small>";
+      } else if(f.phase==="run"){
+        // The first-fish tutorial must never tell the angler to reel
+        // straight through an active run, even when steering is correct.
+        h=f.against
+          ?"Удилище гасит рывок<small>Не форсируйте — подматывайте после ослабления</small>"
+          :!s.ice&&Math.abs(f.vx)>.6
+            ?"Рыба рвётся в сторону!<small>Отведите удилище против рывка, дайте леску</small>"
+            :"Рыба делает рывок<small>Ослабьте подмотку, дождитесь отдыха</small>";
       } else if(f.phase==="toward"){
         h="Рыба идёт к вам!<small>Подматывайте, не допускайте провиса</small>";
       } else if(f.phase==="shake"){
