@@ -403,7 +403,7 @@ func _create_environment() -> void:
     camera.position = Vector3(0, 1.68, 9.2)
     camera.fov = 70.0
     camera.far = 410.0
-    camera.look_at(Vector3(0, 0.3, -30.0), Vector3.UP)
+    camera.look_at(Vector3(0, 3.7, -30.0), Vector3.UP)
     camera.current = true
 
     var light := DirectionalLight3D.new()
@@ -658,24 +658,24 @@ func _create_ui() -> void:
     ui.add_child(root)
 
     var shade := ColorRect.new()
-    shade.color = Color(0.012, 0.035, 0.039, 0.29)
+    shade.color = Color(0.012, 0.035, 0.039, 0.19)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _place(shade, 0, 0, 1, 0.12)
     root.add_child(shade)
 
     var lower := ColorRect.new()
-    lower.color = Color(0.015, 0.030, 0.037, 0.19)
+    lower.color = Color(0.015, 0.030, 0.037, 0.09)
     lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _place(lower, 0, 0.77, 1, 1)
     root.add_child(lower)
 
-    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 23, 0.026, 0.005, 0.68, 0.058)
-    message_label = _label(root, "", 18, 0.026, 0.058, 0.78, 0.126)
-    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 17, 0.63, 0.012, 0.875, 0.079)
+    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 19, 0.026, 0.005, 0.68, 0.058)
+    message_label = _label(root, "", 16, 0.026, 0.058, 0.78, 0.126)
+    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 15, 0.63, 0.012, 0.875, 0.079)
     var pause_button := _button(root, "☰", 0.88, 0.012, 0.946, 0.10, Color(0.18, 0.34, 0.35))
     pause_button.add_theme_font_size_override("font_size", 27)
     pause_button.pressed.connect(open_pause)
-    stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
+    stats_label = _label(root, "", 16, 0.255, 0.738, 0.985, 0.803)
 
     stamina_label = _label(root, "", 17, 0.278, 0.775, 0.60, 0.826)
     stamina_label.add_theme_color_override("font_color", Color(0.76, 0.89, 0.79))
@@ -709,7 +709,7 @@ func _create_ui() -> void:
     pad.add_child(joystick_knob)
     _update_joystick_knob()
 
-    action_button = _button(root, "ЗАБРОС", 0.772, 0.845, 0.977, 0.973, Color(0.44, 0.28, 0.15, 0.90))
+    action_button = _button(root, "ЗАБРОС", 0.772, 0.845, 0.977, 0.973, Color(0.41, 0.28, 0.17, 0.69))
     action_button.pressed.connect(_main_action)
     action_button.button_down.connect(_begin_charge)
     action_button.button_up.connect(_end_charge)
@@ -720,15 +720,15 @@ func _create_ui() -> void:
     _place(cast_charge_bar, 0.555, 0.811, 0.962, 0.834)
     root.add_child(cast_charge_bar)
     cast_charge_bar.visible = false
-    lure_button = _button(root, "ЧЕРВЬ", 0.594, 0.845, 0.76, 0.973, Color(0.10, 0.28, 0.29, 0.90))
+    lure_button = _button(root, "ЧЕРВЬ", 0.594, 0.845, 0.76, 0.973, Color(0.10, 0.28, 0.29, 0.69))
     lure_button.pressed.connect(_toggle_lure)
-    reel_button = _button(root, "МОТАТЬ", 0.548, 0.845, 0.766, 0.973, Color(0.09, 0.30, 0.32, 0.90))
+    reel_button = _button(root, "МОТАТЬ", 0.548, 0.845, 0.766, 0.973, Color(0.09, 0.30, 0.32, 0.69))
     reel_button.button_down.connect(func() -> void: is_reeling = true)
     reel_button.button_up.connect(func() -> void: is_reeling = false)
-    brace_button = _button(root, "ДЕРЖАТЬ", 0.777, 0.845, 0.977, 0.973, Color(0.21, 0.30, 0.19, 0.90))
+    brace_button = _button(root, "ДЕРЖАТЬ", 0.777, 0.845, 0.977, 0.973, Color(0.21, 0.30, 0.19, 0.69))
     brace_button.button_down.connect(func() -> void: is_bracing = true)
     brace_button.button_up.connect(func() -> void: is_bracing = false)
-    drag_button = _button(root, "ФРИКЦИОН", 0.275, 0.845, 0.505, 0.973, Color(0.16, 0.20, 0.21, 0.90))
+    drag_button = _button(root, "ФРИКЦИОН", 0.275, 0.845, 0.505, 0.973, Color(0.16, 0.20, 0.21, 0.69))
     drag_button.pressed.connect(_cycle_drag)
 
     # The minimap follows the player, floating lure and actual hotspots.
@@ -775,7 +775,7 @@ func _button(parent: Control, txt: String, l: float, t: float, r: float, b: floa
     var normal := StyleBoxFlat.new()
     normal.bg_color = color
     normal.set_corner_radius_all(18)
-    normal.border_color = Color(0.73, 0.80, 0.71, 0.34)
+    normal.border_color = Color(0.73, 0.80, 0.71, 0.22)
     normal.set_border_width_all(1)
     result.add_theme_stylebox_override("normal", normal)
     var down := normal.duplicate() as StyleBoxFlat
@@ -1225,7 +1225,7 @@ func start_game() -> void:
     session_started = true
     overlay.call("hide_overlay")
     camera.position = Vector3(0, 1.68, 9.2)
-    camera.look_at(Vector3(0, 0.3, -30.0), Vector3.UP)
+    camera.look_at(Vector3(0, 3.7, -30.0), Vector3.UP)
     _reset_to_ready()
 
 func open_pause() -> void:
