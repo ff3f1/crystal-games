@@ -38,6 +38,23 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
  assert(!report.floatingRod,'main menu must not have a rod levitating in the lake');
  assert(!report.duplicateReel,'duplicate floating reel must not exist in main menu');
  assert(report.weather,'current fishing weather must be shown in menu');
+ const rebuilt=await page.evaluate(()=>{
+   const nav=document.querySelector('#ovMenu .concept-primary');
+   const shelf=document.querySelector('#ovMenu .lodge-grid');
+   const go=document.querySelector('#mGo');
+   return{
+     active:document.querySelector('#ovMenu').classList.contains('concept-redesign'),
+     navItems:nav?.querySelectorAll('button').length,
+     goMoved:go?.parentElement===nav,
+     shopMoved:document.querySelector('#mShop')?.parentElement===nav,
+     achievements:!!document.querySelector('#mAchievements'),
+     inventory:!!document.querySelector('#mInventory'),
+     shelfHorizontal:shelf&&getComputedStyle(shelf).flexDirection==='row'
+   };
+ });
+ assert(rebuilt.active&&rebuilt.goMoved&&rebuilt.shopMoved&&
+   rebuilt.navItems===5&&rebuilt.achievements&&rebuilt.inventory&&rebuilt.shelfHorizontal,
+   'approved menu must be genuinely rebuilt, not the 1.6 tile layout '+JSON.stringify(rebuilt));
  assert(report.tileTexts.every(x=>x.lines===1&&x.fits),'split or clipped Russian menu text '+JSON.stringify(report.tileTexts));
  assert(report.buttons.every(x=>x.visible),'missing menu button '+JSON.stringify(report));
  assert(report.width<=w+3,'horizontal menu overflow '+JSON.stringify(report));
@@ -49,6 +66,14 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    assert.equal(ok,1,'rate button invokes actual store handler once');
    await page.evaluate(()=>FZ.UI.showShop('lure'));
    await page.waitForSelector('.cozy-catalog-row');
+   const shopView=await page.evaluate(()=>{
+     const sh=document.querySelector('#ovSheet .sheet'),items=sh.querySelectorAll('.cozy-catalog-row');
+     if(items.length<2)return{};
+     const a=items[0].getBoundingClientRect(),b=items[1].getBoundingClientRect();
+     return{newSkin:sh.classList.contains('concept-shop'),sameRow:Math.abs(a.y-b.y)<5,differentX:Math.abs(a.x-b.x)>30};
+   });
+   assert(shopView.newSkin&&shopView.sameRow&&shopView.differentX,
+     'catalog must show actual two-column gear cards '+JSON.stringify(shopView));
    const layout=await page.evaluate(()=>{
      const rows=[...document.querySelectorAll('.cozy-catalog-row')];
      return{count:rows.length,overflow:rows.filter(r=>r.scrollWidth>r.clientWidth+2).map(r=>r.textContent.trim().slice(0,35)),
