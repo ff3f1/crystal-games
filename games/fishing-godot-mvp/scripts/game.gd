@@ -46,7 +46,9 @@ var bite_sign_age := 99.0
 var shoreline_activity := 0.0
 var rod_angle := 0.0
 var rod_spring_speed := 0.0
-var fish_swimmers: Array[Node3D] = []
+var fish_population: Node3D
+var pending_fish_id := -1
+var staged_fish_body: Node3D
 var fish_swim_clock := 0.0
 var activity_rings: Array[MeshInstance3D] = []
 var minimap: Control
@@ -106,7 +108,7 @@ func _ready() -> void:
     fight_sim = (load("res://scripts/fight_physics.gd") as GDScript).new()
     ecology = (load("res://scripts/lake_ecology.gd") as GDScript).new()
     _create_hotspots()
-    _create_lake_swimmers()
+    _create_lake_population()
     _create_ui()
     sounds = (load("res://scripts/soundscape.gd") as GDScript).new() as Node
     add_child(sounds)
@@ -131,6 +133,13 @@ func _process(delta: float) -> void:
     lake_hour = fposmod(lake_hour + delta * 0.0014, 24.0)
     wind = clampf(0.31 + 0.22 * sin(elapsed * 0.015), 0.05, 0.68)
     _animate_lake(delta)
+    # The full fish population keeps swimming even when the angler is not
+    # fishing. Only WAITING permits a fish to chase the actual bait.
+    if phase != Phase.WAITING:
+        fish_population.call(
+            "simulate", delta, false, Vector3.ZERO, lure_index,
+            0.0, 0.0, lake_hour, wind, camera.global_position
+        )
     if cast_charging and (phase == Phase.READY or phase == Phase.RESULT):
         cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
     if rod_root != null:
@@ -184,10 +193,13 @@ func _process(delta: float) -> void:
                 bait_underwater.rotation.y += delta * 12.0 if is_reeling else delta * 1.5
             # Fish react to appropriate food and motion, not an arbitrary
             # strike countdown. A short nibble precedes a proper hook window.
-            var reaction: Dictionary = ecology.tick(
-                delta, lure_sim.position, lure_index, lure_sim.depth,
-                lure_sim.retrieve_speed, lure_sim.twitch_boost,
-                fish_spots, lake_hour, wind
+            # The bait is a world-space point at its actual depth, NOT an
+            # invisible random bite table. Physical resident fish inspect it.
+            var lure_world := Vector3(lure_sim.position.x, -lure_sim.depth, lure_sim.position.z)
+            var reaction: Dictionary = fish_population.call(
+                "simulate", delta, true, lure_world, lure_index,
+                float(lure_sim.retrieve_speed), float(lure_sim.twitch_boost),
+                lake_hour, wind, camera.global_position
             )
             shoreline_activity = float(reaction["activity"])
             timer += delta
@@ -203,6 +215,7 @@ func _process(delta: float) -> void:
                 _set_message("Осторожная поклёвка... Не спеши подсекать!")
             elif int(reaction["signal"]) == 2:
                 current_bite_species = str(reaction["species"])
+                pending_fish_id = int(reaction["id"])
                 phase = Phase.BITE
                 timer = 0.0
                 _choose_fish()
@@ -528,6 +541,7 @@ func _create_bobber_and_fish() -> void:
 
     fish_body = Node3D.new()
     add_child(fish_body)
+    staged_fish_body = fish_body
     _set_fish_model("Окунь")
     fish_body.visible = false
 
@@ -561,64 +575,31 @@ func _create_hotspots() -> void:
         marker_mesh.visible = false
         activity_rings.append(marker_mesh)
 
-func _create_lake_swimmers() -> void:
-    # Reuse the same species meshes as trophies, rather than painted decals.
-    # Residents patrol their habitat below the waterline. Only an occasional
-    # short breach becomes visible at the surface.
-    var species := ["Карась", "Окунь", "Щука", "Окунь"]
-    for i in range(fish_spots.size()):
-        var fish := make_fish_visual(species[i])
-        add_child(fish)
-        var anchor: Vector3 = fish_spots[i]["pos"]
-        fish.position = anchor + Vector3(0.0, -1.20, 0.0)
-        fish.scale = Vector3.ONE * (0.38 if species[i] != "Щука" else 0.28)
-        fish.set_meta("swim_anchor", anchor)
-        fish.set_meta("swim_phase", float(i) * 1.73)
-        fish_swimmers.append(fish)
+func _create_lake_population() -> void:
+    # A single fish identity persists from free swimming to contact, hook
+    # and landing. Models are not generated at the moment of a strike.
+    fish_population = (load("res://scripts/fish_population.gd") as GDScript).new() as Node3D
+    add_child(fish_population)
+    fish_population.call("initialize", fish_spots, ecology)
 
 func _animate_lake(delta: float) -> void:
     fish_swim_clock += delta
     var sunlight := clampf(sin((lake_hour - 6.0) / 13.5 * PI), 0.15, 1.0)
-    sun_light.light_energy = lerpf(sun_light.light_energy, 0.46 + sunlight * 0.47, minf(1.0, delta * 0.18))
+    sun_light.light_energy = lerpf(sun_light.light_energy, 0.51 + sunlight * 0.41, minf(1.0, delta * 0.18))
     shore_art.call("set_wind", wind)
     sounds.call("set_weather", wind, lake_hour)
-    for i in range(fish_swimmers.size()):
-        var swimmer := fish_swimmers[i]
-        var centre: Vector3 = swimmer.get_meta("swim_anchor")
-        var phi: float = float(swimmer.get_meta("swim_phase")) + elapsed * (0.21 + float(i) * 0.018)
-        # Perch patrol the stones, carp circle vegetation, pike stays deeper.
-        var excursion := 2.4 if i == 2 else (1.3 if i == 0 else 1.8)
-        var z := centre.z + sin(phi) * excursion
-        var x := centre.x + cos(phi * 0.83) * excursion
-        swimmer.position = Vector3(x, -0.95 if i != 2 else -1.45, z)
-        swimmer.rotation.y = phi + PI * 0.5
-        swimmer.call("set_wiggle", 0.55 + wind * 0.30)
-        # Reveal fish only if they momentarily break the surface; otherwise
-        # the opaque water correctly hides the underwater habitat.
-        var breach_phase := fposmod(elapsed + float(i) * 10.4, 43.0 + i * 6.0)
-        var near_waterfront := camera.global_position.distance_to(centre) < 42.0
-        if near_waterfront and breach_phase < 0.80 and i != 2:
-            var arc := sin(breach_phase / 0.8 * PI)
-            swimmer.position.y = -0.65 + arc * 1.15
-            swimmer.rotation.x = sin(breach_phase / 0.8 * PI) * 0.20
-            if breach_phase < delta:
-                ring.position = Vector3(x, 0.045, z)
-                ripple_age = 0.0
-                ring.visible = true
-        else:
-            swimmer.rotation.x = 0.0
-        if i < activity_rings.size():
-            var ring_mark := activity_rings[i]
-            # Active cues come from actual habitats, not permanent glowing circles.
-            var cue_phase := fposmod(elapsed + float(i) * 7.3, 22.0 + float(i) * 4.0)
-            ring_mark.visible = near_waterfront and cue_phase < 2.7 and i != 2
-            if ring_mark.visible:
-                var alpha := sin(cue_phase / 2.7 * PI)
-                ring_mark.scale = Vector3.ONE * (0.85 + cue_phase * 0.18)
-                var cue_material := ring_mark.material_override as ShaderMaterial
-                if cue_material != null:
-                    cue_material.set_shader_parameter("age", minf(1.6, cue_phase * 0.60))
-                    cue_material.set_shader_parameter("wind", wind)
+    # Activity indicators are connected to actual nearby resident fish
+    # investigating food, rather than cyclic arbitrary spectacle.
+    for i in range(activity_rings.size()):
+        var marker := activity_rings[i]
+        var activity: float = fish_population.call("get_activity", i)
+        marker.visible = activity > 0.24 and phase != Phase.FIGHT and phase != Phase.LANDING
+        if marker.visible:
+            var sh := marker.material_override as ShaderMaterial
+            if sh != null:
+                sh.set_shader_parameter("age", fposmod(elapsed, 1.3))
+                sh.set_shader_parameter("wind", wind)
+            marker.scale = Vector3.ONE * (0.85 + activity * 0.23)
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
@@ -818,6 +799,12 @@ func _main_action() -> void:
             phase = Phase.FIGHT
             timer = 0.0
             tension = 22.0
+            if pending_fish_id >= 0:
+                var live_fish: Node3D = fish_population.call("take_hooked", pending_fish_id)
+                if live_fish != null:
+                    fish_body = live_fish
+                    fish_body.visible = true
+            pending_fish_id = -1
             fight_sim.begin(fish_name, fish_weight, camera.global_position.distance_to(bobber.global_position) * 0.78)
             fight_distance = fight_sim.distance
             tension = fight_sim.tension
@@ -842,6 +829,9 @@ func _reset_to_ready() -> void:
     phase = Phase.READY
     is_reeling = false
     is_bracing = false
+    if pending_fish_id >= 0 and fish_population != null:
+        fish_population.call("release_strike", pending_fish_id)
+        pending_fish_id = -1
     current_bite_species = ""
     bobber.visible = false
     fish_body.visible = false
@@ -876,6 +866,7 @@ func _cast() -> void:
     lure_sim.begin_cast(cast_source, cast_target, lure_index)
     ecology.reset_cast()
     ecology.register_disturbance(0.07)
+    pending_fish_id = -1
     lure_depth = 0.0
     is_reeling = false
     is_bracing = false
@@ -890,8 +881,15 @@ func _cast() -> void:
 
 
 func _choose_fish() -> void:
-    # The ecology has already chosen an eligible fish from the local habitat.
-    # The result is never a pike taking a worm, or a crucian taking a spinner.
+    # Select the same real fish that crossed the hook contact radius.
+    if pending_fish_id >= 0:
+        var original: Dictionary = fish_population.call("get_info", pending_fish_id)
+        if not original.is_empty():
+            fish_name = str(original["species"])
+            fish_weight = float(original["weight"])
+            fish_strength = 0.95 if fish_name == "Карась" else 1.20 if fish_name == "Окунь" else 1.86
+            return
+    # Fallback only for testing the trophy presentation in isolation.
     fish_name = current_bite_species
     if fish_name.is_empty():
         fish_name = "Карась" if lure_index == 0 else "Окунь"
@@ -970,6 +968,12 @@ func _finish(text: String, won: bool = false) -> void:
     phase = Phase.RESULT
     result_text = text
     fish_body.visible = false
+    if fish_population != null:
+        if pending_fish_id >= 0:
+            fish_population.call("release_strike", pending_fish_id)
+            pending_fish_id = -1
+        fish_population.call("finish_hook", won)
+    fish_body = staged_fish_body
     bobber.visible = false
     bait_underwater.visible = false
     is_reeling = false
