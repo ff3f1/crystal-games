@@ -3,6 +3,7 @@
   "use strict";
   const U = FZ.U, G = FZ.Game, UI = FZ.UI, Sc = FZ.Scene;
   const cv = document.getElementById("cv");
+  let activeCanvas = cv;
   let t = 0, last = 0, aim = null, ambT = 0, running = false, worldLast = -Infinity, physicsDebt = 0;
   const FIXED_DT = 1 / 60, MAX_PHYSICS_STEPS = 12;
   // Pointer ownership is independent of the current fishing state.
@@ -23,7 +24,7 @@
   }
   function capture(el, id) { try { el.setPointerCapture(id); } catch (_) {} }
   function release(el, id) { try { if (el.hasPointerCapture(id)) el.releasePointerCapture(id); } catch (_) {} }
-  cv.addEventListener("pointerdown", function(e) {
+  function onPointerDown(e) {
     FZ.Sound.unlock();
     if (blocked() || (e.button != null && e.button !== 0)) return;
     e.preventDefault();
@@ -37,9 +38,9 @@
     pointers.set(e.pointerId,p); inputRig=r;
     if(role === "cast") { castId=e.pointerId; setAim(p.x,p.y); }
     if(role === "rod") rodId=e.pointerId;
-    capture(cv,e.pointerId); syncReel();
-  });
-  cv.addEventListener("pointermove", function(e) {
+    capture(activeCanvas,e.pointerId); syncReel();
+  }
+  function onPointerMove(e) {
     const p=pointers.get(e.pointerId); if(!p)return;
     if(blocked() || p.rig !== G.rig()) { releaseInput(); return; }
     e.preventDefault();
@@ -53,13 +54,13 @@
       r.liftTarget=U.clamp((p.sy-p.y)/(Sc.size().W*.3),-.6,1);
       if(G.sess().mode==="spin" && r.state==="wait" && moveDistance>8)r.twitch=Math.min(1,(r.twitch||0)+moveDistance/70);
     }
-  });
+  }
   function endPointer(e,cancelled) {
     const p=pointers.get(e.pointerId); if(!p)return;
     pointers.delete(e.pointerId);
     if(rodId===e.pointerId)rodId=null;
     if(castId===e.pointerId)castId=null;
-    release(cv,e.pointerId);
+    release(activeCanvas,e.pointerId);
     const r=G.rig(), a=p.role==="cast"?aim:null;
     if(p.role==="cast")aim=null;
     if(!cancelled && !blocked() && r===p.rig) {
@@ -75,9 +76,22 @@
     }
     syncReel();
   }
-  cv.addEventListener("pointerup",e=>endPointer(e,false));
-  cv.addEventListener("pointercancel",e=>endPointer(e,true));
-  cv.addEventListener("lostpointercapture",e=>endPointer(e,true));
+  function bindCanvas(el) {
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", e => endPointer(e,false));
+    el.addEventListener("pointercancel", e => endPointer(e,true));
+    el.addEventListener("lostpointercapture", e => endPointer(e,true));
+  }
+  bindCanvas(cv);
+  // The WebGL fallback replaces #cv with a new Canvas 2D element.
+  // Reattach input there or the player loses casting, striking and multitouch.
+  Input.rebindCanvas = function(nextCanvas) {
+    if (!nextCanvas || nextCanvas === activeCanvas) return;
+    releaseInput();
+    activeCanvas = nextCanvas;
+    bindCanvas(activeCanvas);
+  };
   Input.actionDown=function(id) {
     id=id==null?"legacy":id;
     FZ.Sound.unlock(); if(blocked() || actions.has(id))return;
@@ -97,7 +111,7 @@
   function releaseInput() {
     const ids=Array.from(pointers.keys()); pointers.clear(); actions.clear();
     rodId=null;castId=null;aim=null;inputRig=null;
-    ids.forEach(id=>release(cv,id));
+    ids.forEach(id=>release(activeCanvas,id));
     const r=G.rig();if(r){r.reeling=false;r.tilt=0;r.liftTarget=0;}
     const b=document.getElementById("bAct");if(b)b.classList.remove("held");
   }
