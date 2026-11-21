@@ -124,6 +124,8 @@ func _process(delta: float) -> void:
     _update_player(delta)
     ripple_age += delta
     bite_sign_age += delta
+    if bobber != null:
+        bobber.rotation.x = move_toward(bobber.rotation.x, 0.0, delta * 2.2)
     lake_hour = fposmod(lake_hour + delta * 0.0014, 24.0)
     wind = clampf(0.31 + 0.22 * sin(elapsed * 0.015), 0.05, 0.68)
     _animate_lake(delta)
@@ -161,7 +163,13 @@ func _process(delta: float) -> void:
             lure_sim.tick_water(delta, is_reeling, is_bracing, camera.global_position)
             lure_depth = lure_sim.depth
             bobber.position = lure_sim.visible_surface_position()
-            bobber.position.y += sin(elapsed * 2.8) * 0.025
+            bobber.position.y += sin(elapsed * 2.8) * (0.018 + wind * 0.023)
+            bobber.rotation.z = sin(elapsed * 2.2) * (0.035 + wind * 0.05)
+            if bite_sign_age < 1.4:
+                # A real nibble first tilts the float and creates a tiny dip.
+                var tap := sin(bite_sign_age * 11.0) * exp(-bite_sign_age * 1.65)
+                bobber.position.y -= maxf(0.0, tap) * 0.14
+                bobber.rotation.x += tap * 0.14
             if spinner_glint != null:
                 spinner_glint.scale = Vector3.ONE * (0.95 + sin(elapsed * 7.4) * 0.10)
             if bait_underwater != null:
@@ -964,13 +972,23 @@ func _draw_line() -> void:
     if not bobber.visible:
         return
     var tip := rod_tip.global_position
-    var last := bobber.global_position + Vector3.UP * 0.18
-    var mid := tip.lerp(last, 0.53)
-    mid.y -= 0.12 if phase == Phase.FIGHT else 0.55
+    var endpoint := bobber.global_position + Vector3.UP * 0.16
+    if lure_index == 1 and bait_underwater.visible and phase == Phase.WAITING:
+        endpoint = bait_underwater.global_position
+    var load := clampf(tension / 100.0, 0.0, 1.0) if phase == Phase.FIGHT else 0.05
+    var slack := 0.45 * (1.0 - load)
+    if phase == Phase.CASTING:
+        slack = 0.24
+    var sway := wind * 0.11
+    # Twelve segments make the nylon sag and drift under wind; tension pulls
+    # it straight. One continuous thread from the actual rod tip to the lure.
     line_mesh.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
-    line_mesh.surface_add_vertex(tip)
-    line_mesh.surface_add_vertex(mid)
-    line_mesh.surface_add_vertex(last)
+    for i in range(13):
+        var t := float(i) / 12.0
+        var point := tip.lerp(endpoint, t)
+        point.y -= sin(t * PI) * slack
+        point.x += sin(t * PI) * sway * sin(elapsed * 1.9)
+        line_mesh.surface_add_vertex(point)
     line_mesh.surface_end()
 
 func _set_message(txt: String) -> void:
