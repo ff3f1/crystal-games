@@ -33,6 +33,7 @@ func populate() -> void:
     _make_fishing_spot()
     _make_habitat_details()
     _make_natural_reeds_and_lilies()
+    _make_underwater_weeds()
 
 func shore_edge(x: float) -> float:
     return 3.7 + sin(x * 0.12) * 0.85 + sin(x * 0.033) * 1.2
@@ -196,9 +197,9 @@ func _make_forest() -> void:
 
     # Photoscanned boulders and shrubs close to camera, while lightweight
     # nature-kit assets populate the horizon on mobile hardware.
-    for i in range(23):
+    for i in range(18):
         var side := -1.0 if i % 2 == 0 else 1.0
-        var px := side * random.randf_range(3.2, 28.0)
+        var px := side * random.randf_range(7.5, 30.0)
         var pz := shore_edge(px) + random.randf_range(0.8, 13.0)
         var kind: String = ["rock_07", "rock_moss_set_01", "stone_01"][i % 3]
         _place_asset(kind, Vector3(px, ground_height(px, pz) - 0.13, pz), random.randf_range(0.36, 0.84), random.randf_range(0, TAU))
@@ -235,7 +236,8 @@ func _make_fishing_spot() -> void:
     _place_asset("tackle", Vector3(7.0, ground_height(7.0, 9.3), 9.3), 0.95, 0.22)
     _place_asset("cooler", Vector3(8.1, ground_height(8.1, 10.1), 10.1), 0.95, 0.1)
     _place_asset("sign", Vector3(10.0, ground_height(10, 6.5), 6.5), 1.0, -1.1)
-    _place_asset("rock_moss_set_01", Vector3(-4.2, 0.15, 5.6), 0.65, 0.7)
+    # Keep the fishing sightline open instead of filling the foreground with giant scanned rocks.
+    _place_asset("rock_moss_set_01", Vector3(-8.3, 0.05, 6.0), 0.30, 0.7)
     _place_asset("log", Vector3(-7.0, ground_height(-7, 9.2), 9.2), 2.6, 0.4)
     _place_asset("stump-rounddetailed", Vector3(-3.8, ground_height(-3.8, 10.0), 10.0), 2.6, 0.4)
 
@@ -345,6 +347,43 @@ func _make_natural_reeds_and_lilies() -> void:
     pad_mesh.material_override = pad_mat
     pad_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     add_child(pad_mesh)
+
+func _make_underwater_weeds() -> void:
+    # Underwater visual structure matches the real carp and perch habitats.
+    # Thin curved ribbon blades blend into the sloped lakebed and give the
+    # near-shore bait camera genuinely 3D underwater cover to look through.
+    # One batched surface avoids dozens of draw calls on midrange phones.
+    var mesh_builder := SurfaceTool.new()
+    mesh_builder.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for patch in range(94):
+        var carp_bed := patch < 67
+        var x := (-8.0 + random.randf_range(-10.0, 10.0)) if carp_bed else (11.0 + random.randf_range(-7.5, 7.5))
+        var z := (-18.0 + random.randf_range(-8.0, 8.0)) if carp_bed else (-23.0 + random.randf_range(-6.0, 6.0))
+        var bed_y := lake_floor_height(z) + 0.12
+        var height := random.randf_range(0.25, 0.85) if carp_bed else random.randf_range(0.18, 0.53)
+        var base := Vector3(x, bed_y, z)
+        for blade in range(3):
+            var angle := random.randf_range(-PI, PI)
+            var drift := Vector3(cos(angle), 0.0, sin(angle))
+            var spread := random.randf_range(0.14, 0.36)
+            var half_width := random.randf_range(0.016, 0.035)
+            var colour := Color(0.11, 0.28 + random.randf_range(-0.05, 0.08), 0.15, 1.0)
+            var normal := Vector3(-drift.z, 0.0, drift.x)
+            var foot := base + drift * 0.04
+            var middle := foot + Vector3.UP * height * 0.55 + drift * spread * 0.35
+            var tip := foot + Vector3.UP * height + drift * spread
+            _leaf_tri(mesh_builder, foot + normal * half_width, middle + normal * half_width * 0.8, tip, colour)
+            _leaf_tri(mesh_builder, foot - normal * half_width, tip, middle - normal * half_width * 0.8, colour.darkened(0.12))
+    mesh_builder.generate_normals()
+    var material := StandardMaterial3D.new()
+    material.vertex_color_use_as_albedo = true
+    material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    material.roughness = 0.95
+    var seaweed := MeshInstance3D.new()
+    seaweed.mesh = mesh_builder.commit()
+    seaweed.material_override = material
+    seaweed.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+    add_child(seaweed)
 
 func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: float = 0.0) -> Node3D:
     var path := "res://assets/models/%s.glb" % name
