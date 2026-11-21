@@ -149,7 +149,6 @@ func show_journal() -> void:
             line.add_theme_font_size_override("font_size", 19)
             line.add_theme_color_override("font_color", ink)
             list.add_child(line)
-        panel.add_child(scroll)
     _button(panel, "НАЗАД", 0.08, 0.83, 0.92, 0.93, amber, _back_from_settings)
 
 func show_result(success: bool, species: String, weight: float, reason: String) -> void:
