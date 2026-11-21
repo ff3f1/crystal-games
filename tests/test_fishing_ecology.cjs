@@ -91,6 +91,13 @@ assert(T>.5&&T<1.5,'trophy chance still rare, not guaranteed');
 // Big carp is a longer, more powerful runner than a small bream.
 assert(E.profile(FZ.SP.carp,10).duration>E.profile(bream,.5).duration);
 assert(E.profile(FZ.SP.catfish,20).speed<E.profile(FZ.SP.taimen,20).speed);
+assert(E.profile(FZ.SP.catfish,20).dive>E.profile(pike,7).dive,'catfish favors deep pulls over pike');
+const deep={s:FZ.SP.catfish,w:20,S:1,phase:'rest'};
+const pikeFight={s:pike,w:7,S:1,phase:'rest'};
+const rolls=Array.from({length:100},(_,i)=>i/100);
+assert(rolls.some(v=>E.nextPhase(deep,false,()=>v)==='dive'),'catfish can realistically dive');
+assert(!rolls.some(v=>E.nextPhase(pikeFight,false,()=>v)==='dive'),'pike never makes a catfish dive');
+assert.equal(E.nextPhase({...deep,phase:'dive'},false,()=>.99),'rest','dive is followed by recovery');
 const baseFish=(s,w)=>({s,w,S:1,phase:'rest'});
 assert.equal(E.nextPhase(baseFish(pike,7),true,()=>.3),'run');
 assert.notEqual(E.nextPhase(baseFish(FZ.SP.crucian,.25),false,()=>.3),'run');
@@ -108,6 +115,8 @@ assert(!fs.readFileSync(path.join(root,'game.js'),'utf8').includes('r.idleT > Ma
 assert.equal(E.chooseRunDirection(FZ.SP.pike,12,16,()=>.1),1);
 assert.equal(E.chooseRunDirection(FZ.SP.bream,12,16,()=>.1),-1);
 assert.equal(E.chooseRunDirection(FZ.SP.pike,15.8,16,()=>.1),-1);
+assert.equal(E.chooseRunDirection(FZ.SP.pike,12.8,16,()=>.1),-1,'cover-seeking fish cannot run through bank');
+assert.equal(E.chooseRunDirection(FZ.SP.pike,-12.8,16,()=>.1),1,'bank limit works on both sides');
 // Real engine regression: a trophy may make one warned final run near the bank.
 const species=FZ.SP.carp,fishWeight=10,maxPull=species.fight.power*(.6+1.2*Math.pow(fishWeight,.75));
 st.load.float.rod='f3';st.load.float.line='l7';st.load.float.hook='h4';
@@ -124,4 +133,21 @@ assert.equal(state.fish.phase,'run','trophy enters its final run');
 assert(state.fish.finalSurge,'final surge can trigger only once');
 assert.match(fs.readFileSync(path.join(root,'ui.js'),'utf8'),/Трофей делает последний рывок/);
 
-console.log('PASS 62 species, 20 waters, bait compatibility, habitat, feeding spots, presentation, trophy temperament, no forced bite, cover tactics and warned trophy surge');
+// Deterministic real-engine test: an exhausted catfish is not scripted to dive,
+ // while a strong deep-water fish gives a cue then enters its dive phase.
+const session=G.startSession('pond','summer'),fightRig=G.rig();
+const cat=FZ.SP.catfish,catW=20,catPull=cat.fight.power*(.6+1.2*Math.pow(catW,.75));
+fightRig.state='fight';fightRig.X=0;fightRig.Z=18;fightRig.reeling=false;
+fightRig.fish={s:cat,w:catW,lenCm:100,lenM:1,hooked:true,X:0,Z:18,D:0,vx:0,vz:0,
+  S:.9,effort:.38,phase:'rest',nextPhase:'dive',phaseT:.48,T:catPull*.22,Fmax:catPull,
+  slackT:0,snagT:0,surface:.1,jump:null,chance:0,jumped:0,t:0,overload:0};
+G.update(.05,100);
+assert(fightRig.fish.diveWarning,'deep-water pull is telegraphed before it starts');
+for(let i=0;i<9;i++)G.update(.05,100.05+i*.05);
+assert.equal(fightRig.fish.phase,'dive','catfish enters a heavy underwater pull');
+const zBefore=fightRig.fish.Z;
+G.update(.08,100.55);
+assert(fightRig.fish.Z>zBefore,'underwater dive actually takes line from shore');
+assert(!fightRig.fish.warning,'deep-water pull is distinct from lateral run cue');
+assert.match(fs.readFileSync(path.join(root,'ui.js'),'utf8'),/Рыба давит на глубину/);
+console.log('PASS 62 species, habitat, bait compatibility, run/cover/dive tactics, tactile counterplay and no forced bites');
