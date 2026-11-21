@@ -12,9 +12,11 @@ on:
 permissions:
   contents: read
 
+# Each tested commit uses its own CI slot. GitHub's cancelled older jobs
+# sometimes remain in_progress and block a later build indefinitely.
 concurrency:
-  group: fishing-godot-mvp-${{ github.ref }}
-  cancel-in-progress: true
+  group: fishing-godot-mvp-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   android-debug:
