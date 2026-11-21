@@ -47,6 +47,20 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  const photoBirds=await page.evaluate(()=>({style:FZ.Assets.style,birds:FZ.Scene.birds.length}));
  assert(photoBirds.style!=="art"&&photoBirds.birds===0,
    "photo mode must not paint V-shaped cartoon birds "+JSON.stringify(photoBirds));
+ const approvedHud=await page.evaluate(()=>{
+   const button=document.getElementById('bAct')?.getBoundingClientRect();
+   const hint=document.getElementById('hHint')?.getBoundingClientRect();
+   const tools=[...document.querySelectorAll('#hud .tray .tool')].map(e=>e.getBoundingClientRect());
+   const weather=document.getElementById('conceptWeather');
+   const hud=document.getElementById('hud');
+   return{rightButton:button&&button.x>innerWidth*.60,
+     hintCompact:hint&&!document.getElementById('hHint').textContent?true:!!hint&&hint.height<112,
+     verticalTools:tools.length>=3&&tools.every((r,i)=>!i||r.y>tools[i-1].y+10),
+     weather:!!weather&&weather.textContent.includes('Ветер'),
+     concept:hud.classList.contains('concept-hud')};
+ });
+ assert(Object.values(approvedHud).every(Boolean),
+  'fish view must use approved non-blocking HUD, not the old bottom tray '+JSON.stringify(approvedHud));
  await page.screenshot({path:path.join(dir,"07-game-water.png")});
  const realRodIcon=await page.evaluate(()=>{
    const G=FZ.Game,id=G.loadout(G.sess().mode).rod;
