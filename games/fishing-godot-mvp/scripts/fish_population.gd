@@ -112,6 +112,14 @@ func take_hooked(id: int) -> Node3D:
     mesh.visible = true
     return mesh
 
+func move_hooked(world_position: Vector3) -> void:
+    if current_hook < 0 or current_hook >= agents.size():
+        return
+    var fish: Dictionary = agents[current_hook]
+    # The authoritative fish remains the same agent for the whole fight.
+    fish["pos"] = world_position
+    agents[current_hook] = fish
+
 func release_strike(id: int) -> void:
     if id < 0 or id >= agents.size():
         return
