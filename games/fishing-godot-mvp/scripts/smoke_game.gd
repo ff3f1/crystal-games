@@ -19,7 +19,9 @@ func _run_test() -> void:
     game.fish_weight = 2.45
     game._set_fish_model("Щука")
     game.phase = 4  # FIGHT
-    game.fight_distance = 3.0
+    game.fight_sim.begin("Щука", 2.45, 16.0)
+    game.fight_sim.distance = 2.45
+    game.fight_distance = 2.45
     game.tension = 23.0
     game.is_reeling = true
     game._update_fight(0.15)
@@ -34,10 +36,15 @@ func _run_test() -> void:
     # Drive the real fishing state machine, not only the debug/forced trophy.
     game._process(1.35)
     _require(game.phase == 2, "Cast should reach WAITING")
+    game.bite_delay = 2.0
     game._process(7.0)
-    _require(game.phase == 3, "Waiting should trigger an actual bite")
+    _require(game.phase == 3, "Waiting should trigger a compatible bite")
+    _require(game.minimap != null, "Sonar minimap should be available during fishing")
+    _require(game.lure_sim.is_landed, "Lure physical landing must be reflected in sonar")
     game._main_action()
     _require(game.phase == 4, "Hook action should start the fight")
+    _require(game.fight_sim.distance >= 15.0, "Fish fight should begin at a grounded distance")
+    _require(game.fight_sim.drag_level == 1, "Default drag should be balanced")
     for tick in range(850):
         game.is_reeling = game.tension < 73.0
         game.is_bracing = false
