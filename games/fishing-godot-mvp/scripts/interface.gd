@@ -177,7 +177,6 @@ func _fish_preview(panel: Control, species: String) -> void:
     viewport.transparent_bg = false
     viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
     holder.add_child(viewport)
-    panel.add_child(holder)
 
     var env_node := WorldEnvironment.new()
     var env := Environment.new()
