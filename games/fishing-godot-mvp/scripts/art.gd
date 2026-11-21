@@ -2,6 +2,24 @@ extends Node3D
 ## Art-enabled lakeshore. Downloads CC0 scenes/textures in tools/fetch_assets.py.
 
 var random := RandomNumberGenerator.new()
+var reeds: Array[Node3D] = []
+var floating_leaves: Array[Node3D] = []
+var local_breeze := 0.28
+var wave_clock := 0.0
+
+func _process(delta: float) -> void:
+    wave_clock += delta
+    for i in range(reeds.size()):
+        var reed := reeds[i]
+        reed.rotation.z = sin(wave_clock * 0.85 + float(i) * 1.73) * (0.025 + local_breeze * 0.055)
+        reed.rotation.x = cos(wave_clock * 0.61 + float(i) * 1.38) * (0.014 + local_breeze * 0.028)
+    for i in range(floating_leaves.size()):
+        var pad := floating_leaves[i]
+        pad.position.y = 0.015 + sin(wave_clock * 1.13 + float(i) * 0.67) * 0.018
+        pad.rotation.z = sin(wave_clock * 0.48 + float(i)) * 0.015
+
+func set_wind(value: float) -> void:
+    local_breeze = clampf(value, 0.0, 1.0)
 
 func populate() -> void:
     random.seed = 14390221
@@ -9,6 +27,7 @@ func populate() -> void:
     _make_land()
     _make_forest()
     _make_fishing_spot()
+    _make_habitat_details()
 
 func shore_edge(x: float) -> float:
     return 3.7 + sin(x * 0.12) * 0.85 + sin(x * 0.033) * 1.2
@@ -189,6 +208,31 @@ func _make_fishing_spot() -> void:
     _place_asset("rock_moss_set_01", Vector3(-4.2, 0.15, 5.6), 0.65, 0.7)
     _place_asset("log", Vector3(-7.0, ground_height(-7, 9.2), 9.2), 2.6, 0.4)
     _place_asset("stump-rounddetailed", Vector3(-3.8, ground_height(-3.8, 10.0), 10.0), 2.6, 0.4)
+
+func _make_habitat_details() -> void:
+    # The same physical landmarks the fish ecology understands:
+    # reed-fringed crucian bay (left), outcrop for perch (right),
+    # submerged fall and deep drop where the pike hunts.
+    for i in range(25):
+        var x := -11.3 + random.randf_range(-5.0, 5.0)
+        var z := -15.7 + random.randf_range(-3.6, 4.8)
+        var pad := _place_asset("lilies", Vector3(x, 0.012, z), random.randf_range(0.52, 1.15), random.randf_range(0, TAU))
+        if pad != null:
+            floating_leaves.append(pad)
+    for i in range(24):
+        var x := -13.0 + random.randf_range(-5.5, 8.0)
+        var z := shore_edge(x) + random.randf_range(-1.1, 0.35)
+        var reed := _place_asset("cattails", Vector3(x, 0.0, z), random.randf_range(0.55, 1.35), random.randf_range(0, TAU))
+        if reed != null:
+            reeds.append(reed)
+    for i in range(11):
+        var x := 10.0 + random.randf_range(-6.5, 6.5)
+        var z := -17.0 + random.randf_range(-5.3, 6.1)
+        var rock := _place_asset("rock_07" if i % 2 == 0 else "stone_01", Vector3(x, -0.12, z), random.randf_range(0.22, 0.43), random.randf_range(0, TAU))
+        if rock != null:
+            rock.rotation.x = random.randf_range(-0.22, 0.22)
+    _place_asset("log", Vector3(-3.7, -0.17, -24.5), 1.8, -0.60)
+    _place_asset("rock_moss_set_01", Vector3(3.0, -0.24, -26.5), 0.33, 1.2)
 
 func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: float = 0.0) -> Node3D:
     var path := "res://assets/models/%s.glb" % name
