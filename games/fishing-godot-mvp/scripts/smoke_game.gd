@@ -33,14 +33,24 @@ func _run_test() -> void:
     _require(game.catches.size() > 0, "Caught fish must be in the journal")
     game.retry_cast()
     _require(not game.menu_open, "Retry should resume gameplay")
-    # Drive the real fishing state machine, not only the debug/forced trophy.
+    # Drive a real cast into the vegetated bay. The strike is produced by
+    # the fish ecology, never the old fixed timer.
+    game.lure_sim.destination = Vector3(-8.0, 0.075, -18.0)
+    game.ecology.rng.seed = 71352
     game._process(1.35)
     _require(game.phase == 2, "Cast should reach WAITING")
-    game.bite_delay = 2.0
-    game._process(7.0)
-    _require(game.phase == 3, "Waiting should trigger a compatible bite")
     _require(game.minimap != null, "Sonar minimap should be available during fishing")
     _require(game.lure_sim.is_landed, "Lure physical landing must be reflected in sonar")
+    var saw_nibble := false
+    for i in range(1500):
+        game._process(0.1)
+        if game.bite_sign_age < 0.12:
+            saw_nibble = true
+        if game.phase == 3:
+            break
+    _require(saw_nibble, "Real nibble must precede the hookable strike")
+    _require(game.phase == 3, "Well-placed bait should eventually cause an ecological strike")
+    _require(game.fish_name == "Карась" or game.fish_name == "Окунь", "Fish must respect bait diet")
     game._main_action()
     _require(game.phase == 4, "Hook action should start the fight")
     _require(game.fight_sim.distance >= 15.0, "Fish fight should begin at a grounded distance")
