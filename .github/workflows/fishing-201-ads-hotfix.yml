@@ -31,13 +31,11 @@ jobs:
           unzip -p out/unsigned-hotfix.apk assets/js/ui.js > "$RUNNER_TEMP/ui.js"
           node --check "$RUNNER_TEMP/platform.js"
           node --check "$RUNNER_TEMP/ui.js"
-      - name: Install Android tools
-        uses: android-actions/setup-android@v3
       - name: Resolve Android build tools
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "build-tools;35.0.0" >/dev/null
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner" || sdkmanager "build-tools;35.0.0" >/dev/null
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.0" >> "$GITHUB_ENV"
       - name: Require original publisher signing key
         env:
