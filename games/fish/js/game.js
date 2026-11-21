@@ -686,7 +686,15 @@
     if (f.T < 0.07 * f.Fmax && f.phase !== "tired") f.slackT += dt; else f.slackT = Math.max(0, f.slackT - dt * 2);
     if (f.slackT > 1.3 && rng() < 0.7 * (1.3 - (g.hook ? g.hook.hold : 1)) * dt * 2) return lose("slack");
     if (f.jump && !f.jump.hurt && f.T > 0.45 * lineT) { f.jump.hurt = true; if (rng() < 0.5 * (1.3 - (g.hook ? g.hook.hold : 1))) return lose("jump"); }
-    // поверхность
+    // Track real water depth separately from distance to shore. A catfish
+    // can dig down into the lake even without a cartoonish sideways sprint.
+    if(!sess.ice){
+      const waterDepth=G.depthAt(f.X,Math.max(f.Z,4));
+      const targetDepth=diving?waterDepth*.82:f.phase==="tired"?.15:Math.min(1.15,waterDepth*.5);
+      f.D=U.damp(Number.isFinite(f.D)?f.D:0,U.clamp(targetDepth,.1,waterDepth),
+        diving?2:1.25,dt);
+    }
+    // Deep fish make less surface disturbance. Tired fish rise toward the net.
     f.surface=U.damp(f.surface,diving?0:f.phase==="tired"?1:.15*(1-f.S),2,dt);
     // дистанция
     if (sess.ice) {
