@@ -180,16 +180,16 @@ func _fish_preview(panel: Control, species: String) -> void:
     var env_node := WorldEnvironment.new()
     var env := Environment.new()
     env.background_mode = Environment.BG_COLOR
-    env.background_color = Color(0.075, 0.16, 0.18)
+    env.background_color = Color(0.085, 0.18, 0.19)
     env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.ambient_light_color = Color(0.75, 0.81, 0.76)
-    env.ambient_light_energy = 0.65
+    env.ambient_light_energy = 0.90
     env_node.environment = env
     viewport.add_child(env_node)
 
     var cam := Camera3D.new()
     viewport.add_child(cam)
-    cam.position = Vector3(0, 0.1, 3.8)
+    cam.position = Vector3(0, 0.06, 3.55)
     cam.fov = 45.0
     cam.look_at(Vector3.ZERO)
     cam.current = true
@@ -197,20 +197,20 @@ func _fish_preview(panel: Control, species: String) -> void:
     var light := DirectionalLight3D.new()
     viewport.add_child(light)
     light.rotation_degrees = Vector3(-39, -28, 10)
-    light.light_energy = 1.6
+    light.light_energy = 2.2
 
     preview_rig = Node3D.new()
     viewport.add_child(preview_rig)
     var model: Node3D = game.make_fish_visual(species)
     preview_rig.add_child(model)
-    _fit_model(model)
-    preview_rig.rotation_degrees = Vector3(-8, -25, 4)
+    var side_angle := _fit_model(model)
+    preview_rig.rotation_degrees = Vector3(-4, side_angle, 2)
 
-func _fit_model(model: Node3D) -> void:
+func _fit_model(model: Node3D) -> float:
     var meshes: Array[MeshInstance3D] = []
     _collect_mesh(model, meshes)
     if meshes.is_empty():
-        return
+        return 90.0
     var lo := Vector3(INF, INF, INF)
     var hi := Vector3(-INF, -INF, -INF)
     for m in meshes:
@@ -225,12 +225,14 @@ func _fit_model(model: Node3D) -> void:
                     hi = hi.max(p)
     var span := hi - lo
     var widest := maxf(span.x, maxf(span.y, span.z))
-    var factor := 2.4 / maxf(widest, 0.1)
+    var factor := 4.25 / maxf(widest, 0.1)
     var wrapper := Node3D.new()
     model.get_parent().add_child(wrapper)
     model.reparent(wrapper, false)
     model.scale = Vector3.ONE * factor
     model.position = -(lo + hi) * 0.5 * factor
+    # Face the camera with the flank, not the fish's snout.
+    return 88.0 if span.z > span.x else 0.0
 
 func _collect_mesh(node: Node, out: Array[MeshInstance3D]) -> void:
     if node is MeshInstance3D:
