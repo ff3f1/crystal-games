@@ -110,18 +110,18 @@
   L.onCatch=function(world,species,X,Z) {
     if(!world)return null;
     let found=null,min=Infinity;
+    // A powerful fight disturbs adjacent compatible shoals, too. Otherwise
+    // another overlapping school could instantly replace the one we scattered.
     for(const g of world.groups){
       if(!(g.fish[species.id]>0))continue;
       const d=Math.hypot(X-g.X,Z-g.Z);
-      if(d<g.radius*1.3&&d<min){found=g;min=d;}
+      if(d>=g.radius*1.65)continue;
+      g.pressure=Math.max(g.pressure,18+Math.round(g.intensity*12));
+      if(d<min){found=g;min=d;}
     }
-    if(found){
-      // Repeat casting a depleted shoal is not the optimal strategy.
-      found.pressure=18+Math.round(found.intensity*12);
-      world.reads++;
-      return {name:found.name,rest:Math.round(found.pressure)};
-    }
-    return null;
+    if(!found)return null;
+    world.reads++;
+    return {name:found.name,rest:Math.round(found.pressure)};
   };
   L.onCast=function(world,X,Z) {
     if(!world)return {level:0,text:""};
