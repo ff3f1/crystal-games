@@ -99,6 +99,18 @@ jobs:
             exit 1
           fi
 
+      - name: Single-lake ecology / habitat bite behaviour tests
+        shell: bash
+        run: |
+          set -o pipefail
+          godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_ecology.gd 2>&1 | tee godot-ecology.log
+          grep -q "FISH_ECOLOGY_OK" godot-ecology.log
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:|FISH_ECOLOGY_FAIL:' godot-ecology.log \
+             | grep -v -E 'ERROR: [0-9]+ resources still in use at exit'; then
+            echo "::error::Lake ecology test failed"
+            exit 1
+          fi
+
       - name: End-to-end fishing gameplay smoke test
         shell: bash
         run: |
