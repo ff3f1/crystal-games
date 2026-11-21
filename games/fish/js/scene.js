@@ -437,7 +437,10 @@
     R._sx = sx; R._sy = sy;
     if (sx || sy) { ctx.translate(sx, sy); ctx.drawImage(topC, 0, 0, topC.width, topC.height, -6, -6, W + 12, shoreY + 6); }
     else ctx.drawImage(topC, 0, 0, topC.width, topC.height, 0, 0, W, shoreY);
-    R.drawBirds(L, dt, t);
+    // The original V-shaped vector birds only belong to the illustrated mode.
+    // Over real photographic shore art they look like scribbles, not wildlife.
+    if(FZ.Assets.style==="art")R.drawBirds(L,dt,t);
+    else if(R.birds.length)R.birds.length=0;
 
     if (v.ice) R.drawIceField(v, L, t);
     else R.drawWater(v, L, t, windF, over);
