@@ -36,7 +36,8 @@ func _run_test() -> void:
     # Drive a real cast into the vegetated bay. The strike is produced by
     # the fish ecology, never the old fixed timer.
     game.lure_sim.destination = Vector3(-8.0, 0.075, -18.0)
-    game.ecology.rng.seed = 71352
+    game.fish_population.rng.seed = 71352
+    _require(game.fish_population.total_fish() == 16, "Fish residents must exist before bait hits the water")
     game._process(1.35)
     _require(game.phase == 2, "Cast should reach WAITING")
     _require(game.minimap != null, "Sonar minimap should be available during fishing")
@@ -51,8 +52,15 @@ func _run_test() -> void:
     _require(saw_nibble, "Real nibble must precede the hookable strike")
     _require(game.phase == 3, "Well-placed bait should eventually cause an ecological strike")
     _require(game.fish_name == "Карась" or game.fish_name == "Окунь", "Fish must respect bait diet")
+    var real_id: int = game.pending_fish_id
+    _require(real_id >= 0, "Biting fish must have a persistent identity")
+    var real_info: Dictionary = game.fish_population.get_info(real_id)
+    _require(real_info["position"].distance_to(Vector3(-8.0, -0.75, -18.0)) < 1.8, "Biting fish must physically be at hook")
+    var actual_mesh: Node3D = game.fish_population.agents[real_id]["mesh"]
     game._main_action()
     _require(game.phase == 4, "Hook action should start the fight")
+    _require(game.fish_body == actual_mesh, "Fight must animate the exact real fish that bit")
+    _require(game.fish_population.current_hook == real_id, "Hook must reserve the live fish agent")
     _require(game.fight_sim.distance >= 15.0, "Fish fight should begin at a grounded distance")
     _require(game.fight_sim.drag_level == 1, "Default drag should be balanced")
     for tick in range(850):
@@ -65,6 +73,7 @@ func _run_test() -> void:
     game._process(1.6)
     _require(game.phase == 6, "Natural catch should show the result screen")
     _require(game.catches.size() >= 2, "Natural catch should save another fish")
+    _require(str(game.fish_population.get_info(real_id)["mode"]) == "absent", "Landed fish must disappear from physical lake")
     game.retry_cast()
     game.open_pause()
     _require(game.overlay.screen_name == "pause", "Pause menu should open")
