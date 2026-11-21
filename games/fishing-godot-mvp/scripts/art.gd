@@ -136,6 +136,22 @@ func _make_forest() -> void:
         var scale_factor := random.randf_range(1.2, 2.9)
         _place_asset(kind, Vector3(px, ground_height(px, pz) - 0.10, pz), scale_factor, random.randf_range(0, TAU))
 
+    # Photoscanned boulders and shrubs close to camera, while lightweight
+    # nature-kit assets populate the horizon on mobile hardware.
+    for i in range(23):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var px := side * random.randf_range(3.2, 28.0)
+        var pz := shore_edge(px) + random.randf_range(0.8, 13.0)
+        var kind: String = ["rock_07", "rock_moss_set_01", "stone_01"][i % 3]
+        _place_asset(kind, Vector3(px, ground_height(px, pz) - 0.13, pz), random.randf_range(0.36, 0.84), random.randf_range(0, TAU))
+
+    for i in range(38):
+        var side := -1.0 if i % 2 == 0 else 1.0
+        var px := side * random.randf_range(3.5, 31.0)
+        var pz := shore_edge(px) + random.randf_range(2.1, 24.0)
+        var kind: String = "shrub_02" if i % 2 == 0 else "shrub_03"
+        _place_asset(kind, Vector3(px, ground_height(px, pz), pz), random.randf_range(0.5, 1.0), random.randf_range(0, TAU))
+
     for i in range(155):
         var px := random.randf_range(-95, 95)
         var pz := random.randf_range(7.1, 69)
@@ -172,7 +188,7 @@ func _make_fishing_spot() -> void:
     _place_asset("tackle", Vector3(7.0, ground_height(7.0, 9.3), 9.3), 0.95, 0.22)
     _place_asset("cooler", Vector3(8.1, ground_height(8.1, 10.1), 10.1), 0.95, 0.1)
     _place_asset("sign", Vector3(10.0, ground_height(10, 6.5), 6.5), 1.0, -1.1)
-    _place_asset("rock_cluster", Vector3(-4.2, 0.15, 5.6), 2.0, 0.7)
+    _place_asset("rock_moss_set_01", Vector3(-4.2, 0.15, 5.6), 0.65, 0.7)
     _place_asset("log", Vector3(-7.0, ground_height(-7, 9.2), 9.2), 2.6, 0.4)
     _place_asset("stump-rounddetailed", Vector3(-3.8, ground_height(-3.8, 10.0), 10.0), 2.6, 0.4)
 
