@@ -41,6 +41,9 @@ jobs:
           python3 -m pip install --quiet --break-system-packages Pillow
           python3 games/fishing-godot-mvp/tools/fetch_assets.py
           python3 games/fishing-godot-mvp/tools/build_fish_textures.py
+          python3 games/fishing-godot-mvp/tools/build_sfx.py
+          test -s games/fishing-godot-mvp/assets/audio/lake_water.wav
+          test -s games/fishing-godot-mvp/assets/audio/drag.wav
           test -s games/fishing-godot-mvp/assets/textures/fish_pike_normal.png
           test -s games/fishing-godot-mvp/assets/textures/fish_perch_albedo.png
           test -s games/fishing-godot-mvp/assets/textures/fish_crucian_albedo.png
