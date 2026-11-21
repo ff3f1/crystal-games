@@ -135,7 +135,16 @@ func _process(delta: float) -> void:
     _animate_lake(delta)
     # The full fish population keeps swimming even when the angler is not
     # fishing. Only WAITING permits a fish to chase the actual bait.
-    if phase != Phase.WAITING:
+    if phase == Phase.BITE:
+        # Keep the attacking resident physically at the bait until the
+        # hook window expires or the player's real input sets the hook.
+        fish_population.call(
+            "simulate", delta, true,
+            Vector3(lure_sim.position.x, -lure_sim.depth, lure_sim.position.z),
+            lure_index, float(lure_sim.retrieve_speed), 0.0,
+            lake_hour, wind, camera.global_position
+        )
+    elif phase != Phase.WAITING:
         fish_population.call(
             "simulate", delta, false, Vector3.ZERO, lure_index,
             0.0, 0.0, lake_hour, wind, camera.global_position
