@@ -123,7 +123,17 @@ if not sky_target.exists():
         turned.paste(right_half, (0, 0))
         turned.paste(left_half, (half, 0))
         sky_img = turned
-        sky_img.save(sky_target, "JPEG", quality=85, optimize=True)
+        # The source is an alpine grass meadow, while the game is a lake.
+        # Replace the field below the distant tree line with a soft blue
+        # photographic reflection so a neon-green horizon cannot appear.
+        waterline = int(sky_img.height * 0.428)
+        reflection = sky_img.crop((0, int(sky_img.height * 0.18), sky_img.width, waterline))
+        reflection = reflection.transpose(Image.Transpose.FLIP_TOP_BOTTOM)
+        reflection = reflection.resize((sky_img.width, sky_img.height - waterline), Image.Resampling.BILINEAR)
+        lake_tint = Image.new("RGB", reflection.size, (45, 103, 141))
+        reflection = Image.blend(reflection, lake_tint, 0.77)
+        sky_img.paste(reflection, (0, waterline))
+        sky_img.save(sky_target, "JPEG", quality=88, optimize=True)
     print("Sky panorama ready", sky_target.stat().st_size, "bytes")
 sky_source.unlink(missing_ok=True)
 
