@@ -145,6 +145,8 @@ func _process(delta: float) -> void:
                 phase = Phase.BITE
                 timer = 0.0
                 _choose_fish()
+                is_reeling = false
+                is_bracing = false
                 sounds.call("play", "bite")
                 _splash()
                 _set_message("ПОКЛЁВКА! Подсекай, пока рыба не ушла!")
@@ -802,6 +804,7 @@ func _finish(text: String, won: bool = false) -> void:
     result_text = text
     fish_body.visible = false
     bobber.visible = false
+    bait_underwater.visible = false
     is_reeling = false
     is_bracing = false
     if not won:
@@ -843,39 +846,54 @@ func _update_buttons() -> void:
         Phase.CASTING:
             action_button.text = "ЛЕТИТ..."
         Phase.WAITING:
-            action_button.text = "ЖДЁМ..."
+            action_button.text = "ПОКЛЁВКУ ЖДЁМ"
         Phase.BITE:
             action_button.text = "ПОДСЕЧЬ!"
         Phase.FIGHT:
-            action_button.text = "ВЫВАЖИВАНИЕ"
+            action_button.text = "РЫБА НА КРЮЧКЕ"
         Phase.LANDING:
             action_button.text = "ТРОФЕЙ..."
         Phase.RESULT:
             action_button.text = "ЕЩЁ ЗАБРОС"
     action_button.disabled = phase == Phase.CASTING or phase == Phase.WAITING or phase == Phase.FIGHT or phase == Phase.LANDING
-    action_button.visible = phase != Phase.FIGHT
+    action_button.visible = phase != Phase.FIGHT and phase != Phase.LANDING
     lure_button.disabled = phase != Phase.READY and phase != Phase.RESULT
     lure_button.visible = phase == Phase.READY or phase == Phase.RESULT
-    reel_button.disabled = phase != Phase.FIGHT
-    reel_button.visible = phase == Phase.FIGHT
-    brace_button.disabled = phase != Phase.FIGHT
-    brace_button.visible = phase == Phase.FIGHT
+    var lure_retrieve := phase == Phase.WAITING and lure_index == 1
+    reel_button.visible = phase == Phase.FIGHT or lure_retrieve
+    reel_button.disabled = not reel_button.visible
+    reel_button.text = "ВЕСТИ" if lure_retrieve else "МОТАТЬ"
+    brace_button.visible = phase == Phase.FIGHT or lure_retrieve
+    brace_button.disabled = not brace_button.visible
+    brace_button.text = "РЫВОК" if lure_retrieve else "ПОДНЯТЬ"
+    drag_button.visible = phase == Phase.FIGHT
+    drag_button.disabled = phase != Phase.FIGHT
+    if phase == Phase.FIGHT:
+        drag_button.text = "ФРИКЦИОН: %s" % fight_sim.drag_name()
     tension_bar.visible = phase == Phase.FIGHT
+    stamina_label.visible = phase == Phase.FIGHT
 
 func _update_stats() -> void:
     if stats_label == null:
         return
-    if phase == Phase.FIGHT:
-        stats_label.text = "%s  •  Дистанция: %.1f м  •  Натяжение: %d%%" % [fish_name, fight_distance, int(tension)]
-        tension_bar.value = clampf(tension, 0.0, 100.0)
-    elif phase == Phase.BITE:
-        stats_label.text = "Окно подсечки: %.1f сек." % maxf(0.0, 1.75 - timer)
-    elif phase == Phase.LANDING:
-        stats_label.text = "Рыба у берега — поднимаем улов!"
-    else:
-        stats_label.text = "Наживка: %s  •  Слева — ходьба  •  Справа — обзор" % ("червь" if lure_index == 0 else "блесна")
-    catch_label.text = "Улов: %d  •  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
-
+    match phase:
+        Phase.FIGHT:
+            stats_label.text = "%s %.2f кг  ·  До рыбы %.1f м  ·  Натяжение %d%%" % [fish_name, fish_weight, fight_distance, int(tension)]
+            tension_bar.value = clampf(tension, 0.0, 100.0)
+            stamina_label.text = "СИЛЫ РЫБЫ  %d%%" % int(fight_sim.stamina)
+            var warning_style := Color(0.97, 0.46, 0.29) if tension >= 79.0 else Color(0.75, 0.86, 0.82)
+            stats_label.add_theme_color_override("font_color", warning_style)
+        Phase.WAITING:
+            stats_label.text = "Дальность %.0f м  ·  Глубина %.1f м  ·  %s" % [Vector2(bobber.position.x - camera.position.x, bobber.position.z - camera.position.z).length(), lure_depth, "ВЕДИ БЛЕСНУ" if lure_index == 1 else "СЛЕДИ ЗА ПОПЛАВКОМ"]
+        Phase.BITE:
+            stats_label.text = "ПОДСЕЧЬ СЕЙЧАС  ·  %.1f сек." % maxf(0.0, bite_window - timer)
+        Phase.LANDING:
+            stats_label.text = "Рыба у берега — поднимаем трофей!"
+        _:
+            stats_label.text = "Тихое озеро  ·  Приманка: %s  ·  Мини-карта справа" % ("червь" if lure_index == 0 else "блесна")
+    if phase != Phase.FIGHT:
+        stats_label.add_theme_color_override("font_color", Color(0.96, 0.95, 0.87))
+    catch_label.text = "Улов: %d  ·  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
 
 func _load_profile() -> void:
     var config := ConfigFile.new()
