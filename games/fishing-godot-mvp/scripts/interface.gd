@@ -228,7 +228,7 @@ func _fit_model(model: Node3D) -> float:
                     hi = hi.max(p)
     var span := hi - lo
     var widest := maxf(span.x, maxf(span.y, span.z))
-    var factor := 6.85 / maxf(widest, 0.1)
+    var factor := 4.95 / maxf(widest, 0.1)
     var wrapper := Node3D.new()
     model.get_parent().add_child(wrapper)
     model.reparent(wrapper, false)
