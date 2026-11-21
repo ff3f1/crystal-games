@@ -1,0 +1,87 @@
+name: Fishing Godot MVP — Android debug APK
+
+on:
+  push:
+    branches:
+      - prototype/fishing-godot-mvp
+    paths:
+      - "games/fishing-godot-mvp/**"
+      - ".github/workflows/fishing-godot-mvp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-debug:
+    name: Godot 4.5.1 — validate and build APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Godot editor and export templates
+        uses: solarlabyrinth/action-setup-godot@v3
+        with:
+          version: 4.5.1-stable
+          export-templates: true
+
+      - name: Import and parse project
+        run: |
+          godot --headless --path games/fishing-godot-mvp --editor --quit
+
+      - name: Run headless scene smoke test
+        run: |
+          godot --headless --path games/fishing-godot-mvp --quit-after 45
+
+      - name: Android SDK components
+        shell: bash
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "build-tools;35.0.0" "platforms;android-35" >/dev/null
+
+      - name: Configure Godot Android export
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          EOF
+
+          keytool -genkeypair -noprompt \
+            -keystore "$RUNNER_TEMP/fishing-mvp-debug.keystore" \
+            -alias androiddebugkey -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Fishing MVP,C=RU"
+
+      - name: Export signed debug APK (arm64)
+        shell: bash
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$RUNNER_TEMP/fishing-mvp-debug.keystore"
+          mkdir -p games/fishing-godot-mvp/build
+          godot --headless --path games/fishing-godot-mvp \
+            --export-debug Android \
+            "$GITHUB_WORKSPACE/games/fishing-godot-mvp/build/fishing-first-cast-debug.apk"
+          test -s games/fishing-godot-mvp/build/fishing-first-cast-debug.apk
+          ls -lh games/fishing-godot-mvp/build/*.apk
+
+      - name: Upload installable prototype
+        uses: actions/upload-artifact@v4
+        with:
+          name: fishing-first-cast-godot-debug-apk
+          path: games/fishing-godot-mvp/build/*.apk
+          if-no-files-found: error
+          retention-days: 14
