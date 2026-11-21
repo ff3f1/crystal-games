@@ -570,7 +570,7 @@ func _create_bobber_and_fish() -> void:
     metal.emission_enabled = true
     metal.emission = Color(0.54, 0.41, 0.12)
     metal.emission_energy_multiplier = 0.55
-    var tackle := (load("res://scripts/tackle_visual_3d.gd") as GDScript).new()
+    var tackle: RefCounted = (load("res://scripts/tackle_visual_3d.gd") as GDScript).new()
     bait_underwater = _mesh(self, tackle.call("make_spoon_mesh") as Mesh, Vector3.ZERO, Vector3.ONE, metal)
     bait_underwater.name = "SculptedSpoon3D"
     tackle.call("add_spoon_hardware", bait_underwater)
