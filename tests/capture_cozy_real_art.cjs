@@ -33,7 +33,11 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  assert.equal(await page.locator(".cozy-skins button").count(),3);
  await page.waitForTimeout(250);await page.screenshot({path:path.join(dir,"06-tackle.png")});
  await page.evaluate(()=>{FZ.UI.closeSheet&&FZ.UI.closeSheet();FZ.UI.closeMenu&&FZ.UI.closeMenu();FZ.Game.startSession("pond","summer")});
- await page.waitForTimeout(650);await page.screenshot({path:path.join(dir,"07-game-water.png")});
+ await page.waitForTimeout(650);
+ const photoBirds=await page.evaluate(()=>({style:FZ.Assets.style,birds:FZ.Scene.birds.length}));
+ assert(photoBirds.style!=="art"&&photoBirds.birds===0,
+   "photo mode must not paint V-shaped cartoon birds "+JSON.stringify(photoBirds));
+ await page.screenshot({path:path.join(dir,"07-game-water.png")});
  const realRodIcon=await page.evaluate(()=>{
    const G=FZ.Game,id=G.loadout(G.sess().mode).rod;
    return{expected:FZ.Art.icon(id,56),rendered:document.querySelector('#tRodIc img')?.getAttribute('src')};
