@@ -4,3 +4,5 @@ build/
 *.import
 assets/models/
 assets/textures/
+
+assets/audio/
