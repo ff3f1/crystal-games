@@ -1,47 +1,52 @@
 shader_type spatial;
-render_mode cull_back, depth_draw_opaque, diffuse_burley, specular_schlick_ggx;
+// A translucent, rough freshwater surface instead of metallic grey mirrors.
+// The pixel shader is intentionally inexpensive for mobile GL Compatibility.
+render_mode blend_mix, depth_prepass_alpha, cull_back, diffuse_burley, specular_schlick_ggx;
 
-// Three moving wave frequencies, soft sky highlights and shallow-bank color.
-// No external shader textures, works with Godot 4.5 GL Compatibility on phones.
-uniform vec4 deep_color : source_color = vec4(0.014, 0.087, 0.110, 1.0);
-uniform vec4 bank_color : source_color = vec4(0.080, 0.180, 0.175, 1.0);
-uniform vec4 reflected_sky : source_color = vec4(0.31, 0.39, 0.41, 1.0);
-uniform float wave_height : hint_range(0.0, 0.15) = 0.070;
-uniform float wind_speed : hint_range(0.0, 4.0) = 0.95;
+uniform vec4 deep_water : source_color = vec4(0.030, 0.154, 0.170, 1.0);
+uniform vec4 shallow_water : source_color = vec4(0.082, 0.245, 0.217, 1.0);
+uniform vec4 cloudy_sky : source_color = vec4(0.30, 0.42, 0.44, 1.0);
+uniform float breeze : hint_range(0.0, 1.0) = 0.32;
+uniform float transparency_near : hint_range(0.0, 1.0) = 0.68;
 
-varying float coast;
-varying vec2 world_waves;
+varying vec3 surface_world;
+varying float shore;
 
 void vertex() {
-    float t = TIME * wind_speed;
-    world_waves = VERTEX.xz;
-    // The actual shore lies near local Z = 115 on this 240m plane.
-    coast = smoothstep(99.0, 119.0, VERTEX.z);
-    float long_wave = sin(VERTEX.x * 0.38 + t * 0.93) * 0.55;
-    float cross_wave = cos(VERTEX.z * 0.43 - t * 0.62) * 0.28;
-    float small_wave = sin((VERTEX.x + VERTEX.z) * 1.24 + t * 1.53) * 0.17;
-    VERTEX.y += (long_wave + cross_wave + small_wave) * wave_height * (1.0 - coast * 0.65);
+    float t = TIME * (0.60 + breeze * 1.8);
+    float a = sin(VERTEX.x * 0.31 + VERTEX.z * 0.14 + t * 0.92);
+    float b = sin(VERTEX.z * 0.47 - VERTEX.x * 0.16 - t * 0.73);
+    float c = cos((VERTEX.x + VERTEX.z) * 1.23 + t * 1.52);
+    // Small Gerstner-like displacement, no deep black highlights.
+    VERTEX.y += (a * 0.039 + b * 0.022 + c * 0.012) * (0.55 + breeze);
+    surface_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+    shore = smoothstep(-42.0, 1.5, surface_world.z);
 }
 
 void fragment() {
-    float t = TIME * wind_speed;
-    vec2 coords = world_waves;
-    float small1 = sin(coords.x * 1.8 + coords.y * 0.46 + t * 2.6);
-    float small2 = cos(coords.y * 1.25 - coords.x * 0.58 - t * 1.6);
-    float crossed = sin((coords.x - coords.y) * 2.23 + t * 2.0);
-    float ripples = small1 * 0.48 + small2 * 0.34 + crossed * 0.18;
-    float wave_glint = pow(max(0.0, ripples * 0.5 + 0.45), 11.0);
-    float view = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);
-    float fresnel = pow(1.0 - view, 3.0);
-    vec3 water = mix(deep_color.rgb, bank_color.rgb, coast * 0.68);
-    water = mix(water, reflected_sky.rgb, 0.14 + fresnel * 0.66);
-    water += vec3(0.22, 0.28, 0.26) * wave_glint * 0.16;
-    // Subtle shallow glints, not giant foam circles or bright neon stripes.
-    water += vec3(0.12, 0.18, 0.15) * max(0.0, ripples - 0.60) * coast * 0.07;
-    ALBEDO = water;
-    NORMAL_MAP = normalize(vec3(small1 * 0.14, small2 * 0.13, 1.0)) * 0.5 + 0.5;
-    NORMAL_MAP_DEPTH = 0.27;
-    ROUGHNESS = clamp(0.12 + (1.0 - fresnel) * 0.055 + ripples * 0.014, 0.09, 0.26);
-    METALLIC = 0.12;
-    SPECULAR = 0.86;
+    float t = TIME * (0.60 + breeze * 1.8);
+    vec2 p = surface_world.xz;
+    float wa = sin(p.x * 0.63 + p.y * 0.38 + t * 0.91);
+    float wb = cos(p.y * 0.79 - p.x * 0.23 - t * 0.77);
+    float wc = sin(p.x * 1.71 + p.y * 1.22 + t * 1.61);
+    float ripple = wa * 0.41 + wb * 0.38 + wc * 0.21;
+    vec3 bank = shallow_water.rgb;
+    vec3 lake = mix(deep_water.rgb, bank, shore * 0.56);
+    vec3 nrm = normalize(NORMAL);
+    vec3 view_dir = normalize(VIEW);
+    float fresnel = pow(1.0 - clamp(dot(nrm, view_dir), 0.0, 1.0), 3.4);
+    // White sky reflection is a soft low-frequency veil, not discrete hard
+    // black/white mirror stripes. Underwater fish remain visible near shore.
+    vec3 tint = mix(lake, cloudy_sky.rgb, 0.06 + fresnel * 0.20);
+    tint += vec3(0.033, 0.057, 0.055) * clamp(ripple, -0.6, 0.6);
+    ALBEDO = tint;
+    NORMAL_MAP = normalize(vec3(0.09 * wa + 0.04 * wc, 0.09 * wb, 1.0)) * 0.5 + 0.5;
+    NORMAL_MAP_DEPTH = 0.18;
+    ROUGHNESS = clamp(0.41 + ripple * 0.035 + fresnel * 0.05, 0.35, 0.54);
+    METALLIC = 0.0;
+    SPECULAR = 0.27;
+    // Submerged fish and the lakebed can be seen in clear shallows; deeper
+    // water becomes more opaque, with a proper opaque horizon at distance.
+    float dist = distance(surface_world.xz, CAMERA_POSITION_WORLD.xz);
+    ALPHA = clamp(transparency_near + smoothstep(10.0, 92.0, dist) * 0.285 + fresnel * 0.018, 0.64, 0.979);
 }
