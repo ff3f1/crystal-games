@@ -759,3 +759,104 @@ func _update_stats() -> void:
     else:
         stats_label.text = "Наживка: %s  •  Слева — ходьба  •  Справа — обзор" % ("червь" if lure_index == 0 else "блесна")
     catch_label.text = "Улов: %d  •  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
+
+
+func _load_profile() -> void:
+    var config := ConfigFile.new()
+    if config.load("user://fishing_settings.cfg") == OK:
+        for key in profile.keys():
+            profile[key] = config.get_value("preferences", key, profile[key])
+    catches.clear()
+    if FileAccess.file_exists("user://fishing_catches.json"):
+        var source := FileAccess.open("user://fishing_catches.json", FileAccess.READ)
+        if source != null:
+            var parsed = JSON.parse_string(source.get_as_text())
+            if parsed is Array:
+                for entry in parsed:
+                    if entry is Dictionary and entry.has("species") and entry.has("weight"):
+                        catches.append(entry)
+    catch_count = catches.size()
+    best_weight = 0.0
+    for entry in catches:
+        best_weight = maxf(best_weight, float(entry.get("weight", 0.0)))
+
+func _save_settings() -> void:
+    var config := ConfigFile.new()
+    for key in profile.keys():
+        config.set_value("preferences", key, profile[key])
+    var err := config.save("user://fishing_settings.cfg")
+    if err != OK:
+        push_warning("Could not save preferences: %d" % err)
+
+func _record_catch() -> void:
+    var entry: Dictionary = {
+        "species": fish_name,
+        "weight": snappedf(fish_weight, 0.01),
+        "lure": "Червь" if lure_index == 0 else "Блесна",
+        "date": Time.get_date_string_from_system()
+    }
+    catches.append(entry)
+    catch_count = catches.size()
+    best_weight = maxf(best_weight, fish_weight)
+    var file := FileAccess.open("user://fishing_catches.json", FileAccess.WRITE)
+    if file == null:
+        push_warning("Could not save trophy journal")
+        return
+    file.store_string(JSON.stringify(catches, "\t"))
+    file.close()
+
+func set_preference(key: String, value: float) -> void:
+    if not profile.has(key):
+        return
+    profile[key] = value
+    if key == "volume":
+        sounds.call("set_volume_fraction", value)
+    if key == "fov":
+        camera.fov = value
+    _save_settings()
+
+func set_graphics_quality(shadows_enabled: bool) -> void:
+    profile["shadows"] = shadows_enabled
+    apply_video_settings()
+    _save_settings()
+
+func apply_video_settings() -> void:
+    camera.fov = float(profile.get("fov", 70.0))
+    if sun_light != null:
+        sun_light.shadow_enabled = bool(profile.get("shadows", true))
+
+func start_game() -> void:
+    session_started = true
+    overlay.call("hide_overlay")
+    camera.position = Vector3(0, 1.68, 9.2)
+    camera.look_at(Vector3(0, 0.3, -30.0), Vector3.UP)
+    _reset_to_ready()
+
+func open_pause() -> void:
+    if not session_started or menu_open:
+        return
+    joystick_touch_id = -1
+    look_touch_id = -1
+    joystick_vector = Vector2.ZERO
+    _update_joystick_knob()
+    overlay.call("show_pause")
+
+func resume_game() -> void:
+    if not session_started:
+        return
+    overlay.call("hide_overlay")
+    is_reeling = false
+    is_bracing = false
+
+func exit_to_menu() -> void:
+    session_started = false
+    is_reeling = false
+    is_bracing = false
+    _reset_to_ready()
+    overlay.call("show_home")
+
+func retry_cast() -> void:
+    session_started = true
+    overlay.call("hide_overlay")
+    _reset_to_ready()
+    _cast()
