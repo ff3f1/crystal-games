@@ -251,11 +251,15 @@ func _process(delta: float) -> void:
             forward = forward.normalized()
             var landing_target := camera.global_position + forward * 2.4 + Vector3.UP * 0.60
             fish_body.global_position = landing_from.lerp(landing_target, progress)
+            fish_population.call("move_hooked", fish_body.global_position)
             fish_body.rotation.z = sin(elapsed * 14.0) * 0.24 * (1.0 - progress)
             fish_body.rotation.x = sin(elapsed * 11.0) * 0.13 * (1.0 - progress)
-            for visual in fish_body.get_children():
-                if visual.has_method("set_wiggle"):
-                    visual.call("set_wiggle", 1.85 * (1.0 - progress) + 0.15)
+            if fish_body.has_method("set_wiggle"):
+                fish_body.call("set_wiggle", 1.85 * (1.0 - progress) + 0.15)
+            else:
+                for visual in fish_body.get_children():
+                    if visual.has_method("set_wiggle"):
+                        visual.call("set_wiggle", 1.85 * (1.0 - progress) + 0.15)
             if progress >= 1.0:
                 _record_catch()
                 sounds.call("play", "catch")
@@ -967,9 +971,13 @@ func _update_fight(delta: float) -> void:
     fish_body.position = bobber.position + Vector3(0.0, (0.22 + maxf(0.0, sin(elapsed * 9.0)) * 0.55) if show_jump else -0.18, 0.30)
     fish_body.rotation.y = sin(elapsed * 2.6) * 0.45 + float(fight_sim.lateral) * 0.018
     fish_body.rotation.z = float(fight_sim.headshake) * 0.17
-    for visual in fish_body.get_children():
-        if visual.has_method("set_wiggle"):
-            visual.call("set_wiggle", 0.48 + float(fight_sim.burst) * 1.8)
+    fish_population.call("move_hooked", fish_body.global_position)
+    if fish_body.has_method("set_wiggle"):
+        fish_body.call("set_wiggle", 0.48 + float(fight_sim.burst) * 1.8)
+    else:
+        for visual in fish_body.get_children():
+            if visual.has_method("set_wiggle"):
+                visual.call("set_wiggle", 0.48 + float(fight_sim.burst) * 1.8)
     if show_jump and ripple_age > 1.3:
         _splash()
 
