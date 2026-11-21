@@ -66,6 +66,11 @@ func _run_test() -> void:
     _require(game.overlay.screen_name == "journal", "Journal should open")
     game.exit_to_menu()
     _require(game.overlay.screen_name == "home", "Return to main menu should work")
+    current_scene = null
+    root.remove_child(game)
+    game.queue_free()
+    for i in range(4):
+        await process_frame
     print("FISHING_MVP_SMOKE_OK: menu / real cast / reel-and-release / landed trophy / journal / settings / pause")
     quit(0)
 
