@@ -75,6 +75,12 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    await page.screenshot({path:path.join(output,'00-pressed-menu-button.png')});
    await page.mouse.up();
    await page.waitForTimeout(90);
+   // A successful menu tap opens the map sheet; close it before testing
+   // the unrelated golden PLAY button, otherwise the real sheet blocks taps.
+   assert(await page.locator('#ovSheet').evaluate(el=>el.classList.contains('on')),
+     'real map button must open its interactive sheet');
+   await page.evaluate(()=>FZ.UI.closeSheet());
+   await page.waitForTimeout(80);
  }
  await page.screenshot({path:path.join(output,name+'.png')});
  // Real finger release on the golden button MUST uncover the game on every
