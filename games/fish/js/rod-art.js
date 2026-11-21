@@ -113,7 +113,7 @@
      ctx.save();
      ctx.globalAlpha *= Math.min(.62,Math.abs(reelSpeed)/7*.62);
      ctx.translate(c.reelX - c.baseX, c.reelY - c.axisY);
-     drawRotor(ctx, mode, reelAngle || 0);
+     drawRotor(ctx, mode, reelAngle);
      ctx.restore();
    }
    ctx.restore();
@@ -127,7 +127,7 @@
    const ice=mode==="ice";
    const radius=ice?12:15;
    ctx.save();
-   ctx.rotate(angle);
+   ctx.rotate(Number.isFinite(angle)?angle:0);
    ctx.lineCap="round";
    ctx.globalAlpha*=.84;
    ctx.strokeStyle="rgba(23,43,42,.82)";
