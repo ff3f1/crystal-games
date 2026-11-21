@@ -153,6 +153,10 @@ func finish_hook(landed: bool) -> void:
     agents[current_hook] = fish
     current_hook = -1
 
+func _bottom_y(z: float) -> float:
+    # Same sloped lakebed height as the visible submerged terrain.
+    return -clampf(1.0 + maxf(0.0, 4.0 - z) * 0.11, 1.0, 10.0)
+
 func _return_home(fish: Dictionary) -> Vector3:
     var p: Vector3 = fish["home"]
     var travel := elapsed * (0.13 + float(fish["id"] % 5) * 0.012)
@@ -275,6 +279,9 @@ func simulate(
         # School avoidance prevents fish clipping into one another. Predators
         # get a larger personal radius than small perch/carp.
         var separation := Vector3.ZERO
+        var neighbours := Vector3.ZERO
+        var neighbour_count := 0
+        var predator_near := false
         var personal := 1.10 if str(fish["species"]) == "Щука" else 0.62
         for j in range(agents.size()):
             if i == j:
@@ -286,10 +293,24 @@ func simulate(
             var gap: float = offset.length()
             if gap > 0.001 and gap < personal:
                 separation += offset / gap * (personal - gap)
+            if gap < 3.3 and str(peer["species"]) == str(fish["species"]) and str(fish["species"]) != "Щука":
+                neighbours += peer["pos"]
+                neighbour_count += 1
+            if str(peer["species"]) == "Щука" and str(fish["species"]) != "Щука" and gap < 3.0:
+                predator_near = true
+        if neighbour_count > 0 and mode == "cruise":
+            # Small perch and carp form loose moving schools, not tight balls.
+            target = target.lerp(neighbours / float(neighbour_count), 0.23)
+        if predator_near and mode == "cruise":
+            mode = "spooked"
+            fish["timer"] = rng.randf_range(2.1, 4.0)
+            fish["cooldown"] = 5.0
         target += separation * 1.30
         target.x = clampf(target.x, -57.0, 57.0)
         target.z = clampf(target.z, -88.0, -2.9)
-        target.y = clampf(target.y, -3.1, -0.42)
+        # Fish should never swim below the real sloping lakebed, or burst
+        # through the surface when close to the shoreline.
+        target.y = clampf(target.y, maxf(-3.1, _bottom_y(target.z) + 0.34), -0.42)
         var displacement := target - pos
         var desired: Vector3 = displacement.normalized() * minf(3.0, float(fish["speed"]) * urgency) if displacement.length() > 0.05 else Vector3.ZERO
         var velocity: Vector3 = fish["vel"]
@@ -300,7 +321,7 @@ func simulate(
         pos += velocity * step
         pos.x = clampf(pos.x, -57.0, 57.0)
         pos.z = clampf(pos.z, -88.0, -2.9)
-        pos.y = clampf(pos.y, -3.2, -0.40)
+        pos.y = clampf(pos.y, maxf(-3.2, _bottom_y(pos.z) + 0.30), -0.40)
         fish["pos"] = pos
         fish["vel"] = velocity
         fish["mode"] = mode
