@@ -19,6 +19,7 @@ jobs:
           node --check tests/test_cozy_stage8.cjs
           node tests/test_fishing_ecology.cjs
           node tests/test_cozy_motion.cjs
+          node tests/test_cast_skills.cjs
           node tests/test_cozy_stage8.cjs
       - name: Real in-game screenshots (NO Android build)
         run: |

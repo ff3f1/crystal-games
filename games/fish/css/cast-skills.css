@@ -1,0 +1,57 @@
+/* Compact fishing progression and cast meter. Existing controls remain untouched. */
+#hLvlBox[role="button"]{cursor:pointer;touch-action:manipulation}
+#hLvlBox[role="button"]:focus-visible{outline:2px solid #f7dc9c;outline-offset:2px}
+#ovMenu .lodge-footer .cozy-skill-entry{
+ color:#f4db9e;border:1px solid rgba(236,199,126,.44);
+ background:rgba(24,62,52,.82);padding:7px 11px;
+ border-radius:8px;font-weight:650;font-size:10px;
+}
+#ovMenu .lodge-footer{gap:8px;flex-wrap:wrap}
+.cozy-skill-summary{
+ display:flex;align-items:center;justify-content:space-between;gap:12px;
+ border:1px solid rgba(240,203,137,.39);border-radius:13px;
+ padding:13px;background:rgba(16,51,46,.74);color:#f5e4c1;font-size:12px
+}
+.cozy-skill-summary strong{font-size:11px;color:#f2cf86;text-align:right}
+.cozy-skill-intro,.cozy-skill-foot{font-size:11px;line-height:1.55;color:#bdd3c6;margin:13px 0}
+.cozy-skill-item{
+ display:flex;gap:11px;align-items:center;
+ border:1px solid rgba(230,194,137,.24);border-radius:13px;
+ background:linear-gradient(140deg,rgba(40,82,63,.66),rgba(14,45,45,.83));
+ padding:12px;margin:9px 0
+}
+.cozy-skill-icon{width:39px;height:39px;display:grid;place-items:center;
+ border:1px solid rgba(235,205,151,.5);background:rgba(246,215,157,.10);
+ color:#eac58b;font-size:23px;border-radius:10px;flex-shrink:0}
+.cozy-skill-main{flex:1;min-width:0}
+.cozy-skill-main strong{display:block;color:#f4e9d6;font-size:13px}
+.cozy-skill-main small{display:block;color:#bcd0c5;font-size:10px;line-height:1.5;margin-top:5px}
+.cozy-skill-meter{display:flex;gap:4px;margin:8px 0}
+.cozy-skill-meter i{height:5px;flex:1;border-radius:9px;background:#c6d7be29}
+.cozy-skill-meter i.on{background:#e4bf7e}
+.cozy-skill-bonus{display:block;color:#e8c68c;font-size:10px}
+.cozy-skill-up{align-self:center;min-width:38px;height:40px;border-radius:10px;
+ background:linear-gradient(120deg,#f1d79e,#d7a45b);color:#1c3530;font-size:13px;font-weight:750}
+.cozy-skill-up:disabled{opacity:.4;cursor:default}
+#hud .cozy-power{
+ position:absolute;bottom:calc(116px + var(--safe-b));left:50%;
+ transform:translateX(-50%);width:min(300px,calc(100% - 50px));
+ z-index:12;pointer-events:none;
+ border:1px solid rgba(248,212,144,.62);border-radius:12px;
+ background:linear-gradient(135deg,rgba(16,49,47,.96),rgba(12,36,39,.96));
+ box-shadow:0 5px 20px rgba(2,19,21,.43);padding:10px 12px;
+ color:#f2dfc5
+}
+#hud .cozy-power.hide{display:none}
+#hud .cozy-power-copy{display:flex;justify-content:space-between;gap:5px;font-size:11px}
+#hud .cozy-power-copy span{color:#f9d994;font-weight:750}
+#hud .cozy-power-track{height:9px;background:#44605a;border-radius:7px;
+ position:relative;overflow:hidden;margin:7px 0 5px}
+#hud .cozy-power-track i{display:block;height:100%;width:18%;
+ background:linear-gradient(90deg,#7aa896,#e7c37e,#f6d99c);border-radius:7px}
+#hud .cozy-power-track em{position:absolute;top:0;bottom:0;left:80%;
+ border-left:2px solid rgba(255,251,222,.6)}
+#hud .cozy-power small{color:#c5d3be;font-size:9px}
+@media(max-height:700px){#hud .cozy-power{bottom:calc(102px + var(--safe-b));padding:7px 10px}}
+@media(max-width:360px){.cozy-skill-item{gap:8px;padding:9px}
+ .cozy-skill-up{min-width:32px}.cozy-skill-icon{width:32px;height:32px}}
