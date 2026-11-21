@@ -223,8 +223,6 @@ window.FZ_ASSETS = {
   "base/blacksea": "base/blacksea.webp"
  },
  "audio": {
-  "music_wooden_docks": "audio/music_wooden_docks.mp3",
-  "music_still_water": "audio/music_still_water.mp3",
   "music_autumn": "audio/music_autumn.mp3",
   "music_night": "audio/music_night.mp3",
   "music_spring": "audio/music_spring.mp3",
