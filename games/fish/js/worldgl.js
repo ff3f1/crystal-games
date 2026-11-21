@@ -339,6 +339,9 @@
   R.initFallback=function(cv){
     // A browser cannot switch an acquired WebGL canvas to 2D.
     const fallback=document.createElement('canvas');fallback.id='cv';cv.replaceWith(fallback);canvas=fallback;enabled=false;previous.init.call(R,fallback);
+    // main.js attached listeners before the WebGL capability check.
+    // The new canvas must receive them or touch controls silently disappear.
+    if (FZ.Input && typeof FZ.Input.rebindCanvas === 'function') FZ.Input.rebindCanvas(fallback);
     // Preserve input listeners on the original element through event forwarding.
     ['pointerdown','pointermove','pointerup','pointercancel'].forEach(type=>fallback.addEventListener(type,e=>{
       // Capture on the visible replacement canvas, not the detached original.
