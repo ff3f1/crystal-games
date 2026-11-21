@@ -198,6 +198,22 @@
     return { opposing, vz: f.vz, vx: f.vx };
   };
 
+  // Stamina is earned by active, controlled pressure, not mostly by waiting.
+  // The window is wide enough for a thumb-controlled phone game; near-zero
+  // tension and a dangerously overloaded line both work poorly.
+  P.fightControl = function (opts) {
+    const tension = clamp(Number(opts.tension) || 0, 0, 1.1);
+    const quality = clamp(1 - Math.abs(tension - 0.54) / 0.50, 0, 1);
+    const activity = opts.reeling ? 1 : 0.42;
+    let work = 0.18 + 0.24 * Math.min(tension, 1) + 0.89 * quality * activity;
+    if (opts.against) work += 0.20 * quality;
+    if (tension > 0.20 && tension < 0.92 && (opts.lift || 0) > 0.18) {
+      work += 0.17 * clamp(opts.lift, 0, 1);
+    }
+    if (tension >= 0.92) work *= 0.72;
+    return { quality, work: clamp(work, 0.1, 1.45) };
+  };
+
   // The rod/line is an elastic, damped load; the friction drag releases line
   // before the spool can be wound inward against a running fish.
   P.line = function (f, opts, dt) {
