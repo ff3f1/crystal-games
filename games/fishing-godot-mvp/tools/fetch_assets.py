@@ -98,8 +98,9 @@ for output, url in {
 # Resize the high-resolution JPEG to mobile-friendly 3K for predictable GPU memory use.
 sky_source = TEX / "green-lake-source.jpg"
 sky_target = TEX / "sky_panorama.jpg"
-# Prefer a forested lake panorama; fall back to the known-good Arboretum.
-for sky_name in ("shudu_lake", "arboretum"):
+# Prefer CC0 sunny alpine mountains and blue sky as in the visual reference;
+# retain a known-good lake panorama and arboretum fallback.
+for sky_name in ("alps_field", "shudu_lake", "arboretum"):
     try:
         fetch(f"https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/{sky_name}.jpg", sky_source)
         print("Chosen photographic sky:", sky_name)
