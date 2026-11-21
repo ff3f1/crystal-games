@@ -27,8 +27,11 @@ for (const name of ['reel_tick', 'drag_click', 'drag_rattle', 'drag_strain', 'li
 assert.ok(prevEnd < 3.6, 'samples must fit within compact 3.6s atlas');
 const assetWindow = {};
 vm.runInNewContext(manifestSource, {window: assetWindow});
-assert.ok(assetWindow.FZ_ASSETS.audio.music_wooden_docks);
-assert.ok(assetWindow.FZ_ASSETS.audio.music_still_water);
+// Optional MP3s are not in the repository yet: do not request missing assets.
+assert.ok(!assetWindow.FZ_ASSETS.audio.music_wooden_docks);
+assert.ok(!assetWindow.FZ_ASSETS.audio.music_still_water);
+assert.ok(assetWindow.FZ_ASSETS.audio.music_summer);
+assert.ok(assetWindow.FZ_ASSETS.audio.music_night);
 
 // Fake Web Audio: verify event routing without depending on a speaker or Android.
 const starts = [];
@@ -85,9 +88,14 @@ vm.runInNewContext(audioSource,ctx);
   const shots=starts.filter(s=>s.buffer && s.buffer.isFoley).map(s=>s.args[1]);
   assert.deepEqual(shots,[0,2,2.92], 'reel / heavy drag / line snap atlas timings');
   S.playMusic('summer');
+  assert.ok(playedMusic.at(-1).src.endsWith('music_summer.mp3'), 'use shipped track when optional MP3 absent');
+  // Once installed, new compositions should be preferred but still fall back on decode failure.
+  assetWindow.FZ_ASSETS.audio.music_wooden_docks='audio/music_wooden_docks.mp3';
+  assetWindow.FZ_ASSETS.audio.music_still_water='audio/music_still_water.mp3';
+  S.playMusic('spring');
   assert.ok(playedMusic.at(-1).src.endsWith('music_wooden_docks.mp3'));
   playedMusic.at(-1).events.error();
-  assert.ok(playedMusic.at(-1).src.endsWith('music_summer.mp3'), 'fallback if new MP3 missing');
+  assert.ok(playedMusic.at(-1).src.endsWith('music_spring.mp3'), 'fallback if added MP3 failed');
   S.playMusic('night');
   assert.ok(playedMusic.at(-1).src.endsWith('music_still_water.mp3'));
   console.log('PASS: 5 Foley cues, real-time triggers, music and fallback');
