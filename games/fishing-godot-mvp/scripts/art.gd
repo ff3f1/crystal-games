@@ -7,6 +7,7 @@ var floating_leaves: Array[Node3D] = []
 var local_breeze := 0.28
 var wave_clock := 0.0
 var water_material: ShaderMaterial
+var detailed_vegetation: Node3D
 
 func _process(delta: float) -> void:
     wave_clock += delta
@@ -23,6 +24,8 @@ func set_wind(value: float) -> void:
     local_breeze = clampf(value, 0.0, 1.0)
     if water_material != null:
         water_material.set_shader_parameter("breeze", local_breeze)
+    if detailed_vegetation != null:
+        detailed_vegetation.call("set_wind", local_breeze)
 
 func populate() -> void:
     random.seed = 14390221
@@ -32,8 +35,11 @@ func populate() -> void:
     _make_forest()
     _make_fishing_spot()
     _make_habitat_details()
-    _make_natural_reeds_and_lilies()
-    _make_underwater_weeds()
+    # Replaces flat polygon reed/lily/weed impostors with native 3D surfaces.
+    detailed_vegetation = (load("res://scripts/shore_vegetation_3d.gd") as GDScript).new() as Node3D
+    detailed_vegetation.name = "SculptedVegetation3D"
+    add_child(detailed_vegetation)
+    detailed_vegetation.call("populate", self)
 
 func shore_edge(x: float) -> float:
     return 3.7 + sin(x * 0.12) * 0.85 + sin(x * 0.033) * 1.2
