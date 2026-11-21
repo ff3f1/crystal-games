@@ -39,6 +39,12 @@ void fragment() {
     // black/white mirror stripes. Underwater fish remain visible near shore.
     vec3 tint = mix(lake, cloudy_sky.rgb, 0.06 + fresnel * 0.20);
     tint += vec3(0.033, 0.057, 0.055) * clamp(ripple, -0.6, 0.6);
+    // The pano already contains a misty lake at the horizon. Ease toward
+    // its aerial perspective instead of cutting from dark teal to a bright
+    // photograph along a straight geometric line.
+    float horizon_dist = distance(surface_world.xz, CAMERA_POSITION_WORLD.xz);
+    float aerial = smoothstep(58.0, 255.0, horizon_dist);
+    tint = mix(tint, vec3(0.37, 0.47, 0.49), aerial * 0.75);
     ALBEDO = tint;
     NORMAL_MAP = normalize(vec3(0.09 * wa + 0.04 * wc, 0.09 * wb, 1.0)) * 0.5 + 0.5;
     NORMAL_MAP_DEPTH = 0.18;
