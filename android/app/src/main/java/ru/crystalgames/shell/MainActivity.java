@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.util.Base64;
+import android.util.Log;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.JavascriptInterface;
@@ -103,6 +104,19 @@ public class MainActivity extends AppCompatActivity {
         web.addJavascriptInterface(new ShareBridge(), "AndroidShare");
         try { reviewManager = RuStoreReviewManagerFactory.INSTANCE.create(this); } catch (Exception ignored) { reviewManager = null; }
         web.loadUrl(START_URL);
+        // Native WebView smoke audit: the process may survive while the HTML UI
+        // is broken or hidden. Log actual menu visibility for emulator tests.
+        ui.postDelayed(() -> {
+            if (web == null) return;
+            web.evaluateJavascript(
+                "(function(){var m=document.getElementById('ovMenu');" +
+                "var b=document.getElementById('boot');" +
+                "return !!(m&&m.classList.contains('on')&&" +
+                "m.querySelector('#mGo')&&!b&&" +
+                "getComputedStyle(m).display!=='none')})()",
+                value -> Log.i("FishBootAudit", "UI_READY " + value)
+            );
+        }, 18000);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
