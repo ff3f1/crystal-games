@@ -76,6 +76,8 @@ func _spawn_agent(habitat_index: int, species: String, number: int) -> void:
         "mesh": mesh,
         "cooldown": 0.0,
         "nibble": 0.0,
+        "attention_time": 0.0,
+        "rest_time": rng.randf_range(0.0, 3.5),
         "respawn": 0.0
     })
 
@@ -186,7 +188,14 @@ func _can_see_lure(fish: Dictionary, lure: Vector3, lure_type: int, retrieve_spe
         speed_requirement = 0.90 if retrieve_speed > 0.65 or twitch > 0.1 else 0.18
     var environment := 0.84 + 0.16 * cos(elapsed * 0.21 + float(fish["id"]))
     var strength := float(fish["interest"])
-    return affinity * strength * speed_requirement * environment * clampf(1.0 - d / sight, 0.0, 1.0)
+    # A noisy angler at the shoreline reduces confidence, especially carp.
+    # Cast noise and footsteps therefore affect the actual resident fish,
+    # not merely an unused abstract bite-probability variable.
+    var noise_penalty := clampf(
+        1.0 - float(ecology.get("disturbance")) * (0.52 if species == "Карась" else 0.27),
+        0.42, 1.0
+    )
+    return affinity * strength * speed_requirement * environment * noise_penalty * clampf(1.0 - d / sight, 0.0, 1.0)
 
 func simulate(
     delta: float, fishing: bool, lure_pos: Vector3, lure_type: int,
@@ -225,6 +234,7 @@ func simulate(
             continue
         var remaining: float = maxf(0.0, float(fish["cooldown"]) - step)
         fish["cooldown"] = remaining
+        fish["rest_time"] = maxf(0.0, float(fish["rest_time"]) - step)
         var pos: Vector3 = fish["pos"]
         var target: Vector3 = _return_home(fish)
         var urgency := 1.0
@@ -252,7 +262,14 @@ func simulate(
                 reserved_fish = i
                 out = {"signal": STRIKE, "id": i, "species": fish["species"], "position": lure_pos, "activity": 1.0}
         elif mode == "approach":
-            if reserved_fish >= 0 and reserved_fish != i:
+            fish["attention_time"] = float(fish["attention_time"]) + step
+            # The fish remembers the position it last investigated, but
+            # stops chasing a fast-moving lure once it vanishes from view.
+            var range_limit := 11.5 if str(fish["species"]) == "Щука" else 8.4
+            if pos.distance_to(lure_pos) > range_limit or float(fish["attention_time"]) > 17.0:
+                mode = "cruise"
+                fish["cooldown"] = rng.randf_range(2.2, 5.2)
+            elif reserved_fish >= 0 and reserved_fish != i:
                 # A contact already has dibs on this bait: don't issue a
                 # second nibble from another fish before the first strikes.
                 mode = "cruise"
@@ -268,11 +285,12 @@ func simulate(
                     # A real mesh touched the lure: the very same id gets the
                     # later strike and is passed to the fighting simulation.
                     out = {"signal": NIBBLE, "id": i, "species": fish["species"], "position": pos, "activity": 1.0}
-        elif mode == "cruise" and fishing and remaining <= 0.01 and reserved_fish < 0:
+        elif mode == "cruise" and fishing and remaining <= 0.01 and reserved_fish < 0 and float(fish["rest_time"]) <= 0.0:
             var interest := _can_see_lure(fish, lure_pos, lure_type, retrieve_speed, twitch, hour, wind)
             nearest = maxf(nearest, interest)
             if interest > 0.05 and rng.randf() < 1.0 - exp(-step * 1.25 * interest):
                 mode = "approach"
+                fish["attention_time"] = 0.0
                 target = lure_pos
                 urgency = 1.1
 
@@ -301,6 +319,10 @@ func simulate(
         if neighbour_count > 0 and mode == "cruise":
             # Small perch and carp form loose moving schools, not tight balls.
             target = target.lerp(neighbours / float(neighbour_count), 0.23)
+        if mode == "cruise" and float(fish["rest_time"]) > 0.0:
+            # Feeding fish hover around a productive patch before swimming on,
+            # preventing every individual from endlessly circling at full speed.
+            urgency = 0.18 if str(fish["species"]) == "Карась" else 0.32
         if predator_near and mode == "cruise":
             mode = "spooked"
             fish["timer"] = rng.randf_range(2.1, 4.0)
@@ -331,7 +353,7 @@ func simulate(
             model.rotation.y = lerp_angle(model.rotation.y, heading, minf(1.0, step * 4.2))
             model.rotation.z = lerpf(model.rotation.z, sin(elapsed * 2.4 + float(i)) * 0.045, step * 2.2)
         if model.has_method("set_wiggle"):
-            model.call("set_wiggle", 0.70 + (0.42 if mode == "approach" else 0.0) + float(velocity.length()) * 0.11)
+            model.call("set_wiggle", 0.28 + (0.52 if mode == "approach" else 0.0) + float(velocity.length()) * 0.32)
         # Rendering cull only: behavior still updates when off-camera.
         model.visible = pos.distance_to(camera_position) < visual_distance
         agents[i] = fish
