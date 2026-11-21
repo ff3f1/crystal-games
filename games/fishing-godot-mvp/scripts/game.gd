@@ -168,20 +168,36 @@ func _process(delta: float) -> void:
                 bait_underwater.visible = lure_index == 1
                 bait_underwater.global_position = lure_sim.position
                 bait_underwater.rotation.y += delta * 12.0 if is_reeling else delta * 1.5
-            var readiness: float = lure_sim.bite_readiness(fish_spots, is_reeling)
-            timer += delta * (0.32 + readiness * 0.72)
+            # Fish react to appropriate food and motion, not an arbitrary
+            # strike countdown. A short nibble precedes a proper hook window.
+            var reaction: Dictionary = ecology.tick(
+                delta, lure_sim.position, lure_index, lure_sim.depth,
+                lure_sim.retrieve_speed, lure_sim.twitch_boost,
+                fish_spots, lake_hour, wind
+            )
+            shoreline_activity = float(reaction["activity"])
+            timer += delta
             if lure_index == 1 and lure_sim.is_near_angler(camera.global_position):
+                ecology.reset_cast()
                 _reset_to_ready()
-                _set_message("Блесна у берега. Выбери направление и забрасывай снова!")
-            elif timer >= bite_delay:
+                _set_message("Блесна у берега. Сменишь глубину или проводку?")
+            elif int(reaction["signal"]) == 1:
+                current_bite_species = str(reaction["species"])
+                bite_sign_age = 0.0
+                _splash()
+                sounds.call("play", "bite")
+                _set_message("Осторожная поклёвка... Не спеши подсекать!")
+            elif int(reaction["signal"]) == 2:
+                current_bite_species = str(reaction["species"])
                 phase = Phase.BITE
                 timer = 0.0
                 _choose_fish()
                 is_reeling = false
                 is_bracing = false
-                sounds.call("play", "bite")
+                bite_sign_age = 0.0
                 _splash()
-                _set_message("ПОКЛЁВКА! Подсекай, пока рыба не ушла!")
+                sounds.call("play", "bite")
+                _set_message("УВЕРЕННАЯ ПОКЛЁВКА! Сейчас подсекай!")
                 _update_buttons()
         Phase.BITE:
             timer += delta
