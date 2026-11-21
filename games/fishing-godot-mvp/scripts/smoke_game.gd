@@ -42,6 +42,10 @@ func _run_test() -> void:
     _require(game.phase == 2, "Cast should reach WAITING")
     _require(game.minimap != null, "Sonar minimap should be available during fishing")
     _require(game.lure_sim.is_landed, "Lure physical landing must be reflected in sonar")
+    _require(game.lure_view != null, "A real underwater lure camera must exist")
+    game._process(0.14)
+    _require(game.lure_view.visible, "Live underwater panel must appear only with bait in the water")
+    _require(game.lure_view.viewport.world_3d == game.get_viewport().world_3d, "Underwater camera must share exact same simulated lake")
     var saw_nibble := false
     for i in range(1500):
         game._process(0.1)
