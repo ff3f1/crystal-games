@@ -12,31 +12,38 @@
   const CURRENT=new Set(["asp","chub","dace","ide","grayling","lenok","taimen","rybets","nase","chekhon","nelma","brooktrout","marinka","osman"]);
   const FEEDING_PRED=new Set(["pike","amurpike","perch","zander","asp","chub","lenok","taimen","nelma","grayling","brooktrout","trout","coho","chinook","pinksalmon","chumsalmon","terpug"]);
   const FIGHTS={
-    pike:{run:1.16,shake:1.4,speed:1.1,duration:.9},
-    amurpike:{run:1.16,shake:1.4,speed:1.1,duration:.9},
-    zander:{run:.92,shake:1.6,speed:.94,duration:.95},
+    pike:{run:1.16,shake:1.4,speed:1.1,duration:.9,cover:1.3},
+    amurpike:{run:1.16,shake:1.4,speed:1.1,duration:.9,cover:1.3},
+    zander:{run:.92,shake:1.6,speed:.94,duration:.95,dive:.9},
     perch:{run:.85,shake:1.3,speed:1,duration:.85},
-    catfish:{run:1.35,shake:.65,speed:.72,duration:1.45},
-    burbot:{run:.75,shake:.7,speed:.75,duration:1.15},
-    carp:{run:1.38,shake:.72,speed:1.17,duration:1.30},
-    wildcarp:{run:1.47,shake:.72,speed:1.24,duration:1.34},
+    catfish:{run:1.30,shake:.65,speed:.72,duration:1.45,dive:1.7},
+    burbot:{run:.75,shake:.7,speed:.75,duration:1.15,dive:1.3},
+    carp:{run:1.38,shake:.72,speed:1.17,duration:1.30,dive:.25},
+    wildcarp:{run:1.47,shake:.72,speed:1.24,duration:1.34,dive:.3},
     grasscarp:{run:1.32,shake:.7,speed:1.14,duration:1.23},
     crucian:{run:.65,shake:.6,speed:.82,duration:.84},
     gcrucian:{run:.68,shake:.6,speed:.84,duration:.85},
-    bream:{run:.7,shake:.65,speed:.7,duration:1.05},
-    tench:{run:1.23,shake:.9,speed:.85,duration:1.23},
+    bream:{run:.7,shake:.65,speed:.7,duration:1.05,dive:.25},
+    tench:{run:1.23,shake:.9,speed:.85,duration:1.23,cover:1.15},
     taimen:{run:1.38,shake:1.32,speed:1.26,duration:1.23},
     trout:{run:1.14,shake:1.2,speed:1.2,duration:.92},
     brooktrout:{run:1.14,shake:1.2,speed:1.2,duration:.92},
     grayling:{run:1.18,shake:1.15,speed:1.18,duration:.93},
     asp:{run:1.3,shake:.92,speed:1.32,duration:1.07},
+    sturgeon:{run:.9,shake:.5,speed:.64,duration:1.48,dive:1.5},
+    sterlet:{run:.84,shake:.6,speed:.72,duration:1.24,dive:1.1},
+    halibut:{run:.78,shake:.56,speed:.67,duration:1.35,dive:1.45},
+    cod:{run:.91,shake:.8,speed:.83,duration:1.11,dive:1.06},
+    rudd:{run:.72,shake:.86,speed:.89,duration:.88,cover:.8},
+    chub:{run:1.12,shake:1.02,speed:1.14,duration:.95,cover:.7},
   };
   E.profile=function(s,w){
     const p=FIGHTS[s.id]||{};
     const trophy=clamp(w/Math.max(.01,s.trophy),0,2);
     // Trophy fish retain their original strength but have longer, more distinct runs.
     return {run:p.run||1,shake:p.shake||1,speed:(p.speed||1)*(1+.08*clamp(trophy-.45,0,1)),
-      duration:(p.duration||1)*(1+.12*clamp(trophy-.5,0,1)),trophy};
+      duration:(p.duration||1)*(1+.12*clamp(trophy-.5,0,1)),
+      dive:p.dive||0,cover:p.cover||(EDGE.has(s.id)?1:0),trophy};
   };
   E.habitat=function(s,loc,X,Z,maxCast,maxLat){
     if(!s)return 1;
@@ -143,20 +150,25 @@
   E.nextPhase=function(f,reeling,rand){
     if(f.S<.16)return "tired";
     const p=E.profile(f.s,f.w);
+    // Deep-water fish must recover after a dive rather than chaining them.
+    if(f.phase==="dive")return "rest";
     if(f.phase==="run")return rand()<.16*p.shake?"shake":"rest";
     const active=.3+.7*f.S;
     const run=clamp(f.s.fight.runs*active*p.run*(reeling?1.17:1),0,.74);
     const toward=clamp(.1+(f.s.id==="crucian"||f.s.id==="bream"?.07:0),.08,.18);
     const shake=clamp(f.s.fight.shake*(.25+.09*f.S)*p.shake,0,.27);
+    const dive=clamp(p.dive*(.085+.07*f.S),0,.23);
     const roll=rand();
-    return roll<run?"run":roll<run+toward?"toward":roll<run+toward+shake?"shake":"rest";
+    return roll<run?"run":roll<run+toward?"toward":roll<run+toward+shake?"shake":
+      roll<run+toward+shake+dive?"dive":"rest";
   };
   E.chooseRunDirection=function(s,X,bank,rand){
     if(!(bank>0)||!Number.isFinite(X))return rand()<.5?-1:1;
     const edge=Math.abs(X)/bank,side=Math.sign(X)||1;
     if(edge>.93)return -side; // physical limit: cannot swim through land
-    if(edge>.52&&EDGE.has(s.id)&&rand()<.56)return side; // cover-seeking fish
+    // Physical bank limit beats the fish's preference for cover.
     if(edge>.75)return -side;
+    if(edge>.52&&EDGE.has(s.id)&&rand()<.56)return side; // cover-seeking fish
     return rand()<.5?-1:1;
   };
   E.isEdgeFish=s=>!!s&&EDGE.has(s.id);
