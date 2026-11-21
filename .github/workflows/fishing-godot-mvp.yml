@@ -5,6 +5,7 @@ on:
     branches:
       - prototype/fishing-godot-mvp
       - codex/fishing-3d-alpine
+      - codex/fishing-3d-asset-pass
     paths:
       - "games/fishing-godot-mvp/**"
       - ".github/workflows/fishing-godot-mvp.yml"
@@ -56,6 +57,10 @@ jobs:
           test -s games/fishing-godot-mvp/assets/textures/fish_crucian_albedo.png
           du -sh games/fishing-godot-mvp/assets
           test -s games/fishing-godot-mvp/assets/models/rod.glb
+          test -s games/fishing-godot-mvp/assets/models/fps_arms.glb
+          test -s games/fishing-godot-mvp/assets/models/grass_medium_02.glb
+          test -s games/fishing-godot-mvp/assets/models/pine_roots.glb
+          test -s games/fishing-godot-mvp/assets/textures/fps_arm_albedo.png
           test -s games/fishing-godot-mvp/assets/textures/shore_diffuse.jpg
 
       - name: Convert glTF quantized meshes for Godot compatibility
