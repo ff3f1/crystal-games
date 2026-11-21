@@ -240,15 +240,22 @@ func simulate(
                 reserved_fish = i
                 out = {"signal": STRIKE, "id": i, "species": fish["species"], "position": lure_pos, "activity": 1.0}
         elif mode == "approach":
-            target = lure_pos
-            urgency = 1.2 if str(fish["species"]) == "Щука" else 0.88
-            var chase_distance := pos.distance_to(lure_pos)
-            if chase_distance < 0.76:
-                mode = "inspect"
-                fish["nibble"] = rng.randf_range(0.56, 1.15)
-                # This water contact is caused by a real 3D fish arriving,
-                # not an arbitrary roll detached from its world position.
-                out = {"signal": NIBBLE, "id": i, "species": fish["species"], "position": pos, "activity": 1.0}
+            if reserved_fish >= 0 and reserved_fish != i:
+                # A contact already has dibs on this bait: don't issue a
+                # second nibble from another fish before the first strikes.
+                mode = "cruise"
+                fish["cooldown"] = 2.3
+            else:
+                target = lure_pos
+                urgency = 1.2 if str(fish["species"]) == "Щука" else 0.88
+                var chase_distance := pos.distance_to(lure_pos)
+                if chase_distance < 0.76:
+                    mode = "inspect"
+                    reserved_fish = i
+                    fish["nibble"] = rng.randf_range(0.56, 1.15)
+                    # A real mesh touched the lure: the very same id gets the
+                    # later strike and is passed to the fighting simulation.
+                    out = {"signal": NIBBLE, "id": i, "species": fish["species"], "position": pos, "activity": 1.0}
         elif mode == "cruise" and fishing and remaining <= 0.01 and reserved_fish < 0:
             var interest := _can_see_lure(fish, lure_pos, lure_type, retrieve_speed, twitch, hour, wind)
             nearest = maxf(nearest, interest)
