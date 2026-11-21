@@ -45,7 +45,7 @@ func set_volume_fraction(value: float) -> void:
         AudioServer.set_bus_volume_db(0, linear_to_db(clampf(value, 0.001, 1.0)))
 
 func _tone(length: float, f0: float, f1: float, grit: float, amp: float) -> AudioStreamWAV:
-    const SR := 22050
+    const SR = 22050
     var frames := maxi(1, int(length * float(SR)))
     var bytes := PackedByteArray()
     bytes.resize(frames * 2)
@@ -66,7 +66,7 @@ func _tone(length: float, f0: float, f1: float, grit: float, amp: float) -> Audi
     return stream
 
 func _ambient_water(length: float) -> AudioStreamWAV:
-    const SR := 22050
+    const SR = 22050
     var count := int(float(SR) * length)
     var data := PackedByteArray()
     data.resize(count * 2)
