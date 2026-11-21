@@ -158,9 +158,13 @@
     const toward=clamp(.1+(f.s.id==="crucian"||f.s.id==="bream"?.07:0),.08,.18);
     const shake=clamp(f.s.fight.shake*(.25+.09*f.S)*p.shake,0,.27);
     const dive=clamp(p.dive*(.085+.07*f.S),0,.23);
+    // Reserve at least 10% for recovery. Otherwise strong fish can have
+    // cumulative probabilities above 1 and NEVER reach their dive phase.
+    const scale=Math.min(1,.9/(run+toward+shake+dive));
+    const r=run*scale,near=toward*scale,head=shake*scale,down=dive*scale;
     const roll=rand();
-    return roll<run?"run":roll<run+toward?"toward":roll<run+toward+shake?"shake":
-      roll<run+toward+shake+dive?"dive":"rest";
+    return roll<r?"run":roll<r+near?"toward":roll<r+near+head?"shake":
+      roll<r+near+head+down?"dive":"rest";
   };
   E.chooseRunDirection=function(s,X,bank,rand){
     if(!(bank>0)||!Number.isFinite(X))return rand()<.5?-1:1;
