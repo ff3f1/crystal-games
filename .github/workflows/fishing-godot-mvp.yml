@@ -80,7 +80,8 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_start.gd 2>&1 | tee godot-scene.log
+          timeout --signal=SIGINT --kill-after=5s 65s \
+            godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_start.gd 2>&1 | tee godot-scene.log
           grep -q "FISHING_START_OK" godot-scene.log
           if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:' godot-scene.log \
              | grep -v -E 'ERROR: [0-9]+ resources still in use at exit'; then
