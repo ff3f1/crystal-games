@@ -33,6 +33,22 @@
  }
  UI.showAchievements=achievements;
 
+ // Restyle the REAL existing catalog after all purchase/tab handlers bind.
+ const previousShop=UI.showShop;
+ UI.showShop=function(){
+   const result=previousShop.apply(this,arguments);
+   const sheet=document.querySelector("#ovSheet .sheet");
+   if(sheet)sheet.classList.add("concept-shop");
+   return result;
+ };
+ const previousTackle=UI.showTackle;
+ UI.showTackle=function(){
+   const result=previousTackle.apply(this,arguments);
+   const sheet=document.querySelector("#ovSheet .sheet");
+   if(sheet)sheet.classList.add("concept-loadout");
+   return result;
+ };
+
  const previousMenu=UI.showMenu;
  UI.showMenu=function(){
    const ret=previousMenu.apply(this,arguments);
