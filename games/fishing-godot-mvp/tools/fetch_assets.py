@@ -70,6 +70,19 @@ for name in (
 ):
     fetch(kenney_base + name + ".glb", MODELS / (name + ".glb"))
 
+# Compact real scanned CC0 rocks and shrubs for close-up areas of the lake.
+# Unlike the stylized background kit, these are genuine photoscanned 3D models.
+poly_model_sha = "77343cac874f06b73d16ad0063339df7c9ca254c"
+poly_model_base = f"https://raw.githubusercontent.com/Papyszoo/CC0-Public-Domain-Models/{poly_model_sha}/packs/"
+for category, model in (
+    ("polyhaven-nature-rocks", "rock_07"),
+    ("polyhaven-nature-rocks", "rock_moss_set_01"),
+    ("polyhaven-nature-rocks", "stone_01"),
+    ("polyhaven-nature-plants", "shrub_02"),
+    ("polyhaven-nature-plants", "shrub_03"),
+):
+    fetch(poly_model_base + f"{category}/models/{model}/{model}.glb", MODELS / f"{model}.glb")
+
 # Poly Haven 1K photoscanned CC0 textures, mirrored with license in this public repository.
 poly_base = "https://raw.githubusercontent.com/OmniTender-Systems/game-visual-assets/main/vendor/polyhaven/"
 for output, url in {
