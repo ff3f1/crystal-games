@@ -1,0 +1,18 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V2 Signer: certificate DN: CN=Crystal Games, C=RU
+V2 Signer: certificate SHA-256 digest: 7a5f80c0bd45b837c6b8c03886dcc1916f5ceacf9b86fbe1b4f8c2aa5ca56347
+V2 Signer: certificate SHA-1 digest: 4dc5afee30a3f7e77baf7efbb77bdf6fe46e584e
+V2 Signer: certificate MD5 digest: 88ad8e23a156a0b0aee0e1cd5dd2f010
+V2 Signer: key algorithm: RSA
+V2 Signer: key size (bits): 2048
+V2 Signer: public key SHA-256 digest: 2a8ae51ab1197d4002342fa1df99790a0f4a64f07c10490b749b0f574e7d38bc
+V2 Signer: public key SHA-1 digest: 135683de46a0a3fb1b0df8ed5e3d90454614f446
+V2 Signer: public key MD5 digest: 69218b43f9743a164c7dde0285d96665
