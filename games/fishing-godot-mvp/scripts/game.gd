@@ -2,7 +2,7 @@ extends Node3D
 ## Fishing: First Cast — an isolated, playable Godot 4 mobile prototype.
 ## Procedural art is intentional; the core loop is the test, not photoreal assets.
 
-enum Phase { READY, CASTING, WAITING, BITE, FIGHT, RESULT }
+enum Phase { READY, CASTING, WAITING, BITE, FIGHT, LANDING, RESULT }
 
 var rng := RandomNumberGenerator.new()
 var phase: Phase = Phase.READY
@@ -23,6 +23,16 @@ var ripple_age := 99.0
 var catch_count := 0
 var best_weight := 0.0
 var result_text := ""
+var menu_open := true
+var session_started := false
+var profile: Dictionary = {"volume": 0.7, "sensitivity": 1.0, "fov": 70.0, "shadows": true}
+var catches: Array[Dictionary] = []
+var hud_layer: CanvasLayer
+var overlay: CanvasLayer
+var sounds: Node
+var sun_light: DirectionalLight3D
+var landing_from := Vector3.ZERO
+var last_sound_reel := 0.0
 var shore_art: Node3D
 var joystick_vector := Vector2.ZERO
 var joystick_touch_id := -1
@@ -52,17 +62,28 @@ var reel_button: Button
 var brace_button: Button
 
 func _ready() -> void:
-    rng.seed = 20261121
+    rng.randomize()
+    _load_profile()
     _create_environment()
     _create_shore()
     _create_rod()
     _create_bobber_and_fish()
     _create_ui()
+    sounds = (load("res://scripts/soundscape.gd") as GDScript).new() as Node
+    add_child(sounds)
+    sounds.call("set_volume_fraction", float(profile["volume"]))
+    overlay = (load("res://scripts/interface.gd") as GDScript).new() as CanvasLayer
+    overlay.set("game", self)
+    add_child(overlay)
     _reset_to_ready()
+    apply_video_settings()
+    overlay.call("show_home")
     set_process(true)
 
 func _process(delta: float) -> void:
     elapsed += delta
+    if menu_open:
+        return
     _update_player(delta)
     ripple_age += delta
     if rod_root != null:
@@ -85,6 +106,7 @@ func _process(delta: float) -> void:
                 timer = 0.0
                 bite_delay = rng.randf_range(2.7, 6.0)
                 _splash()
+                sounds.call("play", "splash")
                 _set_message("Поплавок на воде. Следи за поклёвкой.")
                 _update_buttons()
         Phase.WAITING:
@@ -94,6 +116,7 @@ func _process(delta: float) -> void:
                 phase = Phase.BITE
                 timer = 0.0
                 _choose_fish()
+                sounds.call("play", "bite")
                 _splash()
                 _set_message("ПОКЛЁВКА! Подсекай, пока рыба не ушла!")
                 _update_buttons()
@@ -104,6 +127,21 @@ func _process(delta: float) -> void:
                 _finish("Опоздал с подсечкой. Рыба ушла.")
         Phase.FIGHT:
             _update_fight(delta)
+        Phase.LANDING:
+            timer += delta
+            var progress := clampf(timer / 1.55, 0.0, 1.0)
+            fish_body.visible = true
+            var forward := -camera.global_transform.basis.z
+            forward.y = 0.0
+            forward = forward.normalized()
+            var landing_target := camera.global_position + forward * 2.4 + Vector3.UP * 0.60
+            fish_body.global_position = landing_from.lerp(landing_target, progress)
+            fish_body.rotation.z = sin(elapsed * 14.0) * 0.24 * (1.0 - progress)
+            fish_body.rotation.x = sin(elapsed * 11.0) * 0.13 * (1.0 - progress)
+            if progress >= 1.0:
+                _record_catch()
+                sounds.call("play", "catch")
+                _finish("Трофей: %s, %.2f кг!" % [fish_name, fish_weight], true)
         _:
             if bobber.visible and phase == Phase.RESULT:
                 bobber.position.y = 0.09 + sin(elapsed * 2.2) * 0.035
@@ -116,6 +154,8 @@ func _process(delta: float) -> void:
     _update_stats()
 
 func _input(event: InputEvent) -> void:
+    if menu_open:
+        return
     if event is InputEventScreenTouch:
         var view_size := get_viewport().get_visible_rect().size
         if event.pressed:
@@ -180,6 +220,15 @@ func _update_player(delta: float) -> void:
     camera.position = next_position
 
 func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        if menu_open:
+            if session_started:
+                resume_game()
+        else:
+            open_pause()
+        return
+    if menu_open:
+        return
     if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
         _look_drag(event.relative)
     elif event is InputEventKey and not event.echo:
@@ -193,8 +242,9 @@ func _unhandled_input(event: InputEvent) -> void:
             is_bracing = event.pressed
 
 func _look_drag(movement: Vector2) -> void:
-    camera.rotation.y = clampf(camera.rotation.y - movement.x * 0.0035, -0.68, 0.68)
-    camera.rotation.x = clampf(camera.rotation.x - movement.y * 0.002, -0.20, 0.11)
+    var speed := float(profile.get("sensitivity", 1.0))
+    camera.rotation.y = clampf(camera.rotation.y - movement.x * 0.0035 * speed, -1.2, 1.2)
+    camera.rotation.x = clampf(camera.rotation.x - movement.y * 0.002 * speed, -0.27, 0.20)
 
 func _create_environment() -> void:
     camera = Camera3D.new()
@@ -206,6 +256,7 @@ func _create_environment() -> void:
     camera.current = true
 
     var light := DirectionalLight3D.new()
+    sun_light = light
     add_child(light)
     light.rotation_degrees = Vector3(-38, -52, -8)
     light.light_color = Color(1.0, 0.88, 0.71)
@@ -361,17 +412,20 @@ func _set_fish_model(species: String) -> void:
     if fish_body == null:
         return
     for old in fish_body.get_children():
+        fish_body.remove_child(old)
         old.queue_free()
-    var asset := "carp" if species == "Карась" else "perch" if species == "Окунь" else "trout"
-    var fish_asset := load("res://assets/models/%s.glb" % asset) as PackedScene
-    if fish_asset != null:
-        var model := fish_asset.instantiate() as Node3D
-        fish_body.add_child(model)
-        model.rotation_degrees = Vector3(0, 90, 0)
-        model.scale = Vector3.ONE * 0.55
+    var visual := make_fish_visual(species)
+    fish_body.add_child(visual)
+    visual.scale = Vector3.ONE * (0.47 if species == "Щука" else 0.80)
+
+func make_fish_visual(species: String) -> Node3D:
+    var visual := (load("res://scripts/fish_visual.gd") as GDScript).new() as Node3D
+    visual.call("configure", species)
+    return visual
 
 func _create_ui() -> void:
     var ui := CanvasLayer.new()
+    hud_layer = ui
     add_child(ui)
     var root := Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -392,7 +446,10 @@ func _create_ui() -> void:
 
     title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 27, 0.026, 0.005, 0.68, 0.058)
     message_label = _label(root, "", 21, 0.026, 0.058, 0.78, 0.126)
-    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 20, 0.70, 0.012, 0.985, 0.079)
+    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 19, 0.63, 0.012, 0.875, 0.079)
+    var pause_button := _button(root, "☰", 0.91, 0.012, 0.975, 0.10, Color(0.18, 0.34, 0.35))
+    pause_button.add_theme_font_size_override("font_size", 27)
+    pause_button.pressed.connect(open_pause)
     stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
 
     tension_bar = ProgressBar.new()
@@ -517,9 +574,12 @@ func _main_action() -> void:
         Phase.BITE:
             phase = Phase.FIGHT
             timer = 0.0
-            tension = 27.0
-            fight_distance = camera.global_position.distance_to(bobber.global_position)
-            _set_message("Рыба на крючке! Мотай, но не порви леску.")
+            tension = 22.0
+            # The player has time to learn: first fish reaches the shore in about
+            # 6-12 seconds of mindful reeling, rather than 25+ frustrating seconds.
+            fight_distance = clampf(camera.global_position.distance_to(bobber.global_position) * 0.71, 16.0, 22.0)
+            sounds.call("play", "hook")
+            _set_message("Рыба на крючке! Мотай. На красной шкале — отпусти.")
             _update_buttons()
         Phase.RESULT:
             _reset_to_ready()
@@ -550,6 +610,7 @@ func _cast() -> void:
         _set_message("Повернись лицом к озеру.")
         return
     phase = Phase.CASTING
+    sounds.call("play", "cast")
     timer = 0.0
     cast_source = rod_tip.global_position
     var forward := -camera.global_transform.basis.z
@@ -576,51 +637,62 @@ func _choose_fish() -> void:
     _set_fish_model(fish_name)
 
 func _update_fight(delta: float) -> void:
-    var fish_run := 0.8 + sin(elapsed * (1.3 + fish_strength * 0.3)) * 0.6
+    # The fish pulls in bursts, but the player is rewarded for timing releases.
+    var burst := maxf(0.0, sin(elapsed * (1.35 + fish_strength * 0.35)))
+    var fish_pull := 0.48 + fish_strength * 0.34 + burst * (0.36 + fish_strength * 0.13)
     if is_reeling:
-        fight_distance -= (2.15 + (0.45 if is_bracing else 0.0)) * delta
-        tension += (15.0 + fish_strength * 4.0 + (11.0 if is_bracing else 0.0)) * delta
+        fight_distance -= (4.25 - fish_strength * 0.45 + (0.25 if is_bracing else 0.0)) * delta
+        tension += (11.5 + fish_strength * 3.9 + burst * 6.0 + (8.0 if is_bracing else 0.0)) * delta
+        if elapsed - last_sound_reel > 0.28:
+            last_sound_reel = elapsed
+            sounds.call("play", "reel")
     else:
-        fight_distance += (0.48 + fish_strength * 0.35 + maxf(0.0, fish_run)) * delta
-        tension -= 22.0 * delta
+        fight_distance += fish_pull * delta
+        tension -= 28.0 * delta
     if is_bracing and not is_reeling:
-        fight_distance -= 0.65 * delta
-        tension += 6.0 * delta
-    tension += sin(elapsed * 3.3) * fish_strength * delta * 2.0
-    tension = clampf(tension, 0.0, 110.0)
+        fight_distance -= 0.70 * delta
+        tension += 3.8 * delta
+    tension = clampf(tension + sin(elapsed * 3.3) * fish_strength * delta * 1.5, 0.0, 110.0)
     if tension >= 100.0:
-        _finish("Обрыв! Слишком сильное натяжение лески.")
+        _finish("Обрыв! Леска не выдержала натяжения.")
         return
-    if fight_distance > 38.0:
-        _finish("Рыба ушла далеко и сорвалась с крючка.")
+    if fight_distance >= 41.0:
+        _finish("Рыба ушла слишком далеко.")
         return
-    if fight_distance <= 2.5:
-        catch_count += 1
-        best_weight = maxf(best_weight, fish_weight)
-        _finish("ТРОФЕЙ: %s, %.2f кг! Отличная работа." % [fish_name, fish_weight])
+    if fight_distance <= 2.9:
+        phase = Phase.LANDING
+        timer = 0.0
+        landing_from = bobber.global_position + Vector3.UP * 0.12
+        fish_body.visible = true
+        _set_message("Подводим трофей к берегу...")
+        _update_buttons()
         return
     var forward := -camera.global_transform.basis.z
     forward.y = 0.0
     forward = forward.normalized()
     var fish_target := camera.global_position + forward * fight_distance
-    fish_target.y = 0.11
-    bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 2.0))
-    var show_jump := sin(elapsed * 2.9) > 0.74
-    fish_body.visible = show_jump and fight_distance < 16.0
-    fish_body.position = bobber.position + Vector3(0, 0.10 + absf(sin(elapsed * 3.8)) * 0.35, 0.6)
+    fish_target.y = 0.12
+    bobber.position = bobber.position.lerp(fish_target, minf(1.0, delta * 3.0))
+    var show_jump := sin(elapsed * 2.5) > 0.62
+    fish_body.visible = show_jump and fight_distance < 15.0
+    fish_body.position = bobber.position + Vector3(0, 0.17 + absf(sin(elapsed * 3.8)) * 0.39, 0.42)
     fish_body.rotation.y = sin(elapsed * 2.2) * 0.6
     fish_body.rotation.z = sin(elapsed * 7.0) * 0.18
     if show_jump and ripple_age > 1.3:
         _splash()
 
-func _finish(text: String) -> void:
+func _finish(text: String, won: bool = false) -> void:
     phase = Phase.RESULT
     result_text = text
     fish_body.visible = false
+    bobber.visible = false
     is_reeling = false
     is_bracing = false
+    if not won:
+        sounds.call("play", "fail")
     _set_message(text)
     _update_buttons()
+    overlay.call("show_result", won, fish_name, fish_weight, text)
 
 func _splash() -> void:
     ripple_age = 0.0
@@ -660,9 +732,11 @@ func _update_buttons() -> void:
             action_button.text = "ПОДСЕЧЬ!"
         Phase.FIGHT:
             action_button.text = "ВЫВАЖИВАНИЕ"
+        Phase.LANDING:
+            action_button.text = "ТРОФЕЙ..."
         Phase.RESULT:
             action_button.text = "ЕЩЁ ЗАБРОС"
-    action_button.disabled = phase == Phase.CASTING or phase == Phase.WAITING or phase == Phase.FIGHT
+    action_button.disabled = phase == Phase.CASTING or phase == Phase.WAITING or phase == Phase.FIGHT or phase == Phase.LANDING
     action_button.visible = phase != Phase.FIGHT
     lure_button.disabled = phase != Phase.READY and phase != Phase.RESULT
     lure_button.visible = phase == Phase.READY or phase == Phase.RESULT
@@ -680,6 +754,8 @@ func _update_stats() -> void:
         tension_bar.value = clampf(tension, 0.0, 100.0)
     elif phase == Phase.BITE:
         stats_label.text = "Окно подсечки: %.1f сек." % maxf(0.0, 1.75 - timer)
+    elif phase == Phase.LANDING:
+        stats_label.text = "Рыба у берега — поднимаем улов!"
     else:
         stats_label.text = "Наживка: %s  •  Слева — ходьба  •  Справа — обзор" % ("червь" if lure_index == 0 else "блесна")
     catch_label.text = "Улов: %d  •  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
