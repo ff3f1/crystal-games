@@ -685,6 +685,9 @@
 
   // ---------- Птицы, всплески вдали ----------
   R.drawBirds = function (L, dt, t) {
+    // Protect photo scenery even if older rendering wrappers invoke this
+    // directly: cartoon V-birds are restricted to the illustrated style.
+    if(FZ.Assets.style!=="art"){R.birds.length=0;return;}
     if (Math.random() < dt * 0.025 && R.birds.length < 3 && L.dark < 0.4) R.birds.push({ x: -20, y: shoreY * (0.15 + Math.random() * 0.45), v: 25 + Math.random() * 30, ph: Math.random() * 6, s: 0.6 + Math.random() * 0.6 });
     ctx.strokeStyle = U.mix("#2a3240", "#c8d0e0", L.dark); ctx.lineWidth = 1.4;
     R.birds = R.birds.filter(function (b) {
