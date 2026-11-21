@@ -77,12 +77,43 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    await page.waitForTimeout(90);
  }
  await page.screenshot({path:path.join(output,name+'.png')});
+ // Real finger release on the golden button MUST uncover the game on every
+ // tested phone size. The 2.1.0 APK was blocked by display:flex!important.
+ await page.locator('#mGo').click();
+ await page.waitForTimeout(240);
+ const started=await page.evaluate(()=>{
+   const menu=document.querySelector('#ovMenu'),hud=document.querySelector('#hud');
+   const canvas=document.querySelector('#cv').getBoundingClientRect();
+   return{
+     classOff:!menu.classList.contains('on'),
+     display:getComputedStyle(menu).display,
+     pointerEvents:getComputedStyle(menu).pointerEvents,
+     hudVisible:!hud.classList.contains('hide'),
+     menuOpen:FZ.UI.menuOpen,
+     canvasWidth:canvas.width,
+     state:FZ.Game.rig().state
+   };
+ });
+ assert(started.classOff&&started.display==='none'&&started.pointerEvents==='none'&&
+   started.hudVisible&&started.menuOpen===false&&started.canvasWidth>w*.9,
+   'golden CTA MUST start fishing on phone without overlay '+JSON.stringify(started));
+ await page.screenshot({path:path.join(output,name+'-fishing-started.png')});
+ await page.evaluate(()=>FZ.UI.showMenu());
+ await page.waitForSelector('#mGo');
  console.log('SCREEN',name,JSON.stringify(report));
  if(name==='01-phone'){
    const ok=await page.evaluate(()=>{let count=0;FZ.Platform.rate=()=>count++;document.querySelector('#mRate').click();return count});
    assert.equal(ok,1,'rate button invokes actual store handler once');
    await page.evaluate(()=>FZ.UI.showShop('lure'));
    await page.waitForSelector('.cozy-catalog-row');
+   const theme=await page.evaluate(()=>{
+     const sheet=document.querySelector('#ovSheet .sheet'),css=getComputedStyle(sheet);
+     const h2=sheet.querySelector('h2'),title=h2?getComputedStyle(h2):null;
+     return{background:css.backgroundImage,border:css.borderTopColor,titleColor:title?.color};
+   });
+   assert(theme.background.includes('linear-gradient')&&theme.titleColor==='rgb(255, 235, 189)',
+     'shop must use the same brass and pine color system as the menu '+JSON.stringify(theme));
+   await page.screenshot({path:path.join(output,'04-shop-unified-gold.png')});
    const shopView=await page.evaluate(()=>{
      const sh=document.querySelector('#ovSheet .sheet'),items=sh.querySelectorAll('.cozy-catalog-row');
      if(items.length<2)return{};

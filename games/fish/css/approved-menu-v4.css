@@ -1,6 +1,6 @@
 /* Authentic concept art sliced from the approved user image. Not an illustration-only mock:
  * nine live buttons / live profile / original store, achievements and controls. */
-#ovMenu.cozy-lodge.cozy-concept-menu.concept-redesign.reference-menu-v4{
+#ovMenu.cozy-lodge.cozy-concept-menu.concept-redesign.reference-menu-v4.on{
   background:radial-gradient(ellipse at 45% 28%,#9f713e,#092922 75%)!important;
   overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important;
   --ref-gold:#f7cf80;--ref-deep:#0b2922;
@@ -24,7 +24,8 @@
 #ovMenu.reference-menu-v4 .reference-hero{
   position:absolute;top:0;left:0;width:100%;height:52.5%;z-index:0;
   background-image:url('../assets/menu-reference/hero.webp');
-  background-size:100% 100%;background-repeat:no-repeat;
+  /* Preserve the original aspect ratio: no stretched lettering or timber sign. */
+  background-size:cover;background-position:center top;background-repeat:no-repeat;
   pointer-events:none;overflow:hidden;
   animation:ref-intro-scene .85s ease-out backwards;
 }
@@ -184,4 +185,34 @@
  #ovMenu.reference-menu-v4 *,#ovMenu.reference-menu-v4 *::before,#ovMenu.reference-menu-v4 *::after{
   animation:none!important;transition:none!important
  }
+}
+
+/* Stage 20: menu really closes; hidden overlay MUST NOT intercept the game. */
+#ovMenu.reference-menu-v4:not(.on),
+#ovMenu.cozy-lodge.cozy-concept-menu.concept-redesign.reference-menu-v4:not(.on){
+ display:none!important;visibility:hidden!important;pointer-events:none!important;
+}
+#ovMenu.reference-menu-v4.on{visibility:visible;pointer-events:auto}
+
+/* Sprite native cell dimensions are 220×90; preserve that ratio so Cyrillic
+   text and equipment pictures never stretch to tall, narrow proportions. */
+#ovMenu.reference-menu-v4 .lodge-grid{
+ height:auto!important;grid-template-rows:repeat(3,auto)!important;
+ align-content:start!important;overflow:visible!important;
+}
+#ovMenu.reference-menu-v4 .lodge-grid .tile{
+ height:auto!important;aspect-ratio:220 / 90!important;
+ min-height:42px!important;
+ background-size:300% 300%!important;
+ border-radius:clamp(8px,2.2vw,12px)!important;
+}
+#ovMenu.reference-menu-v4 .reference-hero{background-size:cover!important;background-position:center top!important}
+#ovMenu.reference-menu-v4 .lodge-footer button{
+ font-family:Rubik,system-ui,sans-serif!important;
+ letter-spacing:-.08px!important;overflow-wrap:normal!important;word-break:normal!important;
+ text-wrap:balance
+}
+@media(max-width:350px){
+ #ovMenu.reference-menu-v4 .lodge-grid{gap:3px!important}
+ #ovMenu.reference-menu-v4 .lodge-footer button{letter-spacing:-.15px!important}
 }

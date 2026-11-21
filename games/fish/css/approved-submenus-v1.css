@@ -1,0 +1,164 @@
+/* Рыбалка: Клюёт! — interior windows in the same timber / brass / deep pine
+   art direction as the approved lakeside menu.
+   No controls or scrolling behavior is replaced; CSS only. */
+#ovSheet{
+ --omut:#112d28;--foam:#f6ead1;--muted:#d3cbb2;
+ --brass:#f1c67e;--line:#e4bf79;
+ color:#f6ead1;
+}
+#ovSheet .dim{background:rgba(8,20,16,.72)!important;backdrop-filter:blur(6px)}
+#ovSheet .sheet{
+ position:absolute;
+ background:
+   linear-gradient(180deg,rgba(79,51,26,.94),rgba(41,34,22,.85) 67px,rgba(13,42,34,.98) 109px,#102f29 205px,#0c2422 100%)!important;
+ border:2px solid rgba(231,186,103,.81)!important;
+ border-bottom:0!important;
+ border-radius:24px 24px 0 0!important;
+ color:#f8ecd5!important;
+ box-shadow:inset 0 2px rgba(252,214,144,.31),0 -13px 45px #010f0dd9!important;
+ padding-top:22px!important;
+ padding-left:max(15px,env(safe-area-inset-left))!important;
+ padding-right:max(15px,env(safe-area-inset-right))!important;
+}
+#ovSheet .sheet::before{
+ content:"";position:absolute;left:0;right:0;top:0;height:100px;
+ pointer-events:none;border-radius:22px 22px 0 0;opacity:.32;z-index:0;
+ background:repeating-linear-gradient(0deg,transparent 0 13px,#c18a421b 14px 15px,transparent 16px 25px),
+   linear-gradient(90deg,rgba(253,214,147,.16),transparent 30%,rgba(0,0,0,.23) 83%,transparent);
+}
+#ovSheet .sheet>*{position:relative;z-index:1}
+#ovSheet .sheet>.x{
+ position:absolute;z-index:8;top:10px;right:11px;
+ height:38px;width:38px;border-radius:50%;
+ border:1px solid rgba(241,203,130,.78)!important;
+ background:linear-gradient(140deg,#375b42,#172f28)!important;
+ color:#f9e5b6!important;
+ box-shadow:inset 0 1px rgba(255,248,220,.21),0 2px 7px #071511b8;
+}
+#ovSheet .sheet>.x:active{transform:scale(.94)}
+#ovSheet .sheet>.eyebrow,#ovSheet .sheet .cozy-eyebrow{
+ color:#f5ce88!important;letter-spacing:1.5px!important;
+ font-weight:800!important;text-transform:uppercase;
+ font-size:clamp(8px,2.1vw,11px)!important;
+}
+#ovSheet .sheet>h2{
+ font-family:Rubik,system-ui,sans-serif!important;
+ font-size:clamp(19px,5.1vw,26px)!important;line-height:1.14!important;
+ color:#ffebbd!important;font-weight:800!important;letter-spacing:-.35px!important;
+ text-shadow:0 2px 4px #17140ecf!important;
+ padding-right:40px!important;margin:2px 0 6px!important;
+ overflow-wrap:normal!important;word-break:normal!important;
+ text-wrap:balance!important;
+}
+#ovSheet .sheet>.sub,#ovSheet .sheet .quiet-note{
+ color:#dfd4b7!important;font-size:clamp(11px,3vw,13px)!important;
+ line-height:1.48!important;
+}
+#ovSheet .sheet .scroll{
+ scrollbar-color:#cba45b #152f28;
+ color:#eee1ca!important;overscroll-behavior:contain;
+}
+#ovSheet .sheet .tabs{
+ border-bottom:1px solid rgba(229,186,101,.29);
+ padding-bottom:9px!important;
+}
+#ovSheet .sheet .tab,
+#ovSheet .sheet .seg button,
+#ovSheet .sheet .filter{
+ background:linear-gradient(150deg,#275343,#183a34)!important;
+ border:1px solid rgba(224,182,113,.42)!important;
+ color:#eeddbf!important;
+ border-radius:10px!important;
+ box-shadow:inset 0 1px rgba(255,231,179,.13);
+}
+#ovSheet .sheet .tab.on,
+#ovSheet .sheet .seg button.on,
+#ovSheet .sheet .filter.on{
+ background:linear-gradient(125deg,#ffe39f,#dba858)!important;
+ color:#263629!important;border-color:#ffe6a3!important;font-weight:800!important;
+ box-shadow:inset 0 1px #fff1c8,0 2px 6px #0007;
+}
+#ovSheet .sheet .btn,
+#ovSheet .sheet button.btn,
+#ovSheet .sheet .cozy-skill-up,
+#ovSheet .sheet .cozy-tab-next{
+ border-radius:11px!important;
+ border:1px solid #f2d2979c!important;
+ background:linear-gradient(135deg,#fee3a2,#d5a358)!important;
+ color:#1e352c!important;font-weight:800!important;
+ box-shadow:inset 0 1px #fff3ce,0 3px 0 #69532b,0 5px 12px #0005;
+ transition:filter .12s ease,transform .12s ease!important;
+}
+#ovSheet .sheet .btn:active,#ovSheet .sheet button.btn:active,
+#ovSheet .sheet .cozy-tab-next:active{
+ transform:translateY(2px) scale(.97)!important;
+ filter:brightness(1.06);
+ box-shadow:inset 0 1px #fff3ce,0 1px 0 #69532b!important;
+}
+#ovSheet .sheet .btn.ghost{
+ background:linear-gradient(130deg,#2d5440,#142f2b)!important;
+ color:#efd9b3!important;border-color:#c8a76a7c!important;
+}
+#ovSheet .sheet .btn.red{
+ background:linear-gradient(135deg,#a35f43,#783c2a)!important;
+ color:#fff2d9!important;
+}
+#ovSheet .sheet button:focus-visible{outline:2px solid #ffeab7!important;outline-offset:2px}
+#ovSheet .sheet .destination,
+#ovSheet .sheet .acard,
+#ovSheet .sheet .row,
+#ovSheet .sheet .cozy-catalog-row,
+#ovSheet .sheet .cozy-skill-item,
+#ovSheet .sheet .cozy-loadout,
+#ovSheet .sheet .concept-achievement,
+#ovSheet .sheet .cozy-preview{
+ border-color:rgba(224,184,111,.55)!important;
+ background:linear-gradient(130deg,#26483a,#12352f 80%)!important;
+ box-shadow:inset 0 1px rgba(251,215,147,.12),0 3px 8px #021a1780;
+ color:#f5e7c9!important;
+ border-radius:13px;
+}
+#ovSheet .sheet .cozy-preview,
+#ovSheet .sheet .cozy-loadout{
+ background:radial-gradient(circle at 22% 0,rgba(239,189,95,.14),transparent 66%),
+ linear-gradient(125deg,#2d5643,#112d2d)!important;
+}
+#ovSheet .sheet.concept-shop .cozy-catalog-row{
+ background:linear-gradient(145deg,#34593f,#113832)!important;
+}
+#ovSheet .sheet .cozy-catalog-row .body .t,
+#ovSheet .sheet .destination b,
+#ovSheet .sheet .acard b{
+ color:#fff0ce!important;font-weight:750!important;
+}
+#ovSheet .sheet .cozy-catalog-row .body .d,
+#ovSheet .sheet .destination small,
+#ovSheet .sheet .acard small,
+#ovSheet .sheet .cozy-preview span{
+ color:#d4d2b7!important;
+}
+#ovSheet .sheet input[type=range]{accent-color:#e8ba72!important}
+#ovSheet .sheet input,
+#ovSheet .sheet select,
+#ovSheet .sheet textarea{
+ border-color:#caa767!important;color:#f2e6cc!important;
+ background-color:rgba(14,44,36,.85)!important;
+}
+#ovSheet .sheet .cozy-skill-meter i.on,
+#ovSheet .sheet .concept-achievement-track i{background:#e4b86f!important}
+#ovSheet .sheet .cozy-tab-strip{border-bottom:1px solid #d4a96c47;padding-bottom:5px}
+#ovSheet .sheet .cozy-shelf-summary{border-color:#dbbc7d77!important;
+ background:linear-gradient(130deg,#3b573b,#162f2a)!important}
+#ovSheet .sheet .cozy-shelf-summary>strong,
+#ovSheet .sheet .cozy-mini-status,
+#ovSheet .sheet .cozy-skill-bonus{color:#f5ce8c!important}
+#ovSheet .sheet .species-detail,
+#ovSheet .sheet .cozy-bait-note{color:#f5e9ce!important}
+@media(max-width:360px){
+ #ovSheet .sheet{padding-top:17px!important}
+ #ovSheet .sheet>.sub{font-size:11px!important}
+ #ovSheet .sheet .tab{font-size:11px!important;padding-inline:8px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #ovSheet .sheet .btn,#ovSheet .sheet .cozy-tab-next{transition:none!important}
+}
