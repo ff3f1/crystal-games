@@ -2,7 +2,7 @@ name: Fishing candidate APK and AAB
 on:
   push:
     branches: [codex/fishing-overhaul, feature/fishing-living-water-redesign]
-    paths: [".github/workflows/fish-candidate.yml", ".github/scripts/fish-emulator-smoke.sh", "games/fish/js/living-water.js", "games/fish/js/game.js", "games/fish/js/ui.js", "games/fish/css/style.css"] # Meaningful redesign changes
+    paths: [".github/workflows/fish-candidate.yml", ".github/scripts/fish-emulator-smoke.sh", "games/fish/js/living-water.js", "games/fish/js/game.js", "games/fish/js/ui.js", "games/fish/js/worldgl.js", "games/fish/css/style.css"] # Meaningful redesign changes
   workflow_dispatch:
 permissions:
   contents: write
