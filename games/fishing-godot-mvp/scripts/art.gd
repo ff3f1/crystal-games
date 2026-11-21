@@ -73,12 +73,9 @@ func _make_lakebed() -> void:
                     st.set_uv(Vector2(v.x / 3.2, v.z / 3.2))
                     st.add_vertex(v)
     st.generate_normals()
-    var mud := StandardMaterial3D.new()
-    mud.albedo_texture = load("res://assets/textures/shore_diffuse.jpg")
-    mud.albedo_color = Color(0.28, 0.39, 0.30)
-    mud.roughness = 1.0
-    mud.cull_mode = BaseMaterial3D.CULL_DISABLED
-    mud.uv1_triplanar = false
+    var mud := ShaderMaterial.new()
+    mud.shader = load("res://shaders/lakebed.gdshader")
+    mud.set_shader_parameter("lake_silt", load("res://assets/textures/shore_diffuse.jpg"))
     var bed := MeshInstance3D.new()
     bed.mesh = st.commit()
     bed.material_override = mud
