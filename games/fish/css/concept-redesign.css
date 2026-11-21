@@ -446,3 +446,26 @@
  width:calc(100% - 78px)!important}
  #hud.concept-hud .tray #bAct{right:10px!important}
 }
+
+
+/* Primary navigation uses real horizontal icon-label buttons, unlike legacy tiles. */
+#ovMenu.concept-redesign .concept-primary .tile{
+ flex-direction:row!important;justify-content:flex-start!important;
+ align-items:center!important;text-align:left!important
+}
+#ovMenu.concept-redesign .concept-primary .tile>span:last-child{
+ text-align:left!important;white-space:nowrap!important;
+ max-width:calc(100% - 42px)!important
+}
+#ovMenu.concept-redesign .lodge-grid{
+ scroll-snap-type:x mandatory!important;padding-right:31px!important
+}
+#ovMenu.concept-redesign .lodge-grid .tile{scroll-snap-align:start!important}
+#ovMenu.concept-redesign .concept-more-sections{
+ position:absolute;right:3%;bottom:calc(88px + var(--safe-b));
+ display:grid;place-items:center;z-index:5;
+ width:30px;height:34px;border-radius:10px;
+ border:1px solid #e7be7c;background:rgba(24,62,48,.95);
+ color:#f6d996;font-size:23px;box-shadow:0 2px 10px #001b1bb0;
+}
+#ovMenu.concept-redesign .concept-more-sections:focus-visible{outline:2px solid #ffe0a0}
