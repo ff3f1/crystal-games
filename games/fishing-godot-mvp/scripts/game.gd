@@ -431,9 +431,10 @@ func _create_environment() -> void:
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
     env.reflected_light_source = Environment.REFLECTION_SOURCE_BG
-    # Light blue-green distance haze blends the modeled shoreline into
-    # the photographic panorama rather than an abrupt razor-sharp boundary.
-    env.fog_enabled = true
+    # The mobile Compatibility renderer renders global fog across the entire
+    # photographic sky, destroying its detail. Keep it OFF in the main view;
+    # the secondary underwater camera has its own localized greenish fog.
+    env.fog_enabled = false
     env.fog_light_color = Color(0.46, 0.58, 0.57)
     env.fog_density = 0.0017
     world_env.environment = env
