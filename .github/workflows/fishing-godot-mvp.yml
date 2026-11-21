@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: fishing-godot-mvp-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android-debug:
     name: Godot 4.5.1 — validate and build APK
