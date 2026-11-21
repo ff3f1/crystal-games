@@ -33,6 +33,8 @@ var sounds: Node
 var sun_light: DirectionalLight3D
 var landing_from := Vector3.ZERO
 var last_sound_reel := 0.0
+var last_drag_sound := -10.0
+var last_rod_creak := -10.0
 var lure_sim
 var fight_sim
 var ecology
@@ -197,7 +199,7 @@ func _process(delta: float) -> void:
                 current_bite_species = str(reaction["species"])
                 bite_sign_age = 0.0
                 _splash()
-                sounds.call("play", "bite")
+                sounds.call("play", "nibble")
                 _set_message("Осторожная поклёвка... Не спеши подсекать!")
             elif int(reaction["signal"]) == 2:
                 current_bite_species = str(reaction["species"])
@@ -919,8 +921,12 @@ func _update_fight(delta: float) -> void:
     if is_reeling and elapsed - last_sound_reel > 0.27:
         last_sound_reel = elapsed
         sounds.call("play", "reel")
-    if tension > 78.0 and is_reeling and elapsed - last_sound_reel > 0.10:
+    if float(fight_sim.slip_velocity) > 0.10 and elapsed - last_drag_sound > 0.54:
+        last_drag_sound = elapsed
         sounds.call("play", "drag")
+    if tension > 84.0 and elapsed - last_rod_creak > 2.1:
+        last_rod_creak = elapsed
+        sounds.call("play", "rod_creak")
     if result == 2:
         _finish("Обрыв! Ослабь фрикцион или отпусти подмотку.")
         return
@@ -969,7 +975,7 @@ func _finish(text: String, won: bool = false) -> void:
     is_reeling = false
     is_bracing = false
     if not won:
-        sounds.call("play", "fail")
+        sounds.call("play", "line_break" if text.begins_with("Обрыв") else "fail")
     _set_message(text)
     _update_buttons()
     overlay.call("show_result", won, fish_name, fish_weight, text)
