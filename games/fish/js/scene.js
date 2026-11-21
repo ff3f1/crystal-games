@@ -992,12 +992,20 @@
     const night = L.dark > 0.35;
     const sp = Math.min(1, Math.hypot(f.vx, f.vz) / 2);
     const s = p.s;
-    if (!f.jump) drawWake(p, sp, f.vx, -f.vz, (0.35 + 0.46 * sp) * (1 - 0.45 * L.dark), t);
+    // Only fish close to the real surface leave a wake. A deep catfish cannot
+    // draw foam on top of the lake while it pulls down underwater.
+    const depthFade=U.clamp(1-Math.max(0,f.D||0)/2.4,0,1);
+    const surfFade=U.clamp((.18+.82*(f.surface||0))*depthFade,0,1);
+    if (!f.jump && surfFade>.10)
+      drawWake(p,sp,f.vx,-f.vz,(.35+.46*sp)*(1-.45*L.dark)*surfFade,t);
     // силуэт рыбы под водой рядом с берегом
     const lenPx = Math.max(26, f.lenM * s * 1.1);
-    if (f.Z < 9 && !f.jump) {
-      const a = U.clamp(1 - (f.Z - 3) / 6, 0.15, 1) * (0.3 + f.surface * 0.4);
-      FZ.Art.drawFish(ctx, f.s, p.x, p.y + 6 + (1 - f.surface) * 10, lenPx, { silhouette: f.surface < 0.6, alpha: f.surface < 0.6 ? a : 0.85, phase: t * 9, amp: 0.25 + sp * 0.3, dir: (f.vx || 0) > 0 ? -1 : 1, roll: f.surface > 0.8 ? 0.15 : 0 });
+    if (f.Z < 9 && !f.jump && depthFade>.08) {
+      const a=U.clamp(1-(f.Z-3)/6,.15,1)*(.30+(f.surface||0)*.40)*depthFade;
+      FZ.Art.drawFish(ctx,f.s,p.x,p.y+6+(1-(f.surface||0))*10+Math.max(0,f.D||0)*2,lenPx,{
+        silhouette:f.surface<.6,alpha:(f.surface<.6?a:.85*depthFade),
+        phase:t*9,amp:.25+sp*.3,dir:(f.vx||0)>0?-1:1,roll:f.surface>.8?.15:0
+      });
     }
     if (f.jump) {
       const k = f.jump.k;

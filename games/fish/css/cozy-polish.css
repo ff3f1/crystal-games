@@ -1,0 +1,139 @@
+/* Stage 12 — one lake-and-brass design language across the real game UI.
+   CSS only: no replacement graphics or floating tackle decorations. */
+:root{
+  --cozy-deep:#0c292b;
+  --cozy-panel:#143a35;
+  --cozy-gold:#edc783;
+  --cozy-cream:#f9efd8;
+  --cozy-muted:#b9cfc1;
+  --cozy-outline:rgba(225,196,142,.38);
+}
+#ovSheet .dim{background:rgba(3,18,20,.79);backdrop-filter:blur(7px)}
+#ovSheet .sheet{
+  background:radial-gradient(ellipse at 50% -25%,rgba(129,111,66,.19),transparent 54%),
+             linear-gradient(155deg,#1a423b,#102f33 57%,#0b282b);
+  border:1px solid rgba(236,204,147,.44);
+  border-bottom:0;
+  box-shadow:0 -14px 60px rgba(0,0,0,.56),inset 0 2px 0 rgba(255,245,213,.10);
+}
+#ovSheet .sheet>h2{font-size:clamp(23px,6.3vw,28px);line-height:1.18;letter-spacing:-.6px;
+  color:var(--cozy-cream);padding-right:42px;text-wrap:balance}
+#ovSheet .sheet>.sub{line-height:1.5;color:var(--cozy-muted);max-width:45ch}
+#ovSheet .sheet>.x{height:38px;width:38px;border:1px solid rgba(237,202,148,.29);
+  background:rgba(29,62,57,.93);color:#f7dfb7;box-shadow:inset 0 1px rgba(255,255,255,.08)}
+#ovSheet .sheet>.x:active{background:#375448}
+#ovSheet .sheet .scroll{scrollbar-color:rgba(219,182,118,.4) transparent;
+  overscroll-behavior:contain}
+#ovSheet .sheet .tab,#ovSheet .sheet .biomes button{
+  border:1px solid rgba(225,194,141,.26);background:rgba(23,57,49,.78);
+  color:#d1dfd1;font-size:11px;font-weight:600;
+}
+#ovSheet .sheet .tab.on,#ovSheet .sheet .biomes button.on{
+  background:linear-gradient(135deg,#f3daa0,#d7a455);color:#2e3428;
+  border-color:#ffdfaa;box-shadow:0 2px 8px rgba(0,0,0,.25)
+}
+#ovSheet .sheet .row:not(.cozy-catalog-row){
+  border:1px solid rgba(221,194,144,.30);
+  background:linear-gradient(130deg,rgba(39,81,68,.51),rgba(11,41,43,.85));
+  border-radius:13px;
+}
+#ovSheet .sheet .row .body{min-width:0}
+#ovSheet .sheet .row .t{color:#f5e9d1;line-height:1.32}
+#ovSheet .sheet .row .d{color:#bed0c5;line-height:1.48}
+#ovSheet .sheet .row.sel{border-color:rgba(246,213,145,.85);
+  background:linear-gradient(135deg,rgba(69,104,72,.65),rgba(19,59,51,.95));
+  box-shadow:inset 0 0 0 1px rgba(255,245,214,.10)}
+#ovSheet .sheet .row:focus-visible,.sheet .destination:focus-visible,.sheet .acard:focus-visible{
+  outline:2px solid #ffde95;outline-offset:2px
+}
+/* Real photographs of waters: deepen the information area, not the scenery. */
+#ovSheet .map-grid{gap:10px}
+#ovSheet .destination{
+  border:1px solid rgba(221,191,131,.43);border-radius:16px;min-height:184px;
+  background:#173d3c;box-shadow:0 4px 14px rgba(0,0,0,.26);
+}
+#ovSheet .destination>img{filter:saturate(.97) contrast(1.06);
+  transition:transform .28s ease}
+#ovSheet .destination:active>img{transform:scale(1.035)}
+#ovSheet .destination-shade{
+  background:linear-gradient(180deg,rgba(7,23,24,.22),transparent 34%,
+    rgba(8,31,29,.52) 63%,rgba(4,25,26,.96) 100%);
+}
+#ovSheet .destination-level{
+  background:rgba(11,40,39,.82);border:1px solid rgba(238,205,145,.4);
+  border-radius:7px;padding:5px 7px;color:#ffe6b2;font-size:9px
+}
+#ovSheet .destination-info{left:12px;right:10px;bottom:12px}
+#ovSheet .destination-info b{font-size:14px;line-height:1.26;color:#fff1d1}
+#ovSheet .destination-info span{font-size:10px;line-height:1.35;color:#d3e1d0}
+#ovSheet .destination-info small{font-size:9px;line-height:1.35;color:#f2d6a2}
+#ovSheet .destination.locked{opacity:.77}
+#ovSheet .destination.locked>img{filter:saturate(.49) brightness(.75)}
+/* Atlas and journal now feel like the same tackle box, not a plain data grid. */
+#ovSheet .agrid{gap:8px}
+#ovSheet .acard{min-width:0;padding:11px 6px 10px;border:1px solid rgba(216,186,126,.35);
+  border-radius:12px;background:linear-gradient(150deg,#244e40,#103431);
+  box-shadow:inset 0 1px rgba(255,247,219,.09),0 3px 10px rgba(0,0,0,.20)}
+#ovSheet .acard img{height:69px;filter:drop-shadow(0 5px 6px rgba(0,0,0,.48))}
+#ovSheet .acard .n{min-height:30px;color:#f5e9d1;font-size:10.5px;line-height:1.3;
+  font-weight:600;overflow-wrap:normal;word-break:normal;hyphens:none}
+#ovSheet .acard .c{margin-top:4px;color:#ebc78a;font-size:9px}
+#ovSheet .acard.unknown{background:linear-gradient(145deg,#253e3e,#173334)}
+#ovSheet .journal-entry,#ovSheet .guide-fish{
+  border:1px solid rgba(219,189,128,.25);border-radius:12px;
+  background:rgba(14,48,43,.52);padding:10px;margin:7px 0;gap:12px;
+}
+#ovSheet .journal-entry img,#ovSheet .guide-fish img{border-radius:8px;width:72px;flex-shrink:0}
+#ovSheet .journal-entry b,#ovSheet .guide-fish b{color:#f6edd7;font-size:12px;line-height:1.3}
+#ovSheet .journal-entry small,#ovSheet .guide-fish small{line-height:1.4}
+#ovSheet .expedition{border:1px solid rgba(220,194,139,.33);border-radius:13px;
+  background:linear-gradient(140deg,rgba(33,76,62,.72),rgba(15,47,46,.90));
+  box-shadow:0 3px 12px rgba(0,0,0,.18)}
+#ovSheet .expedition>img{border-radius:9px;object-fit:cover}
+#ovSheet .expedition h3{color:#f7ead0;line-height:1.3}
+#ovSheet .help-step h3{color:#f5e5c5}
+#ovSheet .help-step p{color:#bed1c5}
+/* Main menu: refine the approved timber + lake, without piling objects on water. */
+#ovMenu.cozy-concept-menu .lodge-title{box-shadow:0 6px 0 #211910,
+  0 14px 27px rgba(0,0,0,.6),inset 0 2px 2px rgba(255,221,166,.38)}
+#ovMenu.cozy-concept-menu .lodge-bottom{box-shadow:0 -12px 38px rgba(0,30,26,.42),
+  inset 0 1px rgba(255,232,180,.22),0 7px 18px rgba(0,0,0,.46)}
+#ovMenu.cozy-concept-menu .lodge-grid .tile{transition:background .14s,transform .12s,box-shadow .12s;
+  box-shadow:inset 0 1px rgba(255,241,191,.17),0 3px 7px rgba(0,0,0,.33)}
+#ovMenu.cozy-concept-menu .lodge-grid .tile:active{transform:translateY(2px) scale(.98)}
+#ovMenu.cozy-concept-menu .lodge-grid .tile>span:last-child{
+  text-shadow:0 1px 3px rgba(0,0,0,.52)}
+/* Real-time fishing pressure: semantic signal above the same physical line meter. */
+#hud #hTens{border-color:rgba(228,203,151,.38);background:linear-gradient(150deg,rgba(15,51,50,.96),rgba(8,32,39,.96));
+  box-shadow:0 6px 18px rgba(0,0,0,.4),inset 0 1px rgba(255,245,214,.12)}
+#hud .cozy-fight-signal{display:flex;align-items:center;justify-content:space-between;
+  gap:6px;margin:0 8px 6px;padding-bottom:5px;border-bottom:1px solid rgba(229,202,145,.20);
+  font-size:10px;line-height:1.2}
+#hud .cozy-fight-signal b{font-size:10px;font-weight:750;color:#e1e5c5}
+#hud .cozy-fight-signal span{font-size:9px;color:#aee0bc;font-weight:650;text-align:right}
+#hud #hTens[data-cozy-risk="danger"] .cozy-fight-signal b,
+#hud #hTens[data-cozy-risk="danger"] .cozy-fight-signal span{color:#ffd196}
+#hud #hTens[data-cozy-risk="danger"] .fight-track:not(.stamina) i{background:#f4a166}
+#hud #hTens[data-cozy-risk="slack"] .cozy-fight-signal span{color:#b4d6ed}
+#hud #hTens[data-cozy-risk="slack"] .fight-track:not(.stamina) i{background:#a9d3e9}
+#hud #hTens[data-cozy-risk="recover"] .cozy-fight-signal span{color:#e3cf9a}
+#hud #hTens .fight-track i{transition:width .10s linear}
+@media(max-width:360px){
+  #ovSheet .map-grid{gap:7px}
+  #ovSheet .destination{min-height:160px}
+  #ovSheet .destination-info{left:9px;right:7px;bottom:9px}
+  #ovSheet .destination-info b{font-size:12px}
+  #ovSheet .destination-info small{font-size:8px}
+  #ovSheet .journal-entry img,#ovSheet .guide-fish img{width:59px}
+  #ovSheet .acard img{height:56px}
+  #ovSheet .acard .n{font-size:9.5px}
+  #hud .cozy-fight-signal{margin-inline:4px;font-size:9px}
+}
+@media(max-height:680px){
+  #ovSheet .destination{min-height:150px}
+  #hud .cozy-fight-signal{margin-bottom:3px;padding-bottom:3px}
+}
+@media(prefers-reduced-motion:reduce){
+  #ovSheet .destination>img,#hud #hTens .fight-track i,
+  #ovMenu.cozy-concept-menu .lodge-grid .tile{transition:none}
+}

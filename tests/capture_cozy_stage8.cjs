@@ -23,6 +23,18 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
      width:l.scrollWidth,windowW:innerWidth,bottom:b.getBoundingClientRect().bottom,buttons};
  });
  assert(report.title&&report.shopArt,'menu title and game section assets render '+JSON.stringify(report));
+ assert(await page.locator('#cozyFightSignal').count()===1,'real fight meter is installed once');
+ const fightStates=await page.evaluate(()=>{
+   const p=FZ.CozyPolish.describe;
+   return{
+     overload:p({tension:.92,slackT:0,phase:'run'},.7).tone,
+     slack:p({tension:.08,slackT:.7,phase:'rest'},.7).tone,
+     dive:p({tension:.4,slackT:0,phase:'dive',diveWarning:true},.7).title,
+     resting:p({tension:.35,slackT:0,phase:'tired'},.7).action
+   };
+ });
+ assert.deepEqual(fightStates,{overload:'danger',slack:'slack',dive:'Уход на глубину',resting:'Подтягивайте'},
+   'fight UI must reflect real phase and line pressure');
  assert(!report.floatingRod,'main menu must not have a rod levitating in the lake');
  assert(!report.duplicateReel,'duplicate floating reel must not exist in main menu');
  assert(report.weather,'current fishing weather must be shown in menu');
@@ -47,6 +59,12 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    await page.evaluate(()=>FZ.UI.showTackle());
    await page.waitForSelector('.cozy-loadout .cozy-slot');
    await page.screenshot({path:path.join(output,'04-tackle.png')});
+   await page.evaluate(()=>{FZ.UI.closeSheet();FZ.UI.showMap()});
+   await page.waitForSelector('#ovSheet .destination');
+   await page.screenshot({path:path.join(output,'06-polished-waters.png')});
+   await page.evaluate(()=>{FZ.UI.closeSheet();FZ.UI.showAtlas()});
+   await page.waitForSelector('#ovSheet .acard');
+   await page.screenshot({path:path.join(output,'07-polished-atlas.png')});
    await page.evaluate(()=>{FZ.UI.closeSheet();FZ.UI.showMenu()});
    await page.locator('#mHelp').click();await page.waitForTimeout(200);
    assert(await page.locator('#ovSheet').evaluate(e=>e.classList.contains('on')),'tutorial button still works');
