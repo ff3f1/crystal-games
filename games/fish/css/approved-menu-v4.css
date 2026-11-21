@@ -1,0 +1,187 @@
+/* Authentic concept art sliced from the approved user image. Not an illustration-only mock:
+ * nine live buttons / live profile / original store, achievements and controls. */
+#ovMenu.cozy-lodge.cozy-concept-menu.concept-redesign.reference-menu-v4{
+  background:radial-gradient(ellipse at 45% 28%,#9f713e,#092922 75%)!important;
+  overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important;
+  --ref-gold:#f7cf80;--ref-deep:#0b2922;
+}
+#ovMenu.reference-menu-v4::before{display:none!important}
+#ovMenu.reference-menu-v4 .cozy-atmosphere,#ovMenu.reference-menu-v4 .cozy-menu-scene,
+#ovMenu.reference-menu-v4 .cozy-menu-sun,#ovMenu.reference-menu-v4 .cozy-menu-reeds,
+#ovMenu.reference-menu-v4 .concept-more-sections,#ovMenu.reference-menu-v4 .concept-secondary-label{display:none!important}
+#ovMenu.reference-menu-v4 .reference-layout{
+  display:block!important;position:relative!important;isolation:isolate;
+  width:100%!important;max-width:520px!important;height:100dvh!important;min-height:0!important;
+  padding:0!important;margin:0 auto!important;overflow:hidden!important;
+  background:linear-gradient(180deg,#344627 43%,#0c3027 64%,#09231e 92%,#061911 100%);
+  box-shadow:0 0 60px #0009;
+}
+#ovMenu.reference-menu-v4 .reference-layout::after{
+  content:"";position:absolute;inset:52% 0 0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 5%,rgba(167,114,45,.15),transparent 70%),
+    repeating-linear-gradient(104deg,#ffffff02 0 9px,transparent 10px 26px);
+}
+#ovMenu.reference-menu-v4 .reference-hero{
+  position:absolute;top:0;left:0;width:100%;height:52.5%;z-index:0;
+  background-image:url('../assets/menu-reference/hero.webp');
+  background-size:100% 100%;background-repeat:no-repeat;
+  pointer-events:none;overflow:hidden;
+  animation:ref-intro-scene .85s ease-out backwards;
+}
+#ovMenu.reference-menu-v4 .reference-golden-glow{
+  position:absolute;left:8%;top:26%;height:47%;width:50%;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(255,201,102,.19),transparent 66%);
+  mix-blend-mode:screen;animation:ref-glow 13s ease-in-out infinite alternate;
+}
+#ovMenu.reference-menu-v4 .reference-mist{
+  position:absolute;top:47%;left:-20%;width:130%;height:10%;opacity:.37;
+  filter:blur(13px);background:linear-gradient(90deg,transparent,rgba(254,236,202,.17),transparent);
+  animation:ref-mist 20s ease-in-out infinite alternate;
+}
+#ovMenu.reference-menu-v4 .lodge-title{
+  position:absolute!important;top:0!important;left:0!important;
+  width:1px!important;height:1px!important;min-width:0!important;min-height:0!important;
+  padding:0!important;border:0!important;margin:0!important;overflow:hidden!important;
+  clip-path:inset(100%)!important;box-shadow:none!important;
+}
+#ovMenu.reference-menu-v4 .lodge-bottom{display:contents!important}
+/* Never show the baked-in demo numbers: the following opaque bar contains live save data. */
+#ovMenu.reference-menu-v4 .lodge-profile{
+  position:absolute!important;top:50.7%!important;left:3%!important;right:3%!important;
+  height:7.5%!important;min-height:0!important;max-height:none!important;margin:0!important;
+  display:grid!important;grid-template-columns:12% minmax(0,1.5fr) minmax(0,.85fr) minmax(0,.92fr)!important;
+  align-items:center!important;gap:3px!important;padding:5px 7px!important;z-index:4!important;
+  border:2px solid #ffd68a!important;border-radius:18px!important;
+  background:linear-gradient(135deg,#254e35 0%,#0c2b26 44%,#103a29 80%,#102a20)!important;
+  box-shadow:inset 0 2px 2px #ffecb04d,0 4px 0 #79552b,0 8px 20px #001d1799!important;
+  color:#fff0d3!important;text-shadow:0 1px 3px #0008!important;
+}
+#ovMenu.reference-menu-v4 .ref-level{height:100%;min-width:0;aspect-ratio:1/1;max-height:51px;
+  border-radius:50%;border:2px solid #e6b85b;display:grid;place-items:center;position:relative;
+  background:radial-gradient(circle at 45% 30%,#54703d,#193d2c 75%);box-shadow:inset 0 0 0 2px #896333,0 2px 6px #0008}
+#ovMenu.reference-menu-v4 .ref-level strong{font-size:clamp(18px,5vw,29px);color:#ffe2a0;font-weight:800;position:relative;z-index:1}
+#ovMenu.reference-menu-v4 .ref-level-wreath{position:absolute;color:#eab961;font-size:38px;opacity:.3;transform:rotate(-28deg)}
+#ovMenu.reference-menu-v4 .ref-experience{min-width:0;padding:0 5px;display:flex;flex-direction:column;justify-content:center}
+#ovMenu.reference-menu-v4 .ref-experience>b{font-size:clamp(10px,3.0vw,15px);line-height:1.1;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ovMenu.reference-menu-v4 .ref-experience small{font-size:clamp(8px,2.2vw,10px);color:#ebdab3;line-height:1.3}
+#ovMenu.reference-menu-v4 .ref-xp-numbers{font-size:clamp(7px,1.9vw,9px);white-space:nowrap;text-align:right;color:#f4e1b9}
+#ovMenu.reference-menu-v4 .ref-xp-track{margin-top:3px;height:7px;overflow:hidden;border-radius:6px;border:1px solid #856e45;background:#102421}
+#ovMenu.reference-menu-v4 .ref-xp-track i{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(180deg,#ffe59c,#ffb833 68%,#c88319);box-shadow:0 0 8px #f6b757aa}
+#ovMenu.reference-menu-v4 .ref-record{height:100%;min-width:0;padding:1px 5px;display:flex;align-items:center;justify-content:center;gap:4px;
+  background:none;border:0;border-left:1px solid #f4c66b7f;border-radius:0;color:#ffe6ae;text-align:center}
+#ovMenu.reference-menu-v4 .ref-record>span:first-child{font-size:clamp(14px,3.8vw,24px);filter:drop-shadow(0 1px 2px #0006)}
+#ovMenu.reference-menu-v4 .ref-record>span:last-child{display:flex;flex-direction:column;min-width:0}
+#ovMenu.reference-menu-v4 .ref-record small{font-size:clamp(7px,2vw,10px);line-height:1.3}
+#ovMenu.reference-menu-v4 .ref-record b{font-size:clamp(8px,2.7vw,13px);white-space:nowrap}
+#ovMenu.reference-menu-v4 .ref-wealth{height:100%;min-width:0;display:flex;gap:5px;align-items:center;justify-content:center;
+  border-left:1px solid #f4c66b7f;padding-left:4px}
+#ovMenu.reference-menu-v4 .ref-wealth>span{font-size:clamp(14px,4.1vw,24px)}
+#ovMenu.reference-menu-v4 .ref-wealth>b{font-size:clamp(11px,3.1vw,17px);white-space:nowrap;letter-spacing:-.3px}
+#ovMenu.reference-menu-v4 .go{
+  position:absolute!important;top:59.5%!important;left:5%!important;right:5%!important;width:90%!important;
+  height:9.0%!important;min-height:0!important;max-height:none!important;padding:0!important;margin:0!important;
+  display:block!important;z-index:5!important;border:0!important;border-radius:12% / 54%!important;
+  background:url('../assets/menu-reference/cta.webp') center / 100% 100% no-repeat!important;
+  color:transparent!important;font-size:0!important;text-shadow:none!important;
+  box-shadow:0 9px 20px #0008,0 3px 0 #74421d!important;transform:none!important;
+  cursor:pointer;touch-action:manipulation;
+  animation:ref-entry .48s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:.1s;
+}
+#ovMenu.reference-menu-v4 .go>*{visibility:hidden!important}
+#ovMenu.reference-menu-v4 .duel-entry{
+  position:static!important;display:flex!important;width:auto!important;height:auto!important;min-height:0!important;
+  padding:0!important;margin:0!important;border:0!important;
+  background:none!important;box-shadow:none!important;
+}
+#ovMenu.reference-menu-v4 .lodge-grid{
+  position:absolute!important;left:2%!important;right:2%!important;top:70.3%!important;bottom:auto!important;
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  grid-template-rows:repeat(3,minmax(0,1fr))!important;
+  width:96%!important;height:22.9%!important;gap:clamp(4px,1.15vw,9px)!important;
+  padding:0!important;margin:0!important;overflow:visible!important;z-index:5!important;
+  scroll-snap-type:none!important;
+}
+#ovMenu.reference-menu-v4 .lodge-grid .tile{
+  position:relative!important;min-width:0!important;width:100%!important;height:100%!important;min-height:0!important;
+  padding:0!important;margin:0!important;border:0!important;border-radius:12px!important;
+  box-shadow:0 4px 8px #001a1466!important;
+  background-image:url('../assets/menu-reference/tiles.webp')!important;
+  background-size:300% 300%!important;background-repeat:no-repeat!important;
+  font-size:0!important;color:transparent!important;line-height:0!important;
+  overflow:hidden!important;display:block!important;isolation:isolate!important;
+  cursor:pointer;touch-action:manipulation;
+  animation:ref-tile-arrive .48s both;animation-delay:calc((var(--ref-index, 1) - 1) * 32ms + 180ms);
+}
+#ovMenu.reference-menu-v4 .lodge-grid .tile>svg,
+#ovMenu.reference-menu-v4 .lodge-grid .tile>.cozy-tile-art,
+#ovMenu.reference-menu-v4 .lodge-grid .tile>span{display:none!important}
+#ovMenu.reference-menu-v4 .lodge-grid .tile .reward-dot{display:block!important;position:absolute;right:5px;top:4px;z-index:5}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(1){background-position:0% 0%!important;--ref-index:1}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(2){background-position:50% 0%!important;--ref-index:2}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(3){background-position:100% 0%!important;--ref-index:3}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(4){background-position:0% 50%!important;--ref-index:4}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(5){background-position:50% 50%!important;--ref-index:5}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(6){background-position:100% 50%!important;--ref-index:6}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(7){background-position:0% 100%!important;--ref-index:7}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(8){background-position:50% 100%!important;--ref-index:8}
+#ovMenu.reference-menu-v4 .lodge-grid .tile:nth-child(9){background-position:100% 100%!important;--ref-index:9}
+#ovMenu.reference-menu-v4 .lodge-footer{
+  position:absolute!important;left:2%!important;right:2%!important;top:94.1%!important;bottom:auto!important;
+  width:96%!important;height:4.8%!important;min-height:0!important;
+  display:flex!important;flex-direction:row!important;align-items:stretch!important;justify-content:space-between!important;
+  margin:0!important;padding:0!important;gap:3px!important;z-index:4!important;
+}
+#ovMenu.reference-menu-v4 .lodge-footer button{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  min-height:0!important;min-width:0!important;width:auto!important;max-width:none!important;flex:1 1 0!important;
+  border-radius:8px!important;padding:3px 1px!important;margin:0!important;
+  border:1px solid #e8bf7c73!important;
+  background:linear-gradient(180deg,rgba(34,75,54,.94),rgba(10,42,33,.95))!important;
+  box-shadow:inset 0 1px #fbd99833,0 3px 6px #0006!important;
+  color:#f4dbab!important;font-size:clamp(7px,2.0vw,10px)!important;font-weight:600!important;
+  line-height:1.05!important;text-align:center!important;white-space:normal!important;
+}
+#ovMenu.reference-menu-v4 .reference-layout .ref-interactive,
+#ovMenu.reference-menu-v4 .reference-layout .ref-record{
+  -webkit-tap-highlight-color:transparent;outline-offset:2px;
+  transition:transform .13s cubic-bezier(.2,.7,.2,1),filter .13s ease,box-shadow .13s ease!important;
+  transform-origin:center center;will-change:transform;
+}
+#ovMenu.reference-menu-v4 .reference-layout .ref-interactive:active,
+#ovMenu.reference-menu-v4 .reference-layout .ref-interactive.ref-pressed,
+#ovMenu.reference-menu-v4 .reference-layout .ref-interactive.cozy-pressed{
+  transform:translateY(3px) scale(.963)!important;
+  filter:brightness(1.12) saturate(1.06)!important;
+  box-shadow:0 1px 4px #0008!important;
+}
+#ovMenu.reference-menu-v4 .reference-layout .ref-rebound{animation:ref-spring .24s ease-out!important}
+#ovMenu.reference-menu-v4 .reference-layout button:focus-visible{outline:2px solid #ffe5ac!important;outline-offset:2px!important}
+@keyframes ref-intro-scene{from{opacity:.55;transform:scale(1.035)}to{opacity:1;transform:scale(1)}}
+@keyframes ref-glow{0%{opacity:.55;transform:translateY(-1%)}100%{opacity:1;transform:translateY(3%)}}
+@keyframes ref-mist{from{transform:translateX(-5%);opacity:.2}to{transform:translateX(5%);opacity:.38}}
+@keyframes ref-entry{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes ref-tile-arrive{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes ref-spring{0%{transform:translateY(2px) scale(.965)}55%{transform:translateY(-1px) scale(1.018)}100%{transform:none}}
+@media(max-height:660px){
+ #ovMenu.reference-menu-v4 .reference-hero{height:48%}
+ #ovMenu.reference-menu-v4 .lodge-profile{top:46.5%!important;height:8.5%!important}
+ #ovMenu.reference-menu-v4 .go{top:56%!important;height:10%!important}
+ #ovMenu.reference-menu-v4 .lodge-grid{top:67.2%!important;height:25.7%!important}
+ #ovMenu.reference-menu-v4 .lodge-footer{top:94%!important;height:5%!important}
+}
+@media(max-width:345px){
+ #ovMenu.reference-menu-v4 .lodge-profile{padding:3px!important;gap:1px!important}
+ #ovMenu.reference-menu-v4 .ref-wealth{gap:1px}
+ #ovMenu.reference-menu-v4 .ref-record{padding:0 2px}
+ #ovMenu.reference-menu-v4 .lodge-grid{gap:3px!important}
+ #ovMenu.reference-menu-v4 .lodge-footer button{font-size:7px!important}
+}
+@media(min-width:650px){
+ #ovMenu.reference-menu-v4 .reference-layout{max-width:min(560px,100vw)!important}
+}
+@media(prefers-reduced-motion:reduce){
+ #ovMenu.reference-menu-v4 *,#ovMenu.reference-menu-v4 *::before,#ovMenu.reference-menu-v4 *::after{
+  animation:none!important;transition:none!important
+ }
+}

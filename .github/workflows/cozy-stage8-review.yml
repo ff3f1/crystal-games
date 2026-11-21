@@ -14,6 +14,7 @@ jobs:
       - name: Source integrity and trophy net regression
         run: |
           node --check games/fish/js/cozy-concept-menu.js
+          node --check games/fish/js/approved-menu-v4.js
           node --check games/fish/js/game.js
           node --check games/fish/js/main.js
           node --check tests/test_cozy_stage8.cjs

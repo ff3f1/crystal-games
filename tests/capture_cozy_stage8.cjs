@@ -7,6 +7,7 @@ const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',arg
 for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,932,'03-large-phone'],[320,700,'04-compact-phone']]){
  const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:2,isMobile:true,hasTouch:true});
  const errors=[];page.on('pageerror',e=>errors.push(String(e)));
+ page.on('response',r=>{if(r.status()>=400&&r.url().includes('menu-reference'))errors.push(r.status()+' '+r.url())});
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForSelector('#mRate',{timeout:30000});
  await page.waitForTimeout(950);
@@ -15,9 +16,10 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
    const ids=['mGo','mDuel','mMap','mShop','mAtlas','mJourney','mJournal','mQuests','mTour','mForecast','mSet','mHelp','mRate'];
    const buttons=ids.map(id=>{const e=document.getElementById(id),r=e?.getBoundingClientRect();return{id,visible:!!e&&r.width>0&&r.height>0,centerY:r?Math.round(r.y+r.height/2):null}});
    const tileTexts=[...o.querySelectorAll('.lodge-grid .tile')].map(tile=>{
-     const label=tile.querySelector('span:last-child');const range=document.createRange();range.selectNodeContents(label);
-     const textRect=label.getBoundingClientRect(),buttonRect=tile.getBoundingClientRect();
-     return{id:tile.id,lines:range.getClientRects().length,fits:textRect.left>=buttonRect.left-2&&textRect.right<=buttonRect.right+2};
+     const box=tile.getBoundingClientRect(),aria=tile.getAttribute('aria-label')||'';
+     return{id:tile.id,label:aria,lines:1,
+       fits:box.left>=-1&&box.right<=innerWidth+1&&box.top>=0&&box.bottom<=innerHeight+1&&
+        box.width>=75&&box.height>=39&&getComputedStyle(tile).backgroundImage.includes('tiles.webp')};
    });
    return{duplicateReel:!!o.querySelector('.cozy-reel-still'),tileTexts,weather:!!o.querySelector('.go[data-current-weather]'),viewport:{w:innerWidth,h:innerHeight},title:!!o.querySelector('.cozy-sign-fish'),floatingRod:!!o.querySelector('.cozy-rod-still'),shopArt:!!o.querySelector('#mShop .cozy-tile-art img'),
      width:l.scrollWidth,windowW:innerWidth,bottom:b.getBoundingClientRect().bottom,buttons};
@@ -39,26 +41,41 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
  assert(!report.duplicateReel,'duplicate floating reel must not exist in main menu');
  assert(report.weather,'current fishing weather must be shown in menu');
  const rebuilt=await page.evaluate(()=>{
-   const nav=document.querySelector('#ovMenu .concept-primary');
-   const shelf=document.querySelector('#ovMenu .lodge-grid');
-   const go=document.querySelector('#mGo');
-   return{
-     active:document.querySelector('#ovMenu').classList.contains('concept-redesign'),
-     navItems:nav?.querySelectorAll('button').length,
-     goMoved:go?.parentElement===nav,
-     shopMoved:document.querySelector('#mShop')?.parentElement===nav,
-     achievements:!!document.querySelector('#mAchievements'),
-     inventory:!!document.querySelector('#mInventory'),
-     shelfHorizontal:shelf&&getComputedStyle(shelf).flexDirection==='row'
-   };
+   const menu=document.querySelector('#ovMenu'),grid=menu.querySelector('.lodge-grid');
+   const go=menu.querySelector('#mGo'),profile=menu.querySelector('.lodge-profile');
+   const tiles=[...grid.querySelectorAll('.tile')];
+   const columns=getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+   const rows=getComputedStyle(grid).gridTemplateRows.split(' ').length;
+   const goRect=go.getBoundingClientRect();
+   return{active:menu.classList.contains('reference-menu-v4'),
+     columns,rows,count:tiles.length,ids:tiles.map(e=>e.id),
+     profile:!!profile.querySelector('.ref-experience')&&!!profile.querySelector('.ref-record'),
+     hasHero:!!menu.querySelector('.reference-hero'),
+     liveXP:profile.textContent.includes('/'),
+     goVisible:goRect.width>100&&goRect.height>39,
+     noArrow:!menu.querySelector('#conceptMoreSections'),
+     noHidden:tiles.every(e=>e.offsetWidth>0&&e.getBoundingClientRect().bottom<innerHeight),
+     rate:!!menu.querySelector('#mRate'),skills:!!menu.querySelector('#mSkills')};
  });
- assert(rebuilt.active&&rebuilt.goMoved&&rebuilt.shopMoved&&
-   rebuilt.navItems===5&&rebuilt.achievements&&rebuilt.inventory&&rebuilt.shelfHorizontal,
-   'approved menu must be genuinely rebuilt, not the 1.6 tile layout '+JSON.stringify(rebuilt));
- assert(report.tileTexts.every(x=>x.lines===1&&x.fits),'split or clipped Russian menu text '+JSON.stringify(report.tileTexts));
+ assert(rebuilt.active&&rebuilt.columns===3&&rebuilt.rows===3&&rebuilt.count===9&&
+   rebuilt.profile&&rebuilt.hasHero&&rebuilt.liveXP&&rebuilt.goVisible&&rebuilt.noArrow&&
+   rebuilt.noHidden&&rebuilt.rate&&rebuilt.skills,
+   'approved menu MUST show all nine live destinations on one screen '+JSON.stringify(rebuilt));
+ assert.deepEqual(rebuilt.ids,['mMap','mShop','mAtlas','mJourney','mJournal','mQuests','mTour','mForecast','mSet']);
+ assert(report.tileTexts.every(x=>x.lines===1&&x.fits&&x.label),'nine accessible art buttons must fit '+JSON.stringify(report.tileTexts));
  assert(report.buttons.every(x=>x.visible),'missing menu button '+JSON.stringify(report));
  assert(report.width<=w+3,'horizontal menu overflow '+JSON.stringify(report));
  assert(report.buttons.every(x=>x.centerY<=h+10),'menu overflows screen height '+JSON.stringify(report));
+ // The real drawn cards must react to an actual pointer press.
+ if(name==='01-phone'){
+   const target=page.locator('#mMap'),rect=await target.boundingBox();
+   await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();
+   assert(await target.evaluate(el=>el.classList.contains('ref-pressed')),
+     'button must visibly depress as soon as the finger touches it');
+   await page.screenshot({path:path.join(output,'00-pressed-menu-button.png')});
+   await page.mouse.up();
+   await page.waitForTimeout(90);
+ }
  await page.screenshot({path:path.join(output,name+'.png')});
  console.log('SCREEN',name,JSON.stringify(report));
  if(name==='01-phone'){

@@ -3,7 +3,7 @@
  'use strict';
  const S={on:true,music:true};let ac=null,unlocked=false,music=null,wanted='dawn',track='',clock=0,nextBird=14;
  const gates=new Set(),cache={},voices=new Set();let params={},lastReel=-10,lastDrag=-10;
- const cozyFiles=new Set(['bite','take','strike','drag','hook','land','plop']);
+ const cozyFiles=new Set(['bite','take','strike','drag','hook','land','plop','woodtap']);
  const file=id=>(id.startsWith('cozy_')&&cozyFiles.has(id.slice(5))?'assets/audio/cozy/'+id.slice(5)+'.wav':
   cozyFiles.has(id)?'assets/audio/cozy/'+id+'.wav':'assets/audio/renewal/'+id+'.mp3');
  function settings(){return FZ.Game&&FZ.Game.state()?FZ.Game.settings():{}}
@@ -27,6 +27,15 @@
   }catch(_){}
  }
  for(const id of ['click','cast','plop','splash','bite','bell','strike','snap','coin','level','trophy','fail','drill','flop','thunder'])S[id]=(intensity=1)=>cue(id,(id==='bite'?.65:1)*Math.max(.2,Math.min(1,intensity)));
+ // A restrained wooden tactile tap. Suppress the second click when a
+ // pointer-down and the old click handler fire for the same touch.
+ let lastWoodTap=-10;
+ S.click=function(intensity=1){
+   const now=ac?ac.currentTime:Date.now()/1000;
+   if(now-lastWoodTap<.16)return;
+   lastWoodTap=now;
+   return cue('cozy_woodtap',.72*Math.max(.25,Math.min(1,intensity)));
+ };
  S.cozy=(id,gain=1)=>cozyFiles.has(id)?cue('cozy_'+id,Math.max(.15,Math.min(1,gain))):undefined;
  S.reel=function(speed){if(!ac)return;const t=ac.currentTime;if(t-lastReel<.12/Math.max(.5,speed))return;lastReel=t;cue('reel',.42)};
  S.drag=function(k){if(!ac)return;const t=ac.currentTime;if(t-lastDrag<.14)return;lastDrag=t;cue('drag',.35+k*.3)};
