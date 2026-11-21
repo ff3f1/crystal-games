@@ -96,9 +96,18 @@ for output, url in {
 
 # Poly Haven CC0 panoramic real-world lakeside photo replaces the neutral sky gradient.
 # Resize the high-resolution JPEG to mobile-friendly 3K for predictable GPU memory use.
-sky_source = TEX / "arboretum-source.jpg"
+sky_source = TEX / "green-lake-source.jpg"
 sky_target = TEX / "sky_panorama.jpg"
-fetch("https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/arboretum.jpg", sky_source)
+# Prefer a forested lake panorama; fall back to the known-good Arboretum.
+for sky_name in ("shudu_lake", "lake_pier", "arboretum"):
+    try:
+        fetch(f"https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/{sky_name}.jpg", sky_source)
+        print("Chosen photographic sky:", sky_name)
+        break
+    except Exception as exc:
+        print(f"Unable to fetch sky {sky_name}: {exc}")
+else:
+    raise RuntimeError("Unable to fetch any CC0 lake panorama")
 if not sky_target.exists():
     with Image.open(sky_source) as sky_img:
         sky_img = sky_img.convert("RGB")
