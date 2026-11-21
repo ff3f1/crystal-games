@@ -19,10 +19,11 @@ for(const [w,h,name] of [[390,844,'01-phone'],[360,740,'02-small-phone'],[432,93
      const textRect=label.getBoundingClientRect(),buttonRect=tile.getBoundingClientRect();
      return{id:tile.id,lines:range.getClientRects().length,fits:textRect.left>=buttonRect.left-2&&textRect.right<=buttonRect.right+2};
    });
-   return{duplicateReel:!!o.querySelector('.cozy-reel-still'),tileTexts,weather:!!o.querySelector('.go[data-current-weather]'),viewport:{w:innerWidth,h:innerHeight},title:!!o.querySelector('.cozy-sign-fish'),rod:!!o.querySelector('.cozy-rod-still'),shopArt:!!o.querySelector('#mShop .cozy-tile-art img'),
+   return{duplicateReel:!!o.querySelector('.cozy-reel-still'),tileTexts,weather:!!o.querySelector('.go[data-current-weather]'),viewport:{w:innerWidth,h:innerHeight},title:!!o.querySelector('.cozy-sign-fish'),floatingRod:!!o.querySelector('.cozy-rod-still'),shopArt:!!o.querySelector('#mShop .cozy-tile-art img'),
      width:l.scrollWidth,windowW:innerWidth,bottom:b.getBoundingClientRect().bottom,buttons};
  });
- assert(report.title&&report.rod&&report.shopArt,'real art assets are rendered '+JSON.stringify(report));
+ assert(report.title&&report.shopArt,'menu title and game section assets render '+JSON.stringify(report));
+ assert(!report.floatingRod,'main menu must not have a rod levitating in the lake');
  assert(!report.duplicateReel,'duplicate floating reel must not exist in main menu');
  assert(report.weather,'current fishing weather must be shown in menu');
  assert(report.tileTexts.every(x=>x.lines===1&&x.fits),'split or clipped Russian menu text '+JSON.stringify(report.tileTexts));

@@ -1,4 +1,4 @@
-/* Cozy Lodge Stage 8 — approved warm dawn / timber sign / real tackle.
+/* Cozy Lodge Stage 8 — warm dawn / timber sign / uninterrupted lake scenery.
    Existing nine game menu buttons and click handlers remain untouched. */
 (function(FZ){
  "use strict";
@@ -23,7 +23,6 @@
      title.insertAdjacentHTML("beforeend",'<img class="cozy-sign-fish" alt="" src="assets/fish-hd/perch.webp">');
      title.insertAdjacentHTML("afterend",
        '<div class="cozy-menu-scene" aria-hidden="true"><div class="cozy-menu-sun"></div><div class="cozy-menu-horizon"></div>'+
-       '<img class="cozy-rod-still" src="assets/equipment/complete-hd/spin.webp" alt="">'+
        '<div class="cozy-menu-reeds"></div></div>');
    }
    const go=lodge.querySelector(".go");
