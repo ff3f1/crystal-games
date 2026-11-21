@@ -32,6 +32,8 @@ var overlay: CanvasLayer
 var sounds: Node
 var sun_light: DirectionalLight3D
 var hands: Node3D
+var viewmodel_sprite: TextureRect
+var viewmodel_base := Vector2.ZERO
 var landing_from := Vector3.ZERO
 var last_sound_reel := 0.0
 var last_drag_sound := -10.0
@@ -132,6 +134,9 @@ func _process(delta: float) -> void:
     elapsed += delta
     if menu_open:
         return
+    if viewmodel_sprite != null:
+        var pulse := 1.0 if is_reeling else 0.18
+        viewmodel_sprite.position = viewmodel_base + Vector2(sin(elapsed * (13.0 if is_reeling else 1.2)) * 1.6 * pulse, sin(elapsed * (12.0 if is_reeling else 1.6)) * 2.0 * pulse)
     _update_player(delta)
     ripple_age += delta
     bite_sign_age += delta
@@ -531,9 +536,10 @@ func _create_rod() -> void:
     line_node.mesh = line_mesh
     line_node.material_override = _material(Color(0.91, 0.92, 0.87), 0.65)
     add_child(line_node)
-    # First-person hand models do not affect rod physics or casting.
-    hands = (load("res://scripts/first_person_hands.gd") as GDScript).new() as Node3D
-    camera.add_child(hands)
+    # Rod marker remains in 3D for casting/line physics; the visible rod and
+    # hands use an original high-detail alpha WebP POV asset instead of crude
+    # skinned T-pose geometry. This avoids floating disconnected forearms.
+    rod_root.visible = false
 
 func _taper_rod(a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
     var shape := CylinderMesh.new()
@@ -657,6 +663,18 @@ func _create_ui() -> void:
     root.mouse_filter = Control.MOUSE_FILTER_PASS
     ui.add_child(root)
 
+    # High-resolution hand/reel viewmodel from the original generated art.
+    # A single texture guarantees consistent glove anatomy, reel mounting and
+    # rod alignment for all Android aspect ratios. It is visual only.
+    viewmodel_sprite = TextureRect.new()
+    viewmodel_sprite.texture = load("res://assets/textures/fishing_pov_hands.webp") as Texture2D
+    viewmodel_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    viewmodel_sprite.stretch_mode = TextureRect.STRETCH_SCALE
+    viewmodel_sprite.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(viewmodel_sprite)
+    _layout_viewmodel()
+    get_viewport().size_changed.connect(_layout_viewmodel)
+
     var shade := ColorRect.new()
     shade.color = Color(0.012, 0.035, 0.039, 0.19)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -755,6 +773,16 @@ func _create_ui() -> void:
     lure_view.offset_top = 311.0
     lure_view.offset_bottom = 482.0
     root.add_child(lure_view)
+
+func _layout_viewmodel() -> void:
+    if viewmodel_sprite == null or viewmodel_sprite.texture == null:
+        return
+    var view_size := get_viewport().get_visible_rect().size
+    var image_height := view_size.y * 0.93
+    var image_width := image_height * 4.0 / 3.0
+    viewmodel_sprite.size = Vector2(image_width, image_height)
+    viewmodel_base = Vector2(view_size.x - image_width * 0.91, view_size.y - image_height * 0.97)
+    viewmodel_sprite.position = viewmodel_base
 
 func _label(parent: Control, txt: String, font_size: int, l: float, t: float, r: float, b: float) -> Label:
     var result := Label.new()
