@@ -152,7 +152,16 @@
   if(el.innerHTML!==html)el.innerHTML=html;if(el.className!==cls)el.className=cls;
  };
  const event=UI.onEvent;UI.onEvent=function(e){if(e.type==='hooked'&&G.rig().fish)FZ.Assets.fish(G.rig().fish.s.id);event(e)};
- const tools=UI.refreshTools;UI.refreshTools=function(){tools();if(!$('tRodIc'))return;const m=G.mode(),image={float:'reel',feeder:'reel',spin:'reel_spinning_blue',ice:'reel_ice'}[m];$('tRodIc').innerHTML='<img alt="" src="assets/equipment/'+image+'.png">'};
+ // The quick-tackle icon represents the EQUIPPED rod, not a generic reel.
+ // Keep the full original refresh behavior (bait, amount, controls).
+ const tools=UI.refreshTools;UI.refreshTools=function(){
+   tools();
+   const slot=$('tRodIc');if(!slot)return;
+   const mode=G.mode(),load=G.loadout(mode);
+   const rodId=load&&load.rod;
+   const art=FZ.Art.icon(rodId||mode,56);
+   slot.innerHTML='<img alt="" src="'+art+'">';
+ };;
  window.__handleBack=function(){if($('ovAd').classList.contains('on')||FZ.Ads.isBusy())return true;if($('ovSheet').classList.contains('on')){UI.closeSheet();return true}if($('ovLost').classList.contains('on')){$('ovLost').classList.remove('on');G.rig().lost=null;return true}if($('ovCatch').classList.contains('on'))return true;if(!UI.menuOpen){UI.showMenu();return true}return false};
  document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());document.addEventListener('dragstart',e=>e.preventDefault());
 })(window.FZ);
