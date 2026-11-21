@@ -7,19 +7,23 @@
   function describe(f,drag){
     if(!f)return{tone:"idle",title:"Леска",action:"Контроль"};
     const tension=clamp(Number.isFinite(f.tension)?f.tension:0,0,1);
-    const threshold=clamp((Number.isFinite(drag)?drag:.7)+.08,.55,.91);
-    if(tension>=threshold||f.overload>.15)
-      return{tone:"danger",title:"Леска на пределе",action:"Отпустите подмотку"};
+    // Friction drag is not a line break. Orange is reserved for genuinely
+    // dangerous load, gold means the reel is safely giving line.
+    if(tension>.90 || (f.overload||0)>.10)
+      return{tone:"danger",title:"Опасное натяжение",action:"Отпустите подмотку"};
     if((f.slackT||0)>.42)
       return{tone:"slack",title:"Слабина лески",action:"Подматывайте"};
-    if(f.diveWarning)
-      return{tone:"recover",title:"Уход на глубину",action:"Готовьтесь"};
     if(f.warning&&f.coverRun)
       return{tone:"recover",title:"Рывок к траве",action:"Уведите удилище"};
     if(f.warning)
       return{tone:"recover",title:"Сильный рывок",action:"Сбавьте подмотку"};
+    if(f.diveWarning)
+      return{tone:"recover",title:"Уход на глубину",action:"Готовьтесь"};
     if(f.phase==="dive")
       return{tone:"recover",title:"Рыба на глубине",action:"Не форсируйте"};
+    if(f.slipping)
+      return{tone:"slip",title:"Фрикцион отдаёт леску",action:"Не форсируйте"};
+
     if(f.phase==="toward")
       return{tone:"slack",title:"Рыба идёт к вам",action:"Подматывайте"};
     if(f.phase==="tired")

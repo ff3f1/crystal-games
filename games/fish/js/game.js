@@ -715,6 +715,9 @@
     // для отрисовки
     rig.rod.load = U.damp(rig.rod.load, f.T, 23, dt);
     f.tension = f.T / lineT;
+    // The player can now distinguish a safely slipping drag from a real
+    // line-break overload. This is display-only: force and loss odds unchanged.
+    f.slipping=slip>lineT*.015;
     f.strained = !!slip || f.tension > 0.86;
     if (sess.duel && f.strained && reeling) f.duelStrain = (f.duelStrain || 0) + dt;
     if (f.strained && !f.wasStrained) FZ.Platform.vibrate(27);

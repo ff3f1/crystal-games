@@ -248,20 +248,44 @@
       h="Трофей у подсака!<small>Удерживайте золотую кнопку, чтобы аккуратно принять рыбу</small>";
     } else if (r.state === "bite" && r.bite.phase === "take") { h = "Подсекай!<small>смахните вверх или нажмите кнопку</small>"; cls = "strike"; }
     else if (r.state === "fight" && r.fish) {
-      const f = r.fish;
-      if (f.tension > st.drag * 0.98 || f.tension > 0.86) h = "Отпустите! Леска на пределе";
-      else if (f.slackT > 0.5) h = "Подматывайте — леска провисла!";
-      else if (st.tut < 3) h = "Держите палец — подматывайте<small>Отпускайте, когда рыба рвётся</small>";
-      else if (!s.ice && f.snagT > .35) h = "Рыба уходит в траву!<small>Уводите удилище от берега</small>";
-      else if (f.warning && f.coverRun) h="Рыба рвётся к укрытию!<small>Отведите удилище от берега и ослабьте подмотку</small>";
-      else if (f.warning) h = f.finalSurge ? "Трофей делает последний рывок!<small>Перестаньте подматывать и контролируйте леску</small>" :
-        "Готовьтесь к рывку!<small>Ослабьте подмотку, следите за фрикционом</small>";
-      else if (f.diveWarning) h="Сейчас потянет на глубину!<small>Не форсируйте подмотку, держите натяжение</small>";
-      else if (f.phase==="dive") h="Рыба давит на глубину!<small>Дайте ей погасить рывок и подматывайте на отдыхе</small>";
-      else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Рыба рвётся в сторону!<small>Дайте леске сойти и ведите удилище против рывка</small>";
-      else if (f.phase === "toward") h = "Рыба идёт к вам!<small>Подматывайте, чтобы не ослабла леска</small>";
-      else if (f.phase === "shake") h = "Трясёт головой!<small>Не допускайте провиса лески</small>";
-      else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
+      const f=r.fish;
+      cls="fight-coach";
+      // Emergency cues must beat the tutorial. Previously "hold to reel"
+      // hid warnings during the player's FIRST trophy fight.
+      if(f.tension>.90 || f.overload>.10){
+        h="Опасное натяжение!<small>Отпустите подмотку, дайте фрикциону сработать</small>";
+        cls+=" warning";
+      } else if((f.slackT||0)>.5){
+        h="Слабина лески!<small>Осторожно подматывайте, чтобы рыба не сошла</small>";
+        cls+=" warning";
+      } else if(!s.ice && (f.snagT||0)>.35){
+        h="Рыба уходит в траву!<small>Ведите удилище от берега, иначе обрыв</small>";
+        cls+=" warning";
+      } else if(f.warning && f.coverRun){
+        h="Рывок к укрытию!<small>Уведите удилище от берега, ослабьте подмотку</small>";
+        cls+=" warning";
+      } else if(f.warning){
+        h=f.finalSurge?"Последний рывок трофея!<small>Перестаньте подматывать, контролируйте леску</small>":
+          "Сейчас будет рывок!<small>Не форсируйте подмотку</small>";
+        cls+=" warning";
+      } else if(f.diveWarning){
+        h="Уход на глубину!<small>Сбавьте подмотку, держите натяжение</small>";
+        cls+=" warning";
+      } else if(f.phase==="dive"){
+        h="Рыба давит на глубину<small>Выждите рывок, подмотайте на отдыхе</small>";
+      } else if(f.slipping){
+        h="Фрикцион отдаёт леску<small>Не форсируйте, дождитесь ослабления рывка</small>";
+      } else if(!s.ice && f.phase==="run" && !f.against && Math.abs(f.vx)>.6){
+        h="Рыба рвётся в сторону!<small>Отведите удилище против рывка</small>";
+      } else if(f.phase==="toward"){
+        h="Рыба идёт к вам!<small>Подматывайте, не допускайте провиса</small>";
+      } else if(f.phase==="shake"){
+        h="Трясёт головой!<small>Держите натяжение, не спешите</small>";
+      } else if(f.phase==="tired"){
+        h="Рыба устала<small>Плавно подтягивайте к подсаку</small>";
+      } else if(st.tut<3){
+        h="Удерживайте — подмотка<small>Отпускайте, когда рыба сопротивляется</small>";
+      }
     }
     const key = h + cls;
     if (key !== hintKey) { hintKey = key; const e = $("hHint"); e.innerHTML = h; e.className = "hint " + cls; }

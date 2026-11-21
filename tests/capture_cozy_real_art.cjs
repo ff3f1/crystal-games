@@ -93,6 +93,34 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  });
  assert(catfish.phase==="dive"&&catfish.energy<.12&&catfish.hud.includes("глубине"),
    "deep catfish must not render fake surface wake "+JSON.stringify(catfish));
+ // The first fish must not be coached to reel into a deep dive or a line break.
+ const tutorial=await page.evaluate(()=>{
+   const G=FZ.Game,UI=FZ.UI,r=G.rig(),f=r.fish,st=G.state(),s=G.sess();
+   st.tut=1;f.phase="dive";f.tension=.42;f.overload=0;f.diveWarning=true;
+   f.warning=false;f.slipping=false;f.slackT=0;
+   UI.hint(s,r,st,0);
+   const dive=document.querySelector('#hHint').textContent;
+   f.diveWarning=false;f.phase="rest";f.slipping=true;f.tension=.71;
+   UI.hint(s,r,st,0);UI.frame(.016,0);
+   const slip=document.querySelector('#hHint').textContent;
+   const slipPanel=document.querySelector('#hTens').dataset.cozyRisk;
+   f.tension=.97;f.slipping=false;UI.hint(s,r,st,0);UI.frame(.016,0);
+   const danger=document.querySelector('#hHint').textContent;
+   const dangerPanel=document.querySelector('#hTens').dataset.cozyRisk;
+   return{dive,slip,slipPanel,danger,dangerPanel};
+ });
+ assert(tutorial.dive.includes('Уход на глубину')&&!tutorial.dive.includes('Удерживайте'),
+   'tutorial must not override the urgent dive warning '+JSON.stringify(tutorial));
+ assert(tutorial.slip.includes('Фрикцион')&&tutorial.slipPanel==='slip',
+   'safe slipping drag has its own clear HUD signal '+JSON.stringify(tutorial));
+ assert(tutorial.danger.includes('Опасное натяжение')&&tutorial.dangerPanel==='danger',
+   'critical tension overrides tutorial and normal drag '+JSON.stringify(tutorial));
+ await page.screenshot({path:path.join(dir,"12b-line-warning-tutorial.png")});
+ // Restore coherent game state so later browser checks remain independent.
+ await page.evaluate(()=>{
+   const G=FZ.Game,r=G.rig(),f=r.fish;
+   f.tension=.3;f.overload=0;f.slipping=false;f.diveWarning=false;
+ });
  await page.screenshot({path:path.join(dir,"12-catfish-deep-real.png")});
  assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/6 shop tabs/no broken assets");
  await b.close();
