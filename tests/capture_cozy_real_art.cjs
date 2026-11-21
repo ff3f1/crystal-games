@@ -82,6 +82,8 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  assert(pike.phase==="run"&&pike.energy>.20&&pike.hud,"real pike fight must animate and update the HUD "+JSON.stringify(pike));
  await page.screenshot({path:path.join(dir,"11-pike-fight-real.png")});
  await page.evaluate(()=>{
+   // Freeze the simulation, but keep real game graphics and HUD rendering.
+   FZ.appSuspended=true;
    const G=FZ.Game,r=G.rig(),f=r.fish;
    f.s=FZ.SP.catfish;f.w=12;f.phase="dive";f.phaseT=1.1;
    f.X=0;f.Z=14;f.D=2.6;f.surface=.03;f.vx=.1;f.vz=.65;
@@ -93,6 +95,9 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  });
  assert(catfish.phase==="dive"&&catfish.energy<.12&&catfish.hud.includes("глубине"),
    "deep catfish must not render fake surface wake "+JSON.stringify(catfish));
+ assert((await page.locator('#hHint').textContent()).includes('давит на глубину'),
+   'the real fight coach must show a deep dive, even during the first trophy');
+ await page.screenshot({path:path.join(dir,"12-catfish-deep-real.png")});
  // The first fish must not be coached to reel into a deep dive or a line break.
  const tutorial=await page.evaluate(()=>{
    const G=FZ.Game,UI=FZ.UI,r=G.rig(),f=r.fish,st=G.state(),s=G.sess();
@@ -116,12 +121,8 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  assert(tutorial.danger.includes('Опасное натяжение')&&tutorial.dangerPanel==='danger',
    'critical tension overrides tutorial and normal drag '+JSON.stringify(tutorial));
  await page.screenshot({path:path.join(dir,"12b-line-warning-tutorial.png")});
- // Restore coherent game state so later browser checks remain independent.
- await page.evaluate(()=>{
-   const G=FZ.Game,r=G.rig(),f=r.fish;
-   f.tension=.3;f.overload=0;f.slipping=false;f.diveWarning=false;
- });
- await page.screenshot({path:path.join(dir,"12-catfish-deep-real.png")});
+ // Leave the live game unpaused before exiting the browser test.
+ await page.evaluate(()=>{FZ.appSuspended=false});
  assert.deepEqual(errs,[]);console.log("PASS: actual gameplay/real pike fight/deep catfish/6 shop tabs/no broken assets");
  await b.close();
 })().catch(e=>{console.error(e.stack||e);process.exit(1)});
