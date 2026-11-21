@@ -80,6 +80,9 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
    const f=FZ.Game.rig().fish;return{phase:f?.phase,energy:FZ.CozyMotion.surfaceEnergy(f),hud:document.querySelector('#cozyFightSignal')?.textContent};
  });
  assert(pike.phase==="run"&&pike.energy>.20&&pike.hud,"real pike fight must animate and update the HUD "+JSON.stringify(pike));
+ const runCoach=await page.locator('#hHint').textContent();
+ assert(!runCoach.includes('Удерживайте — подмотка'),
+   'active pike run must not be accompanied by a contradictory tutorial '+runCoach);
  await page.screenshot({path:path.join(dir,"11-pike-fight-real.png")});
  await page.evaluate(()=>{
    // Freeze the simulation, but keep real game graphics and HUD rendering.
