@@ -1,0 +1,118 @@
+name: Fishing concept - signed APK for phone testing
+on:
+  push:
+    branches: [feature/cozy-concept-stage8]
+    paths:
+      - 'games/fish/**'
+      - 'android/**'
+      - '.github/workflows/fishing-concept-test-apk.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-test-apk:
+    name: Build original-package signed test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Check game source and real menu assets
+        run: |
+          set -euo pipefail
+          node --check games/fish/js/game.js
+          node --check games/fish/js/approved-menu-v4.js
+          node --check games/fish/js/audio.js
+          node tests/test_cast_skills.cjs
+          node tests/test_concept_redesign.cjs
+          test -s games/fish/assets/menu-reference/hero.webp
+          test -s games/fish/assets/menu-reference/cta.webp
+          test -s games/fish/assets/menu-reference/tiles.webp
+          test -s games/fish/assets/audio/cozy/woodtap.wav
+      - name: Package complete current fishing game and app icons
+        run: |
+          set -euo pipefail
+          mkdir -p android/app/src/main/assets
+          cp -a games/fish/. android/app/src/main/assets/
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p "android/app/src/main/res/mipmap-$d"
+            cp "store/fish/icons/ic_launcher_$d.png" "android/app/src/main/res/mipmap-$d/ic_launcher.png"
+          done
+      - name: Require original release signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::KEYSTORE_B64 is missing; refusing a debug-signed APK incompatible with the installed game"
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/fishing-release.jks"
+          printf 'KEYSTORE_PATH=%s/fishing-release.jks\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Assemble installable signed release APK
+        working-directory: android
+        env:
+          LC_ALL: C.UTF-8
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: >-
+          gradle :app:assembleRelease --no-daemon
+          -PappId=ru.crystalgames.fishing
+          '-PappName=Рыбалка: Клюёт!'
+          -PversionCode=2100
+          -PversionName=2.1.0-test
+          -PadInter=R-M-20269656-1
+          -PadReward=R-M-20269656-2
+      - name: Check signing, version, package, embedded reference artwork
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          cp android/app/build/outputs/apk/release/app-release.apk output/rybalka-klyuet-2.1.0-test.apk
+          SIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$SIGNER" verify --print-certs output/rybalka-klyuet-2.1.0-test.apk | tee output/signature.txt
+          "$(dirname "$SIGNER")/aapt" dump badging output/rybalka-klyuet-2.1.0-test.apk | tee output/package.txt
+          grep -F "package: name='ru.crystalgames.fishing' versionCode='2100' versionName='2.1.0-test'" output/package.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          apk = Path("output/rybalka-klyuet-2.1.0-test.apk")
+          with ZipFile(apk) as z:
+              names = set(z.namelist())
+              needed = [
+                "assets/index.html",
+                "assets/js/approved-menu-v4.js",
+                "assets/css/approved-menu-v4.css",
+                "assets/assets/menu-reference/hero.webp",
+                "assets/assets/menu-reference/cta.webp",
+                "assets/assets/menu-reference/tiles.webp",
+                "assets/assets/audio/cozy/woodtap.wav",
+              ]
+              missing = [name for name in needed if name not in names]
+              assert not missing, f"APK is missing menu assets: {missing}"
+              assert all(z.getinfo(p).file_size > 500 for p in needed), "Empty game assets"
+          print("PASS: original package, approved menu and button sound are embedded")
+          PY
+          sha256sum output/rybalka-klyuet-2.1.0-test.apk > output/SHA256SUMS.txt
+          cat > output/README.txt <<'EOF'
+          Test build only; NOT published to RuStore.
+          App ID: ru.crystalgames.fishing
+          Version: 2.1.0-test (2100)
+          Built from feature/cozy-concept-stage8.
+          Signed with the existing GitHub release signing key (NOT debug key).
+          Keeps existing local game saves when installed as an update if signatures match.
+          Ads use the currently configured production Yandex identifiers.
+          EOF
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fishing-2.1.0-test-apk
+          path: output/
+          retention-days: 30
