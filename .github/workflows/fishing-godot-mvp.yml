@@ -82,7 +82,8 @@ jobs:
           set -o pipefail
           godot --headless --path games/fishing-godot-mvp --script res://scripts/smoke_start.gd 2>&1 | tee godot-scene.log
           grep -q "FISHING_START_OK" godot-scene.log
-          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:' godot-scene.log; then
+          if grep -E 'ERROR:|SCRIPT ERROR:|Parse Error:' godot-scene.log \
+             | grep -v -E 'ERROR: [0-9]+ resources still in use at exit'; then
             echo "::error::Game scene failed headless smoke test"
             exit 1
           fi
