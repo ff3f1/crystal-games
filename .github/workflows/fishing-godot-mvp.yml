@@ -153,6 +153,9 @@ jobs:
           path: |
             games/fishing-godot-mvp/build/*.apk
             games/fishing-godot-mvp/build/scene-preview.png
+            games/fishing-godot-mvp/build/gameplay-preview.png
+            games/fishing-godot-mvp/build/settings-preview.png
+            games/fishing-godot-mvp/build/journal-preview.png
             games/fishing-godot-mvp/build/trophy-preview.png
             games/fishing-godot-mvp/assets/textures/sky_panorama.jpg
           if-no-files-found: error
