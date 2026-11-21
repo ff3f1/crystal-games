@@ -68,6 +68,10 @@ assert(!read("js/cozy-gear.js").includes("Math.sin(t*2.1)*.6"),
  "float and line endpoint must share exactly one weather-driven bob");
 assert(read("js/scene.js").includes("FZ.CozyMotion.rodWeather"),
  "wind sway uses the existing full rod instead of a floating ornament");
+assert(read("js/scene.js").includes("const windF = 0.24 + wx.wind / 7.4"),
+ "real session wind changes water roughness, including calm");
+assert(read("js/cozy-gear.js").includes("ctx.scale(1,-.32)"),
+ "photo float uses a small inverted reflection instead of an extra ring");
 assert(read("js/rod-art.js").includes("drawRotor(ctx, mode, reelAngle)") &&
  !read("js/rod-art.js").includes("drawCrank(ctx, mode, reelAngle)"),
  "reel image must have subtle rotor animation instead of oversized cartoon crank");

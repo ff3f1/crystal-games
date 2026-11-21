@@ -32,10 +32,21 @@
  };
  // Small waterline displacement is tied to actual float motion, never a
  // permanent halo around a completely submerged or motionless bobber.
+ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+ function exposureOf(sink){
+   // A disappearing bobber must lose all surface contact and reflection.
+   return clamp((.78-Math.max(0,sink||0))/.78,0,1);
+ }
  function meniscusStrength(sink,tilt,dx,bob){
-   const exposure=Math.max(0,Math.min(1,(.78-Math.max(0,sink||0))/.78));
+   const exposure=exposureOf(sink);
    const activity=Math.min(1,Math.abs(tilt||0)*.7+Math.abs(dx||0)/13+Math.abs(bob||0)*.20);
    return exposure*(.04+.14*activity);
+ }
+ function reflectionAlpha(sink,tilt,wind,night){
+   const exposure=exposureOf(sink);
+   // Water is a soft, blurred mirror; a rolling float or windy lake has
+   // a weaker reflection. Keep mobile rendering transparent and lightweight.
+   return exposure*clamp(.105-.032*Math.abs(tilt||0)-.003*Math.max(0,wind||0),.035,.105)*(night?.53:1);
  }
  const oldFloat=R.drawFloat;
  R.drawFloat=function(p,tk,L,t,night){
@@ -51,6 +62,22 @@
    if(night)ctx.filter="brightness(.74)";
    ctx.drawImage(asset,-width/2,-h+h*Math.max(0,sink),width,height);
    ctx.restore();
+   // A tiny, inverted reflection of the SAME photographic float just below
+   // the waterline. It follows pitch and vanishes on a full take.
+   const reflection=reflectionAlpha(sink,tk.tilt,
+     G.sess()&&G.sess().wx&&G.sess().wx.wind,night);
+   if(reflection>.006){
+     ctx.save();
+     ctx.beginPath();
+     ctx.rect(x-width*1.3,y+.55,width*2.6,height*.45);
+     ctx.clip();
+     ctx.globalAlpha*=reflection;
+     ctx.translate(x,y+1);
+     ctx.scale(1,-.32);
+     ctx.rotate(-(tk.tilt||0)*1.35);
+     ctx.drawImage(asset,-width/2,-h+h*Math.max(0,sink),width,height);
+     ctx.restore();
+   }
    const strength=meniscusStrength(sink,tk.tilt,tk.dx,tk.bob);
    if(night&&R.glow&&strength>.045)R.glow(x,y-h*.67,h*.42);
    if(strength>.018){
@@ -90,7 +117,7 @@
    return result;
  };
  FZ.CozyGear={
-   meniscusStrength,
+   meniscusStrength,reflectionAlpha,
    lineStyle(v,L){
      const id=G.loadout(v.mode).line||"l1";
      const widths={l1:.85,l2:.97,l3:1.06,l4:1.14,l5:1.17,l6:1.29,l7:1.34,l8:1.43};

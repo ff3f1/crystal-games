@@ -61,7 +61,34 @@ const dir="work/real-art-review";fs.mkdirSync(dir,{recursive:true});
  });
  await page.waitForTimeout(150);
  await page.screenshot({path:path.join(dir,"07b-windy-float.png")});
- await page.evaluate(()=>{const s=FZ.Game.sess();s.wx.wind=s.wx.__reviewWind;delete s.wx.__reviewWind});
+ const physicalReflection=await page.evaluate(()=>{
+   const f=FZ.CozyGear.reflectionAlpha, m=FZ.CozyGear.meniscusStrength;
+   return{
+     surface:f(0,0,0,false),
+     storm:f(0,0,11,false),
+     tilted:f(0,1,0,false),
+     under:f(1.15,0,0,false),
+     night:f(0,0,0,true),
+     ringUnder:m(1.15,0,0,.4)
+   };
+ });
+ assert(physicalReflection.surface>.09 &&
+   physicalReflection.storm<physicalReflection.surface &&
+   physicalReflection.tilted<physicalReflection.surface &&
+   physicalReflection.night<physicalReflection.surface &&
+   physicalReflection.under===0 && physicalReflection.ringUnder===0,
+   "float reflection follows real water exposure and wind "+JSON.stringify(physicalReflection));
+ // Preview the real photo styles in actual gameplay, not an invented mockup.
+ await page.evaluate(()=>{FZ.Game.state().settings.cozyFloatSkin="match"});
+ await page.waitForTimeout(140);
+ await page.screenshot({path:path.join(dir,"07c-match-float.png")});
+ await page.evaluate(()=>{FZ.Game.state().settings.cozyFloatSkin="forest"});
+ await page.waitForTimeout(140);
+ await page.screenshot({path:path.join(dir,"07d-pear-float.png")});
+ await page.evaluate(()=>{
+   FZ.Game.state().settings.cozyFloatSkin="classic";
+   const s=FZ.Game.sess();s.wx.wind=s.wx.__reviewWind;delete s.wx.__reviewWind;
+ });
  // Real engine renders the equipped lure; set up a playable spin scene.
  await page.evaluate(()=>{
    const G=FZ.Game,st=G.state();

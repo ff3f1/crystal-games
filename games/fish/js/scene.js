@@ -422,7 +422,9 @@
     R.lastLight = L;
     const wx = v.wx;
     const over = wx.sky === "overcast" || wx.sky === "rain" || wx.sky === "storm" || wx.sky === "snow";
-    const windF = 0.5 + wx.wind / 7;
+    // The pond should be calm in a real lull. Reflections and the wind
+    // already share the same weather data, rather than constant busy waves.
+    const windF = 0.24 + wx.wind / 7.4;
     const key = loc.id + "|" + season + "|" + wx.sky + "|" + Math.round(v.hour * 16) + "|" + W + "x" + H + "|" + dpr + "|" + (v.ice ? 1 : 0) + "|" + FZ.Assets.version;
     for (const c of clouds) { c.x += (0.004 + wx.wind * 0.0025) * W * dt * 0.1; if (c.x > W * 1.25) c.x = -W * 0.35; }
     if (key !== baseKey) { buildBase(v, L, over); baseKey = key; composeTop(); composeT = t; if (!v.ice) buildRefl(v, L, over); reflDirty = false; }
@@ -464,7 +466,7 @@
       const k = d / rh;
       const step = Math.max(1, Math.round((lo ? 4 + k * 12 : 2.5 + k * 7) * dpr));
       const y = top0 + d;
-      const amp = (0.4 + k * k * 9) * windF;
+      const amp = (0.24 + k * k * 6.2) * windF;
       const dx = Math.round((Math.sin(y / dpr * 0.11 + t * 1.7) * amp + Math.sin(y / dpr * 0.037 - t * 1.1) * amp * 0.7 - 8) * dpr);
       const hh = Math.min(step, rh - d);
       ctx.drawImage(reflC, 0, d, reflC.width, hh, dx + ox, y, reflC.width, hh);
@@ -478,7 +480,7 @@
       for (let i = 0; i < 130; i++) dashes.push({ k: Math.pow(r(), 1.25), x: r() * (W + 80), l: r.range(0.5, 1.5), ph: r() * 6.28, light: r() > 0.42, sp: r.range(0.6, 1.4) });
     }
     const n = lo ? 60 : 130;
-    const wa = Math.min(1.3, windF);
+    const wa = Math.min(1.2, windF);
     const lightC = U.mix(U.mix(L.bot, "#ffffff", 0.35), "#7080a0", L.dark), darkC = U.mix("#0a1a24", "#000000", L.dark);
     for (let pass = 0; pass < 2; pass++) {
       ctx.fillStyle = pass ? darkC : lightC;
@@ -487,7 +489,7 @@
         const k = q.k, yy = shoreY + 2 + k * (span - 2);
         const w = (5 + k * 60) * q.l;
         let x = (q.x + t * (4 + 22 * k) * windF * q.sp) % (W + 80) - 40;
-        const a = (0.07 + 0.2 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
+        const a = (0.055 + 0.16 * k) * (0.55 + 0.45 * Math.sin(t * 1.3 * q.sp + q.ph)) * wa;
         if (a <= 0.01) continue;
         ctx.globalAlpha = a; ctx.fillRect(x, yy, w, 0.6 + k * 1.6);
       }
