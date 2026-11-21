@@ -24,7 +24,6 @@
      title.insertAdjacentHTML("afterend",
        '<div class="cozy-menu-scene" aria-hidden="true"><div class="cozy-menu-sun"></div><div class="cozy-menu-horizon"></div>'+
        '<img class="cozy-rod-still" src="assets/equipment/complete-hd/spin.webp" alt="">'+
-       '<img class="cozy-reel-still" src="assets/equipment/reel_spinning_gold.png" alt="">'+
        '<div class="cozy-menu-reeds"></div></div>');
    }
    const go=lodge.querySelector(".go");
