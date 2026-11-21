@@ -30,14 +30,17 @@ func _looping_player(key: String, decibels: float) -> AudioStreamPlayer:
     player.volume_db = decibels
     var track := load("res://assets/audio/%s.wav" % key) as AudioStream
     if track != null:
-        if track is AudioStreamWAV:
-            var pcm := track as AudioStreamWAV
-            pcm.loop_mode = AudioStreamWAV.LOOP_FORWARD
-            pcm.loop_begin = 0
-            pcm.loop_end = pcm.data.size() / 2
+        # Do not set AudioStreamWAV.loop_mode: Godot 4.5 keeps looped
+        # imported WAVs alive at engine shutdown. Restart on natural end.
         player.stream = track
         player.play()
     return player
+
+func _process(_delta: float) -> void:
+    if water != null and water.stream != null and not water.playing:
+        water.play()
+    if birds != null and birds.stream != null and not birds.playing:
+        birds.play()
 
 func play(key: String) -> void:
     if not effects.has(key):
