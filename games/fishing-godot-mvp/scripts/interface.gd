@@ -49,7 +49,7 @@ func _page(name: String, wide: bool = false) -> Panel:
     _label(root, "ТИХОЕ ОЗЕРО", 48, 0.065, 0.055, 0.48, 0.15, ink)
     _label(root, "РЫБАЛКА • ПЕРВЫЙ ЗАБРОС", 21, 0.069, 0.165, 0.49, 0.24, amber)
     _label(root, "Свободный берег. Настоящий улов.\nТвой следующий заброс может стать рекордным.", 22, 0.07, 0.30, 0.47, 0.48, muted)
-    _label(root, "GODOT 4  ·  TEST BUILD 0.3", 17, 0.07, 0.88, 0.49, 0.96, muted)
+    _label(root, "GODOT 4  ·  MVP 0.4", 17, 0.07, 0.88, 0.49, 0.96, muted)
     var panel := Panel.new()
     var style := StyleBoxFlat.new()
     style.bg_color = Color(0.035, 0.09, 0.10, 0.98)
@@ -186,13 +186,13 @@ func _fish_preview(panel: Control, species: String) -> void:
     env.background_color = Color(0.085, 0.18, 0.19)
     env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.ambient_light_color = Color(0.75, 0.81, 0.76)
-    env.ambient_light_energy = 0.90
+    env.ambient_light_energy = 0.67
     env_node.environment = env
     viewport.add_child(env_node)
 
     var cam := Camera3D.new()
     viewport.add_child(cam)
-    cam.position = Vector3(0, 0.06, 3.55)
+    cam.position = Vector3(0, 0.06, 3.65)
     cam.fov = 45.0
     cam.look_at(Vector3.ZERO)
     cam.current = true
@@ -200,7 +200,7 @@ func _fish_preview(panel: Control, species: String) -> void:
     var light := DirectionalLight3D.new()
     viewport.add_child(light)
     light.rotation_degrees = Vector3(-39, -28, 10)
-    light.light_energy = 2.2
+    light.light_energy = 1.28
 
     preview_rig = Node3D.new()
     viewport.add_child(preview_rig)
@@ -228,7 +228,7 @@ func _fit_model(model: Node3D) -> float:
                     hi = hi.max(p)
     var span := hi - lo
     var widest := maxf(span.x, maxf(span.y, span.z))
-    var factor := 4.25 / maxf(widest, 0.1)
+    var factor := 6.85 / maxf(widest, 0.1)
     var wrapper := Node3D.new()
     model.get_parent().add_child(wrapper)
     model.reparent(wrapper, false)
