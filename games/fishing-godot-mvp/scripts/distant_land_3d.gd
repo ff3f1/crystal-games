@@ -147,35 +147,71 @@ func _pine_mesh(variety: int) -> ArrayMesh:
     return st.commit()
 
 func _build_conifer_forest() -> void:
-    # Several different crown meshes avoid identically tiered tree silhouettes.
-    # Each group is batched as a MultiMesh with per-instance tint.
-    for variety in range(3):
-        var forest := MultiMeshInstance3D.new()
-        forest.name = "InstancedVolumetricConifers" if variety == 0 else "ConiferShapeVariant%d" % variety
-        var multiple := MultiMesh.new()
-        multiple.transform_format = MultiMesh.TRANSFORM_3D
-        multiple.use_colors = true
-        multiple.mesh = _pine_mesh(variety)
-        multiple.instance_count = 190
-        for index in range(multiple.instance_count):
-            var x := rng.randf_range(-174.0, 174.0)
-            var z := rng.randf_range(-274.0, -87.0)
-            var scale_tree := rng.randf_range(0.75, 1.96)
-            if z < -180.0:
-                scale_tree *= 1.12
-            var ground := height_at(x, z)
-            var basis := Basis(Vector3.UP, rng.randf_range(-PI, PI)).scaled(Vector3.ONE * scale_tree)
-            multiple.set_instance_transform(index, Transform3D(basis, Vector3(x, ground - 0.055, z)))
-            var tint := rng.randf_range(0.82, 1.12)
-            multiple.set_instance_color(index, Color(tint * 0.97, tint, tint * 0.96, 1.0))
-        var mat := StandardMaterial3D.new()
-        mat.vertex_color_use_as_albedo = true
-        mat.roughness = 0.96
-        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-        forest.material_override = mat
-        forest.multimesh = multiple
-        forest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-        add_child(forest)
+    # The previous 570 angular procedural pine cones are no longer rendered.
+    # Instancing actual artist-authored Scots pine and Norway spruce GLB
+    # surfaces preserves bark, needle materials and asymmetrical 3D branches.
+    var sources: Array[String] = [
+        "res://assets/models/scots_pine_lod2.glb",
+        "res://assets/models/norway_spruce_lod2.glb"
+    ]
+    var labels: Array[String] = ["InstancedVolumetricConifers", "AuthoredNorwaySpruceForest"]
+    var total := 0
+    for kind in range(sources.size()):
+        var scene: PackedScene = load(sources[kind]) as PackedScene
+        if scene == null:
+            push_error("Missing CC0 authored forest model: " + sources[kind])
+            continue
+        var template: Node3D = scene.instantiate() as Node3D
+        if template == null:
+            push_error("Invalid 3D forest model " + sources[kind])
+            continue
+        var mesh_parts: Array[Dictionary] = []
+        _collect_external_meshes(template, Transform3D.IDENTITY, mesh_parts)
+        template.free()
+        if mesh_parts.is_empty():
+            push_error("GLB tree has no mesh surfaces: " + sources[kind])
+            continue
+        var placements: Array[Transform3D] = []
+        var count := 175 if kind == 0 else 195
+        for index in range(count):
+            var x := rng.randf_range(-181.0, 181.0)
+            var z := rng.randf_range(-274.0, -84.0)
+            # Meters: real models are ~20 m tall, not hand-made 5 m cones.
+            var size_scalar := rng.randf_range(0.38, 0.88)
+            var width_variation := rng.randf_range(0.86, 1.09)
+            var basis := Basis(Vector3.UP, rng.randf_range(-PI, PI)).scaled(
+                Vector3(width_variation * size_scalar, size_scalar, width_variation * size_scalar))
+            placements.append(Transform3D(basis, Vector3(x, height_at(x, z) - 0.08, z)))
+        for part_index in range(mesh_parts.size()):
+            var entry: Dictionary = mesh_parts[part_index]
+            var part_mesh: Mesh = entry["mesh"]
+            var part_transform: Transform3D = entry["transform"]
+            var multiple := MultiMesh.new()
+            multiple.transform_format = MultiMesh.TRANSFORM_3D
+            multiple.mesh = part_mesh
+            multiple.instance_count = placements.size()
+            for index in range(placements.size()):
+                multiple.set_instance_transform(index, placements[index] * part_transform)
+            var forest := MultiMeshInstance3D.new()
+            forest.name = labels[kind] if part_index == 0 else labels[kind] + "Mesh%d" % part_index
+            forest.multimesh = multiple
+            forest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+            add_child(forest)
+        total += count
+    print("ART_AUDIT: imported authored CC0 forest (not procedural trees): ", total, " specimens")
+
+func _collect_external_meshes(node: Node3D, cumulative: Transform3D, output: Array[Dictionary]) -> void:
+    for child in node.get_children():
+        if not child is Node3D:
+            continue
+        var part := child as Node3D
+        var next: Transform3D = cumulative * part.transform
+        if part is MeshInstance3D and (part as MeshInstance3D).mesh != null:
+            output.append({
+                "mesh": (part as MeshInstance3D).mesh,
+                "transform": next
+            })
+        _collect_external_meshes(part, next, output)
 
 func _build_shore_rocks() -> void:
     var rock := SphereMesh.new()
