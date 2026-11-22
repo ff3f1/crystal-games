@@ -549,13 +549,14 @@ func _create_rod() -> void:
                 old_part.visible = false
         var authored_rod: Node3D = authored_scene.instantiate() as Node3D
         authored_rod.name = "AuthoredPBRFishingRod"
-        # The source rod is 1.9 m long and leans upward along source XY.
-        # Yaw it into first-person depth, moderate the slope and keep the cork
-        # grip a safe distance from the camera (the old butt was oversized).
+        # Position the *real* cork grip in the bottom-right foreground, so
+        # the authored rod looks physically held instead of hanging above
+        # the lake. The old -2.10 m model offset made the entire rod tiny
+        # and disconnected from the gloves at normal mobile FOV.
         authored_rod.rotation.y = PI * 0.5
         authored_rod.rotate_object_local(Vector3.BACK, -0.21)
         authored_rod.scale = Vector3.ONE * 1.59
-        authored_rod.position = Vector3(-0.13, -0.025, -2.10)
+        authored_rod.position = Vector3(-0.13, -0.275, -1.63)
         rod_root.add_child(authored_rod)
         # Auxiliary fork, ground float and hanging line are showroom props,
         # not part of the fishing tool in hand.
