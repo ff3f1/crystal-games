@@ -409,7 +409,26 @@ func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: 
     prop.rotation.y = facing
     if name.begins_with("tree-") or name.begins_with("plant-") or name.begins_with("grass-"):
         _correct_nature_colors(prop, name)
+    if name.begins_with("grass-") or name.begins_with("plant-") or name.begins_with("shrub_"):
+        # Imported kits have inconsistent origins (some centered, some below
+        # the stem). Snap actual mesh minimum to the *physical* soil rather
+        # than letting tufts hover across the waterline.
+        var low := _lowest_mesh_y(prop)
+        if low < 99999.0:
+            prop.position.y += location.y - low - 0.025 * factor
     return prop
+
+func _lowest_mesh_y(node: Node) -> float:
+    var minimum_y := 100000.0
+    if node is MeshInstance3D:
+        var part := node as MeshInstance3D
+        var bounds := part.get_aabb()
+        for vertex in range(8):
+            var world_point: Vector3 = part.global_transform * bounds.get_endpoint(vertex)
+            minimum_y = minf(minimum_y, world_point.y)
+    for child in node.get_children():
+        minimum_y = minf(minimum_y, _lowest_mesh_y(child))
+    return minimum_y
 
 func _correct_nature_colors(node: Node, asset_name: String) -> void:
     # Kenney glTF source uses a blue-cyan foliage palette. Preserve the original
