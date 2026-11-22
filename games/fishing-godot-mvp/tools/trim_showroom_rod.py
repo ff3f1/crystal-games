@@ -71,6 +71,38 @@ def trim(source, destination):
     removed = int((~keep).sum())
     if not 700 <= removed <= 1600:
         raise ValueError("Cannot safely identify the disconnected fishing stand")
+
+    # The source showroom model also contains a brown fork resting above the
+    # rod and a long beige *static* display line. Both remained after the
+    # support-pole trim and appeared as floating geometry on real game frames.
+    # Select whole topology-connected objects based on their measured source
+    # bounds. Do not cut the authored rod or its guide rings by position alone.
+    comp_min = np.full((len(points), 3), np.inf, dtype=np.float64)
+    comp_max = np.full((len(points), 3), -np.inf, dtype=np.float64)
+    for axis in range(3):
+        np.minimum.at(comp_min[:, axis], components, points[:, axis])
+        np.maximum.at(comp_max[:, axis], components, points[:, axis])
+    extra_fork = (
+        (comp_min[:, 0] > -0.11) & (comp_min[:, 0] < -0.04)
+        & (comp_max[:, 0] > -0.09) & (comp_max[:, 0] < -0.03)
+        & (comp_min[:, 1] > 0.35) & (comp_min[:, 1] < 0.41)
+        & (comp_max[:, 1] > 0.44)
+    )
+    display_line = (
+        (comp_min[:, 0] > -0.66) & (comp_min[:, 0] < -0.49)
+        & (comp_max[:, 0] > 0.88)
+        & (comp_min[:, 1] < 0.185)
+        & (comp_max[:, 1] > 0.68)
+    )
+    fork_faces = extra_fork[components[triangles[:, 0]]]
+    line_faces = display_line[components[triangles[:, 0]]]
+    fork_removed = int((keep & fork_faces).sum())
+    line_removed = int((keep & line_faces).sum())
+    if not (340 <= fork_removed <= 560 and 520 <= line_removed <= 820):
+        raise ValueError(
+            f"Pinned GLB showroom geometry has changed: fork={fork_removed}, line={line_removed}"
+        )
+    keep &= ~(fork_faces | line_faces)
     cleaned = np.asarray(triangles[keep].reshape(-1), dtype=dtype)
     appended = cleaned.tobytes()
     new_offset = len(binary)
@@ -97,7 +129,7 @@ def trim(source, destination):
     destination.write_bytes(result)
     assert unpack(destination.read_bytes())[0]["accessors"][accessor_id]["count"] == len(cleaned)
     print(f"AUTHORED_ROD_TRIM_OK: retained {int(keep.sum())} authored faces; "
-          f"removed {removed} display-stand/line/float faces; PBR textures unchanged")
+          f"removed {removed} display stand, {fork_removed} fork, {line_removed} static line faces; PBR textures unchanged")
 
 
 if __name__ == "__main__":
