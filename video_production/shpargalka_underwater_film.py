@@ -94,18 +94,33 @@ def getvideo():
  if len(available)<5:raise RuntimeError('Недостаточно реального видео: '+str(list(available)))
  (D/'CREDITS_AND_LICENSES.txt').write_text('\n'.join(licenses),encoding='utf8')
  return available
-async def voices():
+def voices():
+ # Completely local TTS on the GitHub runner: no Edge or external API needed.
+ import sys
+ subprocess.run([sys.executable,'-m','pip','install','-q','piper-tts'],check=True)
+ modeldir=T/'voice_model';modeldir.mkdir(exist_ok=True)
+ model=modeldir/'ru_RU-dmitri-medium.onnx'
+ config=modeldir/'ru_RU-dmitri-medium.onnx.json'
+ base='https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/'
+ for path in (model,config):
+  if not path.exists() or path.stat().st_size<1000:
+   print('Downloading offline Russian voice model',path.name,flush=True)
+   with requests.get(base+path.name,stream=True,timeout=(25,180)) as res:
+    res.raise_for_status()
+    with path.open('wb') as fd:
+     for part in res.iter_content(1024*1024):
+      if part: fd.write(part)
+ if model.stat().st_size<1000000:raise RuntimeError('Voice model download incomplete')
  durations=[]
  for i,(title,_,script) in enumerate(CHAPTERS):
-  file=T/f'voice_{i:02d}.mp3'
-  try:
-   await edge_tts.Communicate(script,voice='ru-RU-DmitryNeural',rate='-6%').save(str(file))
-  except Exception as ex:
-   print('Edge retry',ex,flush=True)
-   await asyncio.sleep(4)
-   await edge_tts.Communicate(script,voice='ru-RU-DmitryNeural',rate='-2%').save(str(file))
-  durations.append(length(file))
-  print('VOICE',i+1,round(durations[-1],1),flush=True)
+  wav=T/f'voice_{i:02d}.wav'
+  mp3=T/f'voice_{i:02d}.mp3'
+  p=subprocess.run(['piper','--model',str(model),'--output_file',str(wav)],input=script,text=True,encoding='utf-8',stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+  if p.returncode: raise RuntimeError('Piper failed: '+p.stderr[-1800:])
+  run([FF,'-hide_banner','-loglevel','error','-y','-i',str(wav),'-c:a','libmp3lame','-q:a','3',str(mp3)])
+  durations.append(length(mp3))
+  print('OFFLINE VOICE',i+1,round(durations[-1],1),flush=True)
+ (D/'VOICE_ATTRIBUTION.txt').write_text('Piper Russian voice: ru_RU-dmitri-medium (rhasspy/piper-voices). Based on OHF-Voice datasets; if using in a monetized release, credit model authors and Hi-Fi TTS (CC BY 4.0 base).\nhttps://huggingface.co/rhasspy/piper-voices/tree/main/ru/ru_RU/dmitri/medium\n',encoding='utf8')
  return durations
 def textoverlay(title,idx,local_name):
  im=Image.new('RGBA',(1280,720),(0,0,0,0)); d=ImageDraw.Draw(im)
@@ -150,5 +165,5 @@ def render(available,ds):
  print('FINISHED',OUT,'DURATION',length(OUT),'SIZE',OUT.stat().st_size,flush=True)
 if __name__=='__main__':
  sources=getvideo()
- ds=asyncio.run(voices())
+ ds=voices()
  render(sources,ds)
