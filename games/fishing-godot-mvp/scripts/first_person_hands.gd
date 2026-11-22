@@ -35,7 +35,7 @@ func _install_sculpted_gloves() -> void:
             "path": "res://assets/models/glove_left.glb",
             "wrist": left_wrist,
             "position": Vector3(0.036, 0.11, -0.196),
-            "rotation": Vector3(-1.43, 0.18, -0.24),
+            "rotation": Vector3(-1.35, 0.21, -0.89),
             "scale": 1.06
         },
         {
@@ -43,7 +43,7 @@ func _install_sculpted_gloves() -> void:
             "path": "res://assets/models/glove_right.glb",
             "wrist": right_wrist,
             "position": Vector3(-0.059, 0.115, -0.188),
-            "rotation": Vector3(-1.49, -0.22, 0.25),
+            "rotation": Vector3(-1.39, -0.25, 0.80),
             "scale": 1.04
         }
     ]
