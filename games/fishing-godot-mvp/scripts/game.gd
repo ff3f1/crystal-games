@@ -316,7 +316,7 @@ func _input(event: InputEvent) -> void:
         if event.pressed:
             if event.position.x < view_size.x * 0.32 and event.position.y > view_size.y * 0.52 and joystick_touch_id == -1:
                 joystick_touch_id = event.index
-                joystick_origin = Vector2(view_size.x * 0.135, view_size.y * 0.884)
+                joystick_origin = Vector2(103.0, view_size.y - 87.0)
                 _move_joystick(event.position)
             elif look_touch_id == -1 and event.position.y < view_size.y * 0.73:
                 look_touch_id = event.index
@@ -334,12 +334,12 @@ func _input(event: InputEvent) -> void:
             _look_drag(event.relative)
 
 func _move_joystick(pos: Vector2) -> void:
-    joystick_vector = ((pos - joystick_origin) / 64.0).limit_length(1.0)
+    joystick_vector = ((pos - joystick_origin) / 53.0).limit_length(1.0)
     _update_joystick_knob()
 
 func _update_joystick_knob() -> void:
     if joystick_knob != null:
-        joystick_knob.position = Vector2(72, 29) + joystick_vector * 33.0
+        joystick_knob.position = Vector2(42, 42) + joystick_vector * 34.0
 
 func _update_player(delta: float) -> void:
     var move := joystick_vector
@@ -666,112 +666,208 @@ func _animate_lake(delta: float) -> void:
             marker.scale = Vector3.ONE * (0.85 + activity * 0.23)
 
 func _create_ui() -> void:
+    # The lake is the interface. Keep the full landscape visible and dock
+    # controls in small, self-contained circular touch targets at the edges.
     var ui := CanvasLayer.new()
     hud_layer = ui
     add_child(ui)
     var root := Control.new()
+    root.name = "FishingHUD"
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_PASS
     ui.add_child(root)
 
-    var shade := ColorRect.new()
-    shade.color = Color(0.012, 0.035, 0.039, 0.18)
-    shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(shade, 0, 0, 1, 0.085)
-    root.add_child(shade)
+    title_label = _hud_text(root, "ТИХОЕ ОЗЕРО    /    РАННЕЕ УТРО", 17, 20, 14, 365, 30)
+    title_label.add_theme_color_override("font_color", Color(0.96, 0.96, 0.88))
+    message_label = _hud_text(root, "", 15, 20, 44, 470, 32)
+    catch_label = _hud_text(root, "0 РЫБ   ·   РЕКОРД —", 14, 420, 15, 330, 28)
+    catch_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    catch_label.anchor_left = 1.0
+    catch_label.anchor_right = 1.0
+    catch_label.offset_left = -410
+    catch_label.offset_right = -80
 
-    var lower := ColorRect.new()
-    lower.color = Color(0.015, 0.030, 0.037, 0.13)
-    lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(lower, 0, 0.82, 1, 1)
-    root.add_child(lower)
-
-    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 20, 0.026, 0.005, 0.68, 0.052)
-    message_label = _label(root, "", 16, 0.026, 0.055, 0.78, 0.112)
-    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 15, 0.63, 0.012, 0.875, 0.077)
-    var pause_button := _button(root, "☰", 0.88, 0.012, 0.946, 0.10, Color(0.18, 0.34, 0.35))
-    pause_button.add_theme_font_size_override("font_size", 27)
+    var pause_button := _hud_circle(root, "II", 52, 24, 22, Color(0.08, 0.17, 0.18, 0.62), true)
+    pause_button.add_theme_font_size_override("font_size", 20)
     pause_button.pressed.connect(open_pause)
-    stats_label = _label(root, "", 16, 0.255, 0.776, 0.985, 0.832)
 
-    stamina_label = _label(root, "", 15, 0.278, 0.795, 0.60, 0.837)
-    stamina_label.add_theme_color_override("font_color", Color(0.76, 0.89, 0.79))
+    # Status stays ABOVE the action cluster instead of covering the lake.
+    stats_label = _hud_text(root, "", 15, 0, 0, 510, 30)
+    stats_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    stats_label.offset_left = -531
+    stats_label.offset_right = -21
+    stats_label.offset_top = -177
+    stats_label.offset_bottom = -146
+    stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    stamina_label = _hud_text(root, "", 14, 0, 0, 340, 26)
+    stamina_label.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    stamina_label.offset_left = -350
+    stamina_label.offset_right = -20
+    stamina_label.offset_top = -198
+    stamina_label.offset_bottom = -175
 
     tension_bar = ProgressBar.new()
-    tension_bar.min_value = 0
-    tension_bar.max_value = 100
+    tension_bar.name = "LineTension"
+    tension_bar.min_value = 0.0
+    tension_bar.max_value = 100.0
     tension_bar.show_percentage = false
-    _place(tension_bar, 0.435, 0.832, 0.960, 0.854)
+    tension_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    tension_bar.offset_left = -336
+    tension_bar.offset_right = -20
+    tension_bar.offset_top = -139
+    tension_bar.offset_bottom = -131
+    var meter_bg := StyleBoxFlat.new()
+    meter_bg.bg_color = Color(0.06, 0.13, 0.14, 0.65)
+    meter_bg.set_corner_radius_all(5)
+    tension_bar.add_theme_stylebox_override("background", meter_bg)
+    var meter_fill := StyleBoxFlat.new()
+    meter_fill.bg_color = Color(0.80, 0.63, 0.37, 0.95)
+    meter_fill.set_corner_radius_all(5)
+    tension_bar.add_theme_stylebox_override("fill", meter_fill)
     root.add_child(tension_bar)
 
-    # Mobile joystick occupies the lower left. Movement input is processed via _input,
-    # allowing right-hand gestures to freely rotate the first-person camera.
+    # Virtual stick: a real circular control, not a stretched rectangle.
     var pad := Panel.new()
+    pad.name = "ThumbstickRing"
+    pad.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+    pad.offset_left = 36
+    pad.offset_right = 170
+    pad.offset_top = -154
+    pad.offset_bottom = -20
     var pad_style := StyleBoxFlat.new()
-    pad_style.bg_color = Color(0.095, 0.20, 0.19, 0.28)
-    pad_style.border_color = Color(0.76, 0.84, 0.71, 0.28)
+    pad_style.bg_color = Color(0.030, 0.11, 0.12, 0.22)
+    pad_style.border_color = Color(0.81, 0.89, 0.80, 0.29)
     pad_style.set_border_width_all(2)
-    pad_style.set_corner_radius_all(72)
+    pad_style.set_corner_radius_all(69)
     pad.add_theme_stylebox_override("panel", pad_style)
-    _place(pad, 0.055, 0.802, 0.210, 0.966)
     pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(pad)
     joystick_knob = Panel.new()
+    joystick_knob.name = "Thumbstick"
     var knob_style := StyleBoxFlat.new()
-    knob_style.bg_color = Color(0.76, 0.82, 0.70, 0.68)
-    knob_style.set_corner_radius_all(39)
+    knob_style.bg_color = Color(0.83, 0.91, 0.82, 0.53)
+    knob_style.border_color = Color(0.96, 0.98, 0.90, 0.27)
+    knob_style.set_border_width_all(1)
+    knob_style.set_corner_radius_all(27)
     joystick_knob.add_theme_stylebox_override("panel", knob_style)
-    joystick_knob.size = Vector2(54, 54)
+    joystick_knob.size = Vector2(50, 50)
     joystick_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
     pad.add_child(joystick_knob)
     _update_joystick_knob()
 
-    action_button = _button(root, "ЗАБРОС", 0.790, 0.862, 0.974, 0.972, Color(0.44, 0.28, 0.15, 0.90))
+    # Every primary/secondary action is a discrete round touch target.
+    # Hidden actions free the camera view rather than leaving dead tiles.
+    action_button = _hud_circle(root, "ЗАБРОС", 112, 19, 20, Color(0.68, 0.41, 0.22, 0.86))
+    action_button.name = "ActionCircle"
+    action_button.add_theme_font_size_override("font_size", 17)
     action_button.pressed.connect(_main_action)
     action_button.button_down.connect(_begin_charge)
     action_button.button_up.connect(_end_charge)
+
+    lure_button = _hud_circle(root, "ЧЕРВЬ", 78, 143, 37, Color(0.10, 0.28, 0.28, 0.73))
+    lure_button.name = "BaitCircle"
+    lure_button.add_theme_font_size_override("font_size", 16)
+    lure_button.pressed.connect(_toggle_lure)
+
+    reel_button = _hud_circle(root, "МОТАТЬ", 108, 142, 21, Color(0.08, 0.26, 0.27, 0.78))
+    reel_button.add_theme_font_size_override("font_size", 16)
+    reel_button.button_down.connect(func() -> void: is_reeling = true)
+    reel_button.button_up.connect(func() -> void: is_reeling = false)
+
+    brace_button = _hud_circle(root, "ПОДНЯТЬ", 91, 25, 140, Color(0.20, 0.33, 0.23, 0.78))
+    brace_button.add_theme_font_size_override("font_size", 15)
+    brace_button.button_down.connect(func() -> void: is_bracing = true)
+    brace_button.button_up.connect(func() -> void: is_bracing = false)
+
+    drag_button = _hud_circle(root, "ФРИКЦИОН", 88, 267, 30, Color(0.16, 0.23, 0.24, 0.78))
+    drag_button.add_theme_font_size_override("font_size", 13)
+    drag_button.pressed.connect(_cycle_drag)
+
     cast_charge_bar = ProgressBar.new()
     cast_charge_bar.min_value = 0.0
     cast_charge_bar.max_value = 100.0
     cast_charge_bar.show_percentage = false
-    _place(cast_charge_bar, 0.555, 0.832, 0.962, 0.854)
+    cast_charge_bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+    cast_charge_bar.offset_left = -130
+    cast_charge_bar.offset_right = -20
+    cast_charge_bar.offset_top = -143
+    cast_charge_bar.offset_bottom = -135
+    cast_charge_bar.add_theme_stylebox_override("background", meter_bg.duplicate())
+    cast_charge_bar.add_theme_stylebox_override("fill", meter_fill.duplicate())
     root.add_child(cast_charge_bar)
     cast_charge_bar.visible = false
-    lure_button = _button(root, "ЧЕРВЬ", 0.614, 0.862, 0.778, 0.972, Color(0.10, 0.28, 0.29, 0.90))
-    lure_button.pressed.connect(_toggle_lure)
-    reel_button = _button(root, "МОТАТЬ", 0.548, 0.862, 0.766, 0.972, Color(0.09, 0.30, 0.32, 0.90))
-    reel_button.button_down.connect(func() -> void: is_reeling = true)
-    reel_button.button_up.connect(func() -> void: is_reeling = false)
-    brace_button = _button(root, "ДЕРЖАТЬ", 0.790, 0.862, 0.974, 0.972, Color(0.21, 0.30, 0.19, 0.90))
-    brace_button.button_down.connect(func() -> void: is_bracing = true)
-    brace_button.button_up.connect(func() -> void: is_bracing = false)
-    drag_button = _button(root, "ФРИКЦИОН", 0.302, 0.862, 0.522, 0.972, Color(0.16, 0.20, 0.21, 0.90))
-    drag_button.pressed.connect(_cycle_drag)
 
-    # The minimap follows the player, floating lure and actual hotspots.
+    # Compact translucent radar, real lure coordinates, real fish contacts.
     minimap = (load("res://scripts/minimap.gd") as GDScript).new() as Control
+    minimap.name = "Radar"
     minimap.set("game", self)
     minimap.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    minimap.anchor_left = 1.0
-    minimap.anchor_right = 1.0
-    minimap.anchor_top = 0.0
-    minimap.anchor_bottom = 0.0
-    minimap.offset_left = -262.0
-    minimap.offset_right = -16.0
-    minimap.offset_top = 110.0
-    minimap.offset_bottom = 300.0
+    minimap.offset_left = -198
+    minimap.offset_right = -26
+    minimap.offset_top = 84
+    minimap.offset_bottom = 256
     root.add_child(minimap)
+    var map_toggle := _hud_circle(root, "MAP", 47, 27, 267, Color(0.07, 0.17, 0.18, 0.68), true)
+    map_toggle.name = "RadarToggle"
+    map_toggle.add_theme_font_size_override("font_size", 12)
+    # Toggling only affects the radar: the physical fish still exist.
+    map_toggle.pressed.connect(func() -> void: minimap.visible = not minimap.visible)
 
     lure_view = (load("res://scripts/lure_camera.gd") as GDScript).new() as Control
-    lure_view.anchor_left = 1.0
-    lure_view.anchor_right = 1.0
-    lure_view.anchor_top = 0.0
-    lure_view.anchor_bottom = 0.0
-    lure_view.offset_left = -262.0
-    lure_view.offset_right = -16.0
-    lure_view.offset_top = 311.0
-    lure_view.offset_bottom = 482.0
+    lure_view.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+    lure_view.offset_left = -218
+    lure_view.offset_right = -26
+    lure_view.offset_top = 283
+    lure_view.offset_bottom = 398
     root.add_child(lure_view)
+
+func _hud_text(parent: Control, value: String, font_size: int, left: float, top: float, width: float, height: float) -> Label:
+    var result := Label.new()
+    result.text = value
+    result.position = Vector2(left, top)
+    result.size = Vector2(width, height)
+    result.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    result.add_theme_font_size_override("font_size", font_size)
+    result.add_theme_color_override("font_color", Color(0.92, 0.94, 0.89, 0.96))
+    result.add_theme_color_override("font_shadow_color", Color(0.02, 0.05, 0.06, 0.78))
+    result.add_theme_constant_override("shadow_offset_x", 1)
+    result.add_theme_constant_override("shadow_offset_y", 2)
+    parent.add_child(result)
+    return result
+
+func _hud_circle(parent: Control, label: String, diameter: int, margin_right: int, margin_bottom: int, color: Color, top_right: bool = false) -> Button:
+    var result := Button.new()
+    result.text = label
+    result.focus_mode = Control.FOCUS_NONE
+    result.set_anchors_preset(Control.PRESET_TOP_RIGHT if top_right else Control.PRESET_BOTTOM_RIGHT)
+    result.offset_left = -margin_right - diameter
+    result.offset_right = -margin_right
+    if top_right:
+        result.offset_top = margin_bottom
+        result.offset_bottom = margin_bottom + diameter
+    else:
+        result.offset_top = -margin_bottom - diameter
+        result.offset_bottom = -margin_bottom
+    result.add_theme_font_size_override("font_size", 15)
+    result.add_theme_color_override("font_color", Color(0.95, 0.96, 0.89))
+    result.add_theme_color_override("font_hover_color", Color(1.0, 1.0, 0.96))
+    var normal := StyleBoxFlat.new()
+    normal.bg_color = color
+    normal.border_color = Color(0.81, 0.88, 0.79, 0.32)
+    normal.set_border_width_all(1)
+    normal.set_corner_radius_all(ceili(float(diameter) * 0.5))
+    result.add_theme_stylebox_override("normal", normal)
+    var hover := normal.duplicate() as StyleBoxFlat
+    hover.bg_color = color.lightened(0.13)
+    result.add_theme_stylebox_override("hover", hover)
+    var down := normal.duplicate() as StyleBoxFlat
+    down.bg_color = color.darkened(0.17)
+    result.add_theme_stylebox_override("pressed", down)
+    var disabled := normal.duplicate() as StyleBoxFlat
+    disabled.bg_color = Color(0.06, 0.15, 0.15, 0.47)
+    result.add_theme_stylebox_override("disabled", disabled)
+    parent.add_child(result)
+    return result
 
 func _label(parent: Control, txt: String, font_size: int, l: float, t: float, r: float, b: float) -> Label:
     var result := Label.new()
@@ -997,7 +1093,7 @@ func _cycle_drag() -> void:
     if phase != Phase.FIGHT:
         return
     fight_sim.cycle_drag()
-    drag_button.text = "ФРИКЦИОН: %s" % fight_sim.drag_name()
+    drag_button.text = "ТОРМОЗ: %s" % fight_sim.drag_name()
     sounds.call("play", "reel")
 
 func _update_fight(delta: float) -> void:
@@ -1122,19 +1218,19 @@ func _update_buttons() -> void:
         Phase.READY:
             action_button.text = "ЗАБРОС"
         Phase.CASTING:
-            action_button.text = "ЛЕТИТ..."
+            action_button.text = "..."
         Phase.WAITING:
-            action_button.text = "ПОКЛЁВКУ ЖДЁМ"
+            action_button.text = "ЖДЁМ"
         Phase.BITE:
             action_button.text = "ПОДСЕЧЬ!"
         Phase.FIGHT:
-            action_button.text = "РЫБА НА КРЮЧКЕ"
+            action_button.text = "БОРЬБА"
         Phase.LANDING:
             action_button.text = "ТРОФЕЙ..."
         Phase.RESULT:
-            action_button.text = "ЕЩЁ ЗАБРОС"
+            action_button.text = "ЗАБРОС"
     action_button.disabled = phase == Phase.CASTING or phase == Phase.WAITING or phase == Phase.FIGHT or phase == Phase.LANDING
-    action_button.visible = phase != Phase.FIGHT and phase != Phase.LANDING
+    action_button.visible = phase == Phase.READY or phase == Phase.BITE or phase == Phase.RESULT
     lure_button.disabled = phase != Phase.READY and phase != Phase.RESULT
     lure_button.visible = phase == Phase.READY or phase == Phase.RESULT
     var lure_retrieve := phase == Phase.WAITING and lure_index == 1
@@ -1169,10 +1265,10 @@ func _update_stats() -> void:
         Phase.LANDING:
             stats_label.text = "Рыба у берега — поднимаем трофей!"
         _:
-            stats_label.text = "Тихое озеро  ·  Приманка: %s  ·  Мини-карта справа" % ("червь" if lure_index == 0 else "блесна")
+            stats_label.text = "ОЗЕРО   ·   %s   ·   07:00" % ("ЧЕРВЬ" if lure_index == 0 else "БЛЕСНА")
     if phase != Phase.FIGHT:
         stats_label.add_theme_color_override("font_color", Color(0.96, 0.95, 0.87))
-    catch_label.text = "Улов: %d  ·  Рекорд: %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
+    catch_label.text = "УЛОВ %d   ·   РЕКОРД %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
 
 func _load_profile() -> void:
     var config := ConfigFile.new()
