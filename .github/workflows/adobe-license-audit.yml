@@ -1,0 +1,26 @@
+name: Audit licensed free Adobe fishing footage
+on:
+  push:
+    branches: [codex/shpargalka-free-adobe-audit]
+    paths:
+      - video_production/adobe_license_audit.py
+      - .github/workflows/adobe-license-audit.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: {sparse-checkout: video_production}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -q requests pillow imageio-ffmpeg
+      - run: python -u video_production/adobe_license_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adobe-license-fishing-contact
+          path: video_production/adobe_audit/CONTACT.jpg
+          retention-days: 2
