@@ -534,6 +534,32 @@ func _create_rod() -> void:
     _rod_section(reel_crank, crank_base, crank_elbow, 0.022, 0.019, steel)
     _rod_section(reel_crank, crank_elbow, crank_elbow + Vector3(-0.075, -0.048, 0.0), 0.034, 0.032, rubber)
 
+    # Replace the entire visible primitive blank/spool assembly with the
+    # authored CC0 fishing rod (11k triangles and PBR materials). The old
+    # procedural components remain invisible so legacy markers and tested
+    # physical simulations retain their exact positions.
+    var authored_scene: PackedScene = load("res://assets/models/authored_fishing_rod.glb") as PackedScene
+    if authored_scene == null:
+        push_error("Missing genuine authored 3D spinning rod")
+    else:
+        for old_part in rod_root.get_children():
+            if old_part is MeshInstance3D:
+                old_part.visible = false
+            elif old_part == reel_crank:
+                old_part.visible = false
+        var authored_rod: Node3D = authored_scene.instantiate() as Node3D
+        authored_rod.name = "AuthoredPBRFishingRod"
+        # The CC0 rod was sculpted resting on the X axis in metres. Align the
+        # length to the camera-forward axis and preserve our cast tip marker.
+        authored_rod.rotation.y = PI * 0.5
+        authored_rod.scale = Vector3.ONE * 1.84
+        authored_rod.position = Vector3(-0.03, 0.015, -2.08)
+        rod_root.add_child(authored_rod)
+        # Auxiliary fork, ground float and hanging line are showroom props,
+        # not part of the fishing tool in hand.
+        _hide_showroom_attachments(authored_rod)
+        print("ART_AUDIT: external CC0 spinning rod PBR mesh installed")
+
     rod_tip = Marker3D.new()
     rod_root.add_child(rod_tip)
     rod_tip.position = tip
@@ -546,6 +572,15 @@ func _create_rod() -> void:
     # First-person hand models do not affect rod physics or casting.
     hands = (load("res://scripts/first_person_hands.gd") as GDScript).new() as Node3D
     camera.add_child(hands)
+
+func _hide_showroom_attachments(node: Node) -> void:
+    for child in node.get_children():
+        var label := str(child.name).to_lower()
+        if "fork" in label or "stand" in label or "bobber" in label or "float" in label:
+            if child is Node3D:
+                (child as Node3D).visible = false
+        else:
+            _hide_showroom_attachments(child)
 
 func _taper_rod(a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
     _rod_section(rod_root, a, b, radius_start, radius_end, mat)
