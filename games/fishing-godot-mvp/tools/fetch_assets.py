@@ -58,6 +58,20 @@ for output_name, exact_title in QUIET_LAKE.items():
         raise ValueError(f"Unable to resolve asset {exact_title!r} in manifest")
     fetch(matches[0]["cdnUrl"], MODELS / f"{output_name}.glb")
 
+# Authored CC0 replacement meshes. These are genuine third-party sculpted
+# and textured assets, not generated triangles. Keep immutable source URLs
+# in the art manifest so licenses and source can be audited.
+ART_PASS_MODELS = {
+    "authored_fishing_rod.glb": "https://grab3d.com/dl/fishing-rod/fishing-rod.glb",
+    "authored_leather_gloves.glb": "https://tevy.dev/models/leather-work-gloves/v1/lod0.glb",
+    "scots_pine_lod1.glb": "https://tevy.dev/models/scots-pine/v1/lod1.glb",
+    "scots_pine_lod2.glb": "https://tevy.dev/models/scots-pine/v1/lod2.glb",
+    "norway_spruce_lod1.glb": "https://tevy.dev/models/norway-spruce/v1/lod1.glb",
+    "norway_spruce_lod2.glb": "https://tevy.dev/models/norway-spruce/v1/lod2.glb",
+}
+for name, url in ART_PASS_MODELS.items():
+    fetch(url, MODELS / name)
+
 # Kenney Nature Kit: CC0. Pin to a checked repo commit, not a moving branch.
 kenney_sha = "2063cb42fb45b80a20c3db066b71e627cc64741c"
 kenney_base = f"https://raw.githubusercontent.com/Hidencod/tge-assets/{kenney_sha}/packs/nature-kit/"
