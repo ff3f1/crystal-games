@@ -82,69 +82,100 @@ func _triangle(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, tint: Color)
     st.set_color(tint)
     st.add_vertex(c)
 
-func _pine_mesh() -> ArrayMesh:
+func _pine_mesh(variety: int) -> ArrayMesh:
+    var local_rng := RandomNumberGenerator.new()
+    local_rng.seed = 843119 + variety * 2057
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
-    var segments := 9
-    var trunk_color := Color(0.33, 0.255, 0.19)
-    var trunk_top := Color(0.28, 0.24, 0.20)
+    var segments := 11
+    var trunk_color := Color(0.31, 0.25, 0.18)
     for i in range(segments):
-        var angle_a := TAU * float(i) / segments
-        var angle_b := TAU * float(i + 1) / segments
-        var lower_a := Vector3(cos(angle_a) * 0.12, 0.0, sin(angle_a) * 0.12)
-        var lower_b := Vector3(cos(angle_b) * 0.12, 0.0, sin(angle_b) * 0.12)
-        var upper_a := Vector3(cos(angle_a) * 0.065, 4.8, sin(angle_a) * 0.065)
-        var upper_b := Vector3(cos(angle_b) * 0.065, 4.8, sin(angle_b) * 0.065)
+        var angle_a := TAU * float(i) / float(segments)
+        var angle_b := TAU * float(i + 1) / float(segments)
+        var lower_a := Vector3(cos(angle_a) * 0.13, 0.0, sin(angle_a) * 0.13)
+        var lower_b := Vector3(cos(angle_b) * 0.13, 0.0, sin(angle_b) * 0.13)
+        var upper_a := Vector3(cos(angle_a) * 0.055, 4.9, sin(angle_a) * 0.055)
+        var upper_b := Vector3(cos(angle_b) * 0.055, 4.9, sin(angle_b) * 0.055)
         _triangle(st, lower_a, upper_a, lower_b, trunk_color)
-        _triangle(st, lower_b, upper_a, upper_b, trunk_top)
-    # The foliage is a volumetric ringed mesh rather than crossed 2D cards.
-    # Radial ledges produce distinctive conifer branch tiers.
-    var levels: Array[float] = [0.97, 1.17, 1.51, 1.72, 1.94, 2.18, 2.41, 2.65, 2.89, 3.13, 3.39, 3.64, 3.87, 4.12, 4.37, 4.62, 4.86]
-    var radii: Array[float] = [1.31, 1.08, 0.68, 1.20, 0.70, 1.10, 0.66, 0.97, 0.55, 0.82, 0.47, 0.68, 0.38, 0.53, 0.29, 0.36, 0.015]
-    for layer in range(levels.size() - 1):
+        _triangle(st, lower_b, upper_a, upper_b, trunk_color.darkened(0.09))
+    # Continuous, slightly lopsided volume instead of stacked pancake
+    # triangles. The earlier striped "Christmas tree" crown was artificial.
+    var rings := 22
+    for band in range(rings):
+        var h0 := 0.91 + float(band) / float(rings) * 4.02
+        var h1 := 0.91 + float(band + 1) / float(rings) * 4.02
+        var r0 := 1.36 * pow(clampf((4.94 - h0) / 4.02, 0.0, 1.0), 0.94)
+        var r1 := 1.36 * pow(clampf((4.94 - h1) / 4.02, 0.0, 1.0), 0.94)
         for side in range(segments):
             var a0 := TAU * float(side) / float(segments)
             var a1 := TAU * float(side + 1) / float(segments)
-            var scallop0 := 0.91 + 0.09 * sin(float(side) * 7.3 + float(layer) * 0.6)
-            var scallop1 := 0.91 + 0.09 * sin(float(side + 1) * 7.3 + float(layer) * 0.6)
-            var r0 := radii[layer]
-            var r1 := radii[layer + 1]
-            var p0 := Vector3(cos(a0) * r0 * scallop0, levels[layer], sin(a0) * r0 * scallop0)
-            var p1 := Vector3(cos(a1) * r0 * scallop1, levels[layer], sin(a1) * r0 * scallop1)
-            var q0 := Vector3(cos(a0) * r1 * scallop0, levels[layer + 1], sin(a0) * r1 * scallop0)
-            var q1 := Vector3(cos(a1) * r1 * scallop1, levels[layer + 1], sin(a1) * r1 * scallop1)
-            var palette := 0.05 * sin(float(side) * 1.6 + float(layer) * 2.3)
-            var green := Color(0.13 + palette, 0.26 + palette * 0.58, 0.20 + palette * 0.32)
+            var sway0 := 1.0 + 0.065 * sin(a0 * 3.7 + float(variety)) + 0.035 * sin(h0 * 4.2 + a0)
+            var sway1 := 1.0 + 0.065 * sin(a1 * 3.7 + float(variety)) + 0.035 * sin(h0 * 4.2 + a1)
+            var next_sway0 := 1.0 + 0.065 * sin(a0 * 3.7 + float(variety)) + 0.035 * sin(h1 * 4.2 + a0)
+            var next_sway1 := 1.0 + 0.065 * sin(a1 * 3.7 + float(variety)) + 0.035 * sin(h1 * 4.2 + a1)
+            var p0 := Vector3(cos(a0) * r0 * sway0, h0, sin(a0) * r0 * sway0)
+            var p1 := Vector3(cos(a1) * r0 * sway1, h0, sin(a1) * r0 * sway1)
+            var q0 := Vector3(cos(a0) * r1 * next_sway0, h1, sin(a0) * r1 * next_sway0)
+            var q1 := Vector3(cos(a1) * r1 * next_sway1, h1, sin(a1) * r1 * next_sway1)
+            var noise := sin(float(side) * 2.37 + float(band) * 0.97 + float(variety)) * 0.018
+            var green := Color(0.19 + noise, 0.32 + noise * 0.6, 0.22 + noise * 0.45)
             _triangle(st, p0, q0, p1, green)
-            _triangle(st, p1, q0, q1, green.lightened(0.07))
+            _triangle(st, p1, q0, q1, green.lightened(0.035))
+    # Branch clusters are *3D* wedge volumes with bark-free needle bodies.
+    # Uneven heights, outward angles and crown sizes break repetition.
+    for needle in range(125):
+        var y := local_rng.randf_range(1.05, 4.75)
+        var angle := local_rng.randf_range(-PI, PI)
+        var radial := Vector3(cos(angle), 0.0, sin(angle))
+        var side_axis := Vector3(-radial.z, 0.0, radial.x)
+        var crown_radius := 1.36 * pow(clampf((4.94 - y) / 4.02, 0.0, 1.0), 0.94)
+        var root := Vector3(0.0, y, 0.0) + radial * crown_radius * 0.82
+        var extension := local_rng.randf_range(0.12, 0.47) * clampf(crown_radius, 0.18, 1.0)
+        var tip := root + radial * extension + Vector3.UP * local_rng.randf_range(-0.15, 0.09)
+        var width := local_rng.randf_range(0.065, 0.18) * clampf(crown_radius, 0.25, 1.0)
+        var left := root - side_axis * width
+        var right := root + side_axis * width
+        var upper := root + Vector3.UP * (width * 1.35)
+        var under := root - Vector3.UP * (width * 0.38)
+        var shade := local_rng.randf_range(-0.025, 0.025)
+        var needles := Color(0.16 + shade, 0.29 + shade, 0.19 + shade * 0.7)
+        _triangle(st, left, tip, upper, needles)
+        _triangle(st, upper, tip, right, needles.lightened(0.08))
+        _triangle(st, right, tip, under, needles.darkened(0.09))
+        _triangle(st, under, tip, left, needles.darkened(0.13))
     st.generate_normals()
     return st.commit()
 
 func _build_conifer_forest() -> void:
-    var forest := MultiMeshInstance3D.new()
-    forest.name = "InstancedVolumetricConifers"
-    var multiple := MultiMesh.new()
-    multiple.transform_format = MultiMesh.TRANSFORM_3D
-    multiple.mesh = _pine_mesh()
-    multiple.instance_count = 470
-    for index in range(multiple.instance_count):
-        var x := rng.randf_range(-174.0, 174.0)
-        var z := rng.randf_range(-87.0, -274.0)
-        # Irregular height / distribution creates breaks and distant sight lines.
-        var scale_tree := rng.randf_range(0.82, 1.87)
-        if z < -180.0:
-            scale_tree *= 1.12
-        var ground := height_at(x, z)
-        var basis := Basis(Vector3.UP, rng.randf_range(-PI, PI)).scaled(Vector3.ONE * scale_tree)
-        multiple.set_instance_transform(index, Transform3D(basis, Vector3(x, ground - 0.055, z)))
-    var mat := StandardMaterial3D.new()
-    mat.vertex_color_use_as_albedo = true
-    mat.roughness = 0.96
-    mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-    forest.material_override = mat
-    forest.multimesh = multiple
-    forest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    add_child(forest)
+    # Several different crown meshes avoid identically tiered tree silhouettes.
+    # Each group is batched as a MultiMesh with per-instance tint.
+    for variety in range(3):
+        var forest := MultiMeshInstance3D.new()
+        forest.name = "InstancedVolumetricConifers" if variety == 0 else "ConiferShapeVariant%d" % variety
+        var multiple := MultiMesh.new()
+        multiple.transform_format = MultiMesh.TRANSFORM_3D
+        multiple.use_colors = true
+        multiple.mesh = _pine_mesh(variety)
+        multiple.instance_count = 190
+        for index in range(multiple.instance_count):
+            var x := rng.randf_range(-174.0, 174.0)
+            var z := rng.randf_range(-274.0, -87.0)
+            var scale_tree := rng.randf_range(0.75, 1.96)
+            if z < -180.0:
+                scale_tree *= 1.12
+            var ground := height_at(x, z)
+            var basis := Basis(Vector3.UP, rng.randf_range(-PI, PI)).scaled(Vector3.ONE * scale_tree)
+            multiple.set_instance_transform(index, Transform3D(basis, Vector3(x, ground - 0.055, z)))
+            var tint := rng.randf_range(0.82, 1.12)
+            multiple.set_instance_color(index, Color(tint * 0.97, tint, tint * 0.96, 1.0))
+        var mat := StandardMaterial3D.new()
+        mat.vertex_color_use_as_albedo = true
+        mat.roughness = 0.96
+        mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+        forest.material_override = mat
+        forest.multimesh = multiple
+        forest.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        add_child(forest)
 
 func _build_shore_rocks() -> void:
     var rock := SphereMesh.new()
