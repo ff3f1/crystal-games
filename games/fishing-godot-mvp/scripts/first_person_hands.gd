@@ -57,7 +57,7 @@ func _install_sculpted_gloves() -> void:
         for original in wrist.get_children():
             if original is MeshInstance3D:
                 var label := str(original.name)
-                if not (label.contains("TailoredSleeve") or label.contains("SleeveCuff")):
+                if not label.contains("TailoredSleeve"):
                     original.visible = false
         var glove: Node3D = scene.instantiate() as Node3D
         glove.name = str(definition["name"])
@@ -80,8 +80,8 @@ func _process(delta: float) -> void:
         # floating ball spinning independently of the rod.
         var crank := time_passed * 13.2
         left_wrist.position = Vector3(
-            0.28 + sin(crank) * 0.025 * retrieve_blend,
-            -0.70 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.09
+            0.42 + sin(crank) * 0.025 * retrieve_blend,
+            -0.36 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.09
                 + cast_lift * 0.035 - line_load * 0.018,
             -1.17
         )
@@ -98,7 +98,7 @@ func _mat(color: Color, roughness: float) -> StandardMaterial3D:
     material.roughness = roughness
     return material
 
-func _loft(parent: Node3D, points: Array[Vector3], widths: Array[float], depths: Array[float], material: Material, label: String, ring_sides: int = 14) -> MeshInstance3D:
+func _loft(parent: Node3D, points: Array[Vector3], widths: Array[float], depths: Array[float], material: Material, label: String, ring_sides: int = 20) -> MeshInstance3D:
     # A single uninterrupted volume with variable elliptical cross-section.
     var st := SurfaceTool.new()
     st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -168,12 +168,12 @@ func _build_hands() -> void:
     right_wrist.position = Vector3(0.66, -0.57, -1.12)
     add_child(right_wrist)
     var right_arm: Array[Vector3] = [
-        Vector3(0.52, -0.56, 0.76),
-        Vector3(0.39, -0.38, 0.54),
-        Vector3(0.20, -0.19, 0.28),
+        Vector3(0.43, -0.47, 0.32),
+        Vector3(0.29, -0.29, 0.24),
+        Vector3(0.20, -0.17, 0.15),
         Vector3(0.095, -0.075, 0.075)
     ]
-    _loft(right_wrist, right_arm, [0.218, 0.196, 0.144, 0.109], [0.173, 0.17, 0.123, 0.098], jacket, "RightTailoredSleeve3D")
+    _loft(right_wrist, right_arm, [0.15, 0.153, 0.13, 0.109], [0.135, 0.132, 0.115, 0.098], jacket, "RightTailoredSleeve3D")
     var right_cuff: Array[Vector3] = [
         Vector3(0.102, -0.086, 0.103),
         Vector3(0.083, -0.031, 0.004),
@@ -205,15 +205,15 @@ func _build_hands() -> void:
 
     left_wrist = Node3D.new()
     left_wrist.name = "LeftReelSupport3D"
-    left_wrist.position = Vector3(0.28, -0.79, -1.17)
+    left_wrist.position = Vector3(0.42, -0.45, -1.17)
     add_child(left_wrist)
     var left_arm: Array[Vector3] = [
-        Vector3(-0.59, -0.52, 0.72),
-        Vector3(-0.43, -0.34, 0.50),
-        Vector3(-0.22, -0.20, 0.25),
+        Vector3(-0.48, -0.49, 0.31),
+        Vector3(-0.34, -0.29, 0.22),
+        Vector3(-0.20, -0.15, 0.14),
         Vector3(-0.083, -0.067, 0.091)
     ]
-    _loft(left_wrist, left_arm, [0.19, 0.166, 0.129, 0.097], [0.159, 0.146, 0.107, 0.084], jacket, "LeftTailoredSleeve3D")
+    _loft(left_wrist, left_arm, [0.145, 0.146, 0.122, 0.097], [0.130, 0.127, 0.103, 0.084], jacket, "LeftTailoredSleeve3D")
     var left_cuff: Array[Vector3] = [
         Vector3(-0.097, -0.080, 0.116),
         Vector3(-0.055, -0.019, 0.016),
