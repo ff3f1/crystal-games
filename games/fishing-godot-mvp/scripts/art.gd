@@ -8,6 +8,7 @@ var local_breeze := 0.28
 var wave_clock := 0.0
 var water_material: ShaderMaterial
 var detailed_vegetation: Node3D
+var physical_far_shore: Node3D
 
 func _process(delta: float) -> void:
     wave_clock += delta
@@ -55,10 +56,8 @@ func _make_water() -> void:
     water_material = ShaderMaterial.new()
     water_material.shader = load("res://shaders/water.gdshader")
     water_material.set_shader_parameter("breeze", local_breeze)
-    # Reuse exactly the visible CC0 sky for physical-looking planar reflections.
-    var panorama := load("res://assets/textures/sky_panorama.jpg") as Texture2D
-    if panorama != null:
-        water_material.set_shader_parameter("sky_reflection", panorama)
+    # Water reflects the procedural sky instead of repeating distant scenery
+    # from a flat photographic equirectangular panorama.
     _mesh(self, plane, Vector3(0, -0.02, -110), Vector3.ONE, water_material)
 
 func lake_floor_height(z: float) -> float:
@@ -94,11 +93,13 @@ func _make_lakebed() -> void:
     add_child(bed)
 
 func _make_land() -> void:
-    # The panoramic sky already contains the distant mountains/shoreline.
-    # A second flat "far-bank" terrain strip creates an ugly hard black seam
-    # where the 3D water meets the photographic horizon. Keep only the
-    # detailed near-bank mesh with real walkable geometry.
     _shore_surface(false)
+    # Build real land beyond the lake with a sloped 3D mountain ridge,
+    # volumetric pine meshes and shore rock geometry. No photo horizon.
+    physical_far_shore = (load("res://scripts/distant_land_3d.gd") as GDScript).new() as Node3D
+    physical_far_shore.name = "PhysicalFarShore3D"
+    add_child(physical_far_shore)
+    physical_far_shore.call("populate")
 
 func _shore_surface(far_bank: bool) -> void:
     var builder := SurfaceTool.new()
