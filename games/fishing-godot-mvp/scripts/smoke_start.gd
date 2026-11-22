@@ -41,6 +41,27 @@ func _run() -> void:
         quit(1)
         return
     print("START_TRACE: validated batched 3D vegetation and modeled tackle")
+    # The far bank must be actual rendered geometry, not a background photo.
+    var bank: Node = game.shore_art.get_node_or_null("PhysicalFarShore3D")
+    if bank == null:
+        push_error("START_SCENE_FAIL: no physical 3D far shore")
+        quit(1)
+        return
+    for mesh_name in ["PhysicalFarShoreTerrain", "InstancedVolumetricConifers", "FarShoreRocks3D"]:
+        var shape: Node = bank.get_node_or_null(mesh_name)
+        if shape == null:
+            push_error("START_SCENE_FAIL: missing 3D far-bank object " + mesh_name)
+            quit(1)
+            return
+        if shape is MeshInstance3D and (shape as MeshInstance3D).mesh == null:
+            push_error("START_SCENE_FAIL: empty far-bank terrain")
+            quit(1)
+            return
+        if shape is MultiMeshInstance3D and (shape as MultiMeshInstance3D).multimesh == null:
+            push_error("START_SCENE_FAIL: empty far-bank multi-mesh")
+            quit(1)
+            return
+    print("START_TRACE: physical far shore and 470 tree meshes validated")
     print("START_TRACE: entering fishing session")
     game.start_game()
     for i in range(8):
