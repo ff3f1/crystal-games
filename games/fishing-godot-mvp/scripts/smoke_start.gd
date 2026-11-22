@@ -67,6 +67,28 @@ func _run() -> void:
         quit(1)
         return
     print("START_TRACE: animated reel handle and attached grip validated")
+    var model: Node3D = game.rod_root.get_node_or_null("AuthoredPBRFishingRod") as Node3D
+    var hold: Node3D = game.hands.get_node_or_null("RightAnatomicalGrip3D") as Node3D
+    if model == null or hold == null:
+        push_error("START_SCENE_FAIL: authentic rod or hand rig missing")
+        quit(1)
+        return
+    var sleeve: MeshInstance3D = hold.get_node_or_null("RightTailoredSleeve3D") as MeshInstance3D
+    if sleeve == null or not sleeve.visible:
+        push_error("START_SCENE_FAIL: first-person glove is severed from the sleeve")
+        quit(1)
+        return
+    # Spatial contact, not just presence of meshes: the imported PBR rod
+    # cork must actually rest in the sculpted glove at camera distance.
+    var cork_position: Vector3 = model.to_global(Vector3(-0.948, 0.0, 0.0))
+    var glove_position: Vector3 = hold.to_global(Vector3(-0.059, 0.115, -0.188))
+    var grip_gap := cork_position.distance_to(glove_position)
+    if grip_gap > 0.24:
+        push_error("START_SCENE_FAIL: disconnected first-person rod grip, gap=" + str(grip_gap))
+        quit(1)
+        return
+    print("START_TRACE: external rod and glove connected in 3D, gap=%.3f m" % grip_gap)
+
     var right_glove: Node = game.hands.get_node_or_null("RightAnatomicalGrip3D")
     var left_glove: Node = game.hands.get_node_or_null("LeftReelSupport3D")
     if right_glove == null or left_glove == null:
