@@ -57,9 +57,11 @@ func _install_sculpted_gloves() -> void:
         for original in wrist.get_children():
             if original is MeshInstance3D:
                 var label := str(original.name)
-                # No giant procedural sleeve triangles: the imported GLB
-                # glove has an authored textile cuff. Keep one clean held grip.
-                original.visible = false
+                # Keep only the fitted forearm and wrist cuff, so the actual
+                # CC0 sculpted glove visibly connects to a sleeve that enters
+                # from the bottom of the camera frame. Previously ALL meshes
+                # were hidden, leaving a floating severed glove near the reel.
+                original.visible = "TailoredSleeve" in label or "SleeveCuff" in label
         var glove: Node3D = scene.instantiate() as Node3D
         glove.name = str(definition["name"])
         glove.position = definition["position"]
@@ -81,10 +83,10 @@ func _process(delta: float) -> void:
         # floating ball spinning independently of the rod.
         var crank := time_passed * 13.2
         left_wrist.position = Vector3(
-            0.16 + sin(crank) * 0.025 * retrieve_blend,
-            -0.27 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.05
+            0.23 + sin(crank) * 0.021 * retrieve_blend,
+            -0.47 + cos(crank) * 0.033 * retrieve_blend - (1.0 - retrieve_blend) * 0.05
                 + cast_lift * 0.035 - line_load * 0.018,
-            -1.17
+            -1.03
         )
         left_wrist.rotation.z = sin(crank) * 0.16 * retrieve_blend
         left_wrist.rotation.x = -0.09 + cos(crank) * 0.095 * retrieve_blend
@@ -92,7 +94,7 @@ func _process(delta: float) -> void:
         # single solid grip on the cork and no disconnected floating palm.
         left_wrist.visible = retrieve_blend > 0.08
     if right_wrist != null:
-        right_wrist.position.y = -0.35 + cast_lift * 0.044 + line_load * 0.023
+        right_wrist.position.y = -0.56 + cast_lift * 0.034 + line_load * 0.020
         right_wrist.rotation.z = sin(time_passed * 1.2) * 0.006 + line_load * 0.029
         right_wrist.rotation.x = sin(time_passed * 1.6) * 0.005 - cast_lift * 0.10 - line_load * 0.025
 
@@ -160,8 +162,12 @@ func _finger(parent: Node3D, root: Vector3, destination: Vector3, thickness: flo
     _loft(parent, path, radii, deep, material, label, 10)
 
 func _build_hands() -> void:
-    var jacket := _mat(Color(0.20, 0.24, 0.25), 0.96)
-    var jacket_dark := _mat(Color(0.17, 0.21, 0.23), 0.97)
+    var jacket := ShaderMaterial.new()
+    jacket.shader = load("res://shaders/cloth_twill.gdshader")
+    jacket.set_shader_parameter("cloth_tint", Color(0.215, 0.255, 0.235))
+    var jacket_dark := ShaderMaterial.new()
+    jacket_dark.shader = jacket.shader
+    jacket_dark.set_shader_parameter("cloth_tint", Color(0.14, 0.17, 0.16))
     var suede := _mat(Color(0.25, 0.285, 0.245), 0.96)
     var suede_side := _mat(Color(0.18, 0.22, 0.20), 0.97)
     var knuckles := _mat(Color(0.29, 0.335, 0.29), 0.95)
@@ -169,7 +175,7 @@ func _build_hands() -> void:
 
     right_wrist = Node3D.new()
     right_wrist.name = "RightAnatomicalGrip3D"
-    right_wrist.position = Vector3(0.46, -0.35, -1.12)
+    right_wrist.position = Vector3(0.56, -0.56, -0.75)
     add_child(right_wrist)
     var right_arm: Array[Vector3] = [
         Vector3(0.43, -0.47, 0.32),
@@ -209,7 +215,7 @@ func _build_hands() -> void:
 
     left_wrist = Node3D.new()
     left_wrist.name = "LeftReelSupport3D"
-    left_wrist.position = Vector3(0.16, -0.27, -1.17)
+    left_wrist.position = Vector3(0.23, -0.47, -1.03)
     add_child(left_wrist)
     var left_arm: Array[Vector3] = [
         Vector3(-0.48, -0.49, 0.31),
