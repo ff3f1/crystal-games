@@ -100,16 +100,16 @@ func _finger(parent: Node3D, root: Vector3, destination: Vector3, thickness: flo
     _loft(parent, path, radii, deep, material, label, 10)
 
 func _build_hands() -> void:
-    var jacket := _mat(Color(0.25, 0.29, 0.30), 0.96)
+    var jacket := _mat(Color(0.20, 0.24, 0.25), 0.96)
     var jacket_dark := _mat(Color(0.17, 0.21, 0.23), 0.97)
-    var suede := _mat(Color(0.39, 0.40, 0.34), 0.93)
-    var suede_side := _mat(Color(0.28, 0.32, 0.28), 0.96)
-    var knuckles := _mat(Color(0.49, 0.47, 0.37), 0.94)
+    var suede := _mat(Color(0.25, 0.285, 0.245), 0.96)
+    var suede_side := _mat(Color(0.18, 0.22, 0.20), 0.97)
+    var knuckles := _mat(Color(0.29, 0.335, 0.29), 0.95)
     var reinforced := _mat(Color(0.23, 0.28, 0.26), 0.97)
 
     right_wrist = Node3D.new()
     right_wrist.name = "RightAnatomicalGrip3D"
-    right_wrist.position = Vector3(0.69, -0.69, -1.11)
+    right_wrist.position = Vector3(0.73, -0.745, -1.12)
     add_child(right_wrist)
     var right_arm: Array[Vector3] = [
         Vector3(0.52, -0.56, 0.76),
