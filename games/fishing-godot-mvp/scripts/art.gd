@@ -175,27 +175,34 @@ func _ground_triangle(surface: SurfaceTool, a: Vector3, b: Vector3, c: Vector3) 
         surface.add_vertex(vertex)
 
 func _make_forest() -> void:
-    var tree_kinds := [
-        "tree-oak", "tree-oak-dark", "tree-detailed", "tree-default",
-        "tree-pinetalla-detailed", "tree-pinetallb-detailed",
-        "tree-pinerounda", "tree-pineroundd",
+    # Near bank: actual CC0 sculpted tree models with bark and needles.
+    # Each has multiple true mesh surfaces and PBR textures; no cones.
+    var living_trees: Array[PackedScene] = [
+        load("res://assets/models/scots_pine_lod1.glb") as PackedScene,
+        load("res://assets/models/norway_spruce_lod1.glb") as PackedScene,
     ]
     var rock_kinds := ["rock-largea", "rock-largee", "rock-smallb", "rock-smallh"]
     var bush_kinds := ["plant-bushdetailed", "plant-bushlarge"]
 
-    for i in range(110):
-        var px := random.randf_range(-100, 100)
-        var pz := random.randf_range(12.0, 75.0)
-        if absf(px) < 6.0 and pz < 23.0:
+    for i in range(74):
+        var px := random.randf_range(-98.0, 98.0)
+        var pz := random.randf_range(14.0, 70.0)
+        if absf(px) < 7.7 and pz < 27.0:
             continue
-        if absf(px - 15.0) < 5.0 and pz < 17.0:
+        if absf(px - 15.0) < 6.8 and pz < 20.0:
             continue
-        var tree: String = tree_kinds[random.randi_range(0, tree_kinds.size() - 1)]
-        _place_asset(tree, Vector3(px, ground_height(px, pz), pz), random.randf_range(3.5, 6.3), random.randf_range(-PI, PI))
-
-    # The photographic panorama already contains a natural distant forest.
-    # Avoid toy-like GLB trees at the horizon: 3D vegetation should live near
-    # the player, where parallax and motion make a difference.
+        var prefab: PackedScene = living_trees[i % living_trees.size()]
+        if prefab == null:
+            push_error("CC0 authored near-bank tree missing")
+            continue
+        var tree_model: Node3D = prefab.instantiate() as Node3D
+        tree_model.name = "AuthoredNearTree%d" % i
+        tree_model.position = Vector3(px, ground_height(px, pz) - 0.05, pz)
+        tree_model.rotation.y = random.randf_range(-PI, PI)
+        var height_factor := random.randf_range(0.34, 0.63)
+        tree_model.scale = Vector3(height_factor * random.randf_range(0.86, 1.13), height_factor, height_factor)
+        add_child(tree_model)
+    print("ART_AUDIT: sculpted CC0 near bank trees instantiated")
 
     for i in range(90):
         var px := random.randf_range(-93, 93)
