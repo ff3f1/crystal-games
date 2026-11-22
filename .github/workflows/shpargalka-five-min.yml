@@ -1,0 +1,28 @@
+name: Build Shpargalka 5-minute licensed underwater film
+on:
+  push:
+    branches: [codex/shpargalka-5min-rework]
+    paths:
+      - video_production/shpargalka_five_min.py
+      - .github/workflows/shpargalka-five-min.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  film:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: video_production
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - run: python -m pip install requests pillow piper-tts
+      - run: python -u video_production/shpargalka_five_min.py
+      - name: Upload finished film and its source credits
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shpargalka-Real-Underwater-5min-MP4
+          path: video_production/five_min_output/
+          retention-days: 14
+          compression-level: 0
