@@ -81,6 +81,13 @@ jobs:
             mv "$output" "$input"
           done
           python3 games/fishing-godot-mvp/tools/inspect_authored_meshes.py
+          python3 -m pip install --quiet --break-system-packages trimesh numpy
+          python3 games/fishing-godot-mvp/tools/split_authored_gloves.py \
+            games/fishing-godot-mvp/assets/models/authored_leather_gloves.glb \
+            games/fishing-godot-mvp/assets/models/glove_left.glb \
+            games/fishing-godot-mvp/assets/models/glove_right.glb
+          test -s games/fishing-godot-mvp/assets/models/glove_left.glb
+          test -s games/fishing-godot-mvp/assets/models/glove_right.glb
 
       - name: Import and parse project
         shell: bash
