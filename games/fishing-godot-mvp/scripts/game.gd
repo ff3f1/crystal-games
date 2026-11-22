@@ -316,7 +316,7 @@ func _input(event: InputEvent) -> void:
         if event.pressed:
             if event.position.x < view_size.x * 0.32 and event.position.y > view_size.y * 0.52 and joystick_touch_id == -1:
                 joystick_touch_id = event.index
-                joystick_origin = Vector2(view_size.x * 0.135, view_size.y * 0.862)
+                joystick_origin = Vector2(view_size.x * 0.135, view_size.y * 0.884)
                 _move_joystick(event.position)
             elif look_touch_id == -1 and event.position.y < view_size.y * 0.73:
                 look_touch_id = event.index
@@ -334,12 +334,12 @@ func _input(event: InputEvent) -> void:
             _look_drag(event.relative)
 
 func _move_joystick(pos: Vector2) -> void:
-    joystick_vector = ((pos - joystick_origin) / 74.0).limit_length(1.0)
+    joystick_vector = ((pos - joystick_origin) / 64.0).limit_length(1.0)
     _update_joystick_knob()
 
 func _update_joystick_knob() -> void:
     if joystick_knob != null:
-        joystick_knob.position = Vector2(82, 42) + joystick_vector * 43.0
+        joystick_knob.position = Vector2(72, 29) + joystick_vector * 33.0
 
 func _update_player(delta: float) -> void:
     var move := joystick_vector
@@ -675,33 +675,33 @@ func _create_ui() -> void:
     ui.add_child(root)
 
     var shade := ColorRect.new()
-    shade.color = Color(0.012, 0.035, 0.039, 0.29)
+    shade.color = Color(0.012, 0.035, 0.039, 0.18)
     shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(shade, 0, 0, 1, 0.12)
+    _place(shade, 0, 0, 1, 0.085)
     root.add_child(shade)
 
     var lower := ColorRect.new()
-    lower.color = Color(0.015, 0.030, 0.037, 0.19)
+    lower.color = Color(0.015, 0.030, 0.037, 0.13)
     lower.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _place(lower, 0, 0.77, 1, 1)
+    _place(lower, 0, 0.82, 1, 1)
     root.add_child(lower)
 
-    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 23, 0.026, 0.005, 0.68, 0.058)
-    message_label = _label(root, "", 18, 0.026, 0.058, 0.78, 0.126)
-    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 17, 0.63, 0.012, 0.875, 0.079)
+    title_label = _label(root, "ПЕРВЫЙ ЗАБРОС  •  ТИХОЕ ОЗЕРО", 20, 0.026, 0.005, 0.68, 0.052)
+    message_label = _label(root, "", 16, 0.026, 0.055, 0.78, 0.112)
+    catch_label = _label(root, "Улов: 0  •  Рекорд: —", 15, 0.63, 0.012, 0.875, 0.077)
     var pause_button := _button(root, "☰", 0.88, 0.012, 0.946, 0.10, Color(0.18, 0.34, 0.35))
     pause_button.add_theme_font_size_override("font_size", 27)
     pause_button.pressed.connect(open_pause)
-    stats_label = _label(root, "", 19, 0.255, 0.738, 0.985, 0.803)
+    stats_label = _label(root, "", 16, 0.255, 0.776, 0.985, 0.832)
 
-    stamina_label = _label(root, "", 17, 0.278, 0.775, 0.60, 0.826)
+    stamina_label = _label(root, "", 15, 0.278, 0.795, 0.60, 0.837)
     stamina_label.add_theme_color_override("font_color", Color(0.76, 0.89, 0.79))
 
     tension_bar = ProgressBar.new()
     tension_bar.min_value = 0
     tension_bar.max_value = 100
     tension_bar.show_percentage = false
-    _place(tension_bar, 0.435, 0.806, 0.960, 0.839)
+    _place(tension_bar, 0.435, 0.832, 0.960, 0.854)
     root.add_child(tension_bar)
 
     # Mobile joystick occupies the lower left. Movement input is processed via _input,
@@ -713,7 +713,7 @@ func _create_ui() -> void:
     pad_style.set_border_width_all(2)
     pad_style.set_corner_radius_all(72)
     pad.add_theme_stylebox_override("panel", pad_style)
-    _place(pad, 0.045, 0.755, 0.225, 0.97)
+    _place(pad, 0.055, 0.802, 0.210, 0.966)
     pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(pad)
     joystick_knob = Panel.new()
@@ -721,12 +721,12 @@ func _create_ui() -> void:
     knob_style.bg_color = Color(0.76, 0.82, 0.70, 0.68)
     knob_style.set_corner_radius_all(39)
     joystick_knob.add_theme_stylebox_override("panel", knob_style)
-    joystick_knob.size = Vector2(62, 62)
+    joystick_knob.size = Vector2(54, 54)
     joystick_knob.mouse_filter = Control.MOUSE_FILTER_IGNORE
     pad.add_child(joystick_knob)
     _update_joystick_knob()
 
-    action_button = _button(root, "ЗАБРОС", 0.772, 0.845, 0.977, 0.973, Color(0.44, 0.28, 0.15, 0.90))
+    action_button = _button(root, "ЗАБРОС", 0.790, 0.862, 0.974, 0.972, Color(0.44, 0.28, 0.15, 0.90))
     action_button.pressed.connect(_main_action)
     action_button.button_down.connect(_begin_charge)
     action_button.button_up.connect(_end_charge)
@@ -734,18 +734,18 @@ func _create_ui() -> void:
     cast_charge_bar.min_value = 0.0
     cast_charge_bar.max_value = 100.0
     cast_charge_bar.show_percentage = false
-    _place(cast_charge_bar, 0.555, 0.811, 0.962, 0.834)
+    _place(cast_charge_bar, 0.555, 0.832, 0.962, 0.854)
     root.add_child(cast_charge_bar)
     cast_charge_bar.visible = false
-    lure_button = _button(root, "ЧЕРВЬ", 0.594, 0.845, 0.76, 0.973, Color(0.10, 0.28, 0.29, 0.90))
+    lure_button = _button(root, "ЧЕРВЬ", 0.614, 0.862, 0.778, 0.972, Color(0.10, 0.28, 0.29, 0.90))
     lure_button.pressed.connect(_toggle_lure)
-    reel_button = _button(root, "МОТАТЬ", 0.548, 0.845, 0.766, 0.973, Color(0.09, 0.30, 0.32, 0.90))
+    reel_button = _button(root, "МОТАТЬ", 0.548, 0.862, 0.766, 0.972, Color(0.09, 0.30, 0.32, 0.90))
     reel_button.button_down.connect(func() -> void: is_reeling = true)
     reel_button.button_up.connect(func() -> void: is_reeling = false)
-    brace_button = _button(root, "ДЕРЖАТЬ", 0.777, 0.845, 0.977, 0.973, Color(0.21, 0.30, 0.19, 0.90))
+    brace_button = _button(root, "ДЕРЖАТЬ", 0.790, 0.862, 0.974, 0.972, Color(0.21, 0.30, 0.19, 0.90))
     brace_button.button_down.connect(func() -> void: is_bracing = true)
     brace_button.button_up.connect(func() -> void: is_bracing = false)
-    drag_button = _button(root, "ФРИКЦИОН", 0.275, 0.845, 0.505, 0.973, Color(0.16, 0.20, 0.21, 0.90))
+    drag_button = _button(root, "ФРИКЦИОН", 0.302, 0.862, 0.522, 0.972, Color(0.16, 0.20, 0.21, 0.90))
     drag_button.pressed.connect(_cycle_drag)
 
     # The minimap follows the player, floating lure and actual hotspots.
@@ -787,11 +787,11 @@ func _label(parent: Control, txt: String, font_size: int, l: float, t: float, r:
 func _button(parent: Control, txt: String, l: float, t: float, r: float, b: float, color: Color) -> Button:
     var result := Button.new()
     result.text = txt
-    result.add_theme_font_size_override("font_size", 20)
+    result.add_theme_font_size_override("font_size", 18)
     result.add_theme_color_override("font_color", Color(1, 1, 1))
     var normal := StyleBoxFlat.new()
     normal.bg_color = color
-    normal.set_corner_radius_all(18)
+    normal.set_corner_radius_all(14)
     normal.border_color = Color(0.73, 0.80, 0.71, 0.34)
     normal.set_border_width_all(1)
     result.add_theme_stylebox_override("normal", normal)
