@@ -56,11 +56,12 @@ jobs:
           du -sh games/fishing-godot-mvp/assets
           test -s games/fishing-godot-mvp/assets/models/rod.glb
           test -s games/fishing-godot-mvp/assets/textures/shore_diffuse.jpg
+          python3 games/fishing-godot-mvp/tools/inspect_authored_meshes.py
 
       - name: Convert glTF quantized meshes for Godot compatibility
         run: |
           npm install -g @gltf-transform/cli@4.5.0
-          for name in rod perch carp trout dock boat chair tackle cooler cattails lilies float_set lure net sign rock_cluster; do
+          for name in rod perch carp trout dock boat chair tackle cooler cattails lilies float_set lure net sign rock_cluster authored_fishing_rod authored_leather_gloves scots_pine_lod1 scots_pine_lod2 norway_spruce_lod1 norway_spruce_lod2; do
             input="games/fishing-godot-mvp/assets/models/${name}.glb"
             output="games/fishing-godot-mvp/assets/models/${name}.converted.glb"
             gltf-transform dequantize "$input" "$output"
