@@ -1,0 +1,27 @@
+name: Build real-story European action fishing documentary
+on:
+  push:
+    branches: [codex/shpargalka-real-story-cut]
+    paths:
+      - video_production/last_meters_film.py
+      - .github/workflows/shpargalka-last-meters-final.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  documentary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: {sparse-checkout: video_production}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -q requests pillow imageio-ffmpeg piper-tts edge-tts
+      - run: python -u video_production/last_meters_film.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Shpargalka-Last-Meters-Real-Action-MP4
+          path: video_production/last_meters_output/
+          retention-days: 14
+          compression-level: 0
