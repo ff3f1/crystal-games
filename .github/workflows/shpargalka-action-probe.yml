@@ -1,0 +1,17 @@
+name: Probe action fishing stock sources
+on:
+  push:
+    branches: [codex/shpargalka-action-shotcut]
+    paths:
+      - video_production/action_clip_probe.py
+      - .github/workflows/shpargalka-action-probe.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install -q requests beautifulsoup4
+      - run: python -u video_production/action_clip_probe.py
