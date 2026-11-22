@@ -96,20 +96,31 @@ def validate():
   ranges.append((start,start+maxlen))
  print('VALIDATION',len(SHOTS),'scenes, no repeated source windows, no glamour Coverr footage',flush=True)
 def speak():
- # Prefer neural TTS (no paid subscription); if unavailable fall back to local open-source Piper.
+ # Generate ALL lines with one voice. Microsoft Edge TTS may intermittently fail;
+ # on a single failure discard all remote lines and use the open-source Piper model for the entire film.
+ using_edge=False
  try:
   import edge_tts
-  out=W/'test_edge.mp3'
-  async def first():
-   await edge_tts.Communicate(SHOTS[0][3],'ru-RU-DmitryNeural',rate='+5%').save(str(out))
-  asyncio.run(asyncio.wait_for(first(),timeout=16))
-  if not out.exists() or out.stat().st_size<1500:raise RuntimeError('Edge TTS returned no voice')
-  use_edge=True
-  print('TTS EDGE NATURAL',flush=True)
+  async def one(txt,path):
+   await edge_tts.Communicate(txt,'ru-RU-DmitryNeural',rate='+5%').save(str(path))
+  for i,(_,start,maxlen,txt) in enumerate(SHOTS):
+   path=W/f'edge{i:02}.mp3'
+   good=False
+   for attempt in range(3):
+    try:
+     asyncio.run(asyncio.wait_for(one(txt,path),timeout=18))
+     if path.exists() and path.stat().st_size>1500:
+      good=True;break
+    except Exception as e:
+     print('EDGE RETRY',i,attempt,type(e).__name__,str(e)[:100],flush=True)
+    time.sleep(1+attempt*2)
+   if not good:raise RuntimeError('Natural voice unavailable; fallback to a single Piper voice for ALL scenes')
+  using_edge=True
+  print('CONSISTENT VOICE: Edge Neural on all',len(SHOTS),'scenes',flush=True)
  except Exception as e:
-  use_edge=False
-  print('TTS fallback to Piper because',type(e).__name__,str(e)[:130],flush=True)
- if not use_edge:
+  print('ONE CONSISTENT PIPER VOICE FALLBACK:',str(e)[:230],flush=True)
+  using_edge=False
+ if not using_edge:
   model=W/'ru_RU-dmitri-medium.onnx';conf=W/'ru_RU-dmitri-medium.onnx.json'
   base='https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/'
   for p in (model,conf):
@@ -117,27 +128,25 @@ def speak():
     with requests.get(base+p.name,timeout=(20,180),stream=True) as r:
      r.raise_for_status()
      with p.open('wb') as f:
-      for b in r.iter_content(1024*1024):
-       if b:f.write(b)
+      for block in r.iter_content(1024*1024):
+       if block:f.write(block)
  voices=[]
- async def edge_one(txt,path):
-  import edge_tts
-  await edge_tts.Communicate(txt,'ru-RU-DmitryNeural',rate='+5%').save(str(path))
- for i,(_,st,maxlen,txt) in enumerate(SHOTS):
+ for i,(_,start,maxlen,txt) in enumerate(SHOTS):
   path=W/f'voice{i:02}.mp3'
-  if use_edge:
-   if i==0:(W/'test_edge.mp3').replace(path)
-   else:asyncio.run(asyncio.wait_for(edge_one(txt,path),timeout=30))
+  if using_edge:
+   (W/f'edge{i:02}.mp3').replace(path)
   else:
    wav=W/f'voice{i:02}.wav'
-   p=subprocess.run(['piper','--model',str(model),'--output_file',str(wav)],input=txt,text=True,encoding='utf-8',capture_output=True,timeout=90)
-   if p.returncode:raise RuntimeError(p.stderr[-500:])
+   p=subprocess.run(['piper','--model',str(model),'--output_file',str(wav)],
+                    input=txt,text=True,encoding='utf-8',capture_output=True,timeout=90)
+   if p.returncode:raise RuntimeError('Piper error '+p.stderr[-500:])
    call([FF,'-loglevel','error','-y','-i',wav,'-q:a','3',path])
   d=length(path)
   allowed=maxlen-.14
   if d>allowed:
    factor=d/allowed
-   if factor>1.24:raise RuntimeError(f'Speech too long for real-time clip {i}, {d:.1f}/{allowed:.1f}: {txt}')
+   if factor>1.25:
+    raise RuntimeError(f'Voice too long for real-time clip {i}: {d:.1f}/{allowed:.1f}: {txt}')
    tmp=W/f'voice_fast{i:02}.mp3'
    call([FF,'-loglevel','error','-y','-i',path,'-af',f'atempo={factor:.4f}',tmp])
    tmp.replace(path);d=length(path)
