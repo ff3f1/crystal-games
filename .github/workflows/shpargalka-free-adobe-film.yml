@@ -1,0 +1,27 @@
+name: Build short fishing film from licensed Adobe footage
+on:
+  push:
+    branches: [codex/shpargalka-free-adobe-audit]
+    paths:
+      - video_production/build_adobe_fishing_film.py
+      - .github/workflows/shpargalka-free-adobe-film.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  film:
+    runs-on: ubuntu-latest
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v4
+        with: {sparse-checkout: video_production}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -q requests pillow piper-tts imageio-ffmpeg
+      - run: python -u video_production/build_adobe_fishing_film.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Shpargalka-Adobe-Original-Fishing-MP4
+          path: video_production/adobe_video_out/
+          retention-days: 14
+          compression-level: 0
