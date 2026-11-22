@@ -94,6 +94,11 @@ jobs:
           done
           python3 games/fishing-godot-mvp/tools/inspect_authored_meshes.py
           python3 -m pip install --quiet --break-system-packages trimesh numpy networkx
+          python3 games/fishing-godot-mvp/tools/trim_showroom_rod.py \
+            games/fishing-godot-mvp/assets/models/authored_fishing_rod.glb \
+            games/fishing-godot-mvp/assets/models/authored_fishing_rod.clean.glb
+          mv games/fishing-godot-mvp/assets/models/authored_fishing_rod.clean.glb \
+            games/fishing-godot-mvp/assets/models/authored_fishing_rod.glb
           python3 games/fishing-godot-mvp/tools/split_authored_gloves.py \
             games/fishing-godot-mvp/assets/models/authored_leather_gloves.glb \
             games/fishing-godot-mvp/assets/models/glove_left.glb \
