@@ -62,6 +62,11 @@ func _run() -> void:
             quit(1)
             return
     print("START_TRACE: physical far shore and 470 tree meshes validated")
+    if game.reel_crank == null or game.reel_crank.name != "AnimatedReelHandle3D" or game.reel_crank.get_child_count() < 2:
+        push_error("START_SCENE_FAIL: missing animated reel handle")
+        quit(1)
+        return
+    print("START_TRACE: animated reel handle and attached grip validated")
     print("START_TRACE: entering fishing session")
     game.start_game()
     for i in range(8):
