@@ -1,0 +1,38 @@
+name: Shpargalka – build underwater documentary
+on:
+  push:
+    branches:
+      - codex/shpargalka-underwater-film
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            video_production
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FFmpeg, fonts and Python requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-dejavu-core
+          python -m pip install --upgrade pip
+          python -m pip install requests pillow edge-tts
+      - name: Download authorized underwater footage, narrate and render final film
+        run: python -u video_production/shpargalka_underwater_film.py
+      - name: Upload completed MP4
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Shpargalka-Rybaka-Pod-Vodoy-Final-MP4
+          path: video_production/rendered/
+          retention-days: 14
+          compression-level: 0
