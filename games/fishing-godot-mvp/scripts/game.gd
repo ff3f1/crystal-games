@@ -161,6 +161,8 @@ func _process(delta: float) -> void:
         cast_charge = clampf(cast_charge + delta * 0.48, 0.64, 1.0)
     if hands != null:
         hands.call("set_winding", is_reeling)
+        hands.call("set_casting", phase == Phase.CASTING)
+        hands.call("set_line_load", clampf(tension / 100.0, 0.0, 1.0) if phase == Phase.FIGHT else 0.0)
     if rod_root != null:
         # Elastic loaded blank: damped return, no instant angular snapping.
         var bending := 0.0
@@ -1266,7 +1268,11 @@ func _update_stats() -> void:
         Phase.LANDING:
             stats_label.text = "Рыба у берега — поднимаем трофей!"
         _:
-            stats_label.text = "ОЗЕРО   ·   %s   ·   07:00" % ("ЧЕРВЬ" if lure_index == 0 else "БЛЕСНА")
+            stats_label.text = "ОЗЕРО   ·   %s   ·   %02d:%02d" % [
+                "ЧЕРВЬ" if lure_index == 0 else "БЛЕСНА",
+                int(floor(lake_hour)),
+                int(floor(fposmod(lake_hour, 1.0) * 60.0))
+            ]
     if phase != Phase.FIGHT:
         stats_label.add_theme_color_override("font_color", Color(0.96, 0.95, 0.87))
     catch_label.text = "УЛОВ %d   ·   РЕКОРД %s" % [catch_count, ("%.2f кг" % best_weight) if best_weight > 0.0 else "—"]
