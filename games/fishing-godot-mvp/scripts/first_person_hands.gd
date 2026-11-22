@@ -57,8 +57,9 @@ func _install_sculpted_gloves() -> void:
         for original in wrist.get_children():
             if original is MeshInstance3D:
                 var label := str(original.name)
-                if not label.contains("TailoredSleeve"):
-                    original.visible = false
+                # No giant procedural sleeve triangles: the imported GLB
+                # glove has an authored textile cuff. Keep one clean held grip.
+                original.visible = false
         var glove: Node3D = scene.instantiate() as Node3D
         glove.name = str(definition["name"])
         glove.position = definition["position"]
@@ -80,15 +81,18 @@ func _process(delta: float) -> void:
         # floating ball spinning independently of the rod.
         var crank := time_passed * 13.2
         left_wrist.position = Vector3(
-            0.42 + sin(crank) * 0.025 * retrieve_blend,
-            -0.36 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.09
+            0.16 + sin(crank) * 0.025 * retrieve_blend,
+            -0.27 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.05
                 + cast_lift * 0.035 - line_load * 0.018,
             -1.17
         )
         left_wrist.rotation.z = sin(crank) * 0.16 * retrieve_blend
         left_wrist.rotation.x = -0.09 + cos(crank) * 0.095 * retrieve_blend
+        # Second hand only enters view when winding. Idle fishing uses a
+        # single solid grip on the cork and no disconnected floating palm.
+        left_wrist.visible = retrieve_blend > 0.08
     if right_wrist != null:
-        right_wrist.position.y = -0.57 + cast_lift * 0.044 + line_load * 0.023
+        right_wrist.position.y = -0.35 + cast_lift * 0.044 + line_load * 0.023
         right_wrist.rotation.z = sin(time_passed * 1.2) * 0.006 + line_load * 0.029
         right_wrist.rotation.x = sin(time_passed * 1.6) * 0.005 - cast_lift * 0.10 - line_load * 0.025
 
@@ -165,7 +169,7 @@ func _build_hands() -> void:
 
     right_wrist = Node3D.new()
     right_wrist.name = "RightAnatomicalGrip3D"
-    right_wrist.position = Vector3(0.66, -0.57, -1.12)
+    right_wrist.position = Vector3(0.46, -0.35, -1.12)
     add_child(right_wrist)
     var right_arm: Array[Vector3] = [
         Vector3(0.43, -0.47, 0.32),
@@ -205,7 +209,7 @@ func _build_hands() -> void:
 
     left_wrist = Node3D.new()
     left_wrist.name = "LeftReelSupport3D"
-    left_wrist.position = Vector3(0.42, -0.45, -1.17)
+    left_wrist.position = Vector3(0.16, -0.27, -1.17)
     add_child(left_wrist)
     var left_arm: Array[Vector3] = [
         Vector3(-0.48, -0.49, 0.31),
