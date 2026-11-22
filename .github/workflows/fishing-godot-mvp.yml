@@ -278,6 +278,9 @@ jobs:
             games/fishing-godot-mvp/build/settings-preview.png
             games/fishing-godot-mvp/build/journal-preview.png
             games/fishing-godot-mvp/build/trophy-preview.png
+            games/fishing-godot-mvp/assets/models/authored_fishing_rod.glb
+            games/fishing-godot-mvp/assets/models/glove_left.glb
+            games/fishing-godot-mvp/assets/models/glove_right.glb
             games/fishing-godot-mvp/assets/textures/sky_panorama.jpg
           if-no-files-found: error
           retention-days: 14
