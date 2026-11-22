@@ -40,22 +40,22 @@ func _page(name: String, wide: bool = false) -> Panel:
     _clear()
     visible = true
     var veil := ColorRect.new()
-    veil.color = Color(0.008, 0.025, 0.033, 0.71)
+    veil.color = Color(0.008, 0.025, 0.033, 0.57)
     _rect(veil, root, 0, 0, 1, 1)
     var line := ColorRect.new()
     line.color = amber
     line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _rect(line, root, 0.03, 0.045, 0.045, 0.95)
-    _label(root, "ТИХОЕ ОЗЕРО", 48, 0.065, 0.055, 0.48, 0.15, ink)
-    _label(root, "РЫБАЛКА • ПЕРВЫЙ ЗАБРОС", 21, 0.069, 0.165, 0.49, 0.24, amber)
+    _rect(line, root, 0.030, 0.075, 0.036, 0.93)
+    _label(root, "ТИХОЕ ОЗЕРО", 43, 0.060, 0.065, 0.49, 0.15, ink)
+    _label(root, "РЫБАЛКА  /  ПЕРВЫЙ ЗАБРОС", 19, 0.063, 0.163, 0.49, 0.231, amber)
     _label(root, "Свободный берег. Настоящий улов.\nТвой следующий заброс может стать рекордным.", 22, 0.07, 0.30, 0.47, 0.48, muted)
-    _label(root, "GODOT 4  ·  3D 0.9  ·  ЖИВОЙ ГОРИЗОНТ", 17, 0.07, 0.88, 0.49, 0.96, muted)
+    _label(root, "3D  /  1.0  ·  ЖИВОЕ ОЗЕРО", 17, 0.063, 0.885, 0.49, 0.952, muted)
     var panel := Panel.new()
     var style := StyleBoxFlat.new()
-    style.bg_color = Color(0.035, 0.09, 0.10, 0.98)
-    style.border_color = Color(0.31, 0.46, 0.45, 0.68)
+    style.bg_color = Color(0.025, 0.071, 0.076, 0.84)
+    style.border_color = Color(0.47, 0.63, 0.58, 0.26)
     style.set_border_width_all(1)
-    style.set_corner_radius_all(23)
+    style.set_corner_radius_all(18)
     panel.add_theme_stylebox_override("panel", style)
     _rect(panel, root, 0.52 if not wide else 0.44, 0.08, 0.94, 0.93)
     var topbar := ColorRect.new()
@@ -68,7 +68,7 @@ func show_home() -> void:
     game.menu_open = true
     game.hud_layer.visible = false
     var panel := _page("home")
-    _label(panel, "ДОБРО ПОЖАЛОВАТЬ", 32, 0.08, 0.10, 0.94, 0.23, ink)
+    _label(panel, "ТИХОЕ ОЗЕРО", 31, 0.08, 0.10, 0.94, 0.23, ink)
     _label(panel, "Лесное озеро  /  Раннее утро", 20, 0.08, 0.23, 0.94, 0.31, muted)
     _button(panel, "НАЧАТЬ РЫБАЛКУ", 0.08, 0.35, 0.92, 0.47, amber, func(): game.start_game())
     _button(panel, "ЖУРНАЛ УЛОВОВ", 0.08, 0.50, 0.92, 0.61, teal, show_journal)
@@ -263,12 +263,14 @@ func _label(parent: Control, message: String, font_size: int, l: float, t: float
 func _button(parent: Control, label_text: String, l: float, t: float, r: float, b: float, fill: Color, callback: Callable) -> Button:
     var bnode := Button.new()
     bnode.text = label_text
-    bnode.add_theme_font_size_override("font_size", 23)
+    bnode.add_theme_font_size_override("font_size", 21)
     bnode.add_theme_color_override("font_color", Color(0.98, 0.99, 0.97))
     bnode.add_theme_color_override("font_hover_color", Color(1, 1, 1))
     var box := StyleBoxFlat.new()
-    box.bg_color = fill
-    box.set_corner_radius_all(11)
+    box.bg_color = fill if fill.a < 0.5 else Color(fill.r, fill.g, fill.b, 0.75 if fill.r > 0.6 else 0.48)
+    box.set_corner_radius_all(17)
+    box.border_color = Color(0.77, 0.87, 0.80, 0.20)
+    box.set_border_width_all(1)
     bnode.add_theme_stylebox_override("normal", box)
     var hover := box.duplicate() as StyleBoxFlat
     hover.bg_color = fill.lightened(0.13)
