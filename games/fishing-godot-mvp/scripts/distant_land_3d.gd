@@ -151,10 +151,17 @@ func _build_conifer_forest() -> void:
     # Instancing actual artist-authored Scots pine and Norway spruce GLB
     # surfaces preserves bark, needle materials and asymmetrical 3D branches.
     var sources: Array[String] = [
+        "res://assets/models/scots_pine_lod1.glb",
+        "res://assets/models/norway_spruce_lod1.glb",
         "res://assets/models/scots_pine_lod2.glb",
         "res://assets/models/norway_spruce_lod2.glb"
     ]
-    var labels: Array[String] = ["InstancedVolumetricConifers", "AuthoredNorwaySpruceForest"]
+    var labels: Array[String] = [
+        "InstancedVolumetricConifers",
+        "AuthoredNorwaySpruceForest",
+        "DistantAuthoredPinesLOD2",
+        "DistantAuthoredSprucesLOD2"
+    ]
     var total := 0
     for kind in range(sources.size()):
         var scene: PackedScene = load(sources[kind]) as PackedScene
@@ -172,13 +179,15 @@ func _build_conifer_forest() -> void:
             push_error("GLB tree has no mesh surfaces: " + sources[kind])
             continue
         var placements: Array[Transform3D] = []
-        var count := 175 if kind == 0 else 195
+        var near_row := kind < 2
+        var count := 86 if near_row else 123
         for index in range(count):
             var x := rng.randf_range(-181.0, 181.0)
-            var z := rng.randf_range(-274.0, -84.0)
-            # Meters: real models are ~20 m tall, not hand-made 5 m cones.
-            var size_scalar := rng.randf_range(0.38, 0.88)
-            var width_variation := rng.randf_range(0.86, 1.09)
+            var z := rng.randf_range(-145.0, -85.0) if near_row else rng.randf_range(-274.0, -141.0)
+            # True 18–22 m authored trees: detailed LOD1 at the visible
+            # opposite shoreline, LOD2 only on distant slopes.
+            var size_scalar := rng.randf_range(0.58, 1.05) if near_row else rng.randf_range(0.75, 1.18)
+            var width_variation := rng.randf_range(0.88, 1.13)
             var basis := Basis(Vector3.UP, rng.randf_range(-PI, PI)).scaled(
                 Vector3(width_variation * size_scalar, size_scalar, width_variation * size_scalar))
             placements.append(Transform3D(basis, Vector3(x, height_at(x, z) - 0.08, z)))
