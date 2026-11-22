@@ -78,7 +78,13 @@ jobs:
             output="games/fishing-godot-mvp/assets/models/${name}.normalized.glb"
             node games/fishing-godot-mvp/tools/normalize_authored_models.mjs "$input" "$output"
             test -s "$output"
-            mv "$output" "$input"
+            with_png="games/fishing-godot-mvp/assets/models/${name}.png.glb"
+            # tevy ships KTX2/Basis materials which the Compatibility import
+            # path rejects; decode them to regular PNG within the GLB.
+            gltf-transform ktxdecompress "$output" "$with_png"
+            test -s "$with_png"
+            mv "$with_png" "$input"
+            rm -f "$output"
           done
           python3 games/fishing-godot-mvp/tools/inspect_authored_meshes.py
           python3 -m pip install --quiet --break-system-packages trimesh numpy
