@@ -34,17 +34,17 @@ func _install_sculpted_gloves() -> void:
             "name": "AuthoredLeatherGloveLeft",
             "path": "res://assets/models/glove_left.glb",
             "wrist": left_wrist,
-            "position": Vector3(0.079, 0.094, -0.187),
-            "rotation": Vector3(-0.12, 0.25, -0.31),
-            "scale": 0.95
+            "position": Vector3(0.036, 0.11, -0.196),
+            "rotation": Vector3(-1.43, 0.18, -0.24),
+            "scale": 1.06
         },
         {
             "name": "AuthoredLeatherGloveRight",
             "path": "res://assets/models/glove_right.glb",
             "wrist": right_wrist,
-            "position": Vector3(-0.041, 0.096, -0.195),
-            "rotation": Vector3(-0.14, -0.28, 0.18),
-            "scale": 0.99
+            "position": Vector3(-0.059, 0.115, -0.188),
+            "rotation": Vector3(-1.49, -0.22, 0.25),
+            "scale": 1.04
         }
     ]
     for definition in placements:
@@ -80,15 +80,15 @@ func _process(delta: float) -> void:
         # floating ball spinning independently of the rod.
         var crank := time_passed * 13.2
         left_wrist.position = Vector3(
-            0.36 + sin(crank) * 0.025 * retrieve_blend,
-            -0.79 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.10
+            0.28 + sin(crank) * 0.025 * retrieve_blend,
+            -0.70 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.09
                 + cast_lift * 0.035 - line_load * 0.018,
             -1.17
         )
         left_wrist.rotation.z = sin(crank) * 0.16 * retrieve_blend
         left_wrist.rotation.x = -0.09 + cos(crank) * 0.095 * retrieve_blend
     if right_wrist != null:
-        right_wrist.position.y = -0.745 + cast_lift * 0.044 + line_load * 0.023
+        right_wrist.position.y = -0.57 + cast_lift * 0.044 + line_load * 0.023
         right_wrist.rotation.z = sin(time_passed * 1.2) * 0.006 + line_load * 0.029
         right_wrist.rotation.x = sin(time_passed * 1.6) * 0.005 - cast_lift * 0.10 - line_load * 0.025
 
@@ -165,7 +165,7 @@ func _build_hands() -> void:
 
     right_wrist = Node3D.new()
     right_wrist.name = "RightAnatomicalGrip3D"
-    right_wrist.position = Vector3(0.73, -0.745, -1.12)
+    right_wrist.position = Vector3(0.66, -0.57, -1.12)
     add_child(right_wrist)
     var right_arm: Array[Vector3] = [
         Vector3(0.52, -0.56, 0.76),
@@ -205,7 +205,7 @@ func _build_hands() -> void:
 
     left_wrist = Node3D.new()
     left_wrist.name = "LeftReelSupport3D"
-    left_wrist.position = Vector3(0.36, -0.89, -1.17)
+    left_wrist.position = Vector3(0.28, -0.79, -1.17)
     add_child(left_wrist)
     var left_arm: Array[Vector3] = [
         Vector3(-0.59, -0.52, 0.72),
