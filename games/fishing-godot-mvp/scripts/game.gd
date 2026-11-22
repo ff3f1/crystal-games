@@ -430,13 +430,8 @@ func _create_environment() -> void:
     var sky := Sky.new()
     # The world has a physical far bank now. Do not show a second mountain
     # range painted onto the sky or reflected as a flat panorama in the lake.
-    var sky_mat := ProceduralSkyMaterial.new()
-    sky_mat.sky_top_color = Color(0.24, 0.49, 0.76)
-    sky_mat.sky_horizon_color = Color(0.67, 0.79, 0.84)
-    sky_mat.ground_horizon_color = Color(0.42, 0.57, 0.56)
-    sky_mat.ground_bottom_color = Color(0.17, 0.27, 0.31)
-    sky_mat.sun_angle_max = 30.0
-    sky_mat.use_debanding = true
+    var sky_mat := ShaderMaterial.new()
+    sky_mat.shader = load("res://shaders/cloud_sky.gdshader")
     sky.sky_material = sky_mat
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
