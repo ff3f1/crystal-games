@@ -21,7 +21,7 @@ for i in [1,3,5,6,7,9,11,12,14,16,18,20,24,27,31,36,42,50]},
 # Each shot is a UNIQUE non-overlapping section of an actual clip; speech must describe what is visible or a general principle.
 # Source, source-start, max available clip length, exact narration.
 SHOTS=[
-('FIGHT',15.5,4.8,'Вот настоящая свечка: рыба уже на крючке и резко вылетает из воды.'),
+('FIGHT',15.5,5.1,'Вот настоящая свечка: рыба уже на крючке и резко вылетает из воды.'),
 ('T12',20.0,6.5,'Но особенно легко потерять трофей, когда до берега остаются считанные метры.'),
 ('T07',1.0,8.8,'Посмотри на спиннингистов на соревнованиях. У воды каждое лишнее движение имеет значение.'),
 ('T12',6.0,12.0,'Первая ошибка — пытаться вытянуть рыбу силой. Не задирай удилище за спину.'),
@@ -100,6 +100,7 @@ def speak():
  # on a single failure discard all remote lines and use the open-source Piper model for the entire film.
  using_edge=False
  try:
+  raise RuntimeError('Use one local consistent voice; avoid unreliable online API')
   import edge_tts
   async def one(txt,path):
    await edge_tts.Communicate(txt,'ru-RU-DmitryNeural',rate='+5%').save(str(path))
