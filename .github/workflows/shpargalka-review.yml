@@ -1,0 +1,25 @@
+name: Visual audit of USFWS fish footage
+on:
+  push:
+    branches: [codex/shpargalka-5min-rework]
+    paths:
+      - video_production/source_review.py
+      - .github/workflows/shpargalka-review.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - run: python -m pip install requests pillow
+      - run: python -u video_production/source_review.py
+      - name: Upload source storyboard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FWS-footage-contact-sheets
+          path: video_production/source_review/*CONTACT.jpg
+          retention-days: 3
