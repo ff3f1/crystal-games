@@ -549,11 +549,13 @@ func _create_rod() -> void:
                 old_part.visible = false
         var authored_rod: Node3D = authored_scene.instantiate() as Node3D
         authored_rod.name = "AuthoredPBRFishingRod"
-        # The CC0 rod was sculpted resting on the X axis in metres. Align the
-        # length to the camera-forward axis and preserve our cast tip marker.
+        # The source rod is 1.9 m long and leans upward along source XY.
+        # Yaw it into first-person depth, moderate the slope and keep the cork
+        # grip a safe distance from the camera (the old butt was oversized).
         authored_rod.rotation.y = PI * 0.5
-        authored_rod.scale = Vector3.ONE * 1.84
-        authored_rod.position = Vector3(-0.03, 0.015, -2.08)
+        authored_rod.rotate_object_local(Vector3.BACK, -0.21)
+        authored_rod.scale = Vector3.ONE * 1.59
+        authored_rod.position = Vector3(-0.13, -0.025, -2.10)
         rod_root.add_child(authored_rod)
         # Auxiliary fork, ground float and hanging line are showroom props,
         # not part of the fishing tool in hand.
@@ -563,6 +565,11 @@ func _create_rod() -> void:
     rod_tip = Marker3D.new()
     rod_root.add_child(rod_tip)
     rod_tip.position = tip
+    var visual_rod: Node3D = rod_root.get_node_or_null("AuthoredPBRFishingRod") as Node3D
+    if visual_rod != null:
+        # Bind the physically simulated line to the tip of the actual imported
+        # model. Previously it was attached to the hidden primitive's tip.
+        rod_tip.position = visual_rod.transform * Vector3(0.913, 0.746, 0.0)
 
     line_mesh = ImmediateMesh.new()
     line_node = MeshInstance3D.new()
