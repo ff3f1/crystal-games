@@ -1,0 +1,24 @@
+name: Review 2026 European fishing fight and landing footage
+on:
+  push:
+    branches: [codex/shpargalka-real-story-cut]
+    paths: [video_production/trout_action_review.py, .github/workflows/shpargalka-trout-review.yml]
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: {sparse-checkout: video_production}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: python -m pip install -q requests pillow imageio-ffmpeg
+      - run: python -u video_production/trout_action_review.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: European-Real-Fishing-18-Clip-Review
+          path: video_production/trout_action_review/TR0UT_CONTACT.jpg
+          retention-days: 2
