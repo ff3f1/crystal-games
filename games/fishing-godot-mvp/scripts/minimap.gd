@@ -49,15 +49,15 @@ func _draw() -> void:
     # The shape of the walkable bank is sampled from the exact same
     # shore_edge function used for movement constraints.
     var player: Vector3 = game.camera.global_position
-    for iy in range(28):
-        for ix in range(24):
-            var map_pos := center + Vector2((float(ix) / 23.0 - 0.5) * radius * 1.85, (float(iy) / 27.0 - 0.5) * radius * 1.85)
+    for iy in range(16):
+        for ix in range(16):
+            var map_pos := center + Vector2((float(ix) / 15.0 - 0.5) * radius * 1.85, (float(iy) / 15.0 - 0.5) * radius * 1.85)
             if not _inside(map_pos, 2.5):
                 continue
             var world_x := player.x + (map_pos.x - _player_on_radar().x) / px_per_metre
             var world_z := player.z + (map_pos.y - _player_on_radar().y) / px_per_metre
             if world_z > float(game.shore_art.call("shore_edge", world_x)):
-                draw_circle(map_pos, 2.8, Color(0.36, 0.45, 0.35, 0.48))
+                draw_circle(map_pos, 4.7, Color(0.36, 0.45, 0.35, 0.32))
     var last_point := Vector2.ZERO
     for ix in range(67):
         var sample_x := player.x + (float(ix) / 66.0 - 0.5) * (radius * 2.4) / px_per_metre
