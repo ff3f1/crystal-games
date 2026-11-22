@@ -68,6 +68,9 @@ ART_PASS_MODELS = {
     "scots_pine_lod2.glb": "https://tevy.dev/models/scots-pine/v1/lod2.glb",
     "norway_spruce_lod1.glb": "https://tevy.dev/models/norway-spruce/v1/lod1.glb",
     "norway_spruce_lod2.glb": "https://tevy.dev/models/norway-spruce/v1/lod2.glb",
+    "authored_grass_lod1.glb": "https://tevy.dev/models/grass-clump/v1/lod1.glb",
+    "authored_cattail_lod1.glb": "https://tevy.dev/models/cattail-clump-sparse/v1/lod1.glb",
+    "authored_reed_lod1.glb": "https://tevy.dev/models/common-reed/v1/lod1.glb",
 }
 for name, url in ART_PASS_MODELS.items():
     fetch(url, MODELS / name)
