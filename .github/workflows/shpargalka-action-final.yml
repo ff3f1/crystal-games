@@ -1,0 +1,29 @@
+name: Render Shpargalka two-minute real fishing action film
+on:
+  push:
+    branches: [codex/shpargalka-action-shotcut]
+    paths:
+      - video_production/fish_jump_final.py
+      - .github/workflows/shpargalka-action-final.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  final:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: video_production
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install requests pillow piper-tts imageio-ffmpeg
+      - run: python -u video_production/fish_jump_final.py
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: Shpargalka-Real-Fish-Action-2min-Final
+          path: video_production/jump_cut_output/
+          retention-days: 14
+          compression-level: 0
