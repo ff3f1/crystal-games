@@ -10,6 +10,15 @@ var time_passed := 0.0
 var retrieve_blend := 0.0
 var casting_blend := 0.0
 var reel_speed := 0.0
+var casting := false
+var cast_lift := 0.0
+var line_load := 0.0
+
+func set_casting(value: bool) -> void:
+    casting = value
+
+func set_line_load(value: float) -> void:
+    line_load = clampf(value, 0.0, 1.0)
 
 func _ready() -> void:
     _build_hands()
@@ -21,20 +30,23 @@ func _process(delta: float) -> void:
     time_passed += delta
     var goal := 1.0 if winding else 0.0
     retrieve_blend = move_toward(retrieve_blend, goal, delta * 6.0)
+    cast_lift = move_toward(cast_lift, 1.0 if casting else 0.0, delta * 4.5)
     if left_wrist != null:
         # Small elliptical motion around the real reel axis, not a detached
         # floating ball spinning independently of the rod.
         var crank := time_passed * 13.2
         left_wrist.position = Vector3(
             0.36 + sin(crank) * 0.025 * retrieve_blend,
-            -0.79 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.10,
+            -0.79 + cos(crank) * 0.038 * retrieve_blend - (1.0 - retrieve_blend) * 0.10
+                + cast_lift * 0.035 - line_load * 0.018,
             -1.17
         )
         left_wrist.rotation.z = sin(crank) * 0.16 * retrieve_blend
         left_wrist.rotation.x = -0.09 + cos(crank) * 0.095 * retrieve_blend
     if right_wrist != null:
-        right_wrist.rotation.z = sin(time_passed * 1.2) * 0.006
-        right_wrist.rotation.x = sin(time_passed * 1.6) * 0.005
+        right_wrist.position.y = -0.745 + cast_lift * 0.044 + line_load * 0.023
+        right_wrist.rotation.z = sin(time_passed * 1.2) * 0.006 + line_load * 0.029
+        right_wrist.rotation.x = sin(time_passed * 1.6) * 0.005 - cast_lift * 0.10 - line_load * 0.025
 
 func _mat(color: Color, roughness: float) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
