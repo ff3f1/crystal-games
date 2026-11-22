@@ -1,0 +1,17 @@
+name: Verify fish-jump video rights and sizes
+on:
+  push:
+    branches: [codex/shpargalka-action-shotcut]
+    paths:
+      - video_production/commons_jump_probe.py
+      - .github/workflows/shpargalka-commons-probe.yml
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - run: python -m pip install requests
+      - run: python -u video_production/commons_jump_probe.py
