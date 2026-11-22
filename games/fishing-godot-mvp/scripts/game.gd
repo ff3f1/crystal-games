@@ -423,18 +423,16 @@ func _create_environment() -> void:
     var env := Environment.new()
     env.background_mode = Environment.BG_SKY
     var sky := Sky.new()
-    var panoramic_texture := load("res://assets/textures/sky_panorama.jpg") as Texture2D
-    if panoramic_texture != null:
-        var sky_mat := PanoramaSkyMaterial.new()
-        sky_mat.panorama = panoramic_texture
-        sky.sky_material = sky_mat
-    else:
-        var sky_mat := ProceduralSkyMaterial.new()
-        sky_mat.sky_top_color = Color(0.28, 0.46, 0.62)
-        sky_mat.sky_horizon_color = Color(0.71, 0.72, 0.67)
-        sky_mat.ground_horizon_color = Color(0.38, 0.54, 0.52)
-        sky_mat.ground_bottom_color = Color(0.14, 0.23, 0.22)
-        sky.sky_material = sky_mat
+    # The world has a physical far bank now. Do not show a second mountain
+    # range painted onto the sky or reflected as a flat panorama in the lake.
+    var sky_mat := ProceduralSkyMaterial.new()
+    sky_mat.sky_top_color = Color(0.24, 0.49, 0.76)
+    sky_mat.sky_horizon_color = Color(0.67, 0.79, 0.84)
+    sky_mat.ground_horizon_color = Color(0.42, 0.57, 0.56)
+    sky_mat.ground_bottom_color = Color(0.17, 0.27, 0.31)
+    sky_mat.sun_angle_max = 30.0
+    sky_mat.use_debanding = true
+    sky.sky_material = sky_mat
     env.sky = sky
     env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
     env.ambient_light_energy = 0.95
