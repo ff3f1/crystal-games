@@ -177,19 +177,22 @@ func _build_hands() -> void:
     right_wrist.name = "RightAnatomicalGrip3D"
     right_wrist.position = Vector3(0.56, -0.56, -0.75)
     add_child(right_wrist)
+    # Sleeve enters from bottom right, follows the actual wrist and meets
+    # the leather glove. The previous triangular forearm ran off-screen and
+    # ended behind the water instead of fitting onto the glove cuff.
     var right_arm: Array[Vector3] = [
-        Vector3(0.43, -0.47, 0.32),
-        Vector3(0.29, -0.29, 0.24),
-        Vector3(0.20, -0.17, 0.15),
-        Vector3(0.095, -0.075, 0.075)
+        Vector3(0.19, -0.21, 0.08),
+        Vector3(0.155, -0.17, 0.005),
+        Vector3(0.095, -0.115, -0.085),
+        Vector3(0.034, -0.055, -0.16)
     ]
-    _loft(right_wrist, right_arm, [0.15, 0.153, 0.13, 0.109], [0.135, 0.132, 0.115, 0.098], jacket, "RightTailoredSleeve3D")
+    _loft(right_wrist, right_arm, [0.176, 0.164, 0.135, 0.116], [0.151, 0.142, 0.113, 0.096], jacket, "RightTailoredSleeve3D")
     var right_cuff: Array[Vector3] = [
-        Vector3(0.102, -0.086, 0.103),
-        Vector3(0.083, -0.031, 0.004),
-        Vector3(0.066, 0.004, -0.048)
+        Vector3(0.034, -0.055, -0.16),
+        Vector3(0.014, -0.001, -0.192),
+        Vector3(-0.026, 0.054, -0.213)
     ]
-    _loft(right_wrist, right_cuff, [0.120, 0.118, 0.108], [0.100, 0.097, 0.092], jacket_dark, "RightSleeveCuff3D")
+    _loft(right_wrist, right_cuff, [0.118, 0.117, 0.108], [0.097, 0.092, 0.087], jacket_dark, "RightSleeveCuff3D")
     # Palm is a long, angled shape hugging the rod handle, not a sphere.
     var right_palm: Array[Vector3] = [
         Vector3(0.073, 0.003, -0.052),
