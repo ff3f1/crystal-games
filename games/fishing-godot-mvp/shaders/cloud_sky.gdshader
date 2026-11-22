@@ -27,7 +27,7 @@ float clouds(vec2 p) {
     float amplitude = 0.54;
     for (int i = 0; i < 4; i++) {
         result += value_noise(p) * amplitude;
-        p = mat2(1.58, -1.14, 1.14, 1.58) * p + vec2(9.7, 1.8);
+        p = mat2(vec2(1.58, -1.14), vec2(1.14, 1.58)) * p + vec2(9.7, 1.8);
         amplitude *= 0.49;
     }
     return result;
