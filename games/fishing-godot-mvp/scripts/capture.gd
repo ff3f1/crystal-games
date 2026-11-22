@@ -18,7 +18,7 @@ func _capture() -> void:
     _save("gameplay-preview.png")
     # A second, intentionally lower angle proves glove silhouettes do not
     # collapse into overlapping balls when viewed at mobile resolution.
-    var saved_pitch := game.camera.rotation.x
+    var saved_pitch: float = game.camera.rotation.x
     game.camera.rotation.x = -0.38
     for i in range(6):
         await process_frame
