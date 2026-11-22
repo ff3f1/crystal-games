@@ -13,6 +13,9 @@ names = (
     "scots_pine_lod2.glb",
     "norway_spruce_lod1.glb",
     "norway_spruce_lod2.glb",
+    "authored_grass_lod1.glb",
+    "authored_cattail_lod1.glb",
+    "authored_reed_lod1.glb",
 )
 for name in names:
     path = root / name
