@@ -229,21 +229,27 @@ func _make_forest() -> void:
         var kind: String = "shrub_02" if i % 2 == 0 else "shrub_03"
         _place_asset(kind, Vector3(px, ground_height(px, pz), pz), random.randf_range(0.5, 1.0), random.randf_range(0, TAU))
 
-    for i in range(155):
-        var px := random.randf_range(-95, 95)
-        var pz := random.randf_range(7.1, 69)
-        if absf(px) < 2.3 and pz < 14:
+    # The crude angular grass and Kenney bushes have been replaced by
+    # individually modeled CC0 wild meadow grass and reeds. All PBR meshes
+    # are grounded by their transformed bounding boxes (not by guessing GLB
+    # authoring origins). Keep the player's casting sightline clear.
+    for i in range(88):
+        var px := random.randf_range(-73.0, 73.0)
+        var pz := random.randf_range(7.8, 47.0)
+        if absf(px) < 3.8 and pz < 19.0:
             continue
-        var kind: String = bush_kinds[random.randi_range(0, bush_kinds.size() - 1)]
-        _place_asset(kind, Vector3(px, ground_height(px, pz), pz), random.randf_range(1.4, 2.9), random.randf_range(0, TAU))
+        _place_grounded_model("authored_grass_lod1",
+            Vector3(px, ground_height(px, pz), pz),
+            random.randf_range(0.65, 1.18), random.randf_range(-PI, PI))
 
-    # Keep low-poly Nature Kit farther from the first-person camera.
-    # Former giant yellow cattails / angular grass filled half the view.
-    for i in range(86):
+    for i in range(62):
         var side := -1.0 if i % 2 == 0 else 1.0
-        var px := side * random.randf_range(8.0, 55.0)
-        var pz := shore_edge(px) + random.randf_range(1.7, 8.0)
-        _place_asset("grass-leafs" if i % 3 == 0 else "grass-large", Vector3(px, ground_height(px, pz), pz), random.randf_range(0.8, 1.5), random.randf_range(0, TAU))
+        var px := side * random.randf_range(7.0, 51.0)
+        var pz := shore_edge(px) + random.randf_range(-0.12, 1.35)
+        var kind := "authored_cattail_lod1" if i % 3 != 0 else "authored_reed_lod1"
+        _place_grounded_model(kind, Vector3(px, minf(0.025, ground_height(px, pz)), pz),
+            random.randf_range(0.74, 1.28), random.randf_range(-PI, PI))
+    print("ART_AUDIT: authored sculpted grass and shoreline reed GLBs instanced")
 
 func _make_fishing_spot() -> void:
     # A small timber pier at the right side; walk there to inspect the equipment.
@@ -402,6 +408,16 @@ func _make_underwater_weeds() -> void:
     seaweed.material_override = material
     seaweed.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
     add_child(seaweed)
+
+func _place_grounded_model(name: String, location: Vector3, factor: float, facing: float) -> Node3D:
+    var model: Node3D = _place_asset(name, location, factor, facing)
+    if model != null:
+        var lowest: float = _lowest_mesh_y(model)
+        if lowest < 9999.0:
+            # Lowpoint calculated in world space after parenting and rotation.
+            # Never leave plants floating above the sand or water edge.
+            model.position.y += location.y - lowest - 0.035
+    return model
 
 func _place_asset(name: String, location: Vector3, factor: float = 1.0, facing: float = 0.0) -> Node3D:
     var path := "res://assets/models/%s.glb" % name
