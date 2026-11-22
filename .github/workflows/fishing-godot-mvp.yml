@@ -181,7 +181,6 @@ jobs:
           ls -lh games/fishing-godot-mvp/build/*.apk
 
       - name: Capture real in-game screenshot
-        continue-on-error: true
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -190,6 +189,9 @@ jobs:
             --resolution 1280x720 \
             --script res://scripts/capture.gd
           test -s games/fishing-godot-mvp/build/scene-preview.png
+          test -s games/fishing-godot-mvp/build/gameplay-preview.png
+          test -s games/fishing-godot-mvp/build/hands-closeup.png
+          test -s games/fishing-godot-mvp/build/radar-preview.png
 
       - name: Render actual shoreline fish and underwater lake QA
         continue-on-error: true
