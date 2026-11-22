@@ -5,6 +5,8 @@ Download during development/CI before importing the Godot project.
 from __future__ import annotations
 import json
 import urllib.request
+import urllib.error
+import time
 from PIL import Image
 from pathlib import Path
 
@@ -16,17 +18,30 @@ TEX.mkdir(parents=True, exist_ok=True)
 
 USER_AGENT = "FishingFirstCast-MVP/0.2 (CC0 game asset importer)"
 
+def _request_bytes(url: str) -> bytes:
+    # CC0 CDNs occasionally hang mid-build. Retry only transport failures;
+    # a permanent 404 or malformed asset still fails loudly.
+    for attempt in range(4):
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, timeout=65) as response:
+                return response.read()
+        except (TimeoutError, urllib.error.URLError, ConnectionError, OSError) as err:
+            if attempt == 3:
+                raise
+            print(f"Asset source temporarily unavailable ({err}), retry {attempt + 1}/3: {url}", flush=True)
+            time.sleep(2 ** attempt)
+    raise RuntimeError("download exhausted")
+
 def fetch(url: str, output: Path) -> None:
     if output.exists() and output.stat().st_size > 100:
         print("Using cached", output.name)
         return
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=55) as resp:
-        data = resp.read()
+    data = _request_bytes(url)
     if len(data) <= 100:
         raise ValueError(f"Asset too small: {output}: {len(data)}")
     output.write_bytes(data)
-    print("Fetched", output.name, len(data), "bytes")
+    print("Fetched", output.name, len(data), "bytes", flush=True)
 
 QUIET_LAKE = {
     "rod": "Fishing Rod and Reel",
@@ -49,9 +64,7 @@ QUIET_LAKE = {
 
 # The 3DAssets.dev manifest contains permanent, versioned CDN links, and all models are CC0.
 manifest_url = "https://3dassets.dev/api/v1/packs/quiet-lake-fishing"
-req = urllib.request.Request(manifest_url, headers={"User-Agent": USER_AGENT})
-with urllib.request.urlopen(req, timeout=55) as response:
-    manifest = json.load(response)["data"]["assets"]
+manifest = json.loads(_request_bytes(manifest_url))["data"]["assets"]
 for output_name, exact_title in QUIET_LAKE.items():
     matches = [a for a in manifest if a["title"].split(" (Quiet Lake Fishing)")[0] == exact_title]
     if len(matches) != 1:
