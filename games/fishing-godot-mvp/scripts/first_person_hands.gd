@@ -18,7 +18,7 @@ func _process(delta: float) -> void:
     if left_wrist != null:
         var reel_motion := 1.0 if winding else 0.0
         left_wrist.rotation.z = lerpf(left_wrist.rotation.z, sin(play_time * 15.0) * 0.12 * reel_motion, minf(1.0, delta * 12.0))
-        left_wrist.position.y = -0.83 + sin(play_time * 15.0) * 0.024 * reel_motion
+        left_wrist.position.y = -0.92 + sin(play_time * 15.0) * 0.024 * reel_motion
     if right_wrist != null:
         right_wrist.rotation.z = sin(play_time * 1.6) * 0.004
         right_wrist.rotation.x = sin(play_time * 1.1) * 0.005
@@ -32,8 +32,8 @@ func _mat(color: Color, rough: float, metal: float = 0.0) -> StandardMaterial3D:
 
 func _ellipsoid(parent: Node3D, center: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
     var sphere := SphereMesh.new()
-    sphere.radial_segments = 12
-    sphere.rings = 7
+    sphere.radial_segments = 24
+    sphere.rings = 14
     var mesh := MeshInstance3D.new()
     mesh.mesh = sphere
     mesh.position = center
@@ -48,7 +48,7 @@ func _segment(parent: Node3D, a: Vector3, b: Vector3, bottom: float, top: float,
     cylinder.top_radius = top
     cylinder.bottom_radius = bottom
     cylinder.height = maxf(0.005, a.distance_to(b))
-    cylinder.radial_segments = segments
+    cylinder.radial_segments = maxi(segments, 14)
     var mesh := MeshInstance3D.new()
     mesh.mesh = cylinder
     mesh.position = (a + b) * 0.5
@@ -70,7 +70,8 @@ func _build_arms() -> void:
     # Right hand fixes the rod blank. It comes in from lower-right,
     # with the fist hugging the base of the carbon rod.
     right_wrist = Node3D.new()
-    right_wrist.position = Vector3(0.78, -0.73, -0.88)
+    right_wrist.position = Vector3(0.66, -0.81, -0.95)
+    right_wrist.scale = Vector3.ONE * 0.92
     add_child(right_wrist)
     _segment(right_wrist, Vector3(0.48, -0.30, 0.49), Vector3(0.12, 0.12, -0.04), 0.25, 0.155, sleeve)
     _segment(right_wrist, Vector3(0.11, 0.04, -0.08), Vector3(-0.02, 0.13, -0.10), 0.17, 0.156, sleeve_shadow)
@@ -87,7 +88,8 @@ func _build_arms() -> void:
 
     # Left hand reaches across the reel and turns the winding handle.
     left_wrist = Node3D.new()
-    left_wrist.position = Vector3(0.18, -0.83, -0.95)
+    left_wrist.position = Vector3(0.14, -0.92, -0.99)
+    left_wrist.scale = Vector3.ONE * 0.91
     add_child(left_wrist)
     _segment(left_wrist, Vector3(-0.57, -0.30, 0.49), Vector3(-0.17, 0.02, -0.07), 0.23, 0.137, sleeve)
     _segment(left_wrist, Vector3(-0.20, -0.02, -0.052), Vector3(-0.13, 0.10, -0.105), 0.137, 0.124, cuff)
