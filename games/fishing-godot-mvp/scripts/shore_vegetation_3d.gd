@@ -9,7 +9,7 @@ var reed_material: ShaderMaterial
 func populate(shore: Node) -> void:
     random.seed = 779126
     _make_reeds(shore)
-    _make_lilies()
+    _make_lilies(shore)
     _make_submerged_plants(shore)
 
 func set_wind(strength: float) -> void:
@@ -80,8 +80,9 @@ func _make_reeds(shore: Node) -> void:
         var x := random.randf_range(-48.0, 47.0)
         if absf(x) < 5.5:
             continue
-        var z: float = float(shore.call("shore_edge", x)) + random.randf_range(-0.5, 0.92)
-        var base := Vector3(x, -0.17, z)
+        var z: float = float(shore.call("shore_edge", x)) + random.randf_range(-0.18, 1.12)
+        var bank_height: float = float(shore.call("ground_height", x, maxf(z, float(shore.call("shore_edge", x)))))
+        var base := Vector3(x, minf(0.012, bank_height) - 0.14, z)
         var tall := random.randf_range(0.92, 1.93)
         var tilt := Vector3(random.randf_range(-0.07, 0.07), 0, random.randf_range(-0.06, 0.06))
         var green := Color(0.21 + random.randf_range(-0.035, 0.055), 0.32 + random.randf_range(-0.04, 0.06), 0.15 + random.randf_range(0.0, 0.05))
@@ -104,15 +105,32 @@ func _make_reeds(shore: Node) -> void:
     reed_material.shader = load("res://shaders/vegetation_3d.gdshader")
     _mesh_from(st, "SolidReeds3D", reed_material)
 
-func _make_lilies() -> void:
+func _make_lilies(shore: Node) -> void:
+    var stems := SurfaceTool.new()
+    stems.begin(Mesh.PRIMITIVE_TRIANGLES)
     var pads := SurfaceTool.new()
     pads.begin(Mesh.PRIMITIVE_TRIANGLES)
     var blooms := SurfaceTool.new()
     blooms.begin(Mesh.PRIMITIVE_TRIANGLES)
     for index in range(39):
-        var x := -12.4 + random.randf_range(-7.0, 8.0)
-        var z := -13.6 + random.randf_range(-6.9, 7.8)
-        var center := Vector3(x, 0.025 + random.randf_range(0, 0.018), z)
+        # Group rooted lilies into an actual bay rather than scattering
+        # little green squares across all open water.
+        var cluster := index % 3
+        var x := (-16.0 if cluster == 0 else -11.2 if cluster == 1 else -20.0) + random.randf_range(-2.6, 2.6)
+        var z := (-11.2 if cluster == 0 else -17.5 if cluster == 1 else -15.5) + random.randf_range(-2.6, 2.4)
+        var center := Vector3(x, 0.012 + random.randf_range(-0.004, 0.008), z)
+        # Each pad grows from the physical lakebed, never levitates as a
+        # disconnected paper polygon suspended over the lake.
+        var bed_height: float = float(shore.call("lake_floor_height", z)) + 0.02
+        var stem_start := Vector3(x + random.randf_range(-0.19, 0.19), bed_height, z + random.randf_range(-0.19, 0.19))
+        var stem_path: Array[Vector3] = [
+            stem_start,
+            stem_start.lerp(center, 0.35) + Vector3(0.12, 0.0, 0.0),
+            stem_start.lerp(center, 0.73) + Vector3(0.06, 0.0, 0.0),
+            center
+        ]
+        var stem_radii: Array[float] = [0.020, 0.017, 0.013, 0.006]
+        _tube(stems, stem_path, stem_radii, Color(0.14, 0.23, 0.13), 6)
         var radius := random.randf_range(0.26, 0.46)
         var olive := Color(0.12 + random.randf_range(0, 0.07), 0.24 + random.randf_range(0, 0.08), 0.105)
         var underside := olive.darkened(0.23)
@@ -152,6 +170,7 @@ func _make_lilies() -> void:
     material.vertex_color_use_as_albedo = true
     material.roughness = 0.83
     material.cull_mode = BaseMaterial3D.CULL_DISABLED
+    _mesh_from(stems, "RootedLilyStems3D", material)
     _mesh_from(pads, "ThickLilyPads3D", material)
     _mesh_from(blooms, "WaterLilyFlowers3D", material)
 
