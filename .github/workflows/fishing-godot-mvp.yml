@@ -79,7 +79,7 @@ jobs:
           sudo apt-get install -y "$RUNNER_TEMP/ktx-4.4.2.deb"
           command -v ktx
           npm install --no-save --silent @gltf-transform/core@4.5.0 @gltf-transform/extensions@4.5.0 @gltf-transform/functions@4.5.0 meshoptimizer@0.25.0
-          for name in authored_fishing_rod authored_leather_gloves scots_pine_lod1 scots_pine_lod2 norway_spruce_lod1 norway_spruce_lod2; do
+          for name in authored_fishing_rod authored_leather_gloves scots_pine_lod1 scots_pine_lod2 norway_spruce_lod1 norway_spruce_lod2 authored_grass_lod1 authored_cattail_lod1 authored_reed_lod1; do
             input="games/fishing-godot-mvp/assets/models/${name}.glb"
             output="games/fishing-godot-mvp/assets/models/${name}.normalized.glb"
             node games/fishing-godot-mvp/tools/normalize_authored_models.mjs "$input" "$output"
