@@ -81,7 +81,34 @@ func _run() -> void:
         push_error("START_SCENE_FAIL: lily pads have no stems in lakebed")
         quit(1)
         return
-    print("START_TRACE: detailed grip geometry and rooted 3D lilies loaded")
+    var right_asset: Node = right_glove.get_node_or_null("AuthoredLeatherGloveRight")
+    var left_asset: Node = left_glove.get_node_or_null("AuthoredLeatherGloveLeft")
+    if right_asset == null or left_asset == null:
+        push_error("START_SCENE_FAIL: procedural fingers were not replaced with authored CC0 glove GLBs")
+        quit(1)
+        return
+    if right_asset.get_child_count() == 0 or left_asset.get_child_count() == 0:
+        push_error("START_SCENE_FAIL: authored gloves missing sculpted mesh geometry")
+        quit(1)
+        return
+    var rod_asset: Node = game.rod_root.get_node_or_null("AuthoredPBRFishingRod")
+    if rod_asset == null or rod_asset.get_child_count() == 0:
+        push_error("START_SCENE_FAIL: old primitive spinning rod still active")
+        quit(1)
+        return
+    if bank.get_node_or_null("AuthoredNorwaySpruceForest") == null:
+        push_error("START_SCENE_FAIL: PBR conifer vegetation missing from distant forest")
+        quit(1)
+        return
+    var near_tree_count := 0
+    for tree_child in game.shore_art.get_children():
+        if str(tree_child.name).begins_with("AuthoredNearTree"):
+            near_tree_count += 1
+    if near_tree_count < 30:
+        push_error("START_SCENE_FAIL: near-bank procedural forest wasn't replaced")
+        quit(1)
+        return
+    print("START_TRACE: authored PBR rod, leather gloves, pine and spruce meshes loaded")
     print("START_TRACE: entering fishing session")
     game.start_game()
     for i in range(8):
