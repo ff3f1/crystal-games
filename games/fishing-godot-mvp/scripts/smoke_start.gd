@@ -61,16 +61,43 @@ func _run() -> void:
             push_error("START_SCENE_FAIL: empty far-bank multi-mesh")
             quit(1)
             return
-    print("START_TRACE: physical far shore and 470 tree meshes validated")
+    print("START_TRACE: physical far shore and 3D tree meshes validated")
     if game.reel_crank == null or game.reel_crank.name != "AnimatedReelHandle3D" or game.reel_crank.get_child_count() < 2:
         push_error("START_SCENE_FAIL: missing animated reel handle")
         quit(1)
         return
     print("START_TRACE: animated reel handle and attached grip validated")
+    var right_glove: Node = game.hands.get_node_or_null("RightAnatomicalGrip3D")
+    var left_glove: Node = game.hands.get_node_or_null("LeftReelSupport3D")
+    if right_glove == null or left_glove == null:
+        push_error("START_SCENE_FAIL: the two articulated 3D hands are not loaded")
+        quit(1)
+        return
+    if right_glove.get_child_count() < 8 or left_glove.get_child_count() < 8:
+        push_error("START_SCENE_FAIL: anatomical gloves missing finger geometry")
+        quit(1)
+        return
+    if vegetation.get_node_or_null("RootedLilyStems3D") == null:
+        push_error("START_SCENE_FAIL: lily pads have no stems in lakebed")
+        quit(1)
+        return
+    print("START_TRACE: detailed grip geometry and rooted 3D lilies loaded")
     print("START_TRACE: entering fishing session")
     game.start_game()
     for i in range(8):
         await process_frame
+    if game.action_button == null or game.action_button.name != "ActionCircle":
+        push_error("START_SCENE_FAIL: mobile HUD primary round action missing")
+        quit(1)
+        return
+    if game.action_button.size.x > 118.0 or game.action_button.size.y > 118.0:
+        push_error("START_SCENE_FAIL: oversized control tile returned")
+        quit(1)
+        return
+    if game.minimap.size.x > 192.0 or game.minimap.size.y > 192.0:
+        push_error("START_SCENE_FAIL: radar is covering too much gameplay")
+        quit(1)
+        return
     if game.minimap == null or not game.hud_layer.visible:
         push_error("START_SCENE_FAIL: minimap or fishing HUD missing")
         quit(1)
