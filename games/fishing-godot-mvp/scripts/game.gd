@@ -463,7 +463,8 @@ func _create_rod() -> void:
     carbon.metallic = 0.35
     var carbon_edge := _material(Color(0.15, 0.18, 0.18), 0.29)
     carbon_edge.metallic = 0.42
-    var cork := _material(Color(0.48, 0.33, 0.20), 0.94)
+    var cork := ShaderMaterial.new()
+    cork.shader = load("res://shaders/cork_grip.gdshader")
     var rubber := _material(Color(0.08, 0.075, 0.07), 0.92)
     var steel := _material(Color(0.62, 0.67, 0.66), 0.20)
     steel.metallic = 0.89
