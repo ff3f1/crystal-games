@@ -59,12 +59,12 @@ func _segment(parent: Node3D, a: Vector3, b: Vector3, bottom: float, top: float,
     return mesh
 
 func _build_arms() -> void:
-    var sleeve := _mat(Color(0.088, 0.133, 0.197), 0.92)
-    var sleeve_shadow := _mat(Color(0.064, 0.103, 0.161), 0.96)
-    var fabric := _mat(Color(0.092, 0.104, 0.107), 0.99)
-    var fabric_light := _mat(Color(0.151, 0.164, 0.164), 0.94)
-    var grip := _mat(Color(0.049, 0.052, 0.058), 0.93)
-    var seam := _mat(Color(0.31, 0.34, 0.315), 0.96)
+    var sleeve := _mat(Color(0.16, 0.20, 0.24), 0.94)
+    var sleeve_shadow := _mat(Color(0.105, 0.14, 0.175), 0.96)
+    var fabric := _mat(Color(0.195, 0.211, 0.203), 0.97)
+    var fabric_light := _mat(Color(0.265, 0.278, 0.254), 0.96)
+    var grip := _mat(Color(0.125, 0.137, 0.129), 0.94)
+    var seam := _mat(Color(0.35, 0.37, 0.32), 0.97)
     var cuff := _mat(Color(0.033, 0.051, 0.070), 0.95)
 
     # Right hand fixes the rod blank. It comes in from lower-right,
