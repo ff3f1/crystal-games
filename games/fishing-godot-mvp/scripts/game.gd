@@ -88,6 +88,7 @@ var camera: Camera3D
 var rod_root: Node3D
 var rod_tip: Marker3D
 var reel_spool: MeshInstance3D
+var reel_crank: Node3D
 var bobber: Node3D
 var fish_body: Node3D
 var ring: MeshInstance3D
@@ -175,9 +176,13 @@ func _process(delta: float) -> void:
     if reel_spool != null:
         if is_reeling and (phase == Phase.FIGHT or phase == Phase.WAITING):
             reel_spool.rotate_z(delta * 17.0)
+            if reel_crank != null:
+                reel_crank.rotate_x(delta * 17.0)
         elif phase == Phase.FIGHT and float(fight_sim.slip_velocity) > 0.04:
-            # Free-running drag lets the spool yield during a trophy run.
+            # Drag payout should visibly spin the crank backward too.
             reel_spool.rotate_z(-delta * float(fight_sim.slip_velocity) * 16.0)
+            if reel_crank != null:
+                reel_crank.rotate_x(-delta * float(fight_sim.slip_velocity) * 10.0)
 
     match phase:
         Phase.CASTING:
@@ -520,9 +525,16 @@ func _create_rod() -> void:
     bail.outer_radius = 0.123
     var bail_obj := _mesh(rod_root, bail, reel_center + Vector3(0.33, 0.00, 0), Vector3.ONE, steel)
     bail_obj.rotation.z = PI * 0.5
-    var handle_end := reel_center + Vector3(-0.17, -0.19, 0.08)
-    _taper_rod(reel_center, handle_end, 0.024, 0.019, steel)
-    _taper_rod(handle_end, handle_end + Vector3(-0.04, -0.12, 0), 0.040, 0.033, rubber)
+    # The handle is mounted on an actual pivot. Unlike the former static
+    # decorative rod, both the crank and its rubber grip orbit during winding.
+    reel_crank = Node3D.new()
+    reel_crank.name = "AnimatedReelHandle3D"
+    reel_crank.position = reel_center + Vector3(-0.18, 0.0, 0.0)
+    rod_root.add_child(reel_crank)
+    var crank_base := Vector3.ZERO
+    var crank_elbow := Vector3(0.0, -0.17, 0.09)
+    _rod_section(reel_crank, crank_base, crank_elbow, 0.022, 0.019, steel)
+    _rod_section(reel_crank, crank_elbow, crank_elbow + Vector3(-0.075, -0.048, 0.0), 0.034, 0.032, rubber)
 
     rod_tip = Marker3D.new()
     rod_root.add_child(rod_tip)
@@ -538,12 +550,15 @@ func _create_rod() -> void:
     camera.add_child(hands)
 
 func _taper_rod(a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
+    _rod_section(rod_root, a, b, radius_start, radius_end, mat)
+
+func _rod_section(parent: Node3D, a: Vector3, b: Vector3, radius_start: float, radius_end: float, mat: Material) -> void:
     var shape := CylinderMesh.new()
     shape.top_radius = radius_end
     shape.bottom_radius = radius_start
     shape.height = maxf(a.distance_to(b), 0.001)
-    shape.radial_segments = 12
-    var m := _mesh(rod_root, shape, (a + b) * 0.5, Vector3.ONE, mat)
+    shape.radial_segments = 16
+    var m := _mesh(parent, shape, (a + b) * 0.5, Vector3.ONE, mat)
     m.quaternion = Quaternion(Vector3.UP, (b - a).normalized())
 
 func _ring_guide(parent: Node3D, p: Vector3, radius: float, mat: Material, width: float) -> void:
