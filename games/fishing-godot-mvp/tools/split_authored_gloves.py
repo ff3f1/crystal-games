@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Separate two authored leather work gloves into reusable left/right GLBs.
+"""Separate and bend CC0 leather gloves into reusable left/right grasping GLBs.
 
 The tevy source is a pair placed flat on a table. We preserve its original
 texture coordinates and textured mesh surfaces and only separate connected
@@ -61,7 +61,22 @@ for name, group in [("left", groups[left_index]), ("right", groups[1 - left_inde
     for i, part in enumerate(group):
         fragment = part.copy()
         fragment.apply_translation(-center)
-        output.add_geometry(fragment, node_name=f"{name}_glove_part_{i}")
+        # Original CC0 work gloves are laid completely flat. This non-rigid
+        # vertex deformation bends their authored finger geometry into a
+        # gripping pose. All faces, UVs and original PBR texture maps remain.
+        # Left glove extends along +X, right along -X from the palm.
+        vertices = np.array(fragment.vertices, dtype=np.float64, copy=True)
+        pointing = 1.0 if name == "left" else -1.0
+        along_finger = vertices[:, 0] * pointing
+        distance = np.maximum(along_finger - 0.012, 0.0)
+        radius = 0.069
+        theta = np.minimum(distance / radius, 1.72)
+        curled = radius * np.sin(theta)
+        drop = radius * (1.0 - np.cos(theta))
+        vertices[:, 0] += pointing * (curled - distance)
+        vertices[:, 1] -= drop
+        fragment.vertices = vertices
+        output.add_geometry(fragment, node_name=f"{name}_curled_grip_part_{i}")
         face_count += len(fragment.faces)
     if face_count < 120:
         raise RuntimeError(f"Too few triangles in {name}: {face_count}")
