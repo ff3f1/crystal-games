@@ -22,6 +22,50 @@ func set_line_load(value: float) -> void:
 
 func _ready() -> void:
     _build_hands()
+    _install_sculpted_gloves()
+
+func _install_sculpted_gloves() -> void:
+    # Authored PBR glove meshes are split out of the CC0 two-glove asset by
+    # tools/split_authored_gloves.py during CI. The original procedural palms
+    # and separate tube fingers are hidden. The only remaining construction
+    # is the long fabric sleeve and wrist cuff behind each glove.
+    var placements: Array[Dictionary] = [
+        {
+            "name": "AuthoredLeatherGloveLeft",
+            "path": "res://assets/models/glove_left.glb",
+            "wrist": left_wrist,
+            "position": Vector3(0.079, 0.094, -0.187),
+            "rotation": Vector3(-0.12, 0.25, -0.31),
+            "scale": 0.95
+        },
+        {
+            "name": "AuthoredLeatherGloveRight",
+            "path": "res://assets/models/glove_right.glb",
+            "wrist": right_wrist,
+            "position": Vector3(-0.041, 0.096, -0.195),
+            "rotation": Vector3(-0.14, -0.28, 0.18),
+            "scale": 0.99
+        }
+    ]
+    for definition in placements:
+        var wrist: Node3D = definition["wrist"]
+        var scene: PackedScene = load(str(definition["path"])) as PackedScene
+        if scene == null:
+            push_error("Missing external CC0 leather glove model: " + str(definition["path"]))
+            continue
+        # Retain only sleeves and cuffs behind the imported glove mesh.
+        for original in wrist.get_children():
+            if original is MeshInstance3D:
+                var label := str(original.name)
+                if not (label.contains("TailoredSleeve") or label.contains("SleeveCuff")):
+                    original.visible = false
+        var glove: Node3D = scene.instantiate() as Node3D
+        glove.name = str(definition["name"])
+        glove.position = definition["position"]
+        glove.rotation = definition["rotation"]
+        glove.scale = Vector3.ONE * float(definition["scale"])
+        wrist.add_child(glove)
+    print("ART_AUDIT: real CC0 leather glove meshes replace generated finger spheres")
 
 func set_winding(value: bool) -> void:
     winding = value
