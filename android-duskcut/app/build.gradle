@@ -3,8 +3,10 @@ plugins { id 'com.android.application' }
 // Both values default to blank: no mock ads and no fabricated in-game rewards.
 def rewardedUnit = (findProperty('DUSK_REWARDED_ID') ?: 'R-M-20492584-1').toString()
 def interstitialUnit = (findProperty('DUSK_INTERSTITIAL_ID') ?: 'R-M-20492584-2').toString()
+def bannerUnit = (findProperty('DUSK_BANNER_ID') ?: 'R-M-20492584-3').toString()
 if (rewardedUnit && !(rewardedUnit ==~ /R-M-[0-9]+-[0-9]+|demo-rewarded-yandex/)) throw new GradleException('Invalid DUSK_REWARDED_ID')
 if (interstitialUnit && !(interstitialUnit ==~ /R-M-[0-9]+-[0-9]+|demo-interstitial-yandex/)) throw new GradleException('Invalid DUSK_INTERSTITIAL_ID')
+if (bannerUnit && !(bannerUnit ==~ /R-M-[0-9]+-[0-9]+|demo-banner-yandex/)) throw new GradleException('Invalid DUSK_BANNER_ID')
 
 android {
     namespace 'ru.crystalgames.duskcut'
@@ -13,10 +15,11 @@ android {
         applicationId 'ru.crystalgames.duskcut'
         minSdk 23
         targetSdk 35
-        versionCode 265
-        versionName '2.6.5'
+        versionCode 266
+        versionName '2.6.6'
         buildConfigField 'String', 'REWARDED_AD_UNIT', '\"' + rewardedUnit + '\"'
         buildConfigField 'String', 'INTERSTITIAL_AD_UNIT', '\"' + interstitialUnit + '\"'
+        buildConfigField 'String', 'BANNER_AD_UNIT', '\"' + bannerUnit + '\"'
     }
     buildFeatures { buildConfig true }
     signingConfigs {

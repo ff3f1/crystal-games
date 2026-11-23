@@ -1,6 +1,6 @@
-# DUSK//CUT 2.6.5 — Android / RuStore
+# DUSK//CUT 2.6.6 — Android / RuStore
 
-Полноценный исходный Android-проект игры на основе исходников v2.6.5 (не версии 2.6.6).
+Полноценный исходный Android-проект игры на основе исходников v2.6.6 (не версии 2.6.6).
 
 ## Внутри
 
@@ -55,7 +55,7 @@ DUSK_KEY_PASSWORD=...
 ## RuStore
 
 - Package: `ru.crystalgames.duskcut` (новое приложение, не замена «Рыбалки»).
-- Version Name: `2.6.5`, Version Code: `265`.
+- Version Name: `2.6.6`, Version Code: `265`.
 - Min Android: 6.0 (API 23), target: API 35.
 - Тип: Игра / Экшен или Аркады (укажите подходящую категорию в консоли).
 - Локальная игра работает без интернета; сеть нужна только для реальных рекламных объявлений и ссылки RuStore.
@@ -82,4 +82,11 @@ DUSK_KEY_PASSWORD=...
 - `DUSK_KEY_ALIAS`: алиас ключа.
 - `DUSK_KEY_PASSWORD`: пароль самого ключа.
 
-После задания секретов запустите GitHub Actions → DUSK CUT - Android APK / RuStore media → Run workflow. В артефактах появится `DUSK-CUT-2.6.5-RUSTORE-SIGNED-RELEASE` — подписанный APK. НЕ публикуйте тестовый debug APK.
+После задания секретов запустите GitHub Actions → DUSK CUT - Android APK / RuStore media → Run workflow. В артефактах появится `DUSK-CUT-2.6.6-RUSTORE-SIGNED-RELEASE` — подписанный APK. НЕ публикуйте тестовый debug APK.
+
+
+## RuStore 2.6.6
+- Multitouch Android: thumb on the movement stick and second finger on the slash surface work independently.
+- Desktop keyboard hints hidden in the Android app, retained in browser version.
+- Real native Yandex Mobile Ads 8 banner `R-M-20492584-3`, displayed only on menu and between-wave upgrade screen, without covering buttons. Requires ad fill and active monetization in RSYA.
+- Existing rewarded (`-1`) and interstitial (`-2`) placements unchanged.

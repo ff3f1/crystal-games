@@ -48,6 +48,8 @@ jobs:
         run: |
           grep -q 'R-M-20492584-1' android-duskcut/app/build.gradle
           grep -q 'R-M-20492584-2' android-duskcut/app/build.gradle
+          grep -q 'R-M-20492584-3' android-duskcut/app/build.gradle
+          grep -q 'mobileTouchHandler' android-duskcut/app/src/main/assets/www/index.html
           grep -q 'window.androidRewardClosed' android-duskcut/app/src/main/assets/www/index.html
           file android-duskcut/RUSTORE_MEDIA/icon_512.png
       - name: Build installable test APK
@@ -56,7 +58,7 @@ jobs:
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: DUSK-CUT-2.6.5-Android-TEST-APK
+          name: DUSK-CUT-2.6.6-Android-TEST-APK
           path: android-duskcut/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -75,14 +77,14 @@ jobs:
         if: ${{ env.DUSK_KEYSTORE_BASE64 != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: DUSK-CUT-2.6.5-RUSTORE-SIGNED-RELEASE
+          name: DUSK-CUT-2.6.6-RUSTORE-SIGNED-RELEASE
           path: android-duskcut/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
       - name: Upload RuStore media and moderation texts
         uses: actions/upload-artifact@v4
         with:
-          name: DUSK-CUT-2.6.5-RuStore-MEDIA
+          name: DUSK-CUT-2.6.6-RuStore-MEDIA
           path: |
             android-duskcut/RUSTORE_MEDIA/*
             android-duskcut/STORE_TEXT_RU.txt

@@ -18,6 +18,9 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.view.View;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.util.DisplayMetrics;
 import android.view.WindowManager;
 import android.widget.Toast;
 
@@ -27,6 +30,9 @@ import com.yandex.mobile.ads.common.AdError;
 import com.yandex.mobile.ads.common.AdRequest;
 import com.yandex.mobile.ads.common.AdRequestError;
 import com.yandex.mobile.ads.common.ImpressionData;
+import com.yandex.mobile.ads.banner.BannerAdView;
+import com.yandex.mobile.ads.banner.BannerAdSize;
+import com.yandex.mobile.ads.banner.BannerAdEventListener;
 import com.yandex.mobile.ads.interstitial.InterstitialAd;
 import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener;
 import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener;
@@ -45,6 +51,9 @@ public final class MainActivity extends Activity {
     private static final String GAME_URL = "https://"+ LOCAL_HOST + "/assets/www/index.html";
 
     private WebView webView;
+    private BannerAdView bannerAd;
+    private boolean bannerLoaded = false;
+    private String bannerScreen = "";
     private WebViewAssetLoader loader;
     private RewardedAdLoader rewardedLoader;
     private RewardedAd rewardedAd;
@@ -95,11 +104,19 @@ public final class MainActivity extends Activity {
                 if (!GAME_URL.equals(url)) return;
                 initialLoadFinished=true;
                 js("window.androidPlatformReady && window.androidPlatformReady("+(rewardedAd != null)+")");
+                refreshBanner();
             }
         });
-        setContentView(webView);
+        FrameLayout root = new FrameLayout(this);
+        root.addView(webView,new FrameLayout.LayoutParams(-1,-1));
+        bannerAd = new BannerAdView(this);
+        bannerAd.setVisibility(View.GONE);
+        FrameLayout.LayoutParams bannerParams = new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);
+        root.addView(bannerAd,bannerParams);
+        setContentView(root);
         webView.loadUrl(GAME_URL);
         initAds();
+        initBanner();
     }
 
     private void immersive() {
@@ -115,6 +132,45 @@ public final class MainActivity extends Activity {
         runOnUiThread(() -> {
             if (webView != null) webView.evaluateJavascript(script, null);
         });
+    }
+
+
+    // Single native adaptive sticky banner. The web UI reserves a footer only when it is visible.
+    private void initBanner() {
+        if (bannerAd == null || BuildConfig.BANNER_AD_UNIT.isEmpty()) return;
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int widthDp = Math.round(metrics.widthPixels / metrics.density);
+        bannerAd.setAdSize(BannerAdSize.sticky(this,widthDp));
+        bannerAd.setBannerAdEventListener(new BannerAdEventListener() {
+            @Override public void onAdLoaded() {
+                if (isDestroyed()) { if (bannerAd != null) bannerAd.destroy(); return; }
+                bannerLoaded = true;
+                refreshBanner();
+            }
+            @Override public void onAdFailedToLoad(AdRequestError error) {
+                bannerLoaded = false;
+                refreshBanner();
+            }
+            @Override public void onAdClicked() {}
+            @Override public void onImpression(ImpressionData data) {}
+        });
+        bannerAd.loadAd(new AdRequest.Builder(BuildConfig.BANNER_AD_UNIT).build());
+    }
+    private void refreshBanner() {
+        if (bannerAd == null) return;
+        boolean show = bannerLoaded && !adShowing
+            && ("menu".equals(bannerScreen) || "upgradeScreen".equals(bannerScreen))
+            && !isFinishing() && !isDestroyed();
+        bannerAd.setVisibility(show ? View.VISIBLE : View.GONE);
+        if (!show) {
+            js("window.androidBannerChanged && window.androidBannerChanged(false,0)");
+        } else {
+            bannerAd.post(() -> {
+                if (bannerAd == null || bannerAd.getVisibility() != View.VISIBLE) return;
+                int heightDp=Math.round(bannerAd.getHeight()/getResources().getDisplayMetrics().density);
+                js("window.androidBannerChanged && window.androidBannerChanged(true,"+Math.max(50,heightDp)+")");
+            });
+        }
     }
 
     private void initAds() {
@@ -155,6 +211,7 @@ public final class MainActivity extends Activity {
             return;
         }
         adShowing=true;
+        refreshBanner();
         rewardGranted=false;
         rewardKind=kind;
         js("window.androidSetRewardAvailable && window.androidSetRewardAvailable(false)");
@@ -176,6 +233,7 @@ public final class MainActivity extends Activity {
         String kind=rewardKind;
         boolean success=rewardGranted;
         adShowing=false;rewardKind=null;rewardGranted=false;
+        refreshBanner();
         // Only real Yandex Mobile Ads onRewarded() authorises granting.
         js("window.androidRewardClosed && window.androidRewardClosed("+quote(kind)+","+success+")");
         loadRewarded();
@@ -186,6 +244,7 @@ public final class MainActivity extends Activity {
             return;
         }
         adShowing=true;
+        refreshBanner();
         final InterstitialAd ad=interstitialAd;
         interstitialAd=null;
         ad.setAdEventListener(new InterstitialAdEventListener() {
@@ -201,6 +260,7 @@ public final class MainActivity extends Activity {
         if (!adShowing) return;
         shownAd.setAdEventListener(null);
         adShowing=false;
+        refreshBanner();
         js("window.androidInterstitialClosed && window.androidInterstitialClosed()");
         loadInterstitial();
     }
@@ -216,6 +276,13 @@ public final class MainActivity extends Activity {
         catch(Exception ignored) {return false;}
     }
     private final class GameBridge {
+        @JavascriptInterface public void setBannerScreen(String screen) {
+            runOnUiThread(() -> {
+                if (!trusted()) return;
+                bannerScreen = ("menu".equals(screen)||"upgradeScreen".equals(screen)) ? screen : "";
+                refreshBanner();
+            });
+        }
         @JavascriptInterface public void showRewarded(String kind) {
             runOnUiThread(() -> {if (trusted()) MainActivity.this.showRewarded(kind);});
         }
@@ -270,6 +337,7 @@ public final class MainActivity extends Activity {
         js("window.androidBackground && window.androidBackground(false)");
     }
     @Override protected void onDestroy() {
+        if(bannerAd!=null) { bannerAd.setBannerAdEventListener(null);bannerAd.destroy();bannerAd=null; }
         if(rewardedAd!=null)rewardedAd.setAdEventListener(null);
         if(interstitialAd!=null)interstitialAd.setAdEventListener(null);
         rewardedAd=null;interstitialAd=null;rewardedLoader=null;interstitialLoader=null;

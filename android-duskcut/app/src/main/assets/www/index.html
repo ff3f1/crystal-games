@@ -908,6 +908,19 @@ body{background:#070a11}
  .shell{width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;aspect-ratio:auto!important;box-shadow:none!important;border:0!important}
  .screen{padding-bottom:max(11px,env(safe-area-inset-bottom))}
 }
+
+/* RuStore: avoid accidental banner clicks; native banner overlays only reserved blank footer. */
+html.android-app .desktop-only{display:none!important}
+html.android-banner-visible #menu.active,
+html.android-banner-visible #upgradeScreen.active{
+ padding-bottom:calc(var(--android-banner-height, 60px) + 16px)!important;
+ scroll-padding-bottom:calc(var(--android-banner-height, 60px) + 16px);
+}
+html.android-banner-visible #upgradeScreen.active .upgrid{
+ max-height:min(38dvh,calc(100dvh - var(--android-banner-height,60px) - 315px));
+ min-height:0;
+}
+html.android-app #joystick{touch-action:none}
 </style>
 <!-- RuStore Android WebView AssetLoader: native platform integration is in MainActivity. -->
 <!-- Ember Night UI & gameplay v2.4: lantern pickups, multi-cut bonuses, counter-interrupts, harrier AI -->
@@ -927,9 +940,9 @@ body{background:#070a11}
 <div id="toast"></div><div id="danger" aria-live="off">⚠ ОГОНЬ · УКЛОНИСЬ</div>
 <section class="screen active" id="menu"><div class="ambientPetals" aria-hidden="true"><i style="--n:0;--x:11%;--d:-0.0s;--speed:12s;--sz:4px"></i><i style="--n:1;--x:40%;--d:-1.7s;--speed:19s;--sz:7px"></i><i style="--n:2;--x:69%;--d:-3.4s;--speed:13s;--sz:5px"></i><i style="--n:3;--x:2%;--d:-5.1s;--speed:20s;--sz:8px"></i><i style="--n:4;--x:31%;--d:-6.8s;--speed:14s;--sz:6px"></i><i style="--n:5;--x:60%;--d:-8.5s;--speed:21s;--sz:4px"></i><i style="--n:6;--x:89%;--d:-10.2s;--speed:15s;--sz:7px"></i><i style="--n:7;--x:22%;--d:-11.9s;--speed:22s;--sz:5px"></i><i style="--n:8;--x:51%;--d:-13.6s;--speed:16s;--sz:8px"></i><i style="--n:9;--x:80%;--d:-15.3s;--speed:23s;--sz:6px"></i><i style="--n:10;--x:13%;--d:-17.0s;--speed:17s;--sz:4px"></i><i style="--n:11;--x:42%;--d:-18.7s;--speed:24s;--sz:7px"></i></div>
  <div class="menuHead"><div class="logo-top">ПИКСЕЛЬНЫЙ НУАР · ЭКШЕН</div><div class="logo">DUSK<em>//</em>CUT</div><div class="logosub">НОЧЬ САКУРЫ // БЕСКОНЕЧНАЯ ОСАДА</div><div class="menuTagline">Когда гаснут огни — просыпается клинок</div></div>
- <div class="menuFoot"><div class="menuStats"><div class="statCard"><small>ЛУЧШИЙ СЧЁТ</small><strong id="bestLabel">000000</strong></div><div class="statCard"><small>ОСКОЛКИ</small><strong><span id="walletLabel">0</span> ◈</strong></div></div><button class="btn" id="startBtn">▶ ВОЙТИ В НОЧЬ</button><div class="two"><button class="btn alt small" id="shopBtn">◈ УЛУЧШЕНИЯ</button><button class="btn alt small" id="chronicleBtn">▤ ХРОНИКИ</button></div><div class="two"><button class="btn alt small" id="helpBtn">? КАК ИГРАТЬ</button><button class="btn alt small" id="settingsBtn">⚙ НАСТРОЙКИ</button></div><div class="socialrow"><button class="btn alt small socialShare" id="menuShareBtn"><svg class="socialGlyph friendsGlyph" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 5h7v2H8zM6 7h11v7H6zM8 14h7v3H8zM3 19h17v3H3zM1 22h21v7H1zM22 9h5v2h-5zM20 11h9v6h-9zM22 17h5v2h-5zM22 21h8v8h-6v-5h-2z"/><path fill="#211826" d="M9 10h2v2H9zM14 10h2v2h-2zM23 13h2v2h-2z"/></svg><span class="socialWords">ПРИГЛАСИТЬ</span></button><button class="btn alt small socialRate" id="menuRateBtn"><svg class="socialGlyph heartGlyph" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5 5h8v3h6V5h8v3h3v9h-3v3h-3v3h-3v3h-3v3h-4v-3h-3v-3H8v-3H5v-3H2V8h3z"/><path fill="#ffe6d2" opacity=".82" d="M7 8h5v3H7zM5 11h3v4H5z"/></svg><span class="socialWords">ОЦЕНИТЬ</span></button></div><div class="minihelp"><b>УПРАВЛЕНИЕ</b><br>ТЕЛЕФОН: СТИК СЛЕВА · СВАЙП СПРАВА · ➤ РЫВОК<br>ПК: WASD · ЛКМ АТАКА · ПКМ ПРИЦЕЛ · E ИСКРА</div><div class="menuMeta"><div class="menuCount" id="runsLabel">ЗАБЕГ // 000</div><div class="menuCount" id="waveBestLabel">РЕКОРДНАЯ ВОЛНА // 00</div><div class="menuCount" id="achievementLabel">ХРОНИКИ 0 / 8</div></div></div>
+ <div class="menuFoot"><div class="menuStats"><div class="statCard"><small>ЛУЧШИЙ СЧЁТ</small><strong id="bestLabel">000000</strong></div><div class="statCard"><small>ОСКОЛКИ</small><strong><span id="walletLabel">0</span> ◈</strong></div></div><button class="btn" id="startBtn">▶ ВОЙТИ В НОЧЬ</button><div class="two"><button class="btn alt small" id="shopBtn">◈ УЛУЧШЕНИЯ</button><button class="btn alt small" id="chronicleBtn">▤ ХРОНИКИ</button></div><div class="two"><button class="btn alt small" id="helpBtn">? КАК ИГРАТЬ</button><button class="btn alt small" id="settingsBtn">⚙ НАСТРОЙКИ</button></div><div class="socialrow"><button class="btn alt small socialShare" id="menuShareBtn"><svg class="socialGlyph friendsGlyph" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 5h7v2H8zM6 7h11v7H6zM8 14h7v3H8zM3 19h17v3H3zM1 22h21v7H1zM22 9h5v2h-5zM20 11h9v6h-9zM22 17h5v2h-5zM22 21h8v8h-6v-5h-2z"/><path fill="#211826" d="M9 10h2v2H9zM14 10h2v2h-2zM23 13h2v2h-2z"/></svg><span class="socialWords">ПРИГЛАСИТЬ</span></button><button class="btn alt small socialRate" id="menuRateBtn"><svg class="socialGlyph heartGlyph" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5 5h8v3h6V5h8v3h3v9h-3v3h-3v3h-3v3h-3v3h-4v-3h-3v-3H8v-3H5v-3H2V8h3z"/><path fill="#ffe6d2" opacity=".82" d="M7 8h5v3H7zM5 11h3v4H5z"/></svg><span class="socialWords">ОЦЕНИТЬ</span></button></div><div class="minihelp"><b>УПРАВЛЕНИЕ</b><br>ТЕЛЕФОН: СТИК СЛЕВА · СВАЙП СПРАВА · ➤ РЫВОК<span class="desktop-only"><br>ПК: WASD · ЛКМ АТАКА · ПКМ ПРИЦЕЛ · E ИСКРА</span></div><div class="menuMeta"><div class="menuCount" id="runsLabel">ЗАБЕГ // 000</div><div class="menuCount" id="waveBestLabel">РЕКОРДНАЯ ВОЛНА // 00</div><div class="menuCount" id="achievementLabel">ХРОНИКИ 0 / 8</div></div></div>
 </section>
-<section class="screen" id="helpScreen"><div class="menuModal"><div class="eyebrow">ОБУЧЕНИЕ / 001</div><h2 class="heading">ТЫ — ПОСЛЕДНИЙ КЛИНОК</h2><p class="desc">На телефоне веди героя левым виртуальным стиком, а пальцем справа задавай направление разреза: зажми, потяни и отпусти. Кнопка ➤ выполнит быстрый рывок. На ПК ходи WASD, наводись мышью, отпускай кнопку для удара; ПРОБЕЛ — быстрый рывок.<br><br>Тапни рядом с врагом, чтобы ударить его. Команда во время перезарядки запоминается. Проведи одним рывком через двух врагов для бонуса ИСКРЫ; прерывай красные линии атаки — это контрудар. Лови золотые огоньки клинком, пока они не погасли. Враги отличаются тактикой: стрелки держат дистанцию, берсерки атакуют рывком, броневраги держат удар.<br><br>За убийства копится ИСКРА — нажми ✦ или E для кругового удара. Отбивай пули рывком. После каждой волны выбирай усиление, объединяй их в синергии, перебрасывай неподходящие карточки и готовься к новым типам врагов. После 12-й волны начинается бесконечная осада. Осколки сохраняются после смерти.</p><button class="btn" id="helpPlay">ПОГНАЛИ</button><button class="btn alt small" id="helpBack">НАЗАД</button></div></section>
+<section class="screen" id="helpScreen"><div class="menuModal"><div class="eyebrow">ОБУЧЕНИЕ / 001</div><h2 class="heading">ТЫ — ПОСЛЕДНИЙ КЛИНОК</h2><p class="desc">На телефоне веди героя левым виртуальным стиком, а пальцем справа задавай направление разреза: зажми, потяни и отпусти. Кнопка ➤ выполнит быстрый рывок.<span class="desktop-only"> На ПК ходи WASD, наводись мышью, отпускай кнопку для удара; ПРОБЕЛ — быстрый рывок.</span><br><br>Тапни рядом с врагом, чтобы ударить его. Команда во время перезарядки запоминается. Проведи одним рывком через двух врагов для бонуса ИСКРЫ; прерывай красные линии атаки — это контрудар. Лови золотые огоньки клинком, пока они не погасли. Враги отличаются тактикой: стрелки держат дистанцию, берсерки атакуют рывком, броневраги держат удар.<br><br>За убийства копится ИСКРА — нажми ✦<span class="desktop-only"> или E</span> для кругового удара. Отбивай пули рывком. После каждой волны выбирай усиление, объединяй их в синергии, перебрасывай неподходящие карточки и готовься к новым типам врагов. После 12-й волны начинается бесконечная осада. Осколки сохраняются после смерти.</p><button class="btn" id="helpPlay">ПОГНАЛИ</button><button class="btn alt small" id="helpBack">НАЗАД</button></div></section>
 <section class="screen" id="upgradeScreen"><div class="ambientPetals" aria-hidden="true"><i style="--n:0;--x:11%;--d:-0.0s;--speed:12s;--sz:4px"></i><i style="--n:1;--x:40%;--d:-1.7s;--speed:19s;--sz:7px"></i><i style="--n:2;--x:69%;--d:-3.4s;--speed:13s;--sz:5px"></i><i style="--n:3;--x:2%;--d:-5.1s;--speed:20s;--sz:8px"></i><i style="--n:4;--x:31%;--d:-6.8s;--speed:14s;--sz:6px"></i><i style="--n:5;--x:60%;--d:-8.5s;--speed:21s;--sz:4px"></i><i style="--n:6;--x:89%;--d:-10.2s;--speed:15s;--sz:7px"></i><i style="--n:7;--x:22%;--d:-11.9s;--speed:22s;--sz:5px"></i><i style="--n:8;--x:51%;--d:-13.6s;--speed:16s;--sz:8px"></i><i style="--n:9;--x:80%;--d:-15.3s;--speed:23s;--sz:6px"></i><i style="--n:10;--x:13%;--d:-17.0s;--speed:17s;--sz:4px"></i><i style="--n:11;--x:42%;--d:-18.7s;--speed:24s;--sz:7px"></i></div><div class="eyebrow" id="upgradeEyebrow">ВОЛНА ПРОЙДЕНА // ВЫБЕРИ ОДНО</div><h2 class="heading">ТВОЯ НОВАЯ СИЛА</h2><div class="waveReward" id="waveReward">ПОБЕДА</div><p class="desc" id="upgradeDesc">Забери одну реликвию. Следующая волна уже ждёт.</p><div class="upgrid" id="upgrades"></div><div id="upgradeBuild"></div><div class="pickHint">КОСНИСЬ КАРТОЧКИ · 3 ВАРИАНТА · 1 ВЫБОР</div><div class="upgradeActions"><button class="smallUtility" id="rerollBtn">⟳ ПЕРЕБРОС · 1</button><button class="smallUtility" id="codexBtn">✧ КОДЕКС СИНЕРГИЙ</button></div></section>
 <section class="screen" id="buildCodexScreen"><div class="eyebrow">КОДЕКС НОЧИ</div><h2 class="heading">СИНЕРГИИ</h2><p class="desc">Объединяй две способности, чтобы пробудить скрытую механику. Активные комбинации подсвечены.</p><div class="codexGrid" id="codexItems"></div><button class="btn alt small" id="codexBack">← НАЗАД</button></section><section class="screen" id="chronicleScreen"><div class="eyebrow">АРХИВ НОЧИ // ПОСТОЯННЫЙ ПРОГРЕСС</div><h2 class="heading">ХРОНИКИ НОЧИ</h2><p class="desc">Настоящие трофеи. За первый выполненный подвиг получаешь осколки.</p><div class="archiveProgress" id="archiveProgress">✦ ХРОНИКА ТВОИХ ПОБЕД · 0 / 8 ✦</div><div class="upgrid chronicleGrid" id="chronicleItems"></div><button class="btn alt small" id="chronicleBack">← В МЕНЮ</button></section>
 <section class="screen finaleScreen" id="victoryScreen">
@@ -992,12 +1005,24 @@ try {const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d && typeof d==='o
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(save));}catch(e){}}
 function pad(v,n=6){return String(Math.max(0,Math.floor(v))).padStart(n,'0')}
 const SCREENS=['buildCodexScreen','menu','helpScreen','upgradeScreen','shopScreen','pauseScreen','overScreen','chronicleScreen','victoryScreen','settingsScreen'];
-function showScreen(id){SCREENS.forEach(s=>$(s).classList.toggle('active',id===s));$('hud').classList.toggle('on',id===null);$('bottomHUD').classList.toggle('on',id===null);if(id){$('tutorial').style.display='none';if(typeof resetStick==='function')resetStick()}$('touchControls').classList.toggle('on',id===null);if(!id)updateHUD();}
+function showScreen(id){
+ SCREENS.forEach(s=>$(s).classList.toggle('active',id===s));
+ $('hud').classList.toggle('on',id===null);
+ $('bottomHUD').classList.toggle('on',id===null);
+ if(id){$('tutorial').style.display='none';if(typeof resetStick==='function')resetStick();if(typeof cancelMobileAttack==='function')cancelMobileAttack()}
+ $('touchControls').classList.toggle('on',id===null);
+ if(!id)updateHUD();
+ if(typeof isAndroid!=='undefined'&&isAndroid){
+  try{window.AndroidBridge.setBannerScreen(id==='menu'||id==='upgradeScreen'?id:'')}catch(_){}
+ }
+}
 // DUSK//CUT RuStore Android platform. No Yandex Games SDK, no simulated rewards.
 // Native messages are only sent by the Android SDK bridge after actual ad events.
 let platformPaused=false, adBusy=false, adOpen=false, adWatchdog=null;
 let rewardedAvailable=false, pendingRewardKind=null, pendingInterstitialDone=null;
 const isAndroid=typeof window.AndroidBridge!=='undefined';
+if(isAndroid)document.documentElement.classList.add('android-app');
+window.androidBannerChanged=function(visible,heightDp){document.documentElement.classList.toggle('android-banner-visible',!!visible);document.documentElement.style.setProperty('--android-banner-height',Math.max(50,Math.min(120,Number(heightDp)||60))+'px')};
 function syncSdkGameplay(){} // Android lifecycle is managed via native callbacks below.
 function refreshRewardButtons(){
  const playable=!!(isAndroid&&rewardedAvailable&&!adBusy&&G.mode==='dead');
@@ -1309,6 +1334,8 @@ function mouseDashAt(q){
  return accepted;
 }
 C.addEventListener('pointerdown',e=>{
+ // Android uses a single independent TouchEvent multi-touch dispatcher below.
+ if(isAndroid&&e.pointerType==='touch')return;
  if(G.mode!=='playing')return;
  if(e.pointerType==='mouse'){
   // LMB = attack immediately. RMB = precision preview, release to attack.
@@ -1347,15 +1374,63 @@ function nearestEnemy(limit){let best=null,bd=limit;for(const e of G.enemies){co
 function getDir(){let x=stick.x,y=stick.y;if(pressed.has('ArrowLeft')||pressed.has('KeyA'))x--;if(pressed.has('ArrowRight')||pressed.has('KeyD'))x++;if(pressed.has('ArrowUp')||pressed.has('KeyW'))y--;if(pressed.has('ArrowDown')||pressed.has('KeyS'))y++;const n=Math.hypot(x,y);if(n>1){x/=n;y/=n}if(n>.12)lastMove={x,y};return{x,y}}
 // Dedicated multitouch joystick: its pointer never competes with the canvas swipe pointer.
 const joy=$('joystick'),knob=$('stickKnob');
-function resetStick(){stick.id=null;stick.x=0;stick.y=0;knob.style.transform='translate(-50%,-50%)'}
+function resetStick(){stick.id=null;if(typeof mobileTouch!=='undefined')mobileTouch.move=null;stick.x=0;stick.y=0;knob.style.transform='translate(-50%,-50%)'}
 function updateStick(e){const b=joy.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;
  const dx=e.clientX-cx,dy=e.clientY-cy,range=Math.max(30,b.width*.37),len=Math.hypot(dx,dy)||1,m=Math.min(1,len/range);
  stick.x=dx/len*m;stick.y=dy/len*m;
  knob.style.transform=`translate(calc(-50% + ${Math.round(stick.x*range)}px),calc(-50% + ${Math.round(stick.y*range)}px))`;
 }
-joy.addEventListener('pointerdown',e=>{if(G.mode!=='playing'||stick.id!==null)return;e.preventDefault();e.stopPropagation();AudioFX.start();stick.id=e.pointerId;try{joy.setPointerCapture(e.pointerId)}catch(_){}updateStick(e);$('tutorial').style.display='none'});
+joy.addEventListener('pointerdown',e=>{if(isAndroid&&e.pointerType==='touch')return;if(G.mode!=='playing'||stick.id!==null)return;e.preventDefault();e.stopPropagation();AudioFX.start();stick.id=e.pointerId;try{joy.setPointerCapture(e.pointerId)}catch(_){}updateStick(e);$('tutorial').style.display='none'});
 joy.addEventListener('pointermove',e=>{if(e.pointerId!==stick.id)return;e.preventDefault();updateStick(e)});
 for(const event of ['pointerup','pointercancel','lostpointercapture'])joy.addEventListener(event,e=>{if(e.pointerId===stick.id)resetStick()});
+
+// Unified Android TouchEvent dispatcher: two stable identifiers, independent release paths.
+// A touch on the right may initiate/release a slash while the left stick stays active.
+const mobileTouch={move:null,attack:null};
+const mobileShell=document.querySelector('.shell');
+function cancelMobileAttack(){mobileTouch.attack=null;G.aim=null;}
+function mobileTouchHandler(e,stage){
+ if(!isAndroid)return;
+ if(G.mode!=='playing'){
+  if(stage==='end'||stage==='cancel'){cancelMobileAttack();resetStick();}
+  return;
+ }
+ let handled=false;
+ const box=mobileShell.getBoundingClientRect();
+ for(const touch of e.changedTouches){
+  const id=touch.identifier, target=touch.target;
+  if(stage==='start'){
+   if(target&&target.closest&&target.closest('#dashBtn,#sparkBtn,.screen,.iconbutton'))continue;
+   const isStick=target===joy||joy.contains(target);
+   const isMoveZone=touch.clientX<box.left+box.width*.44&&touch.clientY>box.top+box.height*.40;
+   if(mobileTouch.move===null&&(isStick||isMoveZone)){
+    mobileTouch.move=id;updateStick(touch);handled=true;
+   }else if(mobileTouch.attack===null && touch.clientX>box.left+box.width*.42){
+    mobileTouch.attack=id;const q=screenPos(touch);
+    G.aim={start:q,now:q,time:0,mouse:false};handled=true;
+   }
+  }else if(id===mobileTouch.move){
+   if(stage==='move')updateStick(touch);
+   else resetStick();
+   handled=true;
+  }else if(id===mobileTouch.attack){
+   if(stage==='move'&&G.aim)G.aim.now=screenPos(touch);
+   else if(stage==='end'){
+    if(G.aim){const v=aimVector(screenPos(touch));if(queueDash(v.dx,v.dy))vibrate(7)}
+    cancelMobileAttack();
+   }else if(stage==='cancel')cancelMobileAttack();
+   handled=true;
+  }
+ }
+ if(handled){
+  if(e.cancelable)e.preventDefault();
+  if(stage==='start'){AudioFX.start();$('tutorial').style.display='none'}
+ }
+}
+for(const [type,stage] of [['touchstart','start'],['touchmove','move'],['touchend','end'],['touchcancel','cancel']]){
+ mobileShell.addEventListener(type,e=>mobileTouchHandler(e,stage),{passive:false,capture:true});
+}
+
 $('dashBtn').addEventListener('pointerdown',e=>{e.stopPropagation()});
 $('dashBtn').addEventListener('click',e=>{e.preventDefault();if(G.mode!=='playing')return;AudioFX.start();const n=nearestEnemy(220);let v=stick.x||stick.y?{x:stick.x,y:stick.y}:n?{x:n.x-G.player.x,y:n.y-G.player.y}:lastMove;queueDash(v.x,v.y);$('tutorial').style.display='none'});
 function addParticle(x,y,col,dx,dy,l,size=2,grav=0){if(!save.settings.particles&&Math.random()<.55)return;if(G.particles.length>210)G.particles.shift();G.particles.push({x,y,vx:dx,vy:dy,life:l,max:l,col,size,grav})}
@@ -2121,7 +2196,7 @@ function draw(t){ctx.clearRect(0,0,CW,CH);if(artReady('menu_bg')&&artReady('tile
 }
 let prev=performance.now(),visualTime=0;
 function loop(now){let dt=clamp((now-prev)/1000,0,.033);prev=now;visualTime+=dt;update(dt);draw(visualTime);requestAnimationFrame(loop)}
-configureView();updateMenu();$('pauseSound').textContent='ЗВУК: '+(AudioFX.enabled?'ВКЛ':'ВЫКЛ');requestAnimationFrame(loop);
+configureView();if(isAndroid){try{window.AndroidBridge.setBannerScreen('menu')}catch(_){}}updateMenu();$('pauseSound').textContent='ЗВУК: '+(AudioFX.enabled?'ВКЛ':'ВЫКЛ');requestAnimationFrame(loop);
 </script>
 </body>
 </html>
