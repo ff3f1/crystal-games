@@ -20,12 +20,16 @@ android {
     }
     buildFeatures { buildConfig true }
     signingConfigs {
-        if (project.hasProperty('DUSK_STORE_FILE') && file(project.property('DUSK_STORE_FILE')).exists()) {
+        def storePath = (findProperty('DUSK_STORE_FILE') ?: System.getenv('DUSK_STORE_FILE'))
+        def storePass = (findProperty('DUSK_STORE_PASSWORD') ?: System.getenv('DUSK_STORE_PASSWORD'))
+        def keyAliasValue = (findProperty('DUSK_KEY_ALIAS') ?: System.getenv('DUSK_KEY_ALIAS'))
+        def keyPass = (findProperty('DUSK_KEY_PASSWORD') ?: System.getenv('DUSK_KEY_PASSWORD'))
+        if (storePath && storePass && keyAliasValue && keyPass && file(storePath).exists()) {
             rustore {
-                storeFile file(project.property('DUSK_STORE_FILE'))
-                storePassword project.property('DUSK_STORE_PASSWORD')
-                keyAlias project.property('DUSK_KEY_ALIAS')
-                keyPassword project.property('DUSK_KEY_PASSWORD')
+                storeFile file(storePath)
+                storePassword storePass.toString()
+                keyAlias keyAliasValue.toString()
+                keyPassword keyPass.toString()
             }
         }
     }

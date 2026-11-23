@@ -71,3 +71,15 @@ DUSK_KEY_PASSWORD=...
 
 ## GitHub Actions
 В проекте настроена сборка **debug APK** в GitHub Actions, которая не требует паролей. Публиковать debug APK в RuStore нельзя; для финального release APK нужен постоянный ключ подписи. APK из Actions — для проверки на телефоне. Файлы изображений лежат в архивном asset bundle и распаковываются до сборки.
+
+## Подписанный APK прямо в GitHub Actions
+
+Для **первого** релиза один раз создайте постоянный Java keystore (.jks) через Android Studio (Build → Generate Signed Bundle / APK) или `keytool`. Его нужно хранить в надёжном месте вне публичного GitHub; он понадобится для всех будущих обновлений.
+
+В Settings → Secrets and variables → Actions → Repository secrets добавьте четыре секрета:
+- `DUSK_KEYSTORE_BASE64`: содержимое JKS, закодированное Base64. На Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes('C:\\path\\to\\release.jks')) | Set-Clipboard`
+- `DUSK_STORE_PASSWORD`: пароль хранилища.
+- `DUSK_KEY_ALIAS`: алиас ключа.
+- `DUSK_KEY_PASSWORD`: пароль самого ключа.
+
+После задания секретов запустите GitHub Actions → DUSK CUT - Android APK / RuStore media → Run workflow. В артефактах появится `DUSK-CUT-2.6.5-RUSTORE-SIGNED-RELEASE` — подписанный APK. НЕ публикуйте тестовый debug APK.

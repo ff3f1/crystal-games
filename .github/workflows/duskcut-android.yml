@@ -13,6 +13,11 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    env:
+      DUSK_KEYSTORE_BASE64: ${{ secrets.DUSK_KEYSTORE_BASE64 }}
+      DUSK_STORE_PASSWORD: ${{ secrets.DUSK_STORE_PASSWORD }}
+      DUSK_KEY_ALIAS: ${{ secrets.DUSK_KEY_ALIAS }}
+      DUSK_KEY_PASSWORD: ${{ secrets.DUSK_KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,6 +56,25 @@ jobs:
         with:
           name: DUSK-CUT-2.6.5-Android-TEST-APK
           path: android-duskcut/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Build signed RuStore release APK (when signing secrets exist)
+        if: ${{ env.DUSK_KEYSTORE_BASE64 != '' }}
+        working-directory: android-duskcut
+        run: |
+          test -n "$DUSK_STORE_PASSWORD"
+          test -n "$DUSK_KEY_ALIAS"
+          test -n "$DUSK_KEY_PASSWORD"
+          printf '%s' "$DUSK_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/duskcut-release.jks"
+          export DUSK_STORE_FILE="$RUNNER_TEMP/duskcut-release.jks"
+          gradle --no-daemon --stacktrace assembleRelease
+          rm -f "$DUSK_STORE_FILE"
+      - name: Upload signed RuStore APK (when signing secrets exist)
+        if: ${{ env.DUSK_KEYSTORE_BASE64 != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DUSK-CUT-2.6.5-RUSTORE-SIGNED-RELEASE
+          path: android-duskcut/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 30
       - name: Upload RuStore media and moderation texts
