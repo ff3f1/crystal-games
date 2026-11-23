@@ -1,0 +1,53 @@
+plugins { id 'com.android.application' }
+
+// Both values default to blank: no mock ads and no fabricated in-game rewards.
+def rewardedUnit = (findProperty('DUSK_REWARDED_ID') ?: 'R-M-20492584-1').toString()
+def interstitialUnit = (findProperty('DUSK_INTERSTITIAL_ID') ?: 'R-M-20492584-2').toString()
+if (rewardedUnit && !(rewardedUnit ==~ /R-M-[0-9]+-[0-9]+|demo-rewarded-yandex/)) throw new GradleException('Invalid DUSK_REWARDED_ID')
+if (interstitialUnit && !(interstitialUnit ==~ /R-M-[0-9]+-[0-9]+|demo-interstitial-yandex/)) throw new GradleException('Invalid DUSK_INTERSTITIAL_ID')
+
+android {
+    namespace 'ru.crystalgames.duskcut'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'ru.crystalgames.duskcut'
+        minSdk 23
+        targetSdk 35
+        versionCode 265
+        versionName '2.6.5'
+        buildConfigField 'String', 'REWARDED_AD_UNIT', '\"' + rewardedUnit + '\"'
+        buildConfigField 'String', 'INTERSTITIAL_AD_UNIT', '\"' + interstitialUnit + '\"'
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        if (project.hasProperty('DUSK_STORE_FILE') && file(project.property('DUSK_STORE_FILE')).exists()) {
+            rustore {
+                storeFile file(project.property('DUSK_STORE_FILE'))
+                storePassword project.property('DUSK_STORE_PASSWORD')
+                keyAlias project.property('DUSK_KEY_ALIAS')
+                keyPassword project.property('DUSK_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { minifyEnabled false }
+        release {
+            minifyEnabled false
+            // RELEASE signing is configured in ~/.gradle/gradle.properties only.
+            // Never commit a signing key or passwords to the project.
+            if (signingConfigs.findByName('rustore') != null) {
+                signingConfig signingConfigs.rustore
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    packaging { resources { excludes += ['META-INF/DEPENDENCIES','META-INF/NOTICE','META-INF/LICENSE'] } }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.yandex.android:mobileads:8.6.0'
+}
