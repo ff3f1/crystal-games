@@ -1,0 +1,57 @@
+name: Fishing 2.1.0 Underwater
+on:
+  push:
+    branches: [feature/fishing-2.1.0-shoals]
+    paths: ['update210/**', '.github/workflows/fishing-dive.yml']
+permissions:
+  actions: read
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 44948375991
+          name: fishing-2.0.2-ads-hotfix-for-rustore
+          path: base
+      - name: Build from pinned APK
+        run: |
+          mkdir out
+          python update210/build.py base/fishing-2.0.2-ads-hotfix.apk unsigned.apk
+          unzip -q unsigned.apk 'assets/*'
+      - name: Verify Android package and publisher
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/35.0.0"
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/signer.jks"
+          "$bt/zipalign" -f -P 16 4 unsigned.apk aligned.apk
+          apk=out/fishing-2.1.0-underwater.apk
+          "$bt/apksigner" sign --ks "$RUNNER_TEMP/signer.jks" --ks-key-alias "$KEY_ALIAS" --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD --out "$apk" aligned.apk
+          cert() { "$bt/apksigner" verify --print-certs "$1" | sed -n '/certificate SHA-256 digest/p'; }
+          orig=$(cert base/fishing-2.0.2-ads-hotfix.apk)
+          test -n "$orig" && test "$orig" = "$(cert "$apk")"
+          "$bt/aapt" dump badging "$apk" > badging.txt
+          grep "name='ru.crystalgames.fishing' versionCode='2100' versionName='2.1.0'" badging.txt
+          rm -f out/*.idsig
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fishing-2.1.0-APK
+          path: out/*.apk
+      - name: Test cast, attraction, spooking and strike on mobile viewport
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+          python -m http.server 8246 -d assets &
+          node update210/smoke.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Gameplay-screens
+          path: out/*.png

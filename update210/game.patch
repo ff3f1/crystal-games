@@ -1,0 +1,392 @@
+diff --git a/css/renewal.css b/css/renewal.css
+index c514384..7c127ab 100644
+--- a/css/renewal.css
++++ b/css/renewal.css
+@@ -204,3 +204,6 @@
+   .duel-result .duel-hero { padding: 9px 12px; }
+   .duel-result .duel-hero strong { font-size: 30px; }
+ }
++
++#rivalCode{display:block;box-sizing:border-box;width:100%;margin:10px 0 14px;padding:14px;border-radius:12px;border:1px solid #86b9ad;background:#102e34;color:white;font:inherit}
++#bRetrieve{position:absolute;right:10px;top:calc(106px + var(--safe-t));padding:9px 14px}
+diff --git a/index.html b/index.html
+index 26d01fc..b28b536 100644
+--- a/index.html
++++ b/index.html
+@@ -37,6 +37,8 @@
+ <script src="js/ui.js"></script>
+ <script src="js/renewal.js"></script>
+ <script src="js/duel.js"></script>
++<script src="js/dive.js"></script>
++<script src="js/rival.js"></script>
+ <script src="js/main.js"></script>
+ </body>
+ </html>
+diff --git a/js/dive.js b/js/dive.js
+new file mode 100644
+index 0000000..55e58ee
+--- /dev/null
++++ b/js/dive.js
+@@ -0,0 +1,57 @@
++/* Underwater approach follows the actual hooked fish and bait. */
++(function (FZ) {
++  "use strict";
++  const G = FZ.Game, clamp = FZ.U.clamp;
++  const bed = new Image(); bed.src = "assets/scenes/below.webp";
++  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
++  let dissolve = 0;
++  function twitch(r) {
++    const h = r.hunt;
++    if (!h || r.state !== "wait") return;
++    const gap = h.age - h.last;
++    if (gap < 0.24) return;
++    h.last = h.age; h.pulse = 1;
++    if (gap < 1.05) { h.shy = 1.55; h.interest = Math.max(0.03,h.interest - 0.19); }
++    else if (!h.shy) h.interest = Math.min(1,h.interest + 0.22);
++  }
++  function render(r,s,t,dt) {
++    const h = r && r.hunt;
++    if (!h || !['settle','wait','bite','fight'].includes(r.state) ||
++        (r.state === 'fight' && (r.fish.t > 3.4 || r.fish.jump))) { dissolve = 0; return false; }
++    const {W,H} = FZ.Scene.size(), scale = cv.width/W;
++    if (!bed.naturalWidth) return false;
++    const fight = r.state === 'fight' ? r.fish : null;
++    const bite = r.state === 'bite' ? r.bite : null;
++    const take = bite && bite.phase === 'take';
++    ctx.save(); ctx.setTransform(scale,0,0,scale,0,0);
++    const mag = Math.max(W/bed.width,H/bed.height)*1.075;
++    const bw=bed.width*mag, bh=bed.height*mag;
++    ctx.drawImage(bed,(W-bw)*0.5+Math.sin(t*.24)*W*.014,(H-bh)*.5+Math.cos(t*.29)*H*.009,bw,bh);
++    const dark=s.period==='night'?.43:s.period==='dusk'?.22:.06;
++    ctx.fillStyle='rgba(4,28,37,'+dark+')';ctx.fillRect(0,0,W,H);
++    const reach=clamp(h.interest,0,1);
++    const mx=W*(.58+Math.sin(t*1.2)*.012);
++    const my=H*(.54+.009*Math.sin(t*1.5)-.085*h.pulse);
++    const fishSize=Math.min(W*.61,H*.58)*(.57+reach*.43);
++    const retreat=h.shy*.12;
++    const gap=(1-reach)*W*.37+retreat*W+(bite&&!take?10+Math.sin(t*6)*7:0);
++    let fx=mx-fishSize*.42-gap,fy=my+Math.sin(t*2.3)*3+gap*.16;
++    if(fight){fx+=Math.sin(fight.t*4)*W*.13;fy+=Math.sin(fight.t*5)*H*.05;}
++    const ax=fight?fx+fishSize*.42:mx,ay=fight?fy:my;
++    ctx.lineWidth=1.15;ctx.strokeStyle='rgba(225,245,230,.71)';ctx.beginPath();ctx.moveTo(W*.69,-5);
++    ctx.quadraticCurveTo(W*.59+Math.sin(t)*8,H*.25,ax,ay);ctx.stroke();
++    const bait=G.gear(s.mode).bait,im=bait&&FZ.Assets.item(bait.id);
++    if(im){const size=Math.min(W,H)*.075;ctx.drawImage(im,ax-size*.48,ay-size*.33,size,size);}
++    FZ.Art.drawFish(ctx,h.fish,fx,fy,fishSize,{dir:-1,phase:t*(fight?14:5),amp:fight?.38:.17,roll:Math.sin(t*1.8)*.028});
++    ctx.fillStyle='rgba(217,242,214,.55)';
++    for(let i=0;i<30;i++){
++      const x=((i*.618+Math.sin(t*.31+i)*.013+t*.009)%1)*W;
++      const y=((i*.381+2-(t*.018)%1)%1)*H;
++      ctx.beginPath();ctx.arc(x,y,.55+(i%4)*.38,0,Math.PI*2);ctx.fill();
++    }
++    dissolve=Math.min(1,dissolve+dt*2.8);
++    if(dissolve<1){ctx.fillStyle='rgba(108,176,159,'+(1-dissolve)*.8+')';ctx.fillRect(0,0,W,H);}
++    ctx.restore();return true;
++  }
++  FZ.Dive={render,twitch};
++})(window.FZ);
+diff --git a/js/game.js b/js/game.js
+index 5a2e246..5ad2caf 100644
+--- a/js/game.js
++++ b/js/game.js
+@@ -190,7 +190,7 @@
+       loc, season, mode, ice: season === "winter" && !loc.openWinter,
+       hour, period: FZ.Scene.period(hour, season),
+       wx: Wd.weather(loc.id, season), spots: [], fedSpot: null, gbUntil: 0, t: 0, catches: 0,
+-      hole: null, nextSpot: 3, lastAim: null
++      hole: null, nextSpot: 0.15, lastAim: null
+     };
+   }
+   G.startSession = function (locId, seasonPick) {
+@@ -293,6 +293,7 @@
+       rig.X = G.aimClamp(a.X + U.rand.range(-sc, sc), rig.Z).X;
+     }
+     sess.lastAim = { X: a.X, Z: a.Z };
++    rig.hunt = null;
+     rig.state = "fly"; rig.flyT = 0; rig.flyDur = 0.5 + a.Z / 68;
+     rig.bite = null; rig.still = 0; rig.spinPause = 0; rig.idleT = 0;
+     rig.fa = { sink: 0.6, tilt: 0.9, bob: 0, dx: 0 };
+@@ -447,6 +448,7 @@
+     } else if (b.phase === "take") {
+       if (sess.mode === "spin" && rig.reeling && rng() < dt * 1.1) { hook(b.s, b.w); emit("msg", { text: "Самозасечка!" }); return; }
+       if (b.t > b.take) {
++        if (rig.hunt) {rig.hunt.interest = 0.12; rig.hunt.shy = 1.4;}
+         if (sess.duel) { finishDuelCast(null, "Пропустил поклёвку"); return; }
+         // не успели
+         const eaten = rng() < 0.5;
+@@ -742,6 +744,8 @@
+       mustRelease: !!s.release, loc: sess.loc.id, pct: Wd.percentile(s, w), mode: sess.mode, period: sess.period,
+       date: U.dayKey()
+     };
++    if (rig.shoalCast) { res.shoal = true; res.xp = Math.round(res.xp * 1.25); }
++    FZ.Rival.score(res);
+     // турнир дня
+     const tour = Wd.tournament();
+     if (tour.species === s.id) {
+@@ -827,10 +831,15 @@
+           const hasPred = Object.keys(sess.loc.fish).some((id) => FZ.SP[id].kind === "pred" && FZ.SP[id].time[sess.period] > 0.6 && FZ.SP[id].season[sess.season] > 0.5);
+           const type = hasPred && U.rand() < (sess.mode === "spin" ? 0.55 : 0.25) ? "boil" : "bubbles";
+           const Z = U.rand.range(6, Math.min(G.maxCast(), sess.loc.zfar - 8));
+-          sess.spots.push({ type, X: U.rand.range(-0.8, 0.8) * FZ.Scene.maxLat(Z), Z, life: U.rand.range(12, 22) });
++          const home = U.rand.range(-0.56, 0.56) * FZ.Scene.maxLat(Z);
++          sess.spots.push({ type, home, X: home, Z, age: 0, direction: U.rand() < 0.5 ? -1 : 1, life: U.rand.range(17, 24) });
+         }
+         if (!sess.ice && U.rand() < 0.5) FZ.Scene.distantJump();
+       }
++      for (const spot of sess.spots) {
++        spot.age += dt;
++        spot.X = spot.home + spot.direction * Math.sin(spot.age * 0.24) * Math.min(1.8, FZ.Scene.maxLat(spot.Z) * 0.3);
++      }
+       sess.spots = sess.spots.filter((s) => (s.life -= dt) > 0);
+       if (sess.fedSpot && sess.fedSpot.until < sess.t) sess.fedSpot = null;
+       if (sess.fedSpot) sess.fedSpot.level = Math.max(0, sess.fedSpot.level - dt * 0.002);
+@@ -845,6 +854,15 @@
+     if (r.state === "fly") {
+       r.flyT += dt / r.flyDur;
+       if (r.flyT >= 1) {
++        if (!sess.duel && !sess.ice && (sess.mode === "float" || sess.mode === "feeder")) {
++          const table = G.biteTable();
++          if (table.length) {
++            const fish = U.weighted(table);
++            r.hunt = { fish, w: sampleWeight(fish), interest: 0.06, pulse: 0, shy: 0, age: 0, last: -5 };
++          }
++        }
++        r.shoalCast = !sess.duel && sess.spots.some(sp => Math.hypot(sp.X - r.X, sp.Z - r.Z) < 1.7);
++        if (r.shoalCast) emit("msg", {text:"Точный заброс в стаю · клёв усилен"});
+         r.flyT = 1; r.state = "settle"; r.settleT = 0;
+         FZ.Scene.splash(r.X, r.Z, sess.mode === "feeder" ? 0.4 : 0.15); FZ.Sound.plop(sess.mode === "feeder");
+         if (sess.mode === "spin") { r.state = "wait"; r.spinPause = 0; }
+@@ -874,13 +892,21 @@
+           const cast = sess.duel.cast;
+           if (cast && r.idleT >= cast.delay) startBite(cast.s, cast.w, false);
+         }
++        else if (r.hunt && G.gear(sess.mode).bait && G.baitLeft(G.gear(sess.mode).bait.id) > 0) {
++          const h = r.hunt;
++          h.age += dt;
++          h.pulse = Math.max(0,h.pulse - dt * 1.5);
++          h.shy = Math.max(0,h.shy - dt);
++          if (!h.shy) h.interest += dt * (r.shoalCast ? 0.16 : 0.095);
++          if (h.interest >= 1) { h.interest = 1; startBite(h.fish,h.w,false); }
++        }
+         // первая рыба в обучении — быстро и гарантированно
+         else if (!G.gear(sess.mode).bait || G.baitLeft(G.gear(sess.mode).bait.id) <= 0) { /* без наживки не клюёт */ }
+         else if (st.tut < 3 && r.idleT > 1.9) { const tbl=G.biteTable();if(tbl.length){const sp=tbl.slice().sort((a,b)=>b[1]-a[1])[0][0];startBite(sp,Math.min(sp.trophy*.8,Math.max(sp.min,sp.med*.8)));} }
+         else {
+           const tbl = G.biteTable();
+           let tot = 0; tbl.forEach((x) => (tot += x[1]));
+-          if (tot>0&&(U.rand() < 1 - Math.exp(-1.25 * tot * dt) || r.idleT > Math.min(24, 7 + 0.6 / Math.max(0.04, tot)))) {
++          if (tot>0&&(U.rand() < 1 - Math.exp(-(r.shoalCast ? 3.6 : 1.25) * tot * dt) || r.idleT > Math.min(24, 7 + 0.6 / Math.max(0.04, tot)))) {
+             r.idleT=0;
+             const s = U.weighted(tbl);
+             const w = sampleWeight(s);
+diff --git a/js/main.js b/js/main.js
+index 471c790..133f5ac 100644
+--- a/js/main.js
++++ b/js/main.js
+@@ -54,7 +54,7 @@
+       else { G.sess().lastAim = selected; r.aimSelected = true; }
+     }
+     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
+-    else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); }
++    else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && r.hunt) FZ.Dive.twitch(r); else if (s === "wait" && G.sess().ice) G.jig(); }
+   }
+   cv.addEventListener("pointerup", up);
+   cv.addEventListener("pointercancel", up);
+@@ -73,6 +73,7 @@
+     }
+     else if (s === "fight") r.reeling = true;
+     else if (mode === "spin" && (s === "wait" || s === "bite")) r.reeling = true;
++    else if (s === "wait" && r.hunt) FZ.Dive.twitch(r);
+     else if (s === "wait" && mode === "ice") G.jig();
+     else if (s === "wait" || s === "settle") G.retrieve();
+   };
+@@ -102,7 +103,7 @@
+     if (s) {
+       if (r) r.idleHint = r.state === "idle" ? (r.idleHint || 0) + dt : 0;
+       const v = G.view(t);
+-      Sc.render(v, dt);
++      if (!FZ.Dive.render(r,s,t,dt)) Sc.render(v, dt);
+       if(r&&r.state==="idle"&&(aim||r.aimSelected&&s.lastAim))Sc.drawAim(v,aim||s.lastAim);
+       UI.frame(dt, t);
+       ambT -= dt; if (ambT <= 0) { ambT = 3; UI.ambience(); }
+diff --git a/js/renewal.js b/js/renewal.js
+index d8129b6..78381c5 100644
+--- a/js/renewal.js
++++ b/js/renewal.js
+@@ -21,14 +21,14 @@
+   if(s.duel){UI.pauseDuel();return}
+   const best=FZ.Duel.best(FZ.Duel.today());
+   const duelLabel=best?'Твой рекорд · '+best.score.toLocaleString('ru-RU'):'Испытание дня';
+-  const tiles=[['mMap','map','Водоёмы'],['mShop','bag','Снасти'],['mAtlas','fish','Атлас рыб'],['mJourney','cup','Экспедиции'],['mJournal','book','Дневник'],['mQuests','list','Задания'],['mTour','star','Турнир дня'],['mForecast','wave','Гид по клёву'],['mSet','gear','Настройки']];
++  const tiles=[['mRival','cup','Пари с другом'],['mMap','map','Водоёмы'],['mShop','bag','Снасти'],['mAtlas','fish','Атлас рыб'],['mJourney','cup','Экспедиции'],['mJournal','book','Дневник'],['mQuests','list','Задания'],['mTour','star','Турнир дня'],['mForecast','wave','Гид по клёву'],['mSet','gear','Настройки']];
+   const rewardReady=FZ.LOCATIONS.some(l=>{const q=FZ.Expeditions.challenge(l.id);return (st.journey.maps[l.id]||0)>=3&&!st.journey.claimed.includes(l.id)||q&&!q.claimed&&q.got===q.need});
+   ov.style.backgroundImage='linear-gradient(180deg,#0b283b81,transparent 34%,#0d313767 52%,#102d35f7 88%),url("'+photo(s.loc.id,s.season)+'")';
+   ov.innerHTML='<div class="lodge"><div class="lodge-title"><small>РЫБАЛКА</small><h1>Клюёт<span>!</span></h1></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><button class="duel-entry" id="mDuel">'+ic('cup')+'<span><b>Три заброса</b><small>'+duelLabel+'</small></span><i>›</i></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button></div></div></div>';
+   ov.classList.add('on');$('hud').classList.add('hide');UI.menuOpen=true;
+   UI.closeMenu=()=>{ov.classList.remove('on');$('hud').classList.remove('hide');UI.menuOpen=false};
+   $('mGo').onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();UI.closeMenu();UI.ambience()};
+-  const handlers={mDuel:UI.showDuel,mMap:UI.showMap,mShop:UI.showShop,mAtlas:UI.showAtlas,mJourney:UI.showJourney,mJournal:UI.showJournal,mQuests:UI.showQuests,mTour:UI.showTour,mForecast:UI.showGuide,mSet:UI.showSettings,mHelp:UI.showHelp};
++  const handlers={mRival:FZ.Rival.open,mDuel:UI.showDuel,mMap:UI.showMap,mShop:UI.showShop,mAtlas:UI.showAtlas,mJourney:UI.showJourney,mJournal:UI.showJournal,mQuests:UI.showQuests,mTour:UI.showTour,mForecast:UI.showGuide,mSet:UI.showSettings,mHelp:UI.showHelp};
+   for(const id of Object.keys(handlers))$(id).onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();handlers[id]()};
+  };
+  UI.showMap=function(seasonTab){
+diff --git a/js/rival.js b/js/rival.js
+new file mode 100644
+index 0000000..29cfe0a
+--- /dev/null
++++ b/js/rival.js
+@@ -0,0 +1,39 @@
++/* A catch carries its venue, species and weight. Challenges survive app restarts. */
++(function (FZ) {
++  "use strict";
++  const G = FZ.Game, UI = FZ.UI, U = FZ.U;
++  const key = "fz_rival_catch_v1";
++  function decode(input) {
++    const m = String(input).toLowerCase().match(/\brf1-([a-z0-9]+)-([a-z0-9]+)-(\d{1,7})\b/);
++    if (!m) return null;
++    const loc = FZ.LOC[m[1]], fish = FZ.SP[m[2]], grams = Number(m[3]);
++    if (!loc || !fish || !loc.fish[fish.id] || grams < 1 || grams > Math.ceil(fish.max * 1000)) return null;
++    return {loc, fish, grams, code: m[0].toUpperCase()};
++  }
++  function active() {
++    try { return decode(localStorage.getItem(key)); } catch (_) { return null; }
++  }
++  function code(r) { return ('RF1-' + r.loc + '-' + r.s.id + '-' + Math.round(r.w * 1000)).toUpperCase(); }
++  function score(r) {
++    const target = active();
++    if (!target || r.loc !== target.loc.id || r.s.id !== target.fish.id) return;
++    const diff = Math.round(r.w * 1000) - target.grams;
++    r.rivalText = diff > 0 ? 'Вызов выигран · +' + U.kg(diff / 1000) : diff === 0 ? 'Ничья! Ещё один заброс?' : 'До победы ещё ' + U.kg((1 - diff) / 1000);
++    if (diff > 0) localStorage.removeItem(key);
++  }
++  function open() {
++    const a = active();
++    const sheet = UI.sheet('<div class="eyebrow">РЫБАЦКОЕ ПАРИ</div><h2>Побей улов друга</h2><div class="scroll"><p>Друг присылает открытку с кодом. Поймай рыбу того же вида на том же водоёме хотя бы на грамм тяжелее.</p>' +
++      (a ? '<div class="catch-goal"><span>ТВОЯ ЦЕЛЬ · '+a.loc.n+'</span><b>'+a.fish.n+' · больше '+U.kg(a.grams/1000)+'</b></div>' : '') +
++      '<label for="rivalCode">Код с открытки или весь текст сообщения</label><input id="rivalCode" maxlength="800" placeholder="RF1-…" autocomplete="off"><button class="btn brass" id="rivalAccept">Принять вызов</button><p id="rivalStatus" aria-live="polite"></p></div>',UI.showMenu);
++    sheet.querySelector('#rivalAccept').onclick = () => {
++      const target = decode(sheet.querySelector('input').value);
++      const status = sheet.querySelector('#rivalStatus');
++      if (!target) { status.textContent = 'Проверь код. Он начинается с RF1.'; return; }
++      if (G.state().lvl < target.loc.lvl) { status.textContent = target.loc.n+' откроется на уровне '+target.loc.lvl; return; }
++      localStorage.setItem(key,target.code);
++      status.textContent = 'Вызов принят! Твоя цель — '+target.fish.n+', больше '+U.kg(target.grams/1000)+'. Водоём — '+target.loc.n+'.';
++    };
++  }
++  FZ.Rival = { code, decode, score, open, active };
++})(window.FZ);
+diff --git a/js/scene.js b/js/scene.js
+index a4fb40f..d9209b4 100644
+--- a/js/scene.js
++++ b/js/scene.js
+@@ -713,6 +713,25 @@
+     const lineCol = U.rgba(U.mix("#ffffff", "#8090b0", L.dark), 0.6);
+     // пятна активности рыбы (пузыри / бой хищника)
+     if (v.spots) for (const s of v.spots) {
++      const school = s.type === "boil" ? 2 : 5;
++      const heading = s.direction * Math.cos(s.age * 0.24) >= 0 ? 1 : -1;
++      ctx.save();
++      for (let i = 0; i < school; i++) {
++        const phase = s.age * 2.3 + i * 2.4;
++        const p = R.proj(s.X + Math.cos(i * 2.4) * 0.66 + Math.sin(phase) * 0.12,
++                         s.Z + Math.sin(i * 2.4) * 0.46);
++        const len = U.clamp(p.s * (school === 2 ? 0.54 : 0.32), 4, 26);
++        ctx.save(); ctx.translate(p.x,p.y); ctx.scale(heading * len,len);
++        const tail = Math.sin(phase * 2) * 0.13;
++        ctx.fillStyle = "rgba(13,44,43,0.42)";
++        ctx.beginPath(); ctx.moveTo(0.55,0); ctx.quadraticCurveTo(0.22,-0.23,-0.28,-0.05);
++        ctx.lineTo(-0.57,tail-0.09);ctx.lineTo(-0.54,tail+0.09);ctx.lineTo(-0.27,0.05);
++        ctx.quadraticCurveTo(0.25,0.18,0.55,0); ctx.fill();
++        ctx.strokeStyle = "rgba(218,241,223,0.50)"; ctx.lineWidth = 0.055;
++        ctx.beginPath(); ctx.moveTo(-0.68,-0.17);ctx.quadraticCurveTo(-0.12,-0.12,0.39,-0.04);ctx.stroke();
++        ctx.restore();
++      }
++      ctx.restore();
+       if (s.type === "bubbles" && Math.random() < dt * 4) R.bubbles(s.X, s.Z, 1);
+       if (s.type === "boil" && Math.random() < dt * 1.3) { R.splash(s.X + (Math.random() - 0.5) * 2, s.Z + (Math.random() - 0.5) * 2, 0.35); }
+     }
+diff --git a/js/share.js b/js/share.js
+index 51fbb19..a7f7c94 100644
+--- a/js/share.js
++++ b/js/share.js
+@@ -77,8 +77,11 @@
+ 
+     // низ: призыв
+     g.fillStyle = "rgba(255,255,255,0.12)"; roundRect(g, 90, 1580, W - 180, 230, 40); g.fill();
+-    g.fillStyle = "#fff"; g.font = "800 58px Rubik, sans-serif"; g.fillText("Поймаешь больше?", W / 2, 1670);
+-    g.font = "500 44px Rubik, sans-serif"; g.fillStyle = "#cfe3e6"; g.fillText("Ищи «Рыбалка: Клюёт!» в RuStore", W / 2, 1750);
++    g.fillStyle = "#fff"; g.font = "800 58px Rubik, sans-serif"; g.fillText("Побей мой улов", W / 2, 1660);
++    g.font = "500 44px Rubik, sans-serif"; g.fillStyle = "#cfe3e6"; const code = FZ.Rival.code(r);
++    fitText(g,code,W-240,52,"700","Rubik, sans-serif");
++    g.fillText(code,W/2,1742);
++    g.font="500 34px Rubik, sans-serif"; g.fillText("Введи код в разделе «Пари с другом»",W/2,1860);
+     return c;
+   };
+ 
+@@ -87,7 +90,7 @@
+     let t = "Поймал " + s.n.toLowerCase() + " на " + U.kg(r.w) + " (" + r.len + " см)!";
+     if (r.trophy) t += " Трофей!";
+     if (r.tier) t += " Турнир дня: " + r.tier.n.toLowerCase() + ".";
+-    return t + " А ты сможешь больше? 🎣";
++    return t + " Место — " + FZ.LOC[r.loc].n + ". Побей мой вес! Код для «Пари с другом»: " + FZ.Rival.code(r);
+   };
+ 
+   Sh.share = async function (r) {
+diff --git a/js/ui.js b/js/ui.js
+index 6b71ede..69acbd4 100644
+--- a/js/ui.js
++++ b/js/ui.js
+@@ -73,6 +73,7 @@
+       '<div id="hDuel" class="duel-hud hide"><span id="hDuelRound"></span><strong id="hDuelScore"></strong><span id="hDuelTarget"></span></div>' +
+       '<div id="hDuelTiming" class="duel-timing hide"><i></i><b id="hDuelNeedle"></b></div>' +
+       '<button class="pill round film" id="bFilm" aria-label="Режим съёмки">' + ic("cam") + "</button>" +
++      '<button class="pill hide" id="bRetrieve">Смотать</button>' +
+       '<div class="echo hide" id="hEcho"></div>' +
+       '<div class="hint" id="hHint"></div>' +
+       '<div class="tension hide" id="hTens">' +
+@@ -90,6 +91,7 @@
+         '<button class="tool" id="tMore"><span class="ic" id="tMoreIc"></span><span class="cnt" id="tMoreTx"></span></button>' +
+       "</div>";
+     hudBuilt = true;
++    $("bRetrieve").onclick = () => G.retrieve();
+     $("bMenu").onclick = () => { FZ.Sound.click(); UI.showMenu(); };
+     $("hTime").onclick = () => { if (!G.sess().duel) UI.showTime(); };
+     $("bFilm").onclick = () => { document.body.classList.toggle("filming"); if (document.body.classList.contains("filming")) UI.toast("Режим съёмки: интерфейс скрыт. Нажмите на камеру, чтобы вернуть"); };
+@@ -186,6 +188,8 @@
+       case "nohole": label = "Бурить"; break;
+       case "drill": label = "Бурю…"; calm = true; break;
+     }
++    setC("bRetrieve","hide", !(r.hunt && r.state === "wait"));
++    if (r.hunt && r.state === "wait") { label = "Шевельнуть"; calm = false; }
+     setT("bAct", label);
+     setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
+     // инструменты/натяжение
+@@ -220,8 +224,8 @@
+     else if (r.state === "idle") {
+       const ok = G.canFish();
+       if (ok !== true) h = ok + "<small>Откройте «Снасти» в меню</small>";
+-      else if (st.tut === 0) h = "Коснитесь воды и отпустите — это заброс<small>Чем выше на экране, тем дальше</small>";
+-      else if (r.idleHint > 6) h = "Коснитесь воды, чтобы забросить";
++      else if (st.tut === 0) h = "Выберите место и нажмите «Заброс»<small>Чем выше на экране, тем дальше</small>";
++      else if (r.idleHint > 6) h = "Выберите место и нажмите «Заброс»";
+     } else if (r.state === "nohole") h = "Пробурите лунку<small>Кнопка «Бурить» внизу</small>";
+     else if (r.state === "wait") {
+       const since = s.t - (r.castAt || 0);
+@@ -238,6 +242,8 @@
+       else if (!s.ice && f.phase === "run" && !f.against && Math.abs(f.vx) > 0.6) h = "Ведите палец в другую сторону";
+       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
+     }
++    if (r.hunt && r.state === "wait") h = r.hunt.shy ? "Рыба насторожилась<small>Дай наживке опуститься</small>" : r.hunt.pulse > 0.1 ? "Подходит ближе…" : "Шевельни наживку<small>Делай паузы между движениями</small>";
++    if (r.hunt && r.state === "bite" && r.bite.phase === "touch") h = "Пробует наживку…";
+     const key = h + cls;
+     if (key !== hintKey) { hintKey = key; const e = $("hHint"); e.innerHTML = h; e.className = "hint " + cls; }
+   };
+@@ -606,6 +612,8 @@
+     const rar = FZ.RARITY[s.rar];
+     const goal = FZ.Expeditions && FZ.Expeditions.challenge(r.loc);
+     const badges = [];
++    if (r.rivalText) badges.push([r.rivalText, "#f6c875"]);
++    if (r.shoal) badges.push(["Из стаи · +25% опыта", "#83dbc9"]);
+     if (r.newSpecies) badges.push(["Новый вид в атласе", "#7ccf6a"]);
+     if (r.trophy) badges.push(["Трофей", "#f2a71b"]);
+     if (r.record && !r.newSpecies) badges.push(["Личный рекорд", "#8fd3e0"]);
