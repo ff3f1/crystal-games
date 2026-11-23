@@ -44,7 +44,7 @@ const assert = require('node:assert/strict');
  await page.screenshot({path:'out/spin.png'});
  await page.evaluate(()=>{const g=FZ.Game;g.endSession();g.startSession('pond','winter');FZ.UI.refreshTools()});
  await page.locator('#bAct').click();await wait(()=>FZ.Game.rig().state==='wait'&&FZ.Game.rig().hunt);
- await page.locator('#bAct').click();await page.evaluate(()=>FZ.Game.setLure(.25));await page.waitForTimeout(1400);
+ await page.locator('#bAct').click();assert(await page.evaluate(()=>{const g=FZ.Game,h=g.rig().hunt;g.setLure(.25);return g.rig().hunt===h}));await page.waitForTimeout(1400);
  assert(await page.evaluate(()=>FZ.Game.rig().hunt.depth<.38));
  await page.screenshot({path:'out/ice.png'});
  assert.deepEqual(errors,[]);

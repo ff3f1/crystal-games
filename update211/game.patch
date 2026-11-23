@@ -1,8 +1,8 @@
 diff --git a/js/dive.js b/js/dive.js
-index 55e58ee..78d89e3 100644
+index 55e58ee..18733f0 100644
 --- a/js/dive.js
 +++ b/js/dive.js
-@@ -1,57 +1,105 @@
+@@ -1,57 +1,109 @@
 -/* Underwater approach follows the actual hooked fish and bait. */
 -(function (FZ) {
 +(function(FZ) {
@@ -18,9 +18,12 @@ index 55e58ee..78d89e3 100644
 +  const variants={dough:'bread',crawler:'worm',icespoon:'spoon',barley:'corn'};
 +  function create(fish,w,s,r) {
 +    const phase=Math.random()*6.28,depth=s.ice?s.hole.lure:.64;
++    const bands=fish ? Object.entries(fish.depth).filter(([,weight])=>weight>0) : [];
++    const zone=bands.length ? FZ.U.weighted(bands) : 'mid';
++    const cruise=({top:.25,mid:.50,bottom:.79}[zone]||.55)+(Math.random()-.5)*.12;
 +    return {fish,w,age:0,last:-5,pulse:0,shy:0,interest:.06,phase,swim:phase,
 +      x:.13,y:.40+.18*Math.random(),vx:.015,vy:0,
-+      depth,lift:0,liftSpeed:0,lx:.61,ly:.54,cruise:.31+.38*Math.random(),castZ:r.Z};
++      depth,lift:0,liftSpeed:0,lx:.61,ly:.54,cruise,castZ:r.Z};
 +  }
    function twitch(r) {
 -    const h = r.hunt;
@@ -51,7 +54,8 @@ index 55e58ee..78d89e3 100644
 +    const layer=.23+.54*h.cruise;
 +    const difference=Math.abs(layer-h.ly);
 +    const action=spin ? r.reeling?.19:h.depth>.9?.006:.085 : s.ice ? (.04+.18*h.pulse)*clamp(1-difference*2.6,.16,1) : (r.shoalCast?.14:.085)+.12*h.pulse;
-+    if(!h.shy)h.interest=clamp(h.interest+action*dt,0,1);
++    const band=spin?clamp(1.2-difference*1.7,.35,1.2):1;
++    if(!h.shy)h.interest=clamp(h.interest+action*band*dt,0,1);
 +    const seek=clamp((h.interest-.1)/.9,0,1);
 +    const b=r.bite, nibble=bite && b.phase==='touch' ? .017*(.5+.5*Math.cos(h.age*8)) : 0;
 +    const goalX=h.shy?.10:h.lx-(1-seek)*.35-nibble;
@@ -194,7 +198,7 @@ index 80522fe..96deac7 100644
      }
      ctx.restore();
 diff --git a/js/game.js b/js/game.js
-index 5ad2caf..374c3e1 100644
+index 5ad2caf..981b590 100644
 --- a/js/game.js
 +++ b/js/game.js
 @@ -246,7 +246,7 @@
@@ -206,7 +210,7 @@ index 5ad2caf..374c3e1 100644
    }
  
    // Время суток
-@@ -332,20 +332,27 @@
+@@ -332,17 +332,24 @@
      rig.state = "drill"; rig.drillT = 0; rig.drillDur = st.extras.auger ? 1.3 : 2.4; rig.bite = null;
      FZ.Sound.drill(rig.drillDur);
    };
@@ -231,11 +235,7 @@ index 5ad2caf..374c3e1 100644
 +    if(rig.hunt) FZ.Dive.twitch(rig);
      rig.jig = Math.min(1, (rig.jig || 0) + 0.22); rig.rod.nod = -0.35; rig.still = 0;
    };
--  G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; } };
-+  G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; beginHunt(); } };
- 
-   // ---------- Поклёвка ----------
-   function zoneNow() {
+   G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; } };
 @@ -695,7 +702,7 @@
      if (g.bait && !g.bait.lure) useBait();
      f.reviveBait=g.bait?{id:g.bait.id,lure:!!g.bait.lure}:null;
@@ -421,10 +421,18 @@ index d9209b4..e58c232 100644
  
    R.landingPose = function (v) {
 diff --git a/js/ui.js b/js/ui.js
-index 69acbd4..37c74f4 100644
+index 69acbd4..4e7dea8 100644
 --- a/js/ui.js
 +++ b/js/ui.js
-@@ -188,8 +188,8 @@
+@@ -74,6 +74,7 @@
+       '<div id="hDuelTiming" class="duel-timing hide"><i></i><b id="hDuelNeedle"></b></div>' +
+       '<button class="pill round film" id="bFilm" aria-label="Режим съёмки">' + ic("cam") + "</button>" +
+       '<button class="pill hide" id="bRetrieve">Смотать</button>' +
++      '<div class="lure-readout hide" id="spinDepth"></div>' +
+       '<div class="echo hide" id="hEcho"></div>' +
+       '<div class="hint" id="hHint"></div>' +
+       '<div class="tension hide" id="hTens">' +
+@@ -188,8 +189,11 @@
        case "nohole": label = "Бурить"; break;
        case "drill": label = "Бурю…"; calm = true; break;
      }
@@ -432,10 +440,13 @@ index 69acbd4..37c74f4 100644
 -    if (r.hunt && r.state === "wait") { label = "Шевельнуть"; calm = false; }
 +    setC("bRetrieve","hide", !(r.hunt && !s.ice && r.state === "wait"));
 +    if (r.hunt && !s.ice && mode !== "spin" && r.state === "wait") { label = "Шевельнуть"; calm = false; }
++    const tracking=mode==="spin" && r.hunt && ["wait","bite"].includes(r.state);
++    setC("spinDepth","hide",!tracking);
++    if(tracking) setT("spinDepth","Блесна · "+(r.hunt.depth*G.depthAt(r.X,r.Z)).toFixed(1).replace(".",",")+" м");
      setT("bAct", label);
      setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
      // инструменты/натяжение
-@@ -243,6 +243,8 @@
+@@ -243,6 +247,8 @@
        else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
      }
      if (r.hunt && r.state === "wait") h = r.hunt.shy ? "Рыба насторожилась<small>Дай наживке опуститься</small>" : r.hunt.pulse > 0.1 ? "Подходит ближе…" : "Шевельни наживку<small>Делай паузы между движениями</small>";
@@ -445,10 +456,10 @@ index 69acbd4..37c74f4 100644
      const key = h + cls;
      if (key !== hintKey) { hintKey = key; const e = $("hHint"); e.innerHTML = h; e.className = "hint " + cls; }
 diff --git a/css/renewal.css b/css/renewal.css
-index 7c127ab..7156917 100644
+index 7c127ab..44644b0 100644
 --- a/css/renewal.css
 +++ b/css/renewal.css
-@@ -207,3 +207,22 @@
+@@ -207,3 +207,24 @@
  
  #rivalCode{display:block;box-sizing:border-box;width:100%;margin:10px 0 14px;padding:14px;border-radius:12px;border:1px solid #86b9ad;background:#102e34;color:white;font:inherit}
  #bRetrieve{position:absolute;right:10px;top:calc(106px + var(--safe-t));padding:9px 14px}
@@ -471,3 +482,5 @@ index 7c127ab..7156917 100644
 +.cabin-drawer-head{margin-bottom:18px}.cabin-drawer-head h2{font:32px Georgia,serif;margin:0}#cabinClose{font-size:26px}
 +#cabinDrawer>button{display:flex;align-items:center;gap:14px;border-bottom:1px solid #e2ddbb29;text-align:left;width:100%;min-height:45px;font-size:15px}
 +@media(max-height:580px){.cabin{padding-top:12px}.cabin-deck{margin-top:20px}.cabin-brand h1{font-size:54px}.cabin-deck>h2{font-size:28px;margin-bottom:9px}.cabin-nav button,.cabin-duel{padding-top:8px;padding-bottom:8px}}
++
++.lure-readout{position:absolute;left:12px;top:calc(90px + var(--safe-t));border-left:2px solid #e7c78b;padding:6px 10px;background:#102e31bb;color:#f4e9c7;font:500 12px Rubik,sans-serif;pointer-events:none}
