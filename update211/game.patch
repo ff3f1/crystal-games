@@ -1,0 +1,473 @@
+diff --git a/js/dive.js b/js/dive.js
+index 55e58ee..78d89e3 100644
+--- a/js/dive.js
++++ b/js/dive.js
+@@ -1,57 +1,105 @@
+-/* Underwater approach follows the actual hooked fish and bait. */
+-(function (FZ) {
++(function(FZ) {
+   "use strict";
+-  const G = FZ.Game, clamp = FZ.U.clamp;
+-  const bed = new Image(); bed.src = "assets/scenes/below.webp";
+-  const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+-  let dissolve = 0;
++  const {clamp,damp}=FZ.U, G=FZ.Game;
++  function image(src) { const im=new Image(); im.src=src; return im; }
++  const backgrounds={open:image('assets/scenes/below.webp'),ice:image('assets/scenes/winter.webp')};
++  const rigs={}, cv=document.getElementById('cv'), ctx=cv.getContext('2d');
++  const variants={dough:'bread',crawler:'worm',icespoon:'spoon',barley:'corn'};
++  function create(fish,w,s,r) {
++    const phase=Math.random()*6.28,depth=s.ice?s.hole.lure:.64;
++    return {fish,w,age:0,last:-5,pulse:0,shy:0,interest:.06,phase,swim:phase,
++      x:.13,y:.40+.18*Math.random(),vx:.015,vy:0,
++      depth,lift:0,liftSpeed:0,lx:.61,ly:.54,cruise:.31+.38*Math.random(),castZ:r.Z};
++  }
+   function twitch(r) {
+-    const h = r.hunt;
+-    if (!h || r.state !== "wait") return;
+-    const gap = h.age - h.last;
+-    if (gap < 0.24) return;
+-    h.last = h.age; h.pulse = 1;
+-    if (gap < 1.05) { h.shy = 1.55; h.interest = Math.max(0.03,h.interest - 0.19); }
+-    else if (!h.shy) h.interest = Math.min(1,h.interest + 0.22);
++    const h=r.hunt, gap=h.age-h.last;
++    if(gap<.2)return;
++    h.last=h.age; h.liftSpeed=-.52; h.pulse=1;
++    if(gap<.8){h.shy=1.55;h.interest=Math.max(.06,h.interest-.12);}
++  }
++  function advance(r,s,dt) {
++    const h=r.hunt,spin=s.mode==='spin',bite=r.state==='bite';
++    h.age+=dt; h.shy=Math.max(0,h.shy-dt);
++    h.pulse=Math.max(0,h.pulse-dt*1.25);
++    h.liftSpeed+=(-24*h.lift-7*h.liftSpeed)*dt;
++    h.lift+=h.liftSpeed*dt;
++    const bait=G.gear(s.mode).bait;
++    if(spin) {
++      const surface=bait && (bait.id==='mouse'||bait.id==='wobbler');
++      h.depth=clamp(h.depth+(r.reeling?-.21:surface?-.045:.105)*dt,.12,.92);
++    } else h.depth=damp(h.depth,s.ice?r.lure:s.mode==='feeder'?.87:({top:.24,mid:.55,bottom:.76}[G.loadout().depth]||.64),3,dt);
++    h.lx=.6+Math.sin(h.age*.95)*.008+(spin?.042*Math.sin(h.age*(r.reeling?3.1:1.1)):0);
++    h.ly=.23+.54*h.depth+h.lift;
++    const layer=.23+.54*h.cruise;
++    const difference=Math.abs(layer-h.ly);
++    const action=spin ? r.reeling?.19:h.depth>.9?.006:.085 : s.ice ? (.04+.18*h.pulse)*clamp(1-difference*2.6,.16,1) : (r.shoalCast?.14:.085)+.12*h.pulse;
++    if(!h.shy)h.interest=clamp(h.interest+action*dt,0,1);
++    const seek=clamp((h.interest-.1)/.9,0,1);
++    const b=r.bite, nibble=bite && b.phase==='touch' ? .017*(.5+.5*Math.cos(h.age*8)) : 0;
++    const goalX=h.shy?.10:h.lx-(1-seek)*.35-nibble;
++    const goalY=h.shy?layer+.08:layer+(h.ly-layer)*seek+Math.sin(h.age*1.5+h.phase)*.013*(1-seek);
++    const accel=bite?4:2.2;
++    h.vx=damp(h.vx,clamp((goalX-h.x)*accel,-.26,.25),3.5,dt);
++    h.vy=damp(h.vy,clamp((goalY-h.y)*accel,-.17,.17),2.4,dt);
++    h.x+=h.vx*dt; h.y+=h.vy*dt;
++    h.swim+=dt*(2.8+Math.abs(h.vx)*30+Math.abs(h.vy)*17);
++    return !!h.fish && h.interest>=.995 && Math.hypot(h.x-h.lx,h.y-h.ly)<.055;
++  }
++  function drawRig(id,x,y,size,t,motion) {
++    ctx.save();ctx.translate(x,y);
++    const key=variants[id]||id;
++    const equipped=['bread','worm','corn','spoon','spinner','wobbler'].includes(key);
++    const spin=key==='spinner'||key==='spoon';
++    ctx.rotate(spin?Math.sin(t*(motion?9:2))*.36:Math.sin(t*2.1)*.045);
++    if(equipped) {
++      const im=rigs[key]||(rigs[key]=image('assets/rigs/'+key+'.webp'));
++      if(im.naturalWidth){const k=size/Math.max(im.width,im.height);
++        const eye=({bread:.82,worm:.82,corn:.86,spoon:.53,spinner:.22,wobbler:.42})[key];
++        ctx.drawImage(im,-eye*im.width*k,-1,im.width*k,im.height*k);ctx.restore();return;}
++    }
++    // Single hook with one mounted bait. Each shape is drawn in hook coordinates.
++    ctx.scale(size/38,size/38);
++    ctx.strokeStyle='#c2c7b9';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,17);ctx.bezierCurveTo(1,24,11,24,11,13);ctx.stroke();
++    const hue={boilie:'#a35336',barley:'#ddb78b',maggot:'#e5d9b3',bloodworm:'#9e392e',mormy:'#bda16a',grasshopper:'#80844a',amphipod:'#b19172',mouse:'#705e4a',jig:'#bd9459',balancer:'#8ba798',livebait:'#a1b8a2'}[id]||'#be976c';
++    ctx.fillStyle=hue;ctx.beginPath();
++    if(id==='bloodworm'||id==='amphipod'){
++      ctx.strokeStyle=hue;ctx.lineWidth=3;ctx.moveTo(0,5);ctx.bezierCurveTo(12,15,-9,19,4,27+2*Math.sin(t*2));ctx.stroke();
++    }else if(['livebait','balancer','jig','mouse','grasshopper'].includes(id)){
++      ctx.ellipse(4,10,13,4,-.14,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(14,9);ctx.lineTo(21,4);ctx.lineTo(20,14);ctx.fill();
++    }else{ctx.ellipse(1,11,id==='maggot'?3.5:6,id==='maggot'?8:5,.3,0,Math.PI*2);ctx.fill();}
++    ctx.restore();
+   }
+-  function render(r,s,t,dt) {
+-    const h = r && r.hunt;
+-    if (!h || !['settle','wait','bite','fight'].includes(r.state) ||
+-        (r.state === 'fight' && (r.fish.t > 3.4 || r.fish.jump))) { dissolve = 0; return false; }
+-    const {W,H} = FZ.Scene.size(), scale = cv.width/W;
+-    if (!bed.naturalWidth) return false;
+-    const fight = r.state === 'fight' ? r.fish : null;
+-    const bite = r.state === 'bite' ? r.bite : null;
+-    const take = bite && bite.phase === 'take';
+-    ctx.save(); ctx.setTransform(scale,0,0,scale,0,0);
+-    const mag = Math.max(W/bed.width,H/bed.height)*1.075;
+-    const bw=bed.width*mag, bh=bed.height*mag;
+-    ctx.drawImage(bed,(W-bw)*0.5+Math.sin(t*.24)*W*.014,(H-bh)*.5+Math.cos(t*.29)*H*.009,bw,bh);
+-    const dark=s.period==='night'?.43:s.period==='dusk'?.22:.06;
+-    ctx.fillStyle='rgba(4,28,37,'+dark+')';ctx.fillRect(0,0,W,H);
+-    const reach=clamp(h.interest,0,1);
+-    const mx=W*(.58+Math.sin(t*1.2)*.012);
+-    const my=H*(.54+.009*Math.sin(t*1.5)-.085*h.pulse);
+-    const fishSize=Math.min(W*.61,H*.58)*(.57+reach*.43);
+-    const retreat=h.shy*.12;
+-    const gap=(1-reach)*W*.37+retreat*W+(bite&&!take?10+Math.sin(t*6)*7:0);
+-    let fx=mx-fishSize*.42-gap,fy=my+Math.sin(t*2.3)*3+gap*.16;
+-    if(fight){fx+=Math.sin(fight.t*4)*W*.13;fy+=Math.sin(fight.t*5)*H*.05;}
+-    const ax=fight?fx+fishSize*.42:mx,ay=fight?fy:my;
+-    ctx.lineWidth=1.15;ctx.strokeStyle='rgba(225,245,230,.71)';ctx.beginPath();ctx.moveTo(W*.69,-5);
+-    ctx.quadraticCurveTo(W*.59+Math.sin(t)*8,H*.25,ax,ay);ctx.stroke();
+-    const bait=G.gear(s.mode).bait,im=bait&&FZ.Assets.item(bait.id);
+-    if(im){const size=Math.min(W,H)*.075;ctx.drawImage(im,ax-size*.48,ay-size*.33,size,size);}
+-    FZ.Art.drawFish(ctx,h.fish,fx,fy,fishSize,{dir:-1,phase:t*(fight?14:5),amp:fight?.38:.17,roll:Math.sin(t*1.8)*.028});
+-    ctx.fillStyle='rgba(217,242,214,.55)';
+-    for(let i=0;i<30;i++){
+-      const x=((i*.618+Math.sin(t*.31+i)*.013+t*.009)%1)*W;
+-      const y=((i*.381+2-(t*.018)%1)%1)*H;
+-      ctx.beginPath();ctx.arc(x,y,.55+(i%4)*.38,0,Math.PI*2);ctx.fill();
++  function render(r,s,t) {
++    const h=r&&r.hunt;
++    if(!h||!['settle','wait','bite','fight'].includes(r.state))return false;
++    const f=r.state==='fight'?r.fish:null;
++    if(f&&(f.jump||f.t>3.4))return false;
++    const im=s.ice?backgrounds.ice:backgrounds.open;if(!im.naturalWidth)return false;
++    const {W,H}=FZ.Scene.size(),d=cv.width/W, clock=h.age+(f?f.t:0);
++    ctx.save();ctx.setTransform(d,0,0,d,0,0);
++    const zoom=Math.max(W/im.width,H/im.height)*1.12,bw=im.width*zoom,bh=im.height*zoom;
++    const pan=s.mode==='spin'?clamp((h.castZ-r.Z)/Math.max(1,h.castZ),0,1):.5;
++    ctx.drawImage(im,(W-bw)*(.43+.14*pan)+Math.sin(clock*.24)*W*.009,(H-bh)*(.35+.3*h.depth),bw,bh);
++    ctx.fillStyle='rgba(3,24,34,'+((s.period==='night'?.38:.02)+h.depth*.065)+')';ctx.fillRect(0,0,W,H);
++    const fish=f?f.s:h.fish;
++    let ax=h.lx*W,ay=h.ly*H;
++    let pose=null;
++    if(fish){
++      const len=Math.min(W*.51,H*.49)*(.78+.22*h.interest);
++      const roll=clamp(-h.vy*1.65,-.28,.28)+(f?Math.sin(f.t*5)*.13:0);
++      pose={x:0,y:0,len,dir:-1,roll};
++      const offset=FZ.Art.mouth(fish,pose);
++      pose.x=h.x*W-offset.x;pose.y=h.y*H-offset.y;
++      if(f){pose.x+=W*.09*Math.sin(f.t*3.8);pose.y+=H*.035*Math.sin(f.t*5.1);}
++      if(f||r.bite?.phase==='take'){const mouth=FZ.Art.mouth(fish,pose);ax=mouth.x;ay=mouth.y;}
+     }
+-    dissolve=Math.min(1,dissolve+dt*2.8);
+-    if(dissolve<1){ctx.fillStyle='rgba(108,176,159,'+(1-dissolve)*.8+')';ctx.fillRect(0,0,W,H);}
++    ctx.strokeStyle='rgba(224,242,233,.69)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W*.68,-2);ctx.quadraticCurveTo(W*(.61+.017*Math.sin(clock)),H*.22,ax,ay);ctx.stroke();
++    const bait=G.gear(s.mode).bait;
++    if(bait)drawRig(bait.id,ax,ay,Math.min(W,H)*(bait.lure?.098:.059),clock,r.reeling);
++    if(pose)FZ.Art.drawFish(ctx,fish,pose.x,pose.y,pose.len,{dir:pose.dir,roll:pose.roll,phase:h.swim+(f?f.t*11:0),amp:f?.31:.12+Math.abs(h.vx)*.72});
++    ctx.fillStyle='rgba(220,241,229,.48)';
++    for(let i=0;i<28;i++){const x=((i*.618+Math.sin(clock*.31+i)*.013+clock*.008)%1)*W,y=((i*.381+2-(clock*.015)%1)%1)*H;ctx.beginPath();ctx.arc(x,y,.55+(i%4)*.34,0,Math.PI*2);ctx.fill();}
+     ctx.restore();return true;
+   }
+-  FZ.Dive={render,twitch};
++  FZ.Dive={create,twitch,advance,render};
+ })(window.FZ);
+diff --git a/js/fishart.js b/js/fishart.js
+index 80522fe..96deac7 100644
+--- a/js/fishart.js
++++ b/js/fishart.js
+@@ -51,6 +51,13 @@
+ 
+   /* Нарисовать рыбу. Голова слева. (x,y) — центр, len — полная длина с хвостом.
+      o: {phase, amp (изгиб), silhouette, alpha, dir (1 — голова влево, -1 — вправо), roll} */
++  const lips = {"cod":[-0.4206,0.0252],"sbream":[-0.4684,0.0457],"blackseagoby":[-0.4214,0.0222],"pinksalmon":[-0.4205,0.016],"zander":[-0.4788,0.0451],"rudd":[-0.4724,0.0192],"sturgeon":[-0.4604,0.0161],"bleak":[-0.4751,0.0018],"nelma":[-0.4209,0.0054],"trout":[-0.4521,0.011],"burbot":[-0.4761,0.0154],"gcrucian":[-0.4645,0.0409],"chekhon":[-0.4207,-0.0403],"muksun":[-0.4207,0.0281],"tench":[-0.4725,0.0354],"minnow":[-0.4207,0.0091],"asp":[-0.4747,0.0315],"sculpin":[-0.4206,0.0175],"peled":[-0.4207,0.0196],"crucian":[-0.456,0.0507],"grayling":[-0.4705,0.0357],"amurpike":[-0.4218,0.009],"catfish":[-0.4774,-0.0025],"flounder":[-0.4207,0.0173],"palia":[-0.4584,0.0135],"halibut":[-0.4206,0.029],"chub":[-0.4655,0.0173],"silvercarp":[-0.4208,0.0207],"lenok":[-0.4538,0.0352],"marinka":[-0.4161,0.0308],"rotan":[-0.4766,0.0341],"whitefish":[-0.4719,0.0262],"pike":[-0.4659,0.014],"sterlet":[-0.413,0.0186],"perch":[-0.4774,0.0555],"roach":[-0.4684,0.0265],"ruffe":[-0.4734,0.0503],"ide":[-0.4645,0.0203],"eel":[-0.4201,0.0116],"redmullet":[-0.425,0.1055],"chinook":[-0.4206,0.0305],"wildcarp":[-0.4766,0.04],"dace":[-0.4673,0.0221],"smelt":[-0.4687,0.0041],"osman":[-0.4238,0.0289],"sockeye":[-0.4205,0.0139],"terpug":[-0.4209,0.0122],"grasscarp":[-0.4765,0.0272],"chumsalmon":[-0.4203,0.0131],"coho":[-0.421,0.0182],"nase":[-0.4742,0.023],"navaga":[-0.4205,0.0146],"brooktrout":[-0.4713,0.0031],"bream":[-0.4707,0.053],"vendace":[-0.4202,0.0102],"vobla":[-0.471,0.0219],"chir":[-0.4209,0.0448],"rybets":[-0.4208,0.0428],"omul":[-0.4724,0.0221],"gudgeon":[-0.4201,0.0294],"taimen":[-0.4715,0.0318],"carp":[-0.4763,0.0527]};
++  A.mouth = function(s,pose) {
++    const local=lips[s.id] || [-0.47,0], angle=pose.roll || 0;
++    const x=local[0]*pose.len, y=local[1]*pose.len;
++    return {x:pose.x+pose.dir*(x*Math.cos(angle)-y*Math.sin(angle)),
++            y:pose.y+x*Math.sin(angle)+y*Math.cos(angle)};
++  };
+   A.drawFish = function (ctx, s, x, y, len, o) {
+     o = o || {};
+     if (!o.direct) {
+@@ -352,11 +359,13 @@
+     const amp = o.amp || 0;
+     if (!amp) ctx.drawImage(img, -w / 2, -h / 2, w, h);
+     else {
+-      const n = 24, sw = img.width / n, dw = w / n;
++      const n = len > 120 ? 48 : 24, sw = img.width / n, dw = w / n;
+       for (let i = 0; i < n; i++) {
+         const t = i / (n - 1);
+-        const dy = Math.sin((o.phase || 0) - t * 3.2) * amp * h * 0.45 * t * t;
+-        ctx.drawImage(img, i * sw, 0, sw + 1, img.height, -w / 2 + i * dw, -h / 2 + dy, dw + 0.6, h);
++        const wave = Math.sin((o.phase || 0) - t * 4.6);
++        const dy = wave * amp * h * 0.54 * t * t;
++        const compress = Math.abs(wave) * amp * t * t * 0.09;
++        ctx.drawImage(img, i * sw, 0, sw + 1, img.height, -w / 2 + i * dw, -h / 2 + dy, dw + 0.6, h * (1-compress));
+       }
+     }
+     ctx.restore();
+diff --git a/js/game.js b/js/game.js
+index 5ad2caf..374c3e1 100644
+--- a/js/game.js
++++ b/js/game.js
+@@ -246,7 +246,7 @@
+   function resetRig() {
+     rig = { state: sess && sess.ice ? "nohole" : "idle", X: 0, Z: 10, fa: { sink: 0, tilt: 0, bob: 0, dx: 0 }, rod: { load: 0, tilt: 0, jerk: 0, nod: 0, reelAngle: 0, ring: 0 },
+       bite: null, fish: null, reeling: false, tilt: 0, still: 0, idleT: 0, landing: null, msgT: 0 };
+-    if (sess && sess.ice && sess.hole) { rig.state = "wait"; rig.lure = sess.hole.lure; }
++    if (sess && sess.ice && sess.hole) { rig.state = "wait"; rig.lure = sess.hole.lure; beginHunt(); }
+   }
+ 
+   // Время суток
+@@ -332,20 +332,27 @@
+     rig.state = "drill"; rig.drillT = 0; rig.drillDur = st.extras.auger ? 1.3 : 2.4; rig.bite = null;
+     FZ.Sound.drill(rig.drillDur);
+   };
++  function beginHunt() {
++    const table=G.biteTable(), bait=G.gear(sess.mode).bait;
++    const fish=table.length ? U.weighted(table) : null;
++    rig.hunt=FZ.Dive.create(fish,fish ? sampleWeight(fish) : 0, sess, rig);
++    rig.hunt.baitId=bait && bait.id;
++  }
+   function finishDrill() {
+     const id = Math.floor(U.rand() * 1e6);
+     const r = U.rng(id);
+     const d = sess.loc.depth;
+     sess.hole = { id, depth: +(U.lerp(d[0] + 0.5, d[1] * 0.8, r()) ).toFixed(1), fish: U.clamp(r.range(0.2, 1.7), 0.15, 1.7), lure: 0.85 };
+-    rig.state = "wait"; rig.lure = 0.85; rig.still = 0;
++    rig.state = "wait"; rig.lure = 0.85; rig.still = 0; beginHunt();
+     FZ.Scene.chips(FZ.Scene.holeGeom().x, FZ.Scene.holeGeom().y, 26);
+     emit("hole", { depth: sess.hole.depth });
+   }
+   G.jig = function () {
+     if (!sess.ice || rig.state !== "wait") return;
++    if(rig.hunt) FZ.Dive.twitch(rig);
+     rig.jig = Math.min(1, (rig.jig || 0) + 0.22); rig.rod.nod = -0.35; rig.still = 0;
+   };
+-  G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; } };
++  G.setLure = function (k) { if (sess.hole) { sess.hole.lure = U.clamp(k, 0.05, 1); rig.lure = sess.hole.lure; beginHunt(); } };
+ 
+   // ---------- Поклёвка ----------
+   function zoneNow() {
+@@ -695,7 +702,7 @@
+     if (g.bait && !g.bait.lure) useBait();
+     f.reviveBait=g.bait?{id:g.bait.id,lure:!!g.bait.lure}:null;
+     rig.lost = { f, why, canRevive: !f.revived && why !== "spool" };
+-    rig.fish = null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.load = 0;
++    rig.fish = null; rig.hunt=null; rig.state = sess.ice ? "wait" : "idle"; rig.rod.load = 0;
+     emit("lost", { text, why, fish: f });
+     G.save();
+   }
+@@ -792,7 +799,7 @@
+       if (q.got >= q.need) { q.done = true; emit("quest", { q }); }
+     });
+     G.addXP(xp);
+-    rig.result = null; rig.state = sess.ice ? "wait" : "idle";
++    rig.result = null; rig.hunt=null; rig.state = sess.ice ? "wait" : "idle";
+     if (sess.ice) { rig.lure = sess.hole ? sess.hole.lure : 0.8; }
+     if (st.tut < 3) st.tut = 3;
+     G.save(true);
+@@ -854,13 +861,7 @@
+     if (r.state === "fly") {
+       r.flyT += dt / r.flyDur;
+       if (r.flyT >= 1) {
+-        if (!sess.duel && !sess.ice && (sess.mode === "float" || sess.mode === "feeder")) {
+-          const table = G.biteTable();
+-          if (table.length) {
+-            const fish = U.weighted(table);
+-            r.hunt = { fish, w: sampleWeight(fish), interest: 0.06, pulse: 0, shy: 0, age: 0, last: -5 };
+-          }
+-        }
++        if (!sess.duel) beginHunt();
+         r.shoalCast = !sess.duel && sess.spots.some(sp => Math.hypot(sp.X - r.X, sp.Z - r.Z) < 1.7);
+         if (r.shoalCast) emit("msg", {text:"Точный заброс в стаю · клёв усилен"});
+         r.flyT = 1; r.state = "settle"; r.settleT = 0;
+@@ -886,6 +887,11 @@
+         }
+       }
+       if (r.state === "wait") {
++        if (sess.ice && (!r.hunt || r.hunt.baitId !== G.loadout().bait)) beginHunt();
++        if (r.hunt && !r.hunt.fish && r.idleT > (r.hunt.retry || 0)) {
++          const table=G.biteTable(); if (table.length) { r.hunt.fish=U.weighted(table); r.hunt.w=sampleWeight(r.hunt.fish); }
++          r.hunt.retry=r.idleT+1.5;
++        }
+         r.idleT += dt;
+         // В испытании косяк и рыба заданы этим забросом.
+         if (sess.duel) {
+@@ -894,11 +900,7 @@
+         }
+         else if (r.hunt && G.gear(sess.mode).bait && G.baitLeft(G.gear(sess.mode).bait.id) > 0) {
+           const h = r.hunt;
+-          h.age += dt;
+-          h.pulse = Math.max(0,h.pulse - dt * 1.5);
+-          h.shy = Math.max(0,h.shy - dt);
+-          if (!h.shy) h.interest += dt * (r.shoalCast ? 0.16 : 0.095);
+-          if (h.interest >= 1) { h.interest = 1; startBite(h.fish,h.w,false); }
++          if (FZ.Dive.advance(r,sess,dt)) startBite(h.fish,h.w,false);
+         }
+         // первая рыба в обучении — быстро и гарантированно
+         else if (!G.gear(sess.mode).bait || G.baitLeft(G.gear(sess.mode).bait.id) <= 0) { /* без наживки не клюёт */ }
+@@ -917,7 +919,7 @@
+           }
+         }
+       }
+-      if (r.state === "bite") biteTick(dt);
++      if (r.state === "bite") { if(r.hunt) FZ.Dive.advance(r,sess,dt); biteTick(dt); }
+     } else if (r.state === "fight") {
+       fightTick(dt, t);
+     } else if (r.state === "landing") {
+diff --git a/js/main.js b/js/main.js
+index 133f5ac..1cf4fb0 100644
+--- a/js/main.js
++++ b/js/main.js
+@@ -54,7 +54,7 @@
+       else { G.sess().lastAim = selected; r.aimSelected = true; }
+     }
+     else if (dy > 45 && dt < 600 && (s === "bite" || s === "wait")) G.strike();
+-    else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && r.hunt) FZ.Dive.twitch(r); else if (s === "wait" && G.sess().ice) G.jig(); }
++    else if (P.moved < 14 && dt < 400) { if (s === "bite" && r.bite.phase === "take") G.strike(); else if (s === "wait" && G.sess().ice) G.jig(); else if (s === "wait" && r.hunt && G.sess().mode !== "spin") FZ.Dive.twitch(r); }
+   }
+   cv.addEventListener("pointerup", up);
+   cv.addEventListener("pointercancel", up);
+@@ -73,8 +73,8 @@
+     }
+     else if (s === "fight") r.reeling = true;
+     else if (mode === "spin" && (s === "wait" || s === "bite")) r.reeling = true;
+-    else if (s === "wait" && r.hunt) FZ.Dive.twitch(r);
+     else if (s === "wait" && mode === "ice") G.jig();
++    else if (s === "wait" && r.hunt) FZ.Dive.twitch(r);
+     else if (s === "wait" || s === "settle") G.retrieve();
+   };
+   Input.actionUp = function () { const r = G.rig(); if (r) r.reeling = false; };
+diff --git a/js/renewal.js b/js/renewal.js
+index 78381c5..7f8efcb 100644
+--- a/js/renewal.js
++++ b/js/renewal.js
+@@ -23,8 +23,21 @@
+   const duelLabel=best?'Твой рекорд · '+best.score.toLocaleString('ru-RU'):'Испытание дня';
+   const tiles=[['mRival','cup','Пари с другом'],['mMap','map','Водоёмы'],['mShop','bag','Снасти'],['mAtlas','fish','Атлас рыб'],['mJourney','cup','Экспедиции'],['mJournal','book','Дневник'],['mQuests','list','Задания'],['mTour','star','Турнир дня'],['mForecast','wave','Гид по клёву'],['mSet','gear','Настройки']];
+   const rewardReady=FZ.LOCATIONS.some(l=>{const q=FZ.Expeditions.challenge(l.id);return (st.journey.maps[l.id]||0)>=3&&!st.journey.claimed.includes(l.id)||q&&!q.claimed&&q.got===q.need});
+-  ov.style.backgroundImage='linear-gradient(180deg,#0b283b81,transparent 34%,#0d313767 52%,#102d35f7 88%),url("'+photo(s.loc.id,s.season)+'")';
+-  ov.innerHTML='<div class="lodge"><div class="lodge-title"><small>РЫБАЛКА</small><h1>Клюёт<span>!</span></h1></div><div class="lodge-bottom"><div class="lodge-profile"><span class="rank">'+st.lvl+'</span><div><b>'+FZ.titleOf(st.lvl)+'</b><small>'+st.stats.total+' уловов · '+Object.keys(st.caught).length+'/62 вида</small></div><strong>'+U.money(st.money)+'</strong></div><button class="go" id="mGo">'+(G.rig().state==='idle'||G.rig().state==='nohole'?'На рыбалку':'Продолжить рыбалку')+ic('play')+'<small>'+s.loc.n+' · '+FZ.SEASONS[s.season]+'</small></button><button class="duel-entry" id="mDuel">'+ic('cup')+'<span><b>Три заброса</b><small>'+duelLabel+'</small></span><i>›</i></button><div class="lodge-grid">'+tiles.map(t=>'<button class="tile" id="'+t[0]+'">'+(t[0]==='mJourney'&&rewardReady?'<i class="reward-dot" aria-label="Есть награда"></i>':'')+ic(t[1])+'<span>'+t[2]+'</span></button>').join('')+'</div><div class="lodge-footer"><button id="mHelp">Как играть</button></div></div></div>';
++  ov.style.backgroundImage='linear-gradient(180deg,rgba(7,22,23,.48),transparent 33%,rgba(9,20,19,.08) 48%,#101d1b 94%),url("assets/scenes/lodge.webp")';
++  const quick=tiles.filter(t=>['mMap','mShop','mJournal'].includes(t[0]));
++  const more=tiles.filter(t=>!quick.includes(t));
++  const button=t=>'<button id="'+t[0]+'">'+ic(t[1])+'<span>'+t[2]+'</span>'+(t[0]==='mJourney'&&rewardReady?' •':'')+'</button>';
++  const resume=!['idle','nohole'].includes(G.rig().state);
++  ov.innerHTML='<main class="cabin"><header><div class="cabin-brand"><span>РЫБАЛКА</span><h1>Клюёт!</h1></div><button id="cabinExtras" aria-expanded="false" aria-controls="cabinDrawer" aria-label="Все разделы">'+ic('menu')+'</button></header>'+
++   '<div class="cabin-deck"><div class="cabin-location">'+FZ.SEASONS[s.season]+' <i></i> '+s.loc.reg+'</div><h2>'+s.loc.n+'</h2>'+
++   '<button id="mGo">'+(resume?'Продолжить ловлю':'Выйти на воду')+ic('play')+'</button>'+
++   '<nav class="cabin-nav">'+quick.map(button).join('')+'</nav>'+
++   '<button id="mDuel" class="cabin-duel">'+ic('cup')+'<span>Три заброса<small>'+duelLabel+'</small></span><b>›</b></button>'+
++   '<footer><span>'+FZ.titleOf(st.lvl)+' · ур. '+st.lvl+'</span><strong>'+U.money(st.money)+'</strong></footer></div>'+
++   '<aside id="cabinDrawer" hidden><div class="cabin-drawer-head"><h2>На берегу</h2><button id="cabinClose" aria-label="Закрыть">×</button></div>'+more.map(button).join('')+'<button id="mHelp">'+ic('book')+'<span>Как играть</span></button></aside></main>';
++  const drawer=$('cabinDrawer');
++  function toggle(open){drawer.hidden=!open;$('cabinExtras').setAttribute('aria-expanded',String(open));if(open)$('cabinClose').focus();else $('cabinExtras').focus();}
++  $('cabinExtras').onclick=()=>toggle(true);$('cabinClose').onclick=()=>toggle(false);
+   ov.classList.add('on');$('hud').classList.add('hide');UI.menuOpen=true;
+   UI.closeMenu=()=>{ov.classList.remove('on');$('hud').classList.remove('hide');UI.menuOpen=false};
+   $('mGo').onclick=()=>{FZ.Sound.unlock();FZ.Sound.click();UI.closeMenu();UI.ambience()};
+diff --git a/js/scene.js b/js/scene.js
+index d9209b4..e58c232 100644
+--- a/js/scene.js
++++ b/js/scene.js
+@@ -823,7 +823,9 @@
+ 
+     if (landing) target = { x: landing.fishX, y: landing.fishY };
+     const floatOnWater = target && !target.air && !landing && !v.fish && v.mode === "float";
+-    const lineEnd = floatOnWater ? floatSurface(target, tk, t) : target;
++    const fishPose = !v.ice && v.fish && v.fish.hooked && target && !landing ? R.fightPose(v.fish,target,t) : null;
++    const liftPose = landing && v.fish ? {x:landing.fishX,y:landing.fishY,len:landing.fishLength,dir:v.fish.vx > 0.05 ? -1 : 1,roll:Math.sin(t*5)*.07*(1-landing.lift)} : null;
++    const lineEnd = fishPose || liftPose ? FZ.Art.mouth(v.fish.s,fishPose || liftPose) : floatOnWater ? floatSurface(target, tk, t) : target;
+     const load = rod.load * (landing ? 1 - v.landing.k : 1);
+     const neutral = {
+       x: G.tip.x - (rod.jerk || 0) * 6,
+@@ -873,7 +875,7 @@
+ 
+     // поплавок / рыба / приманка
+     if (!v.ice && !landing && target && !target.air) {
+-      if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target);
++      if (v.fish && v.fish.hooked) R.drawFightFish(v, L, t, target,fishPose);
+       else if (v.mode === "float") R.drawFloat(target, tk, L, t, night);
+       else if (v.mode === "spin" && tk.reeling) { ctx.strokeStyle = U.rgba("#ffffff", 0.35); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(target.x - target.s * 0.4, target.y + 2); ctx.lineTo(target.x, target.y); ctx.lineTo(target.x + target.s * 0.4, target.y + 2); ctx.stroke(); }
+       else { ctx.fillStyle = U.rgba("#ffffff", 0.3); ctx.beginPath(); ctx.ellipse(target.x, target.y, 3, 1, 0, 0, Math.PI * 2); ctx.fill(); }
+@@ -992,26 +994,21 @@
+     ctx.restore();
+   }
+ 
+-  R.drawFightFish = function (v, L, t, p) {
+-    const f = v.fish;
+-    const night = L.dark > 0.35;
+-    const sp = Math.min(1, Math.hypot(f.vx, f.vz) / 2);
+-    const s = p.s;
+-    if (!f.jump) drawWake(p, sp, f.vx, -f.vz, (0.35 + 0.46 * sp) * (1 - 0.45 * L.dark), t);
+-    // силуэт рыбы под водой рядом с берегом
+-    const lenPx = Math.max(26, f.lenM * s * 1.1);
+-    if (f.Z < 9 && !f.jump) {
+-      const a = U.clamp(1 - (f.Z - 3) / 6, 0.15, 1) * (0.3 + f.surface * 0.4);
+-      FZ.Art.drawFish(ctx, f.s, p.x, p.y + 6 + (1 - f.surface) * 10, lenPx, { silhouette: f.surface < 0.6, alpha: f.surface < 0.6 ? a : 0.85, phase: t * 9, amp: 0.25 + sp * 0.3, dir: (f.vx || 0) > 0 ? -1 : 1, roll: f.surface > 0.8 ? 0.15 : 0 });
+-    }
+-    if (f.jump) {
+-      const k = f.jump.k;
+-      const hgt = Math.sin(k * Math.PI) * Math.max(40, lenPx * 1.1);
+-      ctx.save();
+-      FZ.Art.drawFish(ctx, f.s, p.x + (k - 0.5) * lenPx * 0.7 * (f.jump.dir || 1), p.y - hgt, lenPx * 1.15, { phase: t * 16, amp: 0.55, dir: f.jump.dir || 1, roll: (k - 0.5) * 1.6 * (f.jump.dir || 1) });
+-      ctx.restore();
+-    }
+-    if (night) { ctx.fillStyle = "rgba(160,255,140,0.6)"; }
++  R.fightPose = function(f,p,t) {
++    const len = Math.max(26, f.lenM*p.s*1.1);
++    if (!f.jump) return {x:p.x,y:p.y+6+(1-f.surface)*10,len,dir:f.vx>0?-1:1,roll:f.surface>.8?.15:0};
++    const k=U.clamp(f.jump.k,0,1), travel=f.jump.dir || 1;
++    return {x:p.x+(k-.5)*len*.85*travel,y:p.y-Math.sin(k*Math.PI)*Math.max(40,len*1.1),
++      len:len*1.15,dir:-travel,roll:(.5-k)*1.85+Math.sin(k*Math.PI*2)*.12};
++  };
++  R.drawFightFish = function(v,L,t,p,pose) {
++    const f=v.fish, speed=Math.min(1,Math.hypot(f.vx,f.vz)/2);
++    if(!f.jump) drawWake(p,speed,f.vx,-f.vz,(.35+.46*speed)*(1-.45*L.dark),t);
++    if(!f.jump && f.Z>=9)return;
++    const submerged=!f.jump && f.surface<.6;
++    FZ.Art.drawFish(ctx,f.s,pose.x,pose.y,pose.len,{dir:pose.dir,roll:pose.roll,
++      phase:t*(f.jump?14:8),amp:f.jump?.42:.18+speed*.26,silhouette:submerged,
++      alpha:submerged?U.clamp(1-(f.Z-3)/6,.15,1)*(.3+f.surface*.4):1});
+   };
+ 
+   R.landingPose = function (v) {
+diff --git a/js/ui.js b/js/ui.js
+index 69acbd4..37c74f4 100644
+--- a/js/ui.js
++++ b/js/ui.js
+@@ -188,8 +188,8 @@
+       case "nohole": label = "Бурить"; break;
+       case "drill": label = "Бурю…"; calm = true; break;
+     }
+-    setC("bRetrieve","hide", !(r.hunt && r.state === "wait"));
+-    if (r.hunt && r.state === "wait") { label = "Шевельнуть"; calm = false; }
++    setC("bRetrieve","hide", !(r.hunt && !s.ice && r.state === "wait"));
++    if (r.hunt && !s.ice && mode !== "spin" && r.state === "wait") { label = "Шевельнуть"; calm = false; }
+     setT("bAct", label);
+     setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
+     // инструменты/натяжение
+@@ -243,6 +243,8 @@
+       else if (f.phase === "tired") h = "Рыба устала — подтягивайте!";
+     }
+     if (r.hunt && r.state === "wait") h = r.hunt.shy ? "Рыба насторожилась<small>Дай наживке опуститься</small>" : r.hunt.pulse > 0.1 ? "Подходит ближе…" : "Шевельни наживку<small>Делай паузы между движениями</small>";
++    if (r.hunt && r.state === "wait" && mode === "spin") h = r.reeling ? "Идёт проводка<small>Отпусти, чтобы блесна опустилась</small>" : "Веди блесну<small>Удерживай подмотку и делай паузы</small>";
++    if (r.hunt && r.state === "wait" && s.ice) h = "Найди горизонт рыбы<small>Меняй глубину слева и поигрывай снастью</small>";
+     if (r.hunt && r.state === "bite" && r.bite.phase === "touch") h = "Пробует наживку…";
+     const key = h + cls;
+     if (key !== hintKey) { hintKey = key; const e = $("hHint"); e.innerHTML = h; e.className = "hint " + cls; }
+diff --git a/css/renewal.css b/css/renewal.css
+index 7c127ab..7156917 100644
+--- a/css/renewal.css
++++ b/css/renewal.css
+@@ -207,3 +207,22 @@
+ 
+ #rivalCode{display:block;box-sizing:border-box;width:100%;margin:10px 0 14px;padding:14px;border-radius:12px;border:1px solid #86b9ad;background:#102e34;color:white;font:inherit}
+ #bRetrieve{position:absolute;right:10px;top:calc(106px + var(--safe-t));padding:9px 14px}
++#ovMenu{background-position:50% 53%;background-size:cover;overflow-y:auto}
++.cabin{width:min(100%,560px);min-height:100%;position:relative;display:flex;flex-direction:column;justify-content:space-between;color:#fff8e6;box-sizing:border-box;padding:calc(24px + var(--safe-t,0px)) clamp(20px,6vw,38px) calc(12px + var(--safe-b,0px));text-shadow:0 2px 12px #10231f55}
++.cabin button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;box-shadow:none}
++.cabin header,.cabin footer,.cabin-drawer-head{display:flex;align-items:center;justify-content:space-between}
++.cabin header{align-items:flex-start}.cabin-brand>span,.cabin-location{font:700 11px Rubik,sans-serif;letter-spacing:.22em;text-transform:uppercase}
++.cabin-brand h1{font:700 clamp(72px,13vh,124px)/.85 Caveat,cursive;color:#fff5db;margin:4px 0 0;letter-spacing:-.065em}
++#cabinExtras,#cabinClose{border:1px solid #f3efcf61;border-radius:50%;width:46px;height:46px;background:#14242094;color:#fff6dd;display:grid;place-items:center}
++.cabin svg{width:21px;height:21px}.cabin-deck{margin-top:100px}
++.cabin-location{display:flex;align-items:center;gap:10px;letter-spacing:.13em;color:#f2d7a5}.cabin-location i{width:20px;height:1px;background:currentColor}
++.cabin-deck>h2{font:500 clamp(32px,6.2vh,51px)/1.04 Georgia,'Times New Roman',serif;margin:10px 0 18px;letter-spacing:-.025em}
++#mGo{width:100%;min-height:54px;padding:14px 21px;display:flex;align-items:center;justify-content:space-between;border-radius:9px;background:#efc276;color:#20291f;font-weight:700;font-size:17px}
++.cabin-nav{display:flex;justify-content:space-between;border-bottom:1px solid #d8e2d438;margin:7px 0 0}
++.cabin-nav button{display:flex;align-items:center;gap:6px;padding:14px 1px;font-size:13px}.cabin-nav svg,.cabin-duel svg{color:#e6cc99}
++.cabin-duel{display:flex;align-items:center;width:100%;gap:13px;text-align:left;padding:14px 0}.cabin-duel span{font-weight:700}.cabin-duel small{display:block;color:#c8d1c4;font-size:11px;margin-top:3px;font-weight:400}.cabin-duel b{margin-left:auto;font-size:27px;color:#e6cc99}
++.cabin footer{border-top:1px solid #d8e2d438;color:#d7ddd0;padding:10px 0 0;font-size:11px}.cabin footer strong{color:#efcc89}
++#cabinDrawer[hidden]{display:none}#cabinDrawer{position:absolute;z-index:3;right:0;top:0;bottom:0;overflow:auto;width:min(88%,340px);box-sizing:border-box;background:#172822;box-shadow:-30px 0 80px #081511ba;padding:calc(24px + var(--safe-t,0px)) 22px 16px}
++.cabin-drawer-head{margin-bottom:18px}.cabin-drawer-head h2{font:32px Georgia,serif;margin:0}#cabinClose{font-size:26px}
++#cabinDrawer>button{display:flex;align-items:center;gap:14px;border-bottom:1px solid #e2ddbb29;text-align:left;width:100%;min-height:45px;font-size:15px}
++@media(max-height:580px){.cabin{padding-top:12px}.cabin-deck{margin-top:20px}.cabin-brand h1{font-size:54px}.cabin-deck>h2{font-size:28px;margin-bottom:9px}.cabin-nav button,.cabin-duel{padding-top:8px;padding-bottom:8px}}
