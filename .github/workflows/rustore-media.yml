@@ -1,0 +1,94 @@
+name: RuStore media 2.2.1
+on:
+  push:
+    branches: [media/fishing-2.2.1-rustore]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45189819773
+          name: Fishing-2.2.1-APK
+      - name: Capture the shipped game
+        run: |
+          mkdir media raw
+          unzip -q fishing-2.2.1.apk 'assets/*'
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+          python -m http.server 8246 -d assets &
+          cat > capture.cjs <<'JS'
+          const { chromium } = require('playwright');
+          const { writeFileSync } = require('node:fs');
+          (async()=>{
+           const browser=await chromium.launch();
+           const context=await browser.newContext({viewport:{width:540,height:960},deviceScaleFactor:2,recordVideo:{dir:'raw',size:{width:1080,height:1920}}});
+           const page=await context.newPage();
+           await page.goto('http://localhost:8246');
+           await page.locator('#mGo').waitFor();await page.waitForTimeout(750);
+           const start=Date.now(),cuts={};
+           const begin=n=>cuts[n]=[(Date.now()-start)/1000];
+           const end=n=>cuts[n].push((Date.now()-start)/1000);
+           const shot=n=>page.screenshot({path:'media/'+n+'.jpg',type:'jpeg',quality:94});
+           const wait=fn=>page.waitForFunction(fn,null,{timeout:30000});
+           begin('menu');await shot('04-menu');await page.waitForTimeout(2650);end('menu');
+           await page.locator('#mGo').click();
+           await page.evaluate(()=>{FZ.Game.startSession('pond','summer');FZ.Game.skipTo('day');FZ.UI.refreshTools()});
+           await page.locator('#bAct').click();await wait(()=>FZ.Game.rig().hunt && FZ.Game.rig().state==='wait');
+           await page.locator('#bAct').click();await page.waitForTimeout(1500);
+           begin('bite');
+           await page.locator('#bAct').click();await page.waitForTimeout(1500);
+           await page.locator('#bAct').click();
+           await wait(()=>{const h=FZ.Game.rig().hunt;return h.x>.34});
+           await shot('01-pod-vodoy');
+           await wait(()=>FZ.Game.rig().bite?.phase==='take');await page.keyboard.press('Space');
+           await page.waitForTimeout(1950);end('bite');
+           await page.evaluate(()=>{const g=FZ.Game;g.endSession();g.startSession('pond','summer');g.skipTo('day');g.state().lvl=5;g.state().money=5000;g.buy('rod','s1');g.setActive('spin');FZ.UI.refreshTools()});
+           await page.locator('#bAct').click();await wait(()=>FZ.Game.rig().hunt&&FZ.Game.rig().state==='wait');
+           await page.waitForTimeout(950);begin('spin');
+           await page.keyboard.down('Space');await page.waitForTimeout(2250);await shot('02-spinning');await page.keyboard.up('Space');
+           await page.waitForTimeout(950);await page.keyboard.down('Space');await page.waitForTimeout(1400);await page.keyboard.up('Space');end('spin');
+           await page.evaluate(()=>{const g=FZ.Game;g.endSession();g.startSession('pond','winter');g.skipTo('day');FZ.UI.refreshTools()});
+           begin('ice');await page.locator('#bAct').click();
+           await wait(()=>FZ.Game.rig().hunt && FZ.Game.rig().state==='wait');
+           await page.waitForTimeout(650);await page.evaluate(()=>FZ.Game.setLure(.47));
+           await page.locator('#bAct').click();await page.waitForTimeout(1450);await shot('03-pod-ldom');
+           await page.locator('#bAct').click();await page.waitForTimeout(1800);end('ice');
+           const video=page.video();
+           await context.close();await video.saveAs('raw/game.webm');await browser.close();
+           writeFileSync('raw/cuts.json',JSON.stringify(cuts));
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          cat > assemble.py <<'PY'
+          import subprocess as sp, json
+          from pathlib import Path
+          cuts=json.loads(Path('raw/cuts.json').read_text())
+          labels={'bite':'Поклёвка под водой','spin':'Проводка к берегу','ice':'Рыбалка подо льдом','menu':'Рыбалка: Клюёт! 2.2.1'}
+          duration=float(sp.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','csv=p=0','raw/game.webm']))
+          offset=max(0,duration-cuts['ice'][1]-.2)
+          parts=[]
+          for key in labels:
+           start,end=cuts[key]
+           if key=='bite':start=max(start,end-7.5)
+           if key=='ice':start+=.25
+           label=Path('raw')/f'{key}.txt'
+           label.write_text(labels[key],encoding='utf-8')
+           part=Path('raw')/f'{key}.mp4'
+           vf=f"scale=1080:1920,fps=30,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf:textfile={label}:fontcolor=0xFFF4DE:fontsize=48:x=(w-tw)/2:y=235:box=1:boxcolor=0x102521CC:boxborderw=20"
+           if key=='menu':vf='scale=1080:1920,fps=30'
+           sp.run(['ffmpeg','-v','error','-y','-ss',str(start+offset),'-i','raw/game.webm','-t',str(end-start),'-vf',vf,'-c:v','libx264','-pix_fmt','yuv420p','-crf','18','-an',str(part)],check=True)
+           parts.append(f"file '{part.name}'")
+          Path('raw/list.txt').write_text('\n'.join(parts))
+          sp.run(['ffmpeg','-v','error','-y','-f','concat','-safe','0','-i','raw/list.txt','-c','copy','-movflags','+faststart','media/fishing-2.2.1-gameplay.mp4'],check=True)
+          PY
+          node capture.cjs
+          python assemble.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: RuStore-media-2.2.1
+          path: media/*
