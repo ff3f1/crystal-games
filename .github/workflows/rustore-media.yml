@@ -86,9 +86,11 @@ jobs:
           sp.run(['ffmpeg','-v','error','-y','-f','concat','-safe','0','-i','raw/list.txt','-c','copy','-movflags','+faststart','media/fishing-2.2.1-gameplay.mp4'],check=True)
           PY
           node capture.cjs
-          python assemble.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: RuStore-media-2.2.1
-          path: media/*
+          path: |
+            media/*
+            raw/game.webm
+            raw/cuts.json
