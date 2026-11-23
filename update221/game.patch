@@ -1,0 +1,89 @@
+--- a/js/dive.js
++++ b/js/dive.js
+@@ -12,7 +12,7 @@
+     const cruise=({top:.25,mid:.50,bottom:.79}[zone]||.55)+(Math.random()-.5)*.12;
+     return {fish,w,age:0,last:-5,pulse:0,shy:0,interest:.06,phase,swim:phase,
+       x:.13,y:.40+.18*Math.random(),vx:.015,vy:0,
+-      depth,lift:0,liftSpeed:0,lx:.61,ly:.54,cruise,castZ:r.Z};
++      depth,lift:0,liftSpeed:0,lx:s.mode==="spin"?.34:.61,ly:.54,cruise,castZ:r.Z};
+   }
+   function twitch(r) {
+     const h=r.hunt, gap=h.age-h.last;
+@@ -29,9 +29,10 @@
+     const bait=G.gear(s.mode).bait;
+     if(spin) {
+       const surface=bait && (bait.id==='mouse'||bait.id==='wobbler');
+-      h.depth=clamp(h.depth+(r.reeling?-.21:surface?-.045:.105)*dt,.12,.92);
++      if(!r.reeling && !bite) h.depth=clamp(h.depth+(surface?-.045:.105)*dt,.12,.92);
+     } else h.depth=damp(h.depth,s.ice?r.lure:s.mode==='feeder'?.87:({top:.24,mid:.55,bottom:.76}[G.loadout().depth]||.64),3,dt);
+-    h.lx=.6+Math.sin(h.age*.95)*.008+(spin?.042*Math.sin(h.age*(r.reeling?3.1:1.1)):0);
++    const retrieved=clamp((h.castZ-r.Z)/Math.max(.3,h.castZ-4.2),0,1);
++    h.lx=spin ? .34+.50*retrieved : .6+Math.sin(h.age*.95)*.008;
+     h.ly=.23+.54*h.depth+h.lift;
+     const layer=.23+.54*h.cruise;
+     const difference=Math.abs(layer-h.ly);
+@@ -54,7 +55,7 @@
+     const key=variants[id]||id;
+     const equipped=['bread','worm','corn','spoon','spinner','wobbler'].includes(key);
+     const spin=key==='spinner'||key==='spoon';
+-    ctx.rotate(spin?Math.sin(t*(motion?9:2))*.36:Math.sin(t*2.1)*.045);
++    ctx.rotate(spin?(motion?.98:0)+Math.sin(t*(motion?9:2))*.24:Math.sin(t*2.1)*.045);
+     if(equipped) {
+       const im=rigs[key]||(rigs[key]=image('assets/rigs/'+key+'.webp'));
+       if(im.naturalWidth){const k=size/Math.max(im.width,im.height);
+@@ -83,7 +84,10 @@
+     ctx.save();ctx.setTransform(d,0,0,d,0,0);
+     const zoom=Math.max(W/im.width,H/im.height)*1.12,bw=im.width*zoom,bh=im.height*zoom;
+     const pan=s.mode==='spin'?clamp((h.castZ-r.Z)/Math.max(1,h.castZ),0,1):.5;
+-    ctx.drawImage(im,(W-bw)*(.43+.14*pan)+Math.sin(clock*.24)*W*.009,(H-bh)*(.35+.3*h.depth),bw,bh);
++    const drift=Math.sin(clock*.24)*W*.009;
++    const x=s.ice?clamp(W*.72-bw*.698+drift,W-bw,0):(W-bw)*(.43+.14*pan)+drift;
++    const y=s.ice?clamp(H*.16-bh*.178,H-bh,0):(H-bh)*(.35+.3*h.depth);
++    ctx.drawImage(im,x,y,bw,bh);
+     ctx.fillStyle='rgba(3,24,34,'+((s.period==='night'?.38:.02)+h.depth*.065)+')';ctx.fillRect(0,0,W,H);
+     const fish=f?f.s:h.fish;
+     let ax=h.lx*W,ay=h.ly*H;
+@@ -97,7 +101,11 @@
+       if(f){pose.x+=W*.09*Math.sin(f.t*3.8);pose.y+=H*.035*Math.sin(f.t*5.1);}
+       if(f||r.bite?.phase==='take'){const mouth=FZ.Art.mouth(fish,pose);ax=mouth.x;ay=mouth.y;}
+     }
+-    ctx.strokeStyle='rgba(224,242,233,.69)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W*.68,-2);ctx.quadraticCurveTo(W*(.61+.017*Math.sin(clock)),H*.22,ax,ay);ctx.stroke();
++    ctx.strokeStyle='rgba(224,242,233,.69)';ctx.lineWidth=1;const anchor=s.ice ? {x:x+bw*.698,y:y+bh*.178} :
++      s.mode==='spin' ? {x:W*1.08,y:H*.32} : {x:W*.68,y:-2};
++    const slack=s.mode==='spin' && !r.reeling ? H*.032 : H*.006;
++    ctx.beginPath();ctx.moveTo(anchor.x,anchor.y);
++    ctx.quadraticCurveTo((anchor.x+ax)*.5,(anchor.y+ay)*.5+slack,ax,ay);ctx.stroke();
+     const bait=G.gear(s.mode).bait;
+     if(bait)drawRig(bait.id,ax,ay,Math.min(W,H)*(bait.lure?.098:.059),clock,r.reeling);
+     if(pose)FZ.Art.drawFish(ctx,fish,pose.x,pose.y,pose.len,{dir:pose.dir,roll:pose.roll,phase:h.swim+(f?f.t*11:0),amp:f?.31:.12+Math.abs(h.vx)*.72});
+--- a/js/renewal.js
++++ b/js/renewal.js
+@@ -124,7 +124,7 @@
+  UI.showHelp=function(){UI.sheet('<div class="eyebrow">ОТ ПЕРВОГО ЗАБРОСА ДО ТРОФЕЯ</div><h2>Как играть</h2><div class="scroll help-steps">'+[
+  ['Выбери место','Проведи пальцем по воде и отпусти для заброса. Коротким касанием можно выбрать точку заранее и нажать «Заброс».'],
+  ['Подбери наживку','Кнопка наживки показывает запас. В атласе и гиде указаны подходящие насадки. Поплавок, фидер, спиннинг и зимняя снасть привлекают разные виды.'],
+- ['Проведи приманку','На спиннинге удерживай подмотку, чтобы поднять блесну, и сделай паузу, чтобы дать ей опуститься. На поплавке и фидере лёгкое движение привлекает рыбу, а частые рывки могут её спугнуть.'],
++ ['Проведи приманку','На спиннинге удерживай подмотку, чтобы вести приманку к берегу. На паузе металлическая блесна погружается. На поплавке и фидере лёгкое движение привлекает рыбу, а частые рывки могут её спугнуть.'],
+  ['Дождись потяжки','Первые движения — рыба только пробует. Подсекай кнопкой или свайпом вверх после сигнала «Подсечь!».'],
+  ['Управляй вываживанием','Держи кнопку подмотки в спокойные моменты. Перед рывком появится предупреждение: отпусти кнопку. Фрикцион ограничивает нагрузку, но слабая леска не удержит любую рыбу.'],
+  ['Помогай удилищем','Веди палец по воде или сдвинь его вбок при подмотке. Если рыба рванула вправо, отведи удочку влево.'],
+@@ -156,7 +156,7 @@
+    if(!G.gear(s.mode).bait)html='Закончилась наживка';
+    else if(r.idleT>8&&G.biteTable().length===0)html='Попробуй другую наживку';
+    else if(r.hunt && r.hunt.shy>.1)html='Отходит · дай приманке успокоиться';
+-   else if(s.mode==='spin')html=r.reeling?'':'Подмотка поднимает приманку · пауза опускает';
++   else if(s.mode==='spin')html=r.reeling?'':'Удерживай подмотку, чтобы вести приманку к берегу';
+    else if(s.ice)html=r.idleT<7?'Найди глубину слева · поиграй снастью':'';
+    else if(r.hunt && r.idleT<4)html='Шевельни наживку и дай рыбе подойти';
+   }
+--- a/js/ui.js
++++ b/js/ui.js
+@@ -193,7 +193,7 @@
+     if (r.hunt && !s.ice && mode !== "spin" && r.state === "wait") { label = "Шевельнуть"; calm = false; }
+     const tracking=mode==="spin" && r.hunt && ["wait","bite"].includes(r.state);
+     setC("spinDepth","hide",!tracking);
+-    if(tracking) setT("spinDepth","Глубина · "+(r.hunt.depth*G.depthAt(r.X,r.Z)).toFixed(1).replace(".",",")+" м");
++    if(tracking) setT("spinDepth","До берега "+r.Z.toFixed(1).replace(".",",")+" м · Глубина "+(r.hunt.depth*G.depthAt(r.X,r.Z)).toFixed(1).replace(".",",")+" м");
+     setT("bAct", label);
+     setC("bAct", "calm", calm); setC("bAct", "alarm", alarm);
+     // инструменты/натяжение
