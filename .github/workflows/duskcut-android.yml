@@ -14,10 +14,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      DUSK_KEYSTORE_BASE64: ${{ secrets.DUSK_KEYSTORE_BASE64 }}
-      DUSK_STORE_PASSWORD: ${{ secrets.DUSK_STORE_PASSWORD }}
-      DUSK_KEY_ALIAS: ${{ secrets.DUSK_KEY_ALIAS }}
-      DUSK_KEY_PASSWORD: ${{ secrets.DUSK_KEY_PASSWORD }}
+      # Reuse the existing release keystore secrets shared with the other Android games.
+      # DUSK-specific secrets, if defined, take precedence over shared ones.
+      DUSK_KEYSTORE_BASE64: ${{ secrets.DUSK_KEYSTORE_BASE64 || secrets.KEYSTORE_B64 }}
+      DUSK_STORE_PASSWORD: ${{ secrets.DUSK_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+      DUSK_KEY_ALIAS: ${{ secrets.DUSK_KEY_ALIAS || secrets.KEY_ALIAS }}
+      DUSK_KEY_PASSWORD: ${{ secrets.DUSK_KEY_PASSWORD || secrets.KEY_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
