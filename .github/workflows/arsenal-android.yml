@@ -1,0 +1,50 @@
+name: Arsenal Android 0.2.0
+on:
+  pull_request:
+    paths:
+      - 'android-arsenal/**'
+      - '.github/workflows/arsenal-android.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: android-arsenal
+          sparse-checkout-cone-mode: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verify packaged web assets
+        working-directory: android-arsenal
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zlib
+          data=Path('app/src/main/assets/index.html').read_bytes()
+          assert len(data)==370700
+          assert zlib.crc32(data)&0xffffffff==0x68f56adf
+          print('Embedded photographic assets: verified')
+          PY
+      - name: Build signed debug APK with Android SDK
+        working-directory: android-arsenal
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+          gradle --no-daemon :app:assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.2.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.2.0.apk
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Arsenal-Rybaka-0.2.0-APK
+          path: android-arsenal/Arsenal_Rybaka_0.2.0.apk
+          if-no-files-found: error
+          retention-days: 30
