@@ -26,6 +26,7 @@ import android.graphics.Bitmap;
 import android.graphics.ImageDecoder;
 import android.graphics.BitmapFactory;
 import android.content.ClipData;
+import androidx.core.content.FileProvider;
 import org.json.JSONArray;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -228,9 +229,15 @@ public final class MainActivity extends Activity {
    if(raw==null||raw.length()>LIMIT)return false;byte[] b=raw.getBytes(StandardCharsets.UTF_8);if(b.length>LIMIT)return false;
    runOnUiThread(()->startExport(b,"application/json",filename!=null&&filename.matches("arsenal-[0-9-]+\\.json")?filename:"arsenal-backup.json"));return true;
   }
+  @JavascriptInterface public boolean shareImage(String raw,String text){
+   if(raw==null||raw.length()>4*1024*1024||text==null||text.length()>2000)return false;
+   try{byte[] b=Base64.decode(raw,Base64.DEFAULT);if(b.length<4||(b[0]&255)!=255||(b[1]&255)!=216)return false;
+    photoWorker.execute(()->{try{File dir=new File(getCacheDir(),"share");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException();File[] old=dir.listFiles();if(old!=null)for(File f:old)if(f.lastModified()<System.currentTimeMillis()-86400000L)f.delete();File file=File.createTempFile("arsenal-",".jpg",dir);try(FileOutputStream out=new FileOutputStream(file)){out.write(b);}Uri uri=FileProvider.getUriForFile(MainActivity.this,getPackageName()+".share",file);runOnUiThread(()->{if(isFinishing()||isDestroyed())return;try{Intent i=new Intent(Intent.ACTION_SEND);i.setType("image/jpeg");i.putExtra(Intent.EXTRA_STREAM,uri);i.putExtra(Intent.EXTRA_TEXT,text);i.setClipData(ClipData.newRawUri("Арсенал рыбака",uri));i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Поделиться карточкой"));}catch(Exception e){Toast.makeText(MainActivity.this,"Не удалось поделиться",Toast.LENGTH_LONG).show();}});}catch(Exception e){runOnUiThread(()->Toast.makeText(MainActivity.this,"Не удалось подготовить карточку",Toast.LENGTH_LONG).show());}});return true;
+   }catch(Exception e){return false;}
+  }
   @JavascriptInterface public boolean exportImage(String raw,String filename){
    if(raw==null||raw.length()>4*1024*1024)return false;
-   try{byte[] b=Base64.decode(raw,Base64.DEFAULT);if(b.length<4||(b[0]&255)!=255||(b[1]&255)!=216)return false;runOnUiThread(()->startExport(b,"image/jpeg",filename!=null&&filename.matches("trophy-[0-9-]+\\.jpg")?filename:"trophy.jpg"));return true;}catch(Exception e){return false;}
+   try{byte[] b=Base64.decode(raw,Base64.DEFAULT);if(b.length<4||(b[0]&255)!=255||(b[1]&255)!=216)return false;runOnUiThread(()->startExport(b,"image/jpeg",filename!=null&&filename.matches("(trophy|gear)-[0-9-]+\\.jpg")?filename:"trophy.jpg"));return true;}catch(Exception e){return false;}
   }
  }
  @Override protected void onDestroy(){

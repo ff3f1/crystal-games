@@ -46,7 +46,9 @@ const {pathToFileURL}=require('node:url');
   assert.equal(await page.locator('.gallery-tile img').count(),5);
   await page.locator('.make-cover').last().click();
   await page.locator('#modal').getByRole('button',{name:'Сохранить',exact:true}).click();
+  assert.equal(await page.locator('.album-card').count(),1);assert.ok(await page.locator('.album-no').first().isVisible());
   await page.getByText('Тест 5 фото',{exact:true}).click();
+  const card=await page.evaluate(async()=>makeShareCard('gear',db.items[0].id));assert.ok(card.startsWith('data:image/jpeg;base64,'));
   assert.equal(await page.locator('.gallery-strip button').count(),5);
   await page.locator('.gallery-strip button').last().click();
   assert.equal(await page.locator('#galleryCounter').textContent(),'5 / 5');
@@ -70,6 +72,8 @@ const {pathToFileURL}=require('node:url');
   assert.equal(await page.evaluate(()=>stockState(db.items.find(x=>x.id==='stocktest')).left),0);
   assert.ok(await page.locator('#modal').getByRole('button',{name:'− 1 шт.',exact:true}).isDisabled());
   await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
+  await page.getByRole('button',{name:'Список',exact:true}).click();assert.equal(await page.locator('.album-card').count(),0);
+  await page.getByRole('button',{name:'Альбом',exact:false}).click();assert.equal(await page.locator('.album-card').count(),2);
   for(const width of [320,390,768]){
     await page.setViewportSize({width,height:844});
     for(const label of ['Главная','Арсенал','Наборы','Трофеи','Хотелки','Ещё']){
