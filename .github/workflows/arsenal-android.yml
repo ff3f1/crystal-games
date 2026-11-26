@@ -53,7 +53,7 @@ jobs:
         working-directory: android-arsenal
         run: |
           sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
-          gradle --no-daemon :app:assembleDebug :app:assembleRelease
+          gradle --no-daemon -PARSENAL_LICENSE_URL=https://crystal-games.h1n.ru/arsenal-api :app:assembleDebug :app:assembleRelease
           cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.5.0_test.apk
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.5.0_test.apk
       - name: Upload installable APK

@@ -16,11 +16,16 @@ android {
  buildFeatures { buildConfig true }
  buildTypes {
   debug {
+   applicationIdSuffix '.test'
+   versionNameSuffix '-test'
+   resValue 'string', 'app_name', 'Арсенал рыбака TEST'
    buildConfigField 'String', 'MAIN_AD', '"demo-banner-yandex"'
    buildConfigField 'String', 'CATALOG_AD', '"demo-banner-yandex"'
    buildConfigField 'String', 'INTER_AD', '"demo-interstitial-yandex"'
   }
   release {
+   resValue 'string', 'app_name', 'Арсенал рыбака'
+   buildConfigField 'String', 'LICENSE_BASE_URL', '""'
    buildConfigField 'String', 'MAIN_AD', '"R-M-20514578-1"'
    buildConfigField 'String', 'CATALOG_AD', '"R-M-20514578-2"'
    buildConfigField 'String', 'INTER_AD', '"R-M-20514578-3"'

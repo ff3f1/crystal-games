@@ -55,7 +55,7 @@ final class ProController {
  private void purchase(){
   if(busy){say("Запрос уже выполняется");return;}
   String k=code();
-  if(!valid(k)){k=newCode();prefs.edit().putString("code",k).putBoolean("verified_paid",false).commit();}
+  if(!valid(k)){k=newCode();if(!prefs.edit().putString("code",k).putBoolean("verified_paid",false).commit()){say("Не удалось сохранить код покупки");return;}}
   showCode(k,true);
  }
  private void showCode(String k,boolean purchase){
@@ -84,7 +84,7 @@ final class ProController {
    JSONObject result=null;
    HttpsURLConnection c=null;
    try{
-    URL url=new URL(BuildConfig.LICENSE_BASE_URL+endpoint);
+    URL url=new URL(BuildConfig.LICENSE_BASE_URL+endpoint+".php");
     c=(HttpsURLConnection)url.openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(10000);c.setReadTimeout(10000);
     c.setRequestMethod("POST");c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Cache-Control","no-store");
     byte[] body=new JSONObject().put("code",k).put("mode",mode).toString().getBytes(StandardCharsets.UTF_8);
@@ -109,7 +109,7 @@ final class ProController {
     if("refunded".equals(state)){prefs.edit().remove("code").putBoolean("verified_paid",false).commit();active=false;changed.run();if(notify)say("Лицензия возвращена. Можно оформить новую покупку.");return;}
     if("/order".equals(endpoint)&&"pending".equals(state)){
      Uri u=Uri.parse(data.optString("checkout"));
-     if("https".equals(u.getScheme())&&"auth.robokassa.ru".equals(u.getHost())&&"/Merchant/Index.aspx".equals(u.getPath())&&u.getUserInfo()==null){
+     if("https".equals(u.getScheme())&&"auth.robokassa.ru".equals(u.getHost())&&"/Merchant/Index.aspx".equals(u.getPath())&&u.getUserInfo()==null&&("test".equals(mode)?"1".equals(u.getQueryParameter("IsTest")):u.getQueryParameter("IsTest")==null)){
       try{activity.startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){say("Не удалось открыть страницу оплаты");}
      }else say("Некорректный адрес оплаты");
     }else if(notify)say("Подтверждение оплаты пока не получено.");
