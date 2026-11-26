@@ -47,7 +47,7 @@ final class ProController {
  void open(){
   if(!configured()){new AlertDialog.Builder(activity).setTitle("Арсенал PRO").setMessage("Разовая покупка — 399 ₽. Без рекламы. Оплата пока не подключена.").setPositiveButton("Закрыть",null).show();return;}
   new AlertDialog.Builder(activity).setTitle(active?"PRO активирован":"Арсенал PRO — 399 ₽")
-   .setMessage((BuildConfig.DEBUG?"ТЕСТОВЫЙ РЕЖИМ — деньги не списываются.\n\n":"")+ (active?"Реклама отключена. Сохраните код восстановления для нового телефона.":"Один платёж, без подписки. Для восстановления используется личный код покупки."))
+   .setMessage((BuildConfig.DEBUG?"ТЕСТОВЫЙ РЕЖИМ — деньги не списываются.\n\n":"")+ (active?"Реклама отключена. До 5 фото на карточку. Сохраните код восстановления для нового телефона.":"Один платёж, без подписки. Без рекламы и до 5 фото на карточку. Для восстановления используется личный код покупки."))
    .setPositiveButton(active?"Код восстановления":"Купить PRO",(d,w)->{if(active)showCode(code(),false);else purchase();})
    .setNeutralButton("Восстановить",(d,w)->restore())
    .setNegativeButton("Проверить оплату",(d,w)->check(true)).show();

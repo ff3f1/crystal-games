@@ -109,7 +109,7 @@ public final class MainActivity extends Activity {
   super.onCreate(saved);
   getWindow().setStatusBarColor(0xff121716);
   getWindow().setNavigationBarColor(0xff121716);
-  pro=new ProController(this,()->{if(web!=null){refreshBanner();if(adsAllowed())loadInter();else if(inter!=null){inter.setAdEventListener(null);inter=null;}web.evaluateJavascript("render()",null);}});
+  pro=new ProController(this,()->{if(web!=null){refreshBanner();if(adsAllowed())loadInter();else if(inter!=null){inter.setAdEventListener(null);inter=null;}web.evaluateJavascript("render();if(document.querySelector(\'#galleryGrid\'))refreshGallery()",null);}});
   stateFile=new AtomicFile(new File(getFilesDir(),"arsenal-state.json"));
   web = new WebView(this);
   web.setBackgroundColor(0xff121716);
@@ -160,7 +160,7 @@ public final class MainActivity extends Activity {
   if(request==EXPORT){byte[] bytes=exportBytes;exportBytes=null;if(result==RESULT_OK&&data!=null&&data.getData()!=null&&bytes!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){if(out==null)throw new IOException();out.write(bytes);Toast.makeText(this,"Файл сохранён",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"Не удалось сохранить файл",Toast.LENGTH_LONG).show();}}}
  }
  @Override public void onBackPressed(){
-  if(web!=null) web.evaluateJavascript("(function(){var d=document.querySelector('#modal');if(d&&d.open){closeModal();return true;}if(typeof tab!=='undefined'&&tab!=='home'){page('home');return true;}return false;})()", value->{if("false".equals(value))super.onBackPressed();});
+  if(web!=null) web.evaluateJavascript("(function(){var v=document.querySelector('#photoViewer');if(v&&v.open){closePhotoViewer();return true;}var d=document.querySelector('#modal');if(d&&d.open){closeModal();return true;}if(typeof tab!=='undefined'&&tab!=='home'){page('home');return true;}return false;})()", value->{if("false".equals(value))super.onBackPressed();});
   else super.onBackPressed();
  }
  private void startExport(byte[] bytes,String mime,String filename){
@@ -177,20 +177,20 @@ public final class MainActivity extends Activity {
   Bitmap b;
   if(android.os.Build.VERSION.SDK_INT>=28){
    b=ImageDecoder.decodeBitmap(ImageDecoder.createSource(getContentResolver(),u),(decoder,info,src)->{
-    int w=info.getSize().getWidth(),h=info.getSize().getHeight();double scale=Math.min(1.0,1000.0/Math.max(w,h));decoder.setTargetSize(Math.max(1,(int)Math.round(w*scale)),Math.max(1,(int)Math.round(h*scale)));decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+    int w=info.getSize().getWidth(),h=info.getSize().getHeight();double scale=Math.min(1.0,1400.0/Math.max(w,h));decoder.setTargetSize(Math.max(1,(int)Math.round(w*scale)),Math.max(1,(int)Math.round(h*scale)));decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
    });
   }else{
    BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;
    try(InputStream in=getContentResolver().openInputStream(u)){BitmapFactory.decodeStream(in,null,o);}
    if(o.outWidth<=0||o.outHeight<=0)throw new IOException("Invalid image");
-   int sample=1;while(Math.max(o.outWidth,o.outHeight)/sample>1500)sample*=2;o.inSampleSize=sample;o.inJustDecodeBounds=false;
+   int sample=1;while(Math.max(o.outWidth,o.outHeight)/sample>1800)sample*=2;o.inSampleSize=sample;o.inJustDecodeBounds=false;
    try(InputStream in=getContentResolver().openInputStream(u)){b=BitmapFactory.decodeStream(in,null,o);}
   }
   if(b==null)throw new IOException("Decode failed");
   try{
-   for(int q=85;q>=40;q-=15){ByteArrayOutputStream out=new ByteArrayOutputStream();if(!b.compress(Bitmap.CompressFormat.JPEG,q,out))throw new IOException("Encode failed");byte[] bytes=out.toByteArray();if(bytes.length<=175000)return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}
+   for(int q=85;q>=40;q-=15){ByteArrayOutputStream out=new ByteArrayOutputStream();if(!b.compress(Bitmap.CompressFormat.JPEG,q,out))throw new IOException("Encode failed");byte[] bytes=out.toByteArray();if(bytes.length<=240000)return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}
    double factor=Math.min(1.0,560.0/Math.max(b.getWidth(),b.getHeight()));Bitmap small=Bitmap.createScaledBitmap(b,Math.max(1,(int)(b.getWidth()*factor)),Math.max(1,(int)(b.getHeight()*factor)),true);
-   try{ByteArrayOutputStream out=new ByteArrayOutputStream();small.compress(Bitmap.CompressFormat.JPEG,65,out);byte[] bytes=out.toByteArray();if(bytes.length==0||bytes.length>175000)throw new IOException("Too large");return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}finally{if(small!=b)small.recycle();}
+   try{ByteArrayOutputStream out=new ByteArrayOutputStream();small.compress(Bitmap.CompressFormat.JPEG,65,out);byte[] bytes=out.toByteArray();if(bytes.length==0||bytes.length>240000)throw new IOException("Too large");return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}finally{if(small!=b)small.recycle();}
   }finally{b.recycle();}
  }
  private void sendPhotos(int token,JSONArray photos,int failures,boolean cancelled){
@@ -206,7 +206,7 @@ public final class MainActivity extends Activity {
   @JavascriptInterface public void adBreak(){runOnUiThread(()->maybeInter());}
 
   @JavascriptInterface public synchronized boolean pickPhotos(int token,int limit){
-   if(galleryOpen||limit<1||limit>4)return false;galleryOpen=true;photoToken=token;photoLimit=limit;
+   if(galleryOpen||limit<1||limit>(pro!=null&&pro.isActive()?5:1))return false;galleryOpen=true;photoToken=token;photoLimit=limit;
    runOnUiThread(()->{try{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("image/*");i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,limit>1);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivityForResult(i,GALLERY);}catch(Exception e){galleryOpen=false;sendPhotos(token,new JSONArray(),1,false);}});return true;
   }
   @JavascriptInterface public void rateApp(){runOnUiThread(()->{
