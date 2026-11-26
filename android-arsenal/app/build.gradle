@@ -1,5 +1,8 @@
 plugins { id 'com.android.application' }
-def licenseUrl = (findProperty('ARSENAL_LICENSE_URL') ?: '').toString().replaceAll('/+
+def licenseUrl = (findProperty('ARSENAL_LICENSE_URL') ?: '').toString()
+while (licenseUrl.endsWith('/')) licenseUrl = licenseUrl.substring(0,licenseUrl.length()-1)
+if (licenseUrl && !(licenseUrl ==~ /https:\/\/[a-zA-Z0-9.-]+(:[0-9]+)?(\/[a-zA-Z0-9_-]+)*/)) throw new GradleException('Invalid HTTPS license URL')
+android {
  namespace 'ru.crystalgames.arsenal'
  compileSdk 35
  defaultConfig {
@@ -26,35 +29,4 @@ def licenseUrl = (findProperty('ARSENAL_LICENSE_URL') ?: '').toString().replaceA
  }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
-
-dependencies { implementation 'com.yandex.android:mobileads:8.7.0' }
-,'')
-if (licenseUrl && !(licenseUrl ==~ /https:\/\/[a-zA-Z0-9.-]+(:[0-9]+)?(\/[a-zA-Z0-9_-]+)*/)) throw new GradleException('Invalid HTTPS license URL')
-android {
- namespace 'ru.crystalgames.arsenal'
- compileSdk 35
- defaultConfig {
-  applicationId 'ru.crystalgames.arsenal'
-  minSdk 26
-  targetSdk 34
-  versionCode 6
-  versionName '0.5.0'
- }
- buildFeatures { buildConfig true }
- buildTypes {
-  debug {
-   buildConfigField 'String', 'MAIN_AD', '"demo-banner-yandex"'
-   buildConfigField 'String', 'CATALOG_AD', '"demo-banner-yandex"'
-   buildConfigField 'String', 'INTER_AD', '"demo-interstitial-yandex"'
-  }
-  release {
-   buildConfigField 'String', 'MAIN_AD', '"R-M-20514578-1"'
-   buildConfigField 'String', 'CATALOG_AD', '"R-M-20514578-2"'
-   buildConfigField 'String', 'INTER_AD', '"R-M-20514578-3"'
-   minifyEnabled false
-  }
- }
- compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-}
-
 dependencies { implementation 'com.yandex.android:mobileads:8.7.0' }
