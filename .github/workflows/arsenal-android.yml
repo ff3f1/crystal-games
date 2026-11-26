@@ -35,7 +35,7 @@ jobs:
           import zlib
           data=Path('app/src/main/assets/index.html').read_bytes()
           assert len(data)==390784
-          assert zlib.crc32(data)&0x2140de30==0x463fa0a2
+          assert zlib.crc32(data)&0xffffffff==0x2140de30
           print('Embedded photographic assets: verified')
           PY
       - name: Test app data and workflows
@@ -52,12 +52,12 @@ jobs:
           sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
           gradle --no-daemon :app:assembleDebug :app:assembleRelease
           cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.4.0_test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.4.0.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.4.0_test.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
           name: Arsenal-Rybaka-0.4.0-TEST-APK
-          path: android-arsenal/Arsenal_Rybaka_0.4.0.apk
+          path: android-arsenal/Arsenal_Rybaka_0.4.0_test.apk
           if-no-files-found: error
           retention-days: 30
       - name: Upload unsigned production APK (real IDs)
