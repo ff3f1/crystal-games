@@ -6,6 +6,15 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.*;
 import android.util.AtomicFile;
+import android.graphics.Bitmap;
+import android.graphics.ImageDecoder;
+import android.graphics.BitmapFactory;
+import android.content.ClipData;
+import org.json.JSONArray;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import android.util.Base64;
 import android.widget.Toast;
 import java.io.*;
@@ -14,7 +23,10 @@ import java.nio.charset.StandardCharsets;
 public final class MainActivity extends Activity {
  private WebView web;
  private ValueCallback<Uri[]> pending;
- private static final int PICK=42, EXPORT=43;
+ private static final int PICK=42, EXPORT=43, GALLERY=44;
+ private final ExecutorService photoWorker=Executors.newSingleThreadExecutor();
+ private volatile boolean galleryOpen=false;
+ private int photoToken, photoLimit;
  private byte[] exportBytes;
  private final int LIMIT=64*1024*1024;
  private AtomicFile stateFile;
@@ -65,11 +77,12 @@ public final class MainActivity extends Activity {
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
   super.onActivityResult(request,result,data);
-  if(request==PICK&&pending!=null){pending.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result,data));pending=null;}
+  if(request==PICK&&pending!=null){Uri[] selected=null;if(result==RESULT_OK&&data!=null){LinkedHashSet<Uri> uris=collectUris(data,20);selected=uris.toArray(new Uri[0]);}ValueCallback<Uri[]> callback=pending;pending=null;callback.onReceiveValue(selected);}
+  if(request==GALLERY){final int token=photoToken;final int limit=photoLimit;if(result!=RESULT_OK||data==null){galleryOpen=false;sendPhotos(token,new JSONArray(),0,true);}else{final LinkedHashSet<Uri> uris=collectUris(data,limit);photoWorker.execute(()->{JSONArray out=new JSONArray();int bad=0;for(Uri u:uris){try{out.put(readPhoto(u));}catch(Exception|OutOfMemoryError e){bad++;}}galleryOpen=false;sendPhotos(token,out,bad+(uris.isEmpty()?1:0),false);});}}
   if(request==EXPORT){byte[] bytes=exportBytes;exportBytes=null;if(result==RESULT_OK&&data!=null&&data.getData()!=null&&bytes!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){if(out==null)throw new IOException();out.write(bytes);Toast.makeText(this,"Файл сохранён",Toast.LENGTH_SHORT).show();}catch(Exception e){Toast.makeText(this,"Не удалось сохранить файл",Toast.LENGTH_LONG).show();}}}
  }
  @Override public void onBackPressed(){
-  if(web!=null) web.evaluateJavascript("(function(){var d=document.querySelector('#modal');if(d&&d.open){d.close();return true;}if(typeof tab!=='undefined'&&tab!=='home'){page('home');return true;}return false;})()", value->{if("false".equals(value))super.onBackPressed();});
+  if(web!=null) web.evaluateJavascript("(function(){var d=document.querySelector('#modal');if(d&&d.open){closeModal();return true;}if(typeof tab!=='undefined'&&tab!=='home'){page('home');return true;}return false;})()", value->{if("false".equals(value))super.onBackPressed();});
   else super.onBackPressed();
  }
  private void startExport(byte[] bytes,String mime,String filename){
@@ -78,7 +91,42 @@ public final class MainActivity extends Activity {
   try{Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType(mime);i.putExtra(Intent.EXTRA_TITLE,filename);startActivityForResult(i,EXPORT);}
   catch(Exception e){exportBytes=null;Toast.makeText(this,"Нет приложения для сохранения файла",Toast.LENGTH_LONG).show();}
  }
+ private LinkedHashSet<Uri> collectUris(Intent data,int max){
+  LinkedHashSet<Uri> list=new LinkedHashSet<>();ClipData clip=data.getClipData();if(clip!=null)for(int i=0;i<clip.getItemCount()&&list.size()<max;i++){Uri u=clip.getItemAt(i).getUri();if(u!=null)list.add(u);}
+  if(data.getData()!=null&&list.size()<max)list.add(data.getData());return list;
+ }
+ private String readPhoto(Uri u) throws IOException {
+  Bitmap b;
+  if(android.os.Build.VERSION.SDK_INT>=28){
+   b=ImageDecoder.decodeBitmap(ImageDecoder.createSource(getContentResolver(),u),(decoder,info,src)->{
+    int w=info.getSize().getWidth(),h=info.getSize().getHeight();double scale=Math.min(1.0,1000.0/Math.max(w,h));decoder.setTargetSize(Math.max(1,(int)Math.round(w*scale)),Math.max(1,(int)Math.round(h*scale)));decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+   });
+  }else{
+   BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;
+   try(InputStream in=getContentResolver().openInputStream(u)){BitmapFactory.decodeStream(in,null,o);}
+   if(o.outWidth<=0||o.outHeight<=0)throw new IOException("Invalid image");
+   int sample=1;while(Math.max(o.outWidth,o.outHeight)/sample>1500)sample*=2;o.inSampleSize=sample;o.inJustDecodeBounds=false;
+   try(InputStream in=getContentResolver().openInputStream(u)){b=BitmapFactory.decodeStream(in,null,o);}
+  }
+  if(b==null)throw new IOException("Decode failed");
+  try{
+   for(int q=85;q>=40;q-=15){ByteArrayOutputStream out=new ByteArrayOutputStream();if(!b.compress(Bitmap.CompressFormat.JPEG,q,out))throw new IOException("Encode failed");byte[] bytes=out.toByteArray();if(bytes.length<=175000)return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}
+   double factor=Math.min(1.0,560.0/Math.max(b.getWidth(),b.getHeight()));Bitmap small=Bitmap.createScaledBitmap(b,Math.max(1,(int)(b.getWidth()*factor)),Math.max(1,(int)(b.getHeight()*factor)),true);
+   try{ByteArrayOutputStream out=new ByteArrayOutputStream();small.compress(Bitmap.CompressFormat.JPEG,65,out);byte[] bytes=out.toByteArray();if(bytes.length==0||bytes.length>175000)throw new IOException("Too large");return "data:image/jpeg;base64,"+Base64.encodeToString(bytes,Base64.NO_WRAP);}finally{if(small!=b)small.recycle();}
+  }finally{b.recycle();}
+ }
+ private void sendPhotos(int token,JSONArray photos,int failures,boolean cancelled){
+  runOnUiThread(()->{if(web!=null&&!isFinishing())web.evaluateJavascript("receiveNativePhotos("+token+","+photos.toString()+","+failures+","+cancelled+")",null);});
+ }
  private final class NativeBridge {
+  @JavascriptInterface public synchronized boolean pickPhotos(int token,int limit){
+   if(galleryOpen||limit<1||limit>4)return false;galleryOpen=true;photoToken=token;photoLimit=limit;
+   runOnUiThread(()->{try{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("image/*");i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,limit>1);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivityForResult(i,GALLERY);}catch(Exception e){galleryOpen=false;sendPhotos(token,new JSONArray(),1,false);}});return true;
+  }
+  @JavascriptInterface public void rateApp(){runOnUiThread(()->{
+   Uri u=Uri.parse("https://www.rustore.ru/catalog/app/ru.crystalgames.arsenal");
+   try{startActivity(new Intent(Intent.ACTION_VIEW,u).setPackage("ru.vk.store"));}catch(Exception e){try{startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception ignored){Toast.makeText(MainActivity.this,"Карточка приложения появится после публикации в RuStore",Toast.LENGTH_LONG).show();}}
+  });}
   @JavascriptInterface public synchronized String loadState(){try{byte[] b=stateFile.readFully();return b.length<=LIMIT?new String(b,StandardCharsets.UTF_8):"";}catch(IOException e){return "";}}
   @JavascriptInterface public synchronized boolean saveState(String raw){
    if(raw==null||raw.length()>LIMIT)return false;
@@ -100,6 +148,7 @@ public final class MainActivity extends Activity {
   }
  }
  @Override protected void onDestroy(){
+  photoWorker.shutdownNow();
   if(pending!=null){pending.onReceiveValue(null);pending=null;}
   if(web!=null){web.removeJavascriptInterface("ArsenalNative");web.destroy();web=null;}
   super.onDestroy();
