@@ -6,8 +6,24 @@ android {
   applicationId 'ru.crystalgames.arsenal'
   minSdk 26
   targetSdk 34
-  versionCode 4
-  versionName '0.3.1'
+  versionCode 5
+  versionName '0.4.0'
+ }
+ buildFeatures { buildConfig true }
+ buildTypes {
+  debug {
+   buildConfigField 'String', 'MAIN_AD', '"demo-banner-yandex"'
+   buildConfigField 'String', 'CATALOG_AD', '"demo-banner-yandex"'
+   buildConfigField 'String', 'INTER_AD', '"demo-interstitial-yandex"'
+  }
+  release {
+   buildConfigField 'String', 'MAIN_AD', '"R-M-20514578-1"'
+   buildConfigField 'String', 'CATALOG_AD', '"R-M-20514578-2"'
+   buildConfigField 'String', 'INTER_AD', '"R-M-20514578-3"'
+   minifyEnabled false
+  }
  }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
+
+dependencies { implementation 'com.yandex.android:mobileads:8.7.0' }

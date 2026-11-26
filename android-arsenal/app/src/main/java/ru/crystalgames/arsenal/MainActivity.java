@@ -5,6 +5,22 @@ import android.content.ActivityNotFoundException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.*;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.os.SystemClock;
+import android.os.Handler;
+import android.os.Looper;
+import com.yandex.mobile.ads.common.AdRequest;
+import com.yandex.mobile.ads.common.AdRequestError;
+import com.yandex.mobile.ads.common.AdError;
+import com.yandex.mobile.ads.common.ImpressionData;
+import com.yandex.mobile.ads.banner.BannerAdView;
+import com.yandex.mobile.ads.banner.BannerAdSize;
+import com.yandex.mobile.ads.banner.BannerAdEventListener;
+import com.yandex.mobile.ads.interstitial.InterstitialAd;
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoader;
+import com.yandex.mobile.ads.interstitial.InterstitialAdLoadListener;
+import com.yandex.mobile.ads.interstitial.InterstitialAdEventListener;
 import android.util.AtomicFile;
 import android.graphics.Bitmap;
 import android.graphics.ImageDecoder;
@@ -22,6 +38,64 @@ import java.nio.charset.StandardCharsets;
 
 public final class MainActivity extends Activity {
  private WebView web;
+ private LinearLayout root;
+ private BannerAdView banner;
+ private InterstitialAdLoader interLoader;
+ private InterstitialAd inter;
+ private final Handler adHandler=new Handler(Looper.getMainLooper());
+ private String adScreen="",bannerSlot="";
+ private boolean resumed=false,adShowing=false,interLoading=false;
+ private int actions=0;
+ private long lastInter=SystemClock.elapsedRealtime(), lastBannerRequest=0;
+ private static final long INTER_INTERVAL=300000;
+ private boolean adsAllowed(){return true;} // Only a verified future PRO entitlement may change this.
+ private boolean eligible(){return adsAllowed()&&resumed&&!adShowing&&!galleryOpen&&!isFinishing()&&("main".equals(adScreen)||"catalog".equals(adScreen));}
+ private void destroyBanner(){if(banner!=null){banner.setBannerAdEventListener(null);if(root!=null)root.removeView(banner);banner.destroy();banner=null;}bannerSlot="";}
+ private void refreshBanner(){
+  if(!eligible()){destroyBanner();return;}
+  if(banner!=null&&bannerSlot.equals(adScreen))return;
+  destroyBanner();
+  final String slot=adScreen; final BannerAdView b=new BannerAdView(this);
+  banner=b;bannerSlot=slot;b.setVisibility(View.GONE);
+  root.addView(b,new LinearLayout.LayoutParams(-1,-2));
+  int width=Math.max(1,Math.round(getResources().getDisplayMetrics().widthPixels/getResources().getDisplayMetrics().density));
+  b.setAdSize(BannerAdSize.sticky(this,width));
+  b.setBannerAdEventListener(new BannerAdEventListener(){
+   @Override public void onAdLoaded(){if(banner==b&&eligible()&&slot.equals(adScreen))b.setVisibility(View.VISIBLE);}
+   @Override public void onAdFailedToLoad(AdRequestError error){if(banner==b){destroyBanner();adHandler.postDelayed(()->{if(eligible()&&slot.equals(adScreen)&&banner==null)refreshBanner();},60000);}}
+   @Override public void onAdClicked(){}
+   @Override public void onImpression(ImpressionData data){}
+  });
+  // Debounce transitions and avoid excess requests when browsing.
+  long delay=Math.max(0,1500-(SystemClock.elapsedRealtime()-lastBannerRequest));
+  adHandler.postDelayed(()->{if(banner==b&&eligible()){lastBannerRequest=SystemClock.elapsedRealtime();b.loadAd(new AdRequest.Builder("main".equals(slot)?BuildConfig.MAIN_AD:BuildConfig.CATALOG_AD).build());}},delay);
+ }
+ private void loadInter(){
+  if(!adsAllowed()||isFinishing()||interLoading||inter!=null||adShowing)return;
+  if(interLoader==null)interLoader=new InterstitialAdLoader(this);
+  interLoading=true;
+  interLoader.loadAd(new AdRequest.Builder(BuildConfig.INTER_AD).build(),new InterstitialAdLoadListener(){
+   @Override public void onAdLoaded(InterstitialAd ad){interLoading=false;if(!isFinishing()&&!isDestroyed())inter=ad;}
+   @Override public void onAdFailedToLoad(AdRequestError e){interLoading=false;if(!isFinishing()&&!isDestroyed())adHandler.postDelayed(()->{if(resumed)loadInter();},60000);}
+  });
+ }
+ private void maybeInter(){
+  if(!eligible()||actions<3||SystemClock.elapsedRealtime()-lastInter<INTER_INTERVAL)return;
+  if(inter==null){loadInter();return;}
+  final InterstitialAd a=inter;inter=null;adShowing=true;destroyBanner();
+  a.setAdEventListener(new InterstitialAdEventListener(){
+   @Override public void onAdShown(){lastInter=SystemClock.elapsedRealtime();actions=0;}
+   @Override public void onAdFailedToShow(AdError e){lastInter=SystemClock.elapsedRealtime();finishInter(a);}
+   @Override public void onAdDismissed(){finishInter(a);}
+   @Override public void onAdClicked(){}
+   @Override public void onAdImpression(ImpressionData data){}
+  });
+  try{a.show(this);}catch(Exception e){lastInter=SystemClock.elapsedRealtime();finishInter(a);}
+ }
+ private void finishInter(InterstitialAd a){a.setAdEventListener(null);adShowing=false;if(!isFinishing()&&!isDestroyed()){refreshBanner();loadInter();}}
+ @Override protected void onResume(){super.onResume();resumed=true;refreshBanner();loadInter();}
+ @Override protected void onPause(){resumed=false;destroyBanner();super.onPause();}
+
  private ValueCallback<Uri[]> pending;
  private static final int PICK=42, EXPORT=43, GALLERY=44;
  private final ExecutorService photoWorker=Executors.newSingleThreadExecutor();
@@ -72,7 +146,9 @@ public final class MainActivity extends Activity {
    }
   });
   web.addJavascriptInterface(new NativeBridge(),"ArsenalNative");
-  setContentView(web);
+  root=new LinearLayout(this);root.setOrientation(LinearLayout.VERTICAL);
+  root.addView(web,new LinearLayout.LayoutParams(-1,0,1f));
+  setContentView(root);
   web.loadUrl("file:///android_asset/index.html");
  }
  @Override protected void onActivityResult(int request,int result,Intent data){
@@ -119,6 +195,10 @@ public final class MainActivity extends Activity {
   runOnUiThread(()->{if(web!=null&&!isFinishing())web.evaluateJavascript("receiveNativePhotos("+token+","+photos.toString()+","+failures+","+cancelled+")",null);});
  }
  private final class NativeBridge {
+  @JavascriptInterface public void adScreen(String screen){runOnUiThread(()->{String next=("main".equals(screen)||"catalog".equals(screen))?screen:"";adScreen=next;refreshBanner();});}
+  @JavascriptInterface public void completedAction(){runOnUiThread(()->{actions=Math.min(100,actions+1);});}
+  @JavascriptInterface public void adBreak(){runOnUiThread(()->maybeInter());}
+
   @JavascriptInterface public synchronized boolean pickPhotos(int token,int limit){
    if(galleryOpen||limit<1||limit>4)return false;galleryOpen=true;photoToken=token;photoLimit=limit;
    runOnUiThread(()->{try{Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("image/*");i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,limit>1);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivityForResult(i,GALLERY);}catch(Exception e){galleryOpen=false;sendPhotos(token,new JSONArray(),1,false);}});return true;
@@ -148,7 +228,7 @@ public final class MainActivity extends Activity {
   }
  }
  @Override protected void onDestroy(){
-  photoWorker.shutdownNow();
+  adHandler.removeCallbacksAndMessages(null);destroyBanner();if(inter!=null){inter.setAdEventListener(null);inter=null;}photoWorker.shutdownNow();
   if(pending!=null){pending.onReceiveValue(null);pending=null;}
   if(web!=null){web.removeJavascriptInterface("ArsenalNative");web.destroy();web=null;}
   super.onDestroy();
