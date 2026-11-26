@@ -75,6 +75,8 @@ const {pathToFileURL}=require('node:url');
   await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
   await page.getByRole('button',{name:'Список',exact:true}).click();assert.equal(await page.locator('.album-card').count(),0);
   await page.getByRole('button',{name:'Альбом',exact:false}).click();assert.equal(await page.locator('.album-card').count(),2);
+  await page.getByLabel('Группировка альбома').selectOption('storage');assert.ok(await page.locator('.album-section').count()>0);
+  await page.getByText('Крючки тест',{exact:true}).click();await page.getByRole('button',{name:'☆ В избранное',exact:true}).click();await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'★ Избранное',exact:true}).click();assert.equal(await page.locator('.album-card').count(),1);await page.getByRole('button',{name:'★ Избранное',exact:true}).click();await page.getByLabel('Группировка альбома').selectOption('category');
   for(const width of [320,390,768]){
     await page.setViewportSize({width,height:844});
     for(const label of ['Главная','Арсенал','Наборы','Трофеи','Хотелки','Ещё']){
