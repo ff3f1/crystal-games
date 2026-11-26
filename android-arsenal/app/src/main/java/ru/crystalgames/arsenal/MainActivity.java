@@ -48,7 +48,8 @@ public final class MainActivity extends Activity {
  private int actions=0;
  private long lastInter=SystemClock.elapsedRealtime(), lastBannerRequest=0;
  private static final long INTER_INTERVAL=300000;
- private boolean adsAllowed(){return true;} // Only a verified future PRO entitlement may change this.
+ private ProController pro;
+ private boolean adsAllowed(){return pro==null||!pro.isActive();}
  private boolean eligible(){return adsAllowed()&&resumed&&!adShowing&&!galleryOpen&&!isFinishing()&&("main".equals(adScreen)||"catalog".equals(adScreen));}
  private void destroyBanner(){if(banner!=null){banner.setBannerAdEventListener(null);if(root!=null)root.removeView(banner);banner.destroy();banner=null;}bannerSlot="";}
  private void refreshBanner(){
@@ -75,7 +76,7 @@ public final class MainActivity extends Activity {
   if(interLoader==null)interLoader=new InterstitialAdLoader(this);
   interLoading=true;
   interLoader.loadAd(new AdRequest.Builder(BuildConfig.INTER_AD).build(),new InterstitialAdLoadListener(){
-   @Override public void onAdLoaded(InterstitialAd ad){interLoading=false;if(!isFinishing()&&!isDestroyed())inter=ad;}
+   @Override public void onAdLoaded(InterstitialAd ad){interLoading=false;if(!isFinishing()&&!isDestroyed()&&adsAllowed())inter=ad;}
    @Override public void onAdFailedToLoad(AdRequestError e){interLoading=false;if(!isFinishing()&&!isDestroyed())adHandler.postDelayed(()->{if(resumed)loadInter();},60000);}
   });
  }
@@ -93,7 +94,7 @@ public final class MainActivity extends Activity {
   try{a.show(this);}catch(Exception e){lastInter=SystemClock.elapsedRealtime();finishInter(a);}
  }
  private void finishInter(InterstitialAd a){a.setAdEventListener(null);adShowing=false;if(!isFinishing()&&!isDestroyed()){refreshBanner();loadInter();}}
- @Override protected void onResume(){super.onResume();resumed=true;refreshBanner();loadInter();}
+ @Override protected void onResume(){super.onResume();resumed=true;refreshBanner();loadInter();if(pro!=null)pro.refresh();}
  @Override protected void onPause(){resumed=false;destroyBanner();super.onPause();}
 
  private ValueCallback<Uri[]> pending;
@@ -108,6 +109,7 @@ public final class MainActivity extends Activity {
   super.onCreate(saved);
   getWindow().setStatusBarColor(0xff121716);
   getWindow().setNavigationBarColor(0xff121716);
+  pro=new ProController(this,()->{if(web!=null){refreshBanner();if(adsAllowed())loadInter();else if(inter!=null){inter.setAdEventListener(null);inter=null;}web.evaluateJavascript("render()",null);}});
   stateFile=new AtomicFile(new File(getFilesDir(),"arsenal-state.json"));
   web = new WebView(this);
   web.setBackgroundColor(0xff121716);
@@ -195,6 +197,10 @@ public final class MainActivity extends Activity {
   runOnUiThread(()->{if(web!=null&&!isFinishing())web.evaluateJavascript("receiveNativePhotos("+token+","+photos.toString()+","+failures+","+cancelled+")",null);});
  }
  private final class NativeBridge {
+  @JavascriptInterface public boolean isPro(){return pro!=null&&pro.isActive();}
+  @JavascriptInterface public boolean proConfigured(){return pro!=null&&pro.configured();}
+  @JavascriptInterface public void openPro(){runOnUiThread(()->{if(pro!=null)pro.open();});}
+
   @JavascriptInterface public void adScreen(String screen){runOnUiThread(()->{String next=("main".equals(screen)||"catalog".equals(screen))?screen:"";adScreen=next;refreshBanner();});}
   @JavascriptInterface public void completedAction(){runOnUiThread(()->{actions=Math.min(100,actions+1);});}
   @JavascriptInterface public void adBreak(){runOnUiThread(()->maybeInter());}
@@ -228,7 +234,7 @@ public final class MainActivity extends Activity {
   }
  }
  @Override protected void onDestroy(){
-  adHandler.removeCallbacksAndMessages(null);destroyBanner();if(inter!=null){inter.setAdEventListener(null);inter=null;}photoWorker.shutdownNow();
+  adHandler.removeCallbacksAndMessages(null);destroyBanner();if(inter!=null){inter.setAdEventListener(null);inter=null;}if(pro!=null)pro.destroy();photoWorker.shutdownNow();
   if(pending!=null){pending.onReceiveValue(null);pending=null;}
   if(web!=null){web.removeJavascriptInterface("ArsenalNative");web.destroy();web=null;}
   super.onDestroy();

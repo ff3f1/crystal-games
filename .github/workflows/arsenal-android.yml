@@ -1,4 +1,4 @@
-name: Arsenal Android 0.4.0
+name: Arsenal Android 0.5.0
 on:
   pull_request:
     paths:
@@ -34,10 +34,13 @@ jobs:
           from pathlib import Path
           import zlib
           data=Path('app/src/main/assets/index.html').read_bytes()
-          assert len(data)==390784
-          assert zlib.crc32(data)&0xffffffff==0x2140de30
+          assert len(data)==391784
+          assert zlib.crc32(data)&0xffffffff==0xc09e4c7
           print('Embedded photographic assets: verified')
           PY
+      - name: Test payment server
+        working-directory: android-arsenal/license-server
+        run: python3 -m unittest -v test_server.py
       - name: Test app data and workflows
         working-directory: android-arsenal
         run: node tests/smoke.cjs
@@ -51,19 +54,19 @@ jobs:
         run: |
           sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
           gradle --no-daemon :app:assembleDebug :app:assembleRelease
-          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.4.0_test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.4.0_test.apk
+          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.5.0_test.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.5.0_test.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.4.0-TEST-APK
-          path: android-arsenal/Arsenal_Rybaka_0.4.0_test.apk
+          name: Arsenal-Rybaka-0.5.0-TEST-APK
+          path: android-arsenal/Arsenal_Rybaka_0.5.0_test.apk
           if-no-files-found: error
           retention-days: 30
       - name: Upload unsigned production APK (real IDs)
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.4.0-UNSIGNED-PRODUCTION
+          name: Arsenal-Rybaka-0.5.0-UNSIGNED-PRODUCTION
           path: android-arsenal/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 30
