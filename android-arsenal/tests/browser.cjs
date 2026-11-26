@@ -69,6 +69,18 @@ const {pathToFileURL}=require('node:url');
   await page.locator('#modal').getByRole('button',{name:'− 1 шт.',exact:true}).click();
   assert.equal(await page.evaluate(()=>stockState(db.items.find(x=>x.id==='stocktest')).left),0);
   assert.ok(await page.locator('#modal').getByRole('button',{name:'− 1 шт.',exact:true}).isDisabled());
+  await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
+  for(const width of [320,390,768]){
+    await page.setViewportSize({width,height:844});
+    for(const label of ['Главная','Арсенал','Наборы','Трофеи','Хотелки','Ещё']){
+      await page.locator('nav').getByText(label,{exact:true}).click();
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Overflow '+label+' at '+width);
+      assert.equal(await page.locator('nav [aria-current=page]').count(),1);
+    }
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('nav').getByText('Главная',{exact:true}).click();
+  await page.screenshot({path:'arsenal-home-0.6.2.png',fullPage:true});
   assert.deepEqual(errors,[]);
   await page.screenshot({path:'trophy-smoke.png',fullPage:true});
   console.log('PASS: real browser file selection, decode, preview, save, reload, edit, render, navigation');
