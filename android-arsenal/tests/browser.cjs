@@ -76,7 +76,7 @@ const {pathToFileURL}=require('node:url');
   await page.getByRole('button',{name:'Список',exact:true}).click();assert.equal(await page.locator('.album-card').count(),0);
   await page.getByRole('button',{name:'Альбом',exact:false}).click();assert.equal(await page.locator('.album-card').count(),2);
   await page.getByLabel('Группировка альбома').selectOption('storage');assert.ok(await page.locator('.album-section').count()>0);
-  await page.getByText('Крючки тест',{exact:true}).click();await page.getByRole('button',{name:'☆ В избранное',exact:true}).click();await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'★ Избранное',exact:true}).click();assert.equal(await page.locator('.album-card').count(),1);await page.getByRole('button',{name:'★ Избранное',exact:true}).click();await page.getByLabel('Группировка альбома').selectOption('category');
+  await page.locator('.album-card').filter({hasText:'Крючки тест'}).click();await page.locator('#modal').getByRole('button',{name:'☆ В избранное',exact:true}).click();await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();await page.getByRole('button',{name:'★ Избранное',exact:true}).click();assert.equal(await page.locator('.album-card').count(),1);await page.getByRole('button',{name:'★ Избранное',exact:true}).click();await page.getByLabel('Группировка альбома').selectOption('category');
   for(const width of [320,390,768]){
     await page.setViewportSize({width,height:844});
     for(const label of ['Главная','Арсенал','Наборы','Трофеи','Хотелки','Ещё']){
@@ -88,6 +88,7 @@ const {pathToFileURL}=require('node:url');
   await page.setViewportSize({width:390,height:844});
   await page.locator('nav').getByText('Главная',{exact:true}).click();
   await page.screenshot({path:'arsenal-home-0.6.2.png',fullPage:true});
+  await page.evaluate(()=>{closeModal();backup()});assert.ok(await page.getByText('Сохранить полную копию',{exact:true}).isVisible());assert.equal(await page.locator('#backupData').count(),0);assert.ok(await page.evaluate(()=>backupWithoutPhotos().items.every(x=>x.photos.length===0)));await page.getByRole('button',{name:'Показать JSON вручную'}).click();assert.equal(await page.locator('#backupData').count(),1);await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
   await page.locator('nav').getByText('Арсенал',{exact:true}).click();await page.getByRole('button',{name:'Добавить',exact:true}).click();await page.locator('[name=name]').fill('Быстрое добавление');await page.locator('[name=location]').fill('Коробка 3');await page.getByRole('button',{name:'Сохранить и добавить ещё'}).click();assert.equal(await page.locator('[name=name]').inputValue(),'');assert.equal(await page.locator('[name=location]').inputValue(),'Коробка 3');await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
   assert.deepEqual(errors,[]);
   await page.screenshot({path:'trophy-smoke.png',fullPage:true});
