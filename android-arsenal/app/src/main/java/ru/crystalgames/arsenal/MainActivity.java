@@ -81,8 +81,9 @@ public final class MainActivity extends Activity {
    @Override public void onAdFailedToLoad(AdRequestError e){interLoading=false;if(!isFinishing()&&!isDestroyed())adHandler.postDelayed(()->{if(resumed)loadInter();},60000);}
   });
  }
- private void maybeInter(){
-  if(!eligible()||actions<3||SystemClock.elapsedRealtime()-lastInter<INTER_INTERVAL)return;
+ private void maybeInter(){showInter(false);}
+ private void showInter(boolean test){
+  if(test){if(!BuildConfig.DEBUG||!resumed||adShowing||galleryOpen||isFinishing()||!adsAllowed())return;}else if(!eligible()||actions<3||SystemClock.elapsedRealtime()-lastInter<INTER_INTERVAL)return;
   if(inter==null){loadInter();return;}
   final InterstitialAd a=inter;inter=null;adShowing=true;destroyBanner();
   a.setAdEventListener(new InterstitialAdEventListener(){
@@ -210,6 +211,8 @@ public final class MainActivity extends Activity {
   @JavascriptInterface public void adScreen(String screen){runOnUiThread(()->{String next=("main".equals(screen)||"catalog".equals(screen))?screen:"";adScreen=next;refreshBanner();});}
   @JavascriptInterface public void completedAction(){runOnUiThread(()->{actions=Math.min(100,actions+1);});}
   @JavascriptInterface public void adBreak(){runOnUiThread(()->maybeInter());}
+  @JavascriptInterface public String adTestStatus(){return BuildConfig.DEBUG?"Только демонстрационная реклама. Нажмите для проверки загрузки и показа.":"";}
+  @JavascriptInterface public void testInterstitial(){if(!BuildConfig.DEBUG)return;runOnUiThread(()->{if(!adsAllowed()){Toast.makeText(MainActivity.this,"PRO активирован — реклама выключена",Toast.LENGTH_LONG).show();return;}if(inter==null){loadInter();Toast.makeText(MainActivity.this,"Объявление ещё не загружено. Проверьте интернет и повторите позже.",Toast.LENGTH_LONG).show();return;}showInter(true);});}
 
   @JavascriptInterface public synchronized boolean pickPhotos(int token,int limit){
    if(galleryOpen||limit<1||limit>(pro!=null&&pro.isActive()?5:1))return false;galleryOpen=true;photoToken=token;photoLimit=limit;

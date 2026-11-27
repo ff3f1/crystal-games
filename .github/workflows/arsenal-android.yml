@@ -1,4 +1,4 @@
-name: Arsenal Android 0.8.0
+name: Arsenal Android 0.8.1
 on:
   pull_request:
     paths:
@@ -39,8 +39,8 @@ jobs:
           from pathlib import Path
           import zlib
           data=Path('app/src/main/assets/index.html').read_bytes()
-          assert len(data)==435722
-          assert zlib.crc32(data)&0xffffffff==0x68b6f50d
+          assert len(data)==436584
+          assert zlib.crc32(data)&0xffffffff==0x15fc4df8
           print('Embedded photographic assets: verified')
           PY
       - name: Test payment server
@@ -57,7 +57,7 @@ jobs:
       - name: Upload UI review screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-0.8.0-UI-review
+          name: Arsenal-0.8.1-UI-review
           path: android-arsenal/arsenal-home-0.6.2.png
           if-no-files-found: error
           retention-days: 30
@@ -67,7 +67,7 @@ jobs:
       - name: Upload RuStore listing kit
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-0.8.0-RuStore-Media
+          name: Arsenal-0.8.1-RuStore-Media
           path: android-arsenal/rustore/
           if-no-files-found: error
           retention-days: 30
@@ -76,13 +76,13 @@ jobs:
         run: |
           sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
           gradle --no-daemon -PARSENAL_LICENSE_URL=https://crystal-games.h1n.ru/arsenal-api :app:assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.8.0_test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.8.0_test.apk
+          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.8.1_test.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.8.1_test.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.8.0-TEST-APK
-          path: android-arsenal/Arsenal_Rybaka_0.8.0_test.apk
+          name: Arsenal-Rybaka-0.8.1-TEST-APK
+          path: android-arsenal/Arsenal_Rybaka_0.8.1_test.apk
           if-no-files-found: error
           retention-days: 30
       - name: Build unsigned production APK (payment disabled)
@@ -91,7 +91,32 @@ jobs:
       - name: Upload unsigned production APK (real IDs)
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.8.0-UNSIGNED-PRODUCTION
+          name: Arsenal-Rybaka-0.8.1-UNSIGNED-PRODUCTION
           path: android-arsenal/app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Sign RuStore release with existing Crystal Games publisher key
+        working-directory: android-arsenal
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/35.0.0"
+          test -n "$KEYSTORE_B64"
+          umask 077
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/arsenal-signing.jks"
+          trap 'rm -f "$RUNNER_TEMP/arsenal-signing.jks"' EXIT
+          "$bt/zipalign" -f -P 16 4 app/build/outputs/apk/release/app-release-unsigned.apk "$RUNNER_TEMP/arsenal-aligned.apk"
+          "$bt/apksigner" sign --ks "$RUNNER_TEMP/arsenal-signing.jks" --ks-key-alias "$KEY_ALIAS" --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEY_PASSWORD --out Arsenal_Rybaka_0.8.1_RuStore.apk "$RUNNER_TEMP/arsenal-aligned.apk"
+          "$bt/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.8.1_RuStore.apk
+          "$bt/aapt" dump badging Arsenal_Rybaka_0.8.1_RuStore.apk | grep "name='ru.crystalgames.arsenal' versionCode='19' versionName='0.8.1'"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Arsenal-Rybaka-0.8.1-RuStore-SIGNED
+          path: android-arsenal/Arsenal_Rybaka_0.8.1_RuStore.apk
           if-no-files-found: error
           retention-days: 30
