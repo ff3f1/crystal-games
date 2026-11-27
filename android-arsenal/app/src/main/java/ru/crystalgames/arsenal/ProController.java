@@ -27,6 +27,8 @@ final class ProController {
  private final String mode=BuildConfig.DEBUG?"test":"live";
  private volatile boolean active=false,closed=false;
  private boolean busy=false;
+ private volatile int quotedPrice=0, promoRemaining=0;
+ String priceLabel(){return quotedPrice==19900?"199 ₽":quotedPrice==39900?"399 ₽":"Цена при оформлении";}
  ProController(Activity a,Runnable onChange){
   activity=a;changed=onChange;
   prefs=a.getSharedPreferences("arsenal_pro_"+mode,Context.MODE_PRIVATE);
@@ -46,7 +48,7 @@ final class ProController {
  }
  void open(){
   if(!configured()){new AlertDialog.Builder(activity).setTitle("Арсенал PRO").setMessage("Разовая покупка — 399 ₽. Без рекламы. Оплата пока не подключена.").setPositiveButton("Закрыть",null).show();return;}
-  new AlertDialog.Builder(activity).setTitle(active?"PRO активирован":"Арсенал PRO — 399 ₽")
+  new AlertDialog.Builder(activity).setTitle(active?"PRO активирован":"Арсенал PRO — "+priceLabel())
    .setMessage((BuildConfig.DEBUG?"ТЕСТОВЫЙ РЕЖИМ — деньги не списываются.\n\n":"")+ (active?"Реклама отключена. До 5 фото на карточку. Сохраните код восстановления для нового телефона.":"Один платёж, без подписки. Без рекламы и до 5 фото на карточку. Для восстановления используется личный код покупки."))
    .setPositiveButton(active?"Код восстановления":"Купить PRO",(d,w)->{if(active)showCode(code(),false);else purchase();})
    .setNeutralButton("Восстановить",(d,w)->restore())
@@ -99,6 +101,7 @@ final class ProController {
    activity.runOnUiThread(()->{
     busy=false;if(closed||activity.isFinishing()||activity.isDestroyed())return;
     if(data==null){if(notify)say("Сервис оплаты недоступен. Попробуйте позже.");return;}
+    int quote=data.optInt("price_cents",0);quotedPrice=(quote==19900||quote==39900)?quote:0;promoRemaining=Math.max(0,Math.min(1000,data.optInt("promo_remaining",0)));
     String state=data.optString("state");
     if("paid".equals(state)){
      boolean saved=prefs.edit().putString("code",k).putBoolean("verified_paid",true).commit();
@@ -110,7 +113,9 @@ final class ProController {
     if("/order".equals(endpoint)&&"pending".equals(state)){
      Uri u=Uri.parse(data.optString("checkout"));
      if("https".equals(u.getScheme())&&"auth.robokassa.ru".equals(u.getHost())&&"/Merchant/Index.aspx".equals(u.getPath())&&u.getUserInfo()==null&&("test".equals(mode)?"1".equals(u.getQueryParameter("IsTest")):u.getQueryParameter("IsTest")==null)){
-      try{activity.startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){say("Не удалось открыть страницу оплаты");}
+      String rawAmount=u.getQueryParameter("OutSum");int exact=0;try{exact=new java.math.BigDecimal(rawAmount).movePointRight(2).intValueExact();}catch(Exception ignored){}
+      if((exact!=19900&&exact!=39900)||(quotedPrice!=0&&exact!=quotedPrice)){say("Не удалось подтвердить стоимость заказа");return;}
+      final int price=exact;new AlertDialog.Builder(activity).setTitle("Подтверждение покупки").setMessage("PRO — "+(price/100)+" ₽. Разовый платёж. "+(price==19900?"Акционная цена закреплена за этим счётом.":"Без подписки.")).setPositiveButton("Перейти к оплате",(d,w)->{try{activity.startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){say("Не удалось открыть страницу оплаты");}}).setNegativeButton("Отмена",null).show();
      }else say("Некорректный адрес оплаты");
     }else if(notify)say("Подтверждение оплаты пока не получено.");
    });

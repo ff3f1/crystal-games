@@ -5,6 +5,8 @@ from urllib.parse import urlencode, parse_qs
 from wsgiref.simple_server import make_server
 
 PRICE = "399.00"
+REGULAR = 39900
+PROMO = 19900
 MERCHANT = "arsenal-rybaka"
 CODE = re.compile(r"[A-Za-z0-9_-]{43}")
 def sha(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -15,7 +17,8 @@ def cents(s):
     return int(whole)*100 + int((fraction+"00")[:2])
 def signature_ok(expected, supplied):
     return isinstance(supplied,str) and bool(re.fullmatch(r"[a-fA-F0-9]{64}",supplied)) and hmac.compare_digest(expected,supplied.lower())
-def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False):
+def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False, promo_live=False, promo_test=False, promo_limit=20):
+    if not isinstance(promo_limit,int) or not 0<=promo_limit<=1000: raise ValueError("Invalid promotion limit")
     if not test1 or not test2 or test1 == test2: raise ValueError("Separate test secrets required")
     if live_enabled and (not live1 or not live2 or len({test1,test2,live1,live2}) != 4): raise ValueError("Separate live secrets required")
     def db():
@@ -35,11 +38,19 @@ def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False):
         if mode=="test": return test1,test2
         if mode=="live" and live_enabled: return live1,live2
         return None
+    def offer(c, mode, row=None):
+        enabled = promo_test if mode=="test" else promo_live
+        # Pending invoices stay reserved until provider-confirmed cancellation. Never recycle a payable invoice.
+        used=c.execute("SELECT count(*) FROM orders WHERE mode=? AND amount=?",(mode,PROMO)).fetchone()[0]
+        remaining=max(0,promo_limit-used) if enabled else 0
+        price=row["amount"] if row else (PROMO if remaining else REGULAR)
+        return {"price_cents":price,"regular_cents":REGULAR,"promo_remaining":remaining,"promo_limit":promo_limit,"promo_enabled":bool(enabled),"reserved":bool(row and row["state"]=="pending" and row["amount"]==PROMO)}
     def checkout(row, p1):
         mode=row["mode"]
-        q=dict(MerchantLogin=MERCHANT,OutSum=PRICE,InvId=str(row["id"]),
+        price=f"{row['amount']//100}.{row['amount']%100:02d}"
+        q=dict(MerchantLogin=MERCHANT,OutSum=price,InvId=str(row["id"]),
                Description="Арсенал рыбака PRO — лицензия",
-               Shp_mode=mode,SignatureValue=sha(f"{MERCHANT}:{PRICE}:{row['id']}:{p1}:Shp_mode={mode}"))
+               Shp_mode=mode,SignatureValue=sha(f"{MERCHANT}:{price}:{row['id']}:{p1}:Shp_mode={mode}"))
         if mode=="test": q["IsTest"]="1"
         return "https://auth.robokassa.ru/Merchant/Index.aspx?"+urlencode(q)
     def dispatch(env):
@@ -63,12 +74,12 @@ def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False):
                 mode=p["Shp_mode"]; pw=passwords(mode)
                 if not pw: return 403,"disabled"
                 inv,amount=p["InvId"],p["OutSum"]
-                if not re.fullmatch(r"[1-9][0-9]{0,15}",inv) or cents(amount)!=39900: return 400,"amount"
+                if not re.fullmatch(r"[1-9][0-9]{0,15}",inv) or cents(amount) not in (REGULAR,PROMO): return 400,"amount"
                 if not signature_ok(sha(f"{amount}:{inv}:{pw[1]}:Shp_mode={mode}"),p["SignatureValue"]): return 403,"signature"
                 with closing(db()) as c, c:
                     c.execute("BEGIN IMMEDIATE")
                     row=c.execute("SELECT * FROM orders WHERE id=?",(int(inv),)).fetchone()
-                    if not row or row["mode"]!=mode or row["amount"]!=39900: return 404,"order"
+                    if not row or row["mode"]!=mode or row["amount"]!=cents(amount): return 404,"order"
                     if row["state"]=="pending":
                         c.execute("UPDATE orders SET state='paid',paid=? WHERE id=?",(int(time.time()),int(inv)))
                 return 200,"OK"+inv
@@ -91,10 +102,10 @@ def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False):
                     # Limit storage growth from unauthenticated order requests; adjust after launch.
                     count=c.execute("SELECT count(*) FROM orders WHERE state='pending' AND created>?",(int(time.time())-86400,)).fetchone()[0]
                     if count>=1000: return 429,{"error":"limit"}
-                    c.execute("INSERT INTO orders(keyhash,mode,amount,created) VALUES(?,?,?,?)",(key,mode,39900,int(time.time())))
+                    c.execute("INSERT INTO orders(keyhash,mode,amount,created) VALUES(?,?,?,?)",(key,mode,offer(c,mode)["price_cents"],int(time.time())))
             row=c.execute("SELECT * FROM orders WHERE keyhash=? AND mode=?",(key,mode)).fetchone()
-            if not row: return 200,{"state":"unknown","mode":mode}
-            data={"state":row["state"],"mode":mode,"invoice":row["id"]}
+            if not row: return 200,{"state":"unknown","mode":mode,**offer(c,mode)}
+            data={"state":row["state"],"mode":mode,"invoice":row["id"],**offer(c,mode,row)}
             if path=="/order" and row["state"]=="pending": data["checkout"]=checkout(row,pw[0])
             return 200,data
     def app(env,start):
@@ -106,6 +117,6 @@ def make_app(dbpath, test1, test2, live1="", live2="", live_enabled=False):
     return app
 
 def from_env():
-    return make_app(os.environ.get("ARSENAL_DB","/var/lib/arsenal/orders.sqlite3"),os.environ["ROBO_TEST_1"],os.environ["ROBO_TEST_2"],os.environ.get("ROBO_LIVE_1",""),os.environ.get("ROBO_LIVE_2",""),os.environ.get("LIVE_ENABLED")=="yes")
+    return make_app(os.environ.get("ARSENAL_DB","/var/lib/arsenal/orders.sqlite3"),os.environ["ROBO_TEST_1"],os.environ["ROBO_TEST_2"],os.environ.get("ROBO_LIVE_1",""),os.environ.get("ROBO_LIVE_2",""),os.environ.get("LIVE_ENABLED")=="yes",os.environ.get("PROMO_LIVE")=="yes",os.environ.get("PROMO_TEST")=="yes",int(os.environ.get("PROMO_LIMIT","20")))
 if __name__=="__main__":
     with make_server("127.0.0.1",8765,from_env()) as http: http.serve_forever()

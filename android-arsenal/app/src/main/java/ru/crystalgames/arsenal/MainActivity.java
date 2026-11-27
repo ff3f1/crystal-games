@@ -199,6 +199,7 @@ public final class MainActivity extends Activity {
  }
  private final class NativeBridge {
   @JavascriptInterface public boolean isPro(){return pro!=null&&pro.isActive();}
+  @JavascriptInterface public String proPrice(){return pro!=null?pro.priceLabel():"Цена при оформлении";}
   @JavascriptInterface public boolean proConfigured(){return pro!=null&&pro.configured();}
   @JavascriptInterface public void openPro(){runOnUiThread(()->{if(pro!=null)pro.open();});}
 

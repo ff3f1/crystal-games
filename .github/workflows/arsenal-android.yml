@@ -1,4 +1,4 @@
-name: Arsenal Android 0.7.3
+name: Arsenal Android 0.7.4
 on:
   pull_request:
     paths:
@@ -39,8 +39,8 @@ jobs:
           from pathlib import Path
           import zlib
           data=Path('app/src/main/assets/index.html').read_bytes()
-          assert len(data)==427180
-          assert zlib.crc32(data)&0xffffffff==0x6574ca4
+          assert len(data)==427560
+          assert zlib.crc32(data)&0xffffffff==0xc1e7edef
           print('Embedded photographic assets: verified')
           PY
       - name: Test payment server
@@ -57,7 +57,7 @@ jobs:
       - name: Upload UI review screenshot
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-0.7.3-UI-review
+          name: Arsenal-0.7.4-UI-review
           path: android-arsenal/arsenal-home-0.6.2.png
           if-no-files-found: error
           retention-days: 30
@@ -67,7 +67,7 @@ jobs:
       - name: Upload RuStore listing kit
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-0.7.3-RuStore-Media
+          name: Arsenal-0.7.4-RuStore-Media
           path: android-arsenal/rustore/
           if-no-files-found: error
           retention-days: 30
@@ -76,13 +76,13 @@ jobs:
         run: |
           sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
           gradle --no-daemon -PARSENAL_LICENSE_URL=https://crystal-games.h1n.ru/arsenal-api :app:assembleDebug
-          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.7.3_test.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.7.3_test.apk
+          cp app/build/outputs/apk/debug/app-debug.apk Arsenal_Rybaka_0.7.4_test.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs Arsenal_Rybaka_0.7.4_test.apk
       - name: Upload installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.7.3-TEST-APK
-          path: android-arsenal/Arsenal_Rybaka_0.7.3_test.apk
+          name: Arsenal-Rybaka-0.7.4-TEST-APK
+          path: android-arsenal/Arsenal_Rybaka_0.7.4_test.apk
           if-no-files-found: error
           retention-days: 30
       - name: Build unsigned production APK (payment disabled)
@@ -91,7 +91,7 @@ jobs:
       - name: Upload unsigned production APK (real IDs)
         uses: actions/upload-artifact@v4
         with:
-          name: Arsenal-Rybaka-0.7.3-UNSIGNED-PRODUCTION
+          name: Arsenal-Rybaka-0.7.4-UNSIGNED-PRODUCTION
           path: android-arsenal/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
           retention-days: 30
