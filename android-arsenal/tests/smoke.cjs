@@ -9,6 +9,7 @@ vm.createContext(sandbox);
 vm.runInContext(code,sandbox);
 vm.runInContext(`
 assert.equal(db.trophies.length,0);
+const beforeDemo=JSON.stringify(db);demo();assert.equal(JSON.stringify(db),beforeDemo);assert.ok($('#modal').innerHTML.includes('ТОЛЬКО ПРОСМОТР'));closeModal();
 assert.equal(validProduct('https://example.com/a'),true);
 assert.equal(validProduct('javascript:alert(1)'),false);
 assert.equal(validProduct('https://u:p@example.com'),false);

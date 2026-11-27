@@ -9,7 +9,7 @@ const {pathToFileURL}=require('node:url');
   const page=await browser.newPage({viewport:{width:390,height:844}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
   await page.goto(pathToFileURL(path.resolve('app/src/main/assets/index.html')).href);
-  await page.getByText('Нравится приложение?',{exact:true}).waitFor();assert.equal(await page.getByText('АРСЕНАЛ PRO',{exact:true}).count(),0);
+  await page.getByText('Нравится приложение?',{exact:true}).waitFor();assert.equal(await page.getByText('АРСЕНАЛ PRO',{exact:true}).count(),0);await page.getByRole('button',{name:'Посмотреть пример',exact:true}).click();assert.equal(await page.locator('.demo-preview article').count(),4);assert.equal(await page.evaluate(()=>db.items.length),0);await page.getByRole('button',{name:'Понятно',exact:true}).click();
   await page.locator('nav').getByText('Трофеи',{exact:true}).click();
   await page.getByRole('button',{name:'Добавить',exact:true}).click();
   assert.equal(await page.locator('#photoUpgrade').isVisible(),false);await page.locator('[name=species]').fill('Щука');
@@ -82,12 +82,12 @@ const {pathToFileURL}=require('node:url');
     for(const label of ['Главная','Арсенал','Наборы','Трофеи','Хотелки','Ещё']){
       await page.locator('nav').getByText(label,{exact:true}).click();
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Overflow '+label+' at '+width);
-      assert.equal(await page.locator('nav [aria-current=page]').count(),1);
+      assert.equal(await page.locator('nav [aria-current=page]').count(),1);assert.equal(await page.locator('main').evaluate(e=>getComputedStyle(e).color),'rgb(32, 55, 47)');assert.equal(await page.locator('header').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(32, 59, 50)');
     }
   }
   await page.setViewportSize({width:390,height:844});
   await page.locator('nav').getByText('Главная',{exact:true}).click();
-  await page.screenshot({path:'arsenal-home-0.6.2.png',fullPage:true});assert.equal(await page.locator('.journal-heading h1').innerText(),'Мой арсенал');assert.ok(await page.locator('.catalog-index .category').count()>0);
+  await page.screenshot({path:'arsenal-home-0.6.2.png',fullPage:true});assert.equal(await page.locator('.field-cover h1').innerText(),'Мой арсенал');assert.ok(await page.locator('.catalog-index .category').count()>0);
   await page.evaluate(()=>{closeModal();backup()});assert.ok(await page.getByText('Сохранить полную копию',{exact:true}).isVisible());assert.equal(await page.locator('#backupData').count(),0);assert.ok(await page.evaluate(()=>backupWithoutPhotos().items.every(x=>x.photos.length===0)));await page.getByRole('button',{name:'Показать JSON вручную'}).click();assert.equal(await page.locator('#backupData').count(),1);await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
   await page.locator('nav').getByText('Арсенал',{exact:true}).click();await page.getByRole('button',{name:'Добавить',exact:true}).click();await page.locator('[name=name]').fill('Быстрое добавление');await page.locator('[name=location]').fill('Коробка 3');await page.getByRole('button',{name:'Сохранить и добавить ещё'}).click();assert.equal(await page.locator('[name=name]').inputValue(),'');assert.equal(await page.locator('[name=location]').inputValue(),'Коробка 3');await page.locator('#modal').getByRole('button',{name:'Закрыть',exact:true}).click();
   await page.evaluate(()=>{moreView='feeder';page('more')});await page.getByRole('button',{name:'Первый заброс'}).click();assert.ok(await page.evaluate(()=>db.feeder.end>Date.now()));await page.evaluate(()=>{db.feeder.end=Date.now()-1000;updateTimer()});assert.equal(await page.locator('#timer').innerText(),'00:00');await page.getByRole('button',{name:'Сбросить сессию'}).click();assert.equal(await page.evaluate(()=>db.feeder.end),0);

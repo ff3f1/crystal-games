@@ -109,12 +109,12 @@ public final class MainActivity extends Activity {
  private AtomicFile stateFile;
  @Override public void onCreate(Bundle saved) {
   super.onCreate(saved);
-  getWindow().setStatusBarColor(0xff121716);
-  getWindow().setNavigationBarColor(0xff121716);
+  getWindow().setStatusBarColor(0xff203b32);
+  getWindow().setNavigationBarColor(0xff203b32);
   pro=new ProController(this,()->{if(web!=null){refreshBanner();if(adsAllowed())loadInter();else if(inter!=null){inter.setAdEventListener(null);inter=null;}web.evaluateJavascript("render();if(document.querySelector(\'#galleryGrid\'))refreshGallery()",null);}});
   stateFile=new AtomicFile(new File(getFilesDir(),"arsenal-state.json"));
   web = new WebView(this);
-  web.setBackgroundColor(0xff121716);
+  web.setBackgroundColor(0xfff4f0e6);
   WebSettings s=web.getSettings();
   s.setJavaScriptEnabled(true);
   s.setDomStorageEnabled(true);
