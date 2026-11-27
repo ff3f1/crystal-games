@@ -1,0 +1,125 @@
+name: Arsenal 0.8.1 Android device audit
+on:
+  push:
+    branches: [arsenal-android-v02]
+    paths: ['.github/workflows/arsenal-device-audit.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  device:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Arsenal-Rybaka-0.8.1-RuStore-SIGNED
+          run-id: 45970582088
+          github-token: ${{ github.token }}
+          path: audit/release
+      - uses: actions/download-artifact@v4
+        with:
+          name: Arsenal-Rybaka-0.8.1-TEST-APK
+          run-id: 45970582088
+          github-token: ${{ github.token }}
+          path: audit/test
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Create device check script
+        run: |
+          cat > audit/device.py <<'PY'
+          import subprocess, time, re, xml.etree.ElementTree as ET
+          from pathlib import Path
+          def adb(*args):
+              return subprocess.check_output(['adb',*args],stderr=subprocess.STDOUT)
+          def shell(*args):
+              return adb('shell',*args).decode(errors='replace')
+          def screenshot(name):
+              Path('audit/'+name+'.png').write_bytes(adb('exec-out','screencap','-p'))
+          def nodes():
+              shell('uiautomator','dump','/sdcard/arsenal-audit.xml')
+              return list(ET.fromstring(shell('cat','/sdcard/arsenal-audit.xml')).iter('node'))
+          def tap_text(label):
+              for i in range(3):
+                  for n in nodes():
+                      if label in (n.get('text'),n.get('content-desc')):
+                          a,b,c,d=map(int,re.findall(r'\d+',n.get('bounds','')))
+                          shell('input','tap',str((a+c)//2),str((b+d)//2))
+                          time.sleep(1)
+                          return
+                  time.sleep(1)
+              raise AssertionError('Missing UI label: '+label)
+          def visible(label):
+              return any(label in (n.get('text','')+' '+n.get('content-desc','')) for n in nodes())
+          release=next(Path('audit/release').glob('*.apk'))
+          debug=next(Path('audit/test').glob('*.apk'))
+          # Release is deliberately offline: do not request or generate live ad impressions.
+          shell('svc','wifi','disable');shell('svc','data','disable')
+          adb('install',str(release))
+          shell('am','start','-W','-n','ru.crystalgames.arsenal/ru.crystalgames.arsenal.MainActivity')
+          time.sleep(5)
+          for i,(label,heading) in enumerate([('Главная','Мой арсенал'),('Арсенал','Арсенал'),('Наборы','Наборы'),('Трофеи','Трофеи'),('Хотелки','Хотелки'),('Ещё','Инструменты')]):
+              tap_text(label)
+              assert visible(heading),heading
+              screenshot('release-'+str(i))
+          tap_text('Фидер')
+          assert visible('Перезаброс')
+          screenshot('release-feeder')
+          tap_text('Настройки')
+          assert not visible('Арсенал PRO')
+          screenshot('release-settings')
+          shell('am','force-stop','ru.crystalgames.arsenal')
+          shell('pm','uninstall','ru.crystalgames.arsenal')
+          # Only demo ad IDs in the TEST package; no ad clicks.
+          shell('svc','wifi','enable');shell('svc','data','enable')
+          adb('install',str(debug))
+          shell('am','start','-W','-n','ru.crystalgames.arsenal.test/ru.crystalgames.arsenal.MainActivity')
+          time.sleep(25)
+          screenshot('demo-banner-home')
+          tap_text('Ещё');tap_text('Настройки')
+          size=shell('wm','size')
+          w,h=map(int,re.findall(r'(\d+)x(\d+)',size)[-1])
+          found=False
+          for i in range(12):
+              if visible('Проверить тестовую межстраничную'):
+                  found=True;break
+              shell('input','swipe',str(w//2),str(h*3//4),str(w//2),str(h//4),'350')
+              time.sleep(.5)
+          assert found,'Debug ad diagnostic button missing'
+          screenshot('demo-before-interstitial')
+          tap_text('Проверить тестовую межстраничную')
+          time.sleep(5)
+          screenshot('demo-after-interstitial')
+          state=shell('dumpsys','activity','activities')
+          Path('audit/activity.txt').write_text(state)
+          resumed=[l.strip() for l in state.splitlines() if 'ResumedActivity' in l]
+          print('Resumed activity:',resumed)
+          # Require an actual SDK ad activity or recognizable demo ad label. A no-fill is inconclusive, not a pass.
+          text=' '.join(n.get('text','')+' '+n.get('content-desc','') for n in nodes()).lower()
+          shown=any('yandex' in l.lower() and 'ad' in l.lower() for l in resumed) or any(x in text for x in ['demo ad','test ad','тестовое объявление','демонстрационное объявление'])
+          print('Demo interstitial evidence:',shown)
+          if not shown:
+              raise AssertionError('Demo ad display not confirmed; inspect screenshot / network / SDK fill')
+          print('PASS: installed signed release offline, opened all navigation tabs, verified demo interstitial without live impressions')
+          PY
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: python3 audit/device.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Arsenal-0.8.1-device-audit
+          path: |
+            audit/*.png
+            audit/activity.txt
+          if-no-files-found: warn
+          retention-days: 14
