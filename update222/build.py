@@ -1,3 +1,4 @@
+import copy
 import hashlib
 import struct
 import sys
@@ -6,7 +7,7 @@ from zipfile import ZipFile
 from tempfile import TemporaryDirectory
 
 source, dest = map(Path, sys.argv[1:])
-print("Pinned 2.2.1 input SHA256:", hashlib.sha256(source.read_bytes()).hexdigest())
+assert hashlib.sha256(source.read_bytes()).hexdigest() == "432a7253de4bfb21900add3d0c0ba0d6477173c840eb249d668b3ba3892e7344"
 with TemporaryDirectory() as tmp, ZipFile(source) as original:
     root = Path(tmp)
     def patch(name, transform):
@@ -90,7 +91,7 @@ body.filming .view-switch{opacity:0;pointer-events:none!important}
             n=entry.filename
             if n.startswith('META-INF/') and n.upper().endswith(('.RSA','.SF','.DSA','.EC','MANIFEST.MF')): continue
             data=manifest if n=='AndroidManifest.xml' else updates.get(n,original.read(n))
-            output.writestr(entry,data)
+            output.writestr(copy.copy(entry),data)
     with ZipFile(dest) as result:
         for n in original.namelist():
             if n=='AndroidManifest.xml' or n in updates or n not in result.NameToInfo: continue
