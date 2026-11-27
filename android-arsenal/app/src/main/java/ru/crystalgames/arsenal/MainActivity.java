@@ -95,7 +95,7 @@ public final class MainActivity extends Activity {
   try{a.show(this);}catch(Exception e){lastInter=SystemClock.elapsedRealtime();finishInter(a);}
  }
  private void finishInter(InterstitialAd a){a.setAdEventListener(null);adShowing=false;if(!isFinishing()&&!isDestroyed()){refreshBanner();loadInter();}}
- @Override protected void onResume(){super.onResume();resumed=true;refreshBanner();loadInter();if(pro!=null)pro.refresh();}
+ @Override protected void onResume(){super.onResume();resumed=true;refreshBanner();loadInter();if(pro!=null)pro.refresh();FeederAlarm.resume(this);if(web!=null)web.evaluateJavascript("if(typeof refreshTimerStatus===\'function\')refreshTimerStatus()",null);}
  @Override protected void onPause(){resumed=false;destroyBanner();super.onPause();}
 
  private ValueCallback<Uri[]> pending;
@@ -198,6 +198,10 @@ public final class MainActivity extends Activity {
   runOnUiThread(()->{if(web!=null&&!isFinishing())web.evaluateJavascript("receiveNativePhotos("+token+","+photos.toString()+","+failures+","+cancelled+")",null);});
  }
  private final class NativeBridge {
+  @JavascriptInterface public void setFeederAlarm(double end){if(!Double.isFinite(end)||end<0||end>Long.MAX_VALUE)return;runOnUiThread(()->FeederAlarm.set(MainActivity.this,(long)end));}
+  @JavascriptInterface public void feederDue(double end){if(!Double.isFinite(end)||end<=0||end>Long.MAX_VALUE)return;runOnUiThread(()->FeederAlarm.fire(MainActivity.this,(long)end));}
+  @JavascriptInterface public String feederAlarmStatus(){return (FeederAlarm.allowed(MainActivity.this)?"on":"off")+":"+(FeederAlarm.exact(MainActivity.this)?"exact":"approx");}
+  @JavascriptInterface public void configureFeederAlarm(){runOnUiThread(()->{if(android.os.Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},75);return;}try{if(!FeederAlarm.allowed(MainActivity.this)){Intent i=new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName());startActivity(i);}else if(android.os.Build.VERSION.SDK_INT>=31&&!FeederAlarm.exact(MainActivity.this)){startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));}else{startActivity(new Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName()).putExtra(android.provider.Settings.EXTRA_CHANNEL_ID,"feeder_timer_v1"));}}catch(Exception e){Toast.makeText(MainActivity.this,"Откройте настройки уведомлений приложения",Toast.LENGTH_LONG).show();}});}
   @JavascriptInterface public boolean isPro(){return pro!=null&&pro.isActive();}
   @JavascriptInterface public String proPrice(){return pro!=null?pro.priceLabel():"Цена при оформлении";}
   @JavascriptInterface public boolean proConfigured(){return pro!=null&&pro.configured();}
