@@ -9,8 +9,8 @@ android {
   applicationId 'ru.crystalgames.arsenal'
   minSdk 26
   targetSdk 34
-  versionCode 17
-  versionName '0.7.5'
+  versionCode 18
+  versionName '0.8.0'
   buildConfigField 'String', 'LICENSE_BASE_URL', '"' + licenseUrl + '"'
  }
  buildFeatures { buildConfig true }
